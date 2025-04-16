@@ -23,17 +23,33 @@
 - [x] Manipulação de mídia
 - [x] Sistema de doações pelo tipa.ai
 - [x] Servidor API
-- [ ] Editar README com principais diferenças da ravena antiga
+- [ ] Comandos genéricos: processCustomStaticVariables implementar seleção random
+- [ ] Editar README com principais diferenças da ravena antiga (incompleto)
 - [ ] Implementar docs para todas as funções implementadas até o momento
 - [ ] Melhorar comando !cmd pra ficar mais organizado
-- [ ] Implementar e testar comandos com variáveis para APIs personalizadas
+- [ ] Implementar e testar comandos com variáveis para APIs personalizadas (RAB, LoL, WR, valorant, etc.)
 - [ ] Organizar/traduzir docs das funções
 - [ ] Script para migração de dados da ravena antiga
 - [ ] Ferramentas de análise e estatísticas
 - [ ] Mensagem IA pra join/leave de grupo
 - [ ] Dados de quem enviou convite na mensagem quando add ravena
+- [ ] Comandos genéricos: Variáveis dinâmicas
+- [ ] Comando: !gif, busca de gifs
+- [ ] Comando: !imagine, geração de imagens no sdwebui
+- [ ] Comando: !lembrar e versão nova com opção de repetir
+- [ ] Comando: !anime, info de animes
+- [ ] Comando: !imdb, info de filmes e séries
+- [ ] Comando: !download, baixa arquivo de link direto
+- [ ] Comando: !wiki, busca na wikipédia
+- [ ] Comando: !velharia, importa os comandos genéricos antigos da ravena
+- [ ] Comando: !dxx, comandos de dados agora como fixos
+- [ ] Comando: !news, ViniMunews (antigo JrMunews)
+- [ ] Comando: !deletar, pra apagar msgs do bot
+- [ ] Comando: !g-pausar, suspende atividade do bot no grupo
+- [ ] Comando: !ajuda [topico], usar o Gemini pra gerar ajuda sobre os comandos
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
+- [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
 - [ ] Pensar em novos jogos
@@ -43,6 +59,29 @@
 
 - [ ] Fix respostas LLM não chegarem pelo OpenRouter
 - [ ] Fix boas vindas enviando mesmo sem setar
+
+## 📚 Documentação dos Comandos
+
+Esta seção contém documentação detalhada de cada categoria de comandos disponíveis atualmente no bot, explicando sua implementação, uso e requisitos.
+
+- [Menu de Comandos](docs/Menu.md) - Exibição de comandos disponíveis
+- [Comandos Básicos](docs/PlaceholderCommands.md) - Conjunto de comandos essenciais e utilitários
+- [Stickers](docs/Stickers.md) - Criação de stickers a partir de imagens
+- [Roleta Russa](docs/RoletaRussaCommands.md) - Mini-jogo de azar com sistema de timeout
+- [Previsão do Tempo](docs/Weather.md) - Comandos para obter informações meteorológicas
+- [Download de YouTube](docs/YoutubeDownloader.md) - Ferramentas para baixar vídeos e áudios do YouTube
+- [Resumos de Conversas](docs/SummaryCommands.md) - Geração de resumos das conversas do grupo
+- [Gerenciamento de Arquivos](docs/FileManager.md) - Sistema para armazenamento e organização de arquivos
+- [Conversão de Arquivos](docs/FileConversions.md) - Comandos para converter entre diferentes formatos de mídia
+- [Comandos de Grupo](docs/GroupCommands.md) - Recursos específicos para gerenciamento de grupos
+- [Manipulação de Imagens](docs/ImageManipulation.md) - Ferramentas para modificar e transformar imagens
+- [Listas](docs/ListCommands.md) - Sistema para criar e gerenciar listas de membros
+- [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web
+- [Comandos de Voz](docs/SpeechCommands.md) - Conversão entre texto e fala
+- [Monitoramento de Streams](docs/StreamCommands.md) - Comandos para gerenciar monitoramento de lives
+- [Comandos de Doação](docs/DonationCommands.md) - Comandos para visualizar informações de doação e doadores
+
+Para saber mais sobre os comandos de gerenciamento de grupo, consulte a [documentação de Comandos de Gerenciamento](docs/Management.md).
 
 ## 🔧 Instalação
 

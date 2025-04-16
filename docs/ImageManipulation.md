@@ -1,85 +1,146 @@
-# Installation Guide: Image Manipulation Module
+# Manipulação de Imagens
 
-Follow these steps to add image manipulation capabilities to your WhatsApp bot.
+O módulo `ImageManipulation.js` fornece comandos para modificar, transformar e aplicar efeitos em imagens, incluindo remoção de fundo, distorção e efeitos artísticos.
 
-## Step 1: Install Required Dependencies
+## Implementação
 
-### System Requirements
+Este módulo utiliza várias ferramentas e bibliotecas para processamento de imagem:
 
-First, install ImageMagick on your system:
+- **ImageMagick**: Para aplicar efeitos artísticos e transformações
+- **sharp**: Para recortar e processamento básico de imagens
+- **rembg**: Para remoção de fundo (requer Python)
 
-**Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install imagemagick
+## Requisitos Externos
+
+Para o funcionamento completo deste módulo, é necessário instalar:
+
+- **ImageMagick**: [Baixar ImageMagick](https://imagemagick.org/script/download.php)
+  - No Windows: Adicione à variável PATH do sistema ou especifique no arquivo `.env`
+  - No Linux: `sudo apt-get install imagemagick`
+  - No macOS: `brew install imagemagick`
+
+- **Python e rembg** (para remoção de fundo):
+  ```bash
+  pip install rembg
+  ```
+
+## Comandos Disponíveis
+
+| Comando | Descrição | Aliases |
+|---------|-----------|---------|
+| `!removebg` | Remove o fundo de uma imagem | - |
+| `!stickerbg` | Cria um sticker após remover o fundo | `!sbg` |
+| `!distort` | Aplica efeito de distorção a uma imagem | - |
+| `!sketch` | Aplica efeito de desenho a lápis | - |
+| `!oil` | Aplica efeito de pintura a óleo | - |
+| `!neon` | Aplica efeito de neon | - |
+| `!pixelate` | Aplica efeito de pixelização | - |
+
+## Exemplos de Uso
+
+### Comando !removebg
+
+Este comando deve ser usado com uma imagem (diretamente ou como resposta a uma mensagem com imagem).
+
+**Entrada:**
+```
+!removebg
 ```
 
-**macOS:**
-```bash
-brew install imagemagick
+**Saída:**
+A imagem original com o fundo removido, enviada como arquivo. Útil para criar fotos de perfil, figurinhas e elementos gráficos.
+
+### Comando !stickerbg ou !sbg
+
+**Entrada:**
+```
+!stickerbg Nome do Sticker
+```
+ou
+```
+!sbg Nome do Sticker
 ```
 
-**Windows:**
-1. Download installer from [ImageMagick website](https://imagemagick.org/script/download.php)
-2. Run the installer and ensure "Install legacy utilities" is selected
-3. Restart your computer after installation
+**Saída:**
+Um sticker com fundo transparente criado a partir da imagem, com o nome especificado.
 
-### Python Requirements
+### Comando !distort
 
-Install Python 3.7+ if not already installed, then:
+**Entrada:**
+```
+!distort 50
+```
+(O parâmetro é a intensidade da distorção, de 30 a 70)
 
-```bash
-# Install rembg for background removal
-python -m pip install rembg
+**Saída:**
+A imagem com efeito de distorção aplicado, útil para criar memes e imagens engraçadas.
+
+### Comandos de Efeitos Artísticos
+
+Todos estes comandos funcionam da mesma forma, aplicando diferentes efeitos artísticos:
+
+**Entrada:**
+```
+!sketch
+```
+ou
+```
+!oil
+```
+ou
+```
+!neon
+```
+ou
+```
+!pixelate
 ```
 
-### Node.js Dependencies
+**Saída:**
+A imagem com o efeito artístico correspondente aplicado.
 
-Update your project dependencies:
+## Reações com Emojis
 
-```bash
-# Install required npm packages
-npm install sharp imagemagick uuid
-```
+Os comandos deste módulo também podem ser acionados usando reações com emojis em mensagens com imagens:
 
-## Step 2: Add the Module to Your Project
+| Emoji | Comando equivalente |
+|-------|---------------------|
+| 🖼 | `!sticker` |
+| ✂️ | `!stickerbg` |
+| 🪓 | `!removebg` |
+| 🤪 | `!distort` |
+| 📝 | `!sketch` |
+| 🎭 | `!neon` |
+| 🧩 | `!pixelate` |
+| 🖌️ | `!oil` |
 
-1. Copy the `ImageManipulation.js` file to your `src/functions/` directory
-2. Update your package.json to include the new dependencies
-3. Restart your bot
+## Funcionamento Interno
 
-## Step 3: Verify Installation
+O fluxo de processamento para a maioria dos comandos segue este padrão:
 
-Check that everything is working correctly:
+1. Obtém a mídia da mensagem (direta ou citada)
+2. Salva a mídia em um arquivo temporário
+3. Aplica o efeito ou transformação solicitada usando as ferramentas adequadas
+4. Envia o resultado de volta para o chat
+5. Limpa os arquivos temporários
 
-```bash
-# Verify ImageMagick installation
-convert -version
+### Remoção de Fundo
 
-# Verify rembg installation
-python -c "import rembg; print('rembg installed successfully')"
+Para remover o fundo, o módulo usa a ferramenta `rembg`, que utiliza redes neurais para detecção e remoção inteligente de fundo. Em seguida, usa `sharp` para recortar quaisquer espaços em branco excedentes.
 
-# Verify sharp installation
-node -e "require('sharp'); console.log('sharp installed successfully')"
-```
+### Efeitos Artísticos
 
-## Troubleshooting
+Os efeitos artísticos são aplicados usando o ImageMagick com configurações específicas para cada efeito:
 
-### Common Issues
+- **sketch**: Conversão para escala de cinza e aplicação de filtro de esboço
+- **oil**: Aplicação de filtro de pintura a óleo com textura
+- **neon**: Processamento com detecção de bordas e efeito de brilho neon
+- **pixelate**: Redução extrema de escala seguida de ampliação para criar pixelização
 
-**Error: "Unable to find python"**
-- Ensure Python is in your PATH environment variable
-- Try specifying full path in the removeBackground function
+## Notas e Limitações
 
-**Error: "Invalid Parameter - rembg"**
-- Make sure you've installed rembg with `python -m pip install rembg`
-- Try reinstalling with `python -m pip install --upgrade rembg`
-
-**Error: "unable to open image"**
-- Check that ImageMagick is properly installed
-- Verify file paths and permissions in temp directory
-
-**Performance Issues**
-- The first background removal might be slow due to model download
-- Subsequent operations should be faster
-- Consider adding a timeout for long-running operations
+- O processamento de imagens é feito em arquivos temporários no sistema
+- Os arquivos temporários são excluídos após o processamento
+- A qualidade e eficácia da remoção de fundo dependem da complexidade da imagem original
+- Imagens muito grandes podem ser redimensionadas automaticamente para evitar problemas de memória
+- O processamento de imagens pode levar alguns segundos, especialmente para a remoção de fundo

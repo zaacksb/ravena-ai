@@ -699,5 +699,23 @@ Também deve ser possível reagir com os emoji de números (1️⃣, 2️⃣ , .
 
 Use a pasta da base de dados para armazenar as listas (pasta lists), um arquivo por grupo, assim como os custom-cmd
 
-
 --- 
+Crie um readme.md bonito explicando tudo que está implementado aqui.
+Mais detalhes para a introdução do README:
+- Imagem centralizada na horizontal (placeholder, me sugira um tamanho que fique bom no github)
+- Titulo: ravenabot-ai
+- Sobre: Novo código da ravena todo desenvolvido utilizando LLM Claude 3.7 Sonnet
+- Livre para uso, sem garantias
+Sessão logo após a intrudução: TODO-List com checklist, crie e marque como concluído o que já tem, deixe alguns placeholders que irei preencher
+Inclua Instruçoes de instalação como baixar o nodejs  e outros programas.
+Para programas externos como image-magic etc. crie novos .md e link eles no readme principal. Já existe versões deste arquivos que devem ser localizadas para PT-bR, ficam na pasta "docs".
+Neste sessão fale também sobre o .env e o que deve ser inserido no mesmo
+Após a instalaçao, mostre um fluxograma de funcionamento usando markup mermaid.
+Após o fluxograma, fale sobre os tipos de comando do bot
+Inclua uma sessão sobre como implementar novos comandos (pasta functions), exemplo no arquivo PlaceholderCommands.js
+
+Para cada arquivo dentro da pasta functions, gere um .md explicando o funcionamento do mesmo, detalhes da implementação e programas externos (caso aplicável).
+
+È necessário que exista também um tópico dentro do arquivo mostrandoexemplos de utilização dos comandos  (entrada e saída).
+
+Estes arquivos devem ser apontados em um novo tópico do README.md, me envie apenas o código deste tópico já com os links para cada arquivo e uma breve descrição de cada. Siga o mesmo padrão de formatação do arquivo
