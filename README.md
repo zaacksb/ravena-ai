@@ -1,4 +1,4 @@
-# ravenabot-ai
+# ravena-ai
 
 ![Ravenabot AI - img by chatgpt](ravenabanner.png)
 
@@ -24,6 +24,7 @@
 - [x] Sistema de doações pelo tipa.ai
 - [x] Servidor API
 - [ ] Editar README com principais diferenças da ravena antiga
+- [ ] Implementar docs para todas as funções implementadas até o momento
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Implementar e testar comandos com variáveis para APIs personalizadas
 - [ ] Organizar/traduzir docs das funções
@@ -37,6 +38,8 @@
 - [ ] Pensar em novos jogos
 
 ## ✅ TODO-FIX-List
+> Essa lista ainda vai aumentar bastante
+
 - [ ] Fix respostas LLM não chegarem pelo OpenRouter
 - [ ] Fix boas vindas enviando mesmo sem setar
 
