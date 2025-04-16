@@ -28,6 +28,7 @@
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Implementar e testar comandos com variáveis para APIs personalizadas
 - [ ] Organizar/traduzir docs das funções
+- [ ] Script para migração de dados da ravena antiga
 - [ ] Ferramentas de análise e estatísticas
 - [ ] Mensagem IA pra join/leave de grupo
 - [ ] Dados de quem enviou convite na mensagem quando add ravena
