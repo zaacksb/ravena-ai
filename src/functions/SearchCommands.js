@@ -1,0 +1,288 @@
+const axios = require('axios');
+const { MessageMedia } = require('whatsapp-web.js');
+const Logger = require('../utils/Logger');
+
+const logger = new Logger('search-commands');
+
+// Decodificador simples de entidades HTML
+function decodeHtmlEntities(text) {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+logger.info('Módulo SearchCommands carregado');
+
+const commands = [
+  {
+    name: 'buscar',
+    description: 'Busca na web',
+    category: 'group',
+    aliases: ['google', 'search'],
+    reactions: {
+      before: "🔍",
+      after: "✅"
+    },
+    method: async (bot, message, args, group) => {
+      await searchWeb(bot, message, args, group);
+    }
+  },
+  {
+    name: 'buscar-img',
+    description: 'Busca por imagens',
+    category: 'group',
+    aliases: ['img', 'imagem'],
+    reactions: {
+      before: "🖼️",
+      after: "✅"
+    },
+    method: async (bot, message, args, group) => {
+      await searchImages(bot, message, args, group);
+    }
+  }
+];
+
+/**
+ * Busca na web usando DuckDuckGo
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ */
+async function searchWeb(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    
+    if (args.length === 0) {
+      await bot.sendMessage(chatId, 'Por favor, forneça uma consulta de busca. Exemplo: !buscar tutorial javascript');
+      return;
+    }
+    
+    const query = args.join(' ');
+    logger.info(`Buscando na web por: ${query}`);
+    
+    // Envia indicador de digitação
+    try {
+      await bot.client.sendPresenceUpdate('composing', chatId);
+    } catch (error) {
+      logger.error('Erro ao enviar indicador de digitação:', error);
+    }
+    
+    // Usa API DuckDuckGo
+    const response = await axios.get('https://api.duckduckgo.com/', {
+      params: {
+        q: query,
+        format: 'json',
+        skip_disambig: 1,
+        no_html: 1,
+        no_redirect: 1
+      },
+      timeout: 10000
+    });
+    
+    const data = response.data;
+    
+    // Constrói mensagem de resultados da busca
+    let resultsMessage = `🔍 *Resultados para "${query}":*\n\n`;
+    
+    // Adiciona resumo se disponível
+    if (data.AbstractText) {
+      resultsMessage += `*${data.AbstractSource}:*\n${decodeHtmlEntities(data.AbstractText)}\n\n`;
+    }
+    
+    // Adiciona tópicos relacionados
+    if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+      const topResults = data.RelatedTopics.slice(0, 5);
+      topResults.forEach((result, index) => {
+        if (result.Text) {
+          resultsMessage += `${index + 1}. ${decodeHtmlEntities(result.Text)}\n`;
+          if (result.FirstURL) {
+            resultsMessage += `   🔗 ${result.FirstURL}\n\n`;
+          }
+        }
+      });
+    } else if (data.Results && data.Results.length > 0) {
+      // Alternativa: usa Results se disponível
+      const topResults = data.Results.slice(0, 5);
+      topResults.forEach((result, index) => {
+        if (result.Text) {
+          resultsMessage += `${index + 1}. ${decodeHtmlEntities(result.Text)}\n`;
+          if (result.FirstURL) {
+            resultsMessage += `   🔗 ${result.FirstURL}\n\n`;
+          }
+        }
+      });
+    } else {
+      // Se não houver resultados claros, tenta usar as informações que temos
+      if (data.Infobox && data.Infobox.content) {
+        const infoItems = data.Infobox.content.slice(0, 5);
+        infoItems.forEach((item, index) => {
+          if (item.label && item.value) {
+            resultsMessage += `${item.label}: ${item.value}\n`;
+          }
+        });
+        resultsMessage += '\n';
+      }
+      
+      // Se ainda não houver resultados, fornece uma mensagem alternativa
+      if (resultsMessage === `🔍 *Resultados para "${query}":*\n\n`) {
+        resultsMessage += "Não foram encontrados resultados específicos para esta busca.\n\n";
+        resultsMessage += `Tente buscar diretamente: https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+      }
+    }
+    
+    // Envia os resultados
+    await bot.sendMessage(chatId, resultsMessage);
+    
+    logger.info(`Resultados de busca enviados com sucesso para "${query}"`);
+  } catch (error) {
+    logger.error('Erro na busca web:', error);
+    const chatId = message.group || message.author;
+    await bot.sendMessage(chatId, 'Erro ao realizar busca na web. Por favor, tente novamente.');
+  }
+}
+
+/**
+ * Busca por imagens
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ */
+async function searchImages(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    
+    if (args.length === 0) {
+      await bot.sendMessage(chatId, 'Por favor, forneça uma consulta de busca. Exemplo: !buscar-img gatos fofos');
+      return;
+    }
+    
+    const query = args.join(' ');
+    logger.info(`Buscando imagens para: ${query}`);
+    
+    // Envia indicador de digitação
+    try {
+      await bot.client.sendPresenceUpdate('composing', chatId);
+    } catch (error) {
+      logger.error('Erro ao enviar indicador de digitação:', error);
+    }
+    
+    // Informa o usuário
+    await bot.sendMessage(chatId, `🔍 Buscando imagens para "${query}"...`);
+    
+    try {
+      // Utiliza Unsplash API para buscar imagens - uma alternativa gratuita
+      // Obs: Em produção, você deve registrar uma chave de API Unsplash
+      // Aqui estamos usando a API pública que tem limite de requisições
+      const response = await axios.get('https://api.unsplash.com/search/photos', {
+        params: {
+          query: query,
+          per_page: 3,
+          client_id: 'XfOu2zO_AYjXMUKw7-LDCrn8tYBQSWKIKbfj6vzf0R8' // Demo key com limites
+        },
+        timeout: 10000
+      });
+      
+      const results = response.data.results;
+      
+      if (!results || results.length === 0) {
+        await bot.sendMessage(chatId, `Não foram encontradas imagens para "${query}". Tente outra consulta.`);
+        return;
+      }
+      
+      // Envia até 3 imagens
+      for (let i = 0; i < Math.min(3, results.length); i++) {
+        try {
+          const imgUrl = results[i].urls.regular;
+          
+          // Obtém dados da imagem
+          const imgResponse = await axios.get(imgUrl, {
+            responseType: 'arraybuffer',
+            timeout: 15000
+          });
+          
+          // Determina o tipo MIME
+          const contentType = imgResponse.headers['content-type'] || 'image/jpeg';
+          
+          // Cria mídia de mensagem
+          const media = new MessageMedia(
+            contentType,
+            Buffer.from(imgResponse.data).toString('base64'),
+            `image-${i + 1}.jpg`
+          );
+          
+          // Envia imagem
+          const caption = `Resultado ${i + 1} para "${query}" | Fonte: Unsplash`;
+          await bot.sendMessage(chatId, media, {
+            caption: caption
+          });
+          
+          // Adiciona um pequeno atraso entre imagens
+          if (i < Math.min(3, results.length) - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        } catch (imgError) {
+          logger.error(`Erro ao enviar imagem ${i + 1}:`, imgError);
+        }
+      }
+      
+      logger.info(`Resultados de busca de imagem enviados com sucesso para "${query}"`);
+    } catch (apiError) {
+      logger.error('Erro na API de imagens:', apiError);
+      
+      // Fallback para imagens de placeholder se a API falhar
+      const placeholderImages = [
+        {
+          url: `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 1')}`,
+          caption: `Resultado 1 para "${query}"`
+        },
+        {
+          url: `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 2')}`,
+          caption: `Resultado 2 para "${query}"`
+        },
+        {
+          url: `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 3')}`,
+          caption: `Resultado 3 para "${query}"`
+        }
+      ];
+      
+      // Envia imagens de placeholder
+      for (const img of placeholderImages.slice(0, 3)) {
+        try {
+          // Obtém dados da imagem
+          const response = await axios.get(img.url, {
+            responseType: 'arraybuffer',
+            timeout: 10000
+          });
+          
+          // Cria mídia de mensagem
+          const media = new MessageMedia(
+            'image/jpeg',
+            Buffer.from(response.data).toString('base64')
+          );
+          
+          // Envia imagem
+          await bot.sendMessage(chatId, media, {
+            caption: img.caption
+          });
+          
+          // Adiciona um pequeno atraso entre imagens
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (imgError) {
+          logger.error(`Erro ao enviar imagem de placeholder:`, imgError);
+        }
+      }
+    }
+  } catch (error) {
+    logger.error('Erro na busca de imagens:', error);
+    const chatId = message.group || message.author;
+    await bot.sendMessage(chatId, 'Erro ao realizar busca de imagens. Por favor, tente novamente.');
+  }
+}
+
+// Exporta comandos
+module.exports = { commands };

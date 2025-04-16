@@ -1,0 +1,703 @@
+Implement a whatsapp chatbot using whatsapp-web.js 1.27.0.
+Do not use TypeScript.
+
+The main file should be able to create multiple instances of the bot for different numbers 
+The interface must be a class that can be instantiated multiple times in the same process, receiving the needed parameters, such as the class which will handle the events. Those instances must have a specifiable ID when creating the object and the phone number to request pairing code.
+
+There should be a locally managed and backed up database, JSON format, to store group and user data, commands and whatever else is necessary. If a current file read error ocurrs when loading, get the latest backup automatically.
+Implement a logger class that logs to log folder with the bot it in the name and autorotate files nightly, also print loggin to terminal.
+The instances will run in parallel, but share the same database.
+
+Mainly, it must support handling common events:
+
+- connected and disconnected
+- message: main event, where messages are received, processed and replied to
+- groupJoin and groupLeave: Fired when user joins a group
+- notification: Will be used for monitoring twitch, kick, youtube and other platforms new videos and streams. I will implement those methods later.
+
+Received messages can be commands, defined by a starting character, default prefix when creating the bot is '!'
+There are 3 command types and it should check if message is one of them in this order:
+- fixed commands: Defined by classes on 'functions' folder, specified and imported in a fixed-cmds class. Give me placeholders for some of them like !weather, !ping
+
+- custom commands: Created and managed by users on a per-group basis. Each group has it's own custom commands file in the custom-cmd folder. 
+
+- management: Fixed and defined on a management class. Use to change group properties, CRUD custom commands. Start with g, like !g-setName: setName, addCmd, addCmdReply, delCmd, enableCmd, disableCmd, setCustomPrefix, setWelcome, setFarewell
+- Management extra: Users can send !g-manage [groupName] and then their private chat with the bot will be handled like it's in the group, so that they can manage the group from outside
+
+- On the command handler, it should load the complete list (get for each type) before trying to check if the received message is one of them.
+
+- About: g-addCmd: It must be a reply of a message and content is that mentioned message. Type is based on the mentioned message.
+- Also implement g-addCmdReply [command]: Almost the same, but adds a new response to the specified command
+
+A CommandHandler should be implemented to check if a received message is a command, and if it is, call the apropriate handler spcified
+commands.json (example). This method should be called by the eventHandler onMessage
+The text to check in the message is the message body if it's a text message or the caption in case of media
+[
+{
+	"startsWith": "g-",
+	"contais": "setName", // This would handle messages like !g-setName
+	"method": management.setGroupTitle,
+	"ignorePrefix": true|false,
+	"needsMedia": true|false, // message must have media
+	"customCheck: "functionName" | calls specified function with the message content
+}
+]
+
+Custom commands are a bit different:
+[
+{
+	"startsWith": "bom dia",
+	"type": text|sticker|image|video|gif,
+	"responses": ["Reponse 1", "Response 2", "Today is {day}", "Custom riable {pokemon}", "{img-imageVa_name.png} The image caption"],
+	"sendAllResponses": true|false, // send all responses in order if true, false selects a random one to send
+	"mentions": [], // array of people to mention in the command. Enables {mention1}, {mention2}, ... variables
+	"cooldown": 30,
+	"react": "👌",
+	"reply": true|false,
+	"count": 0, // times used
+	"period": {"start": "07:00", "end": "08:00"}, // command can only be used between 7 and 8 am
+	"expires": "2025-12-01", // not avaiable after this date
+	"metadata": {}, // create by, timestamp created
+	"active": true|false,
+	"deleted": true|false,
+
+
+}
+]
+Their reply string can have custom variables defined in a json file custom-variables.json
+They can send files like img-fileName, audio-fileName, voice-fileName, etc. Those files should be saved in the data folder whenever a custom command is created
+Some variables can be dinamically specified in a processCustomVariables method - like time and date, api responses, server info, etc.
+
+The called handler must a receive the mesage properties like:
+ReceivedMessage {
+	group: group Id,
+	author: sender Id,
+	type: text|sticker|image|video|audio|voice
+	content: based on media type
+	*caption: if media
+	origin: message object from the original source
+}
+
+
+Group class will store relevant group data, such as the ID to send messages via the API, name for the users to interface with, twitch, kick and youtube channels that will be monitored asynchronously
+{
+	id: 123456@g.us,
+	addedBy: 123456@c.us,
+	removedBy: 123@c.us // if removed from group, store who removed, starts false
+	name: group title, all lowercase, but no spaces, limited to 16 characters, default is current title in this format
+	prefix: "!", // character prefix for group
+	inviteCode: if avaiable,
+	paused: true/false,
+	filters: { // if message contains these filters, delete the message from the chat
+		"nsfw": true/false,
+		"links": true/false,
+		"words": [],
+		"people": [],
+	},
+	twitch: [{
+		"name": "channel",
+		"titles": {
+			"on": "[ON] channel",
+			"off": "[OFF] channel"
+		},
+		"changeTitle": switch|defined|false,
+		"media": {
+			"text": "estou on",
+			"image": "image.jpg",
+			"video":"video.mp4",
+			"gif": "gif.mp4",
+			"sticker": "image.png"
+		}
+	}],
+	kick: [], // same as twitch
+	youtube: ["uid-001","uid-003"] // monitored channels id
+	"greetings": {"text": "Bem vindo, {pessoa}!", "sticker": "image.png", "video"... }, // Sent to the group when someone joins
+	"farewells": {"text": "Tchau, {pessoa}!"}, // Sent to the group when someone leaves
+
+}
+
+When joining a group, create a new group object with the specified data and save to database.
+Send a welcome message to this group. This message should be generated on a custom function generateGreetingMessage and be sent to the group when joining.
+This function receives the group title, group description and number of members.
+There are 2 kinds of welcome message to be fired
+1. The bot itself joined the group: Create the group on the database and send two messages, a default one with the botinfo and a LLM generated one with the group info (title, description and number of members)
+2. Someone else joined the group: Send the defined group.greetings message with processed variables (who joined etc.)
+
+Create a file with functions to call LLM API through OpenRouter, use official libraries if avaiable. Also provide functions to call a local LLM on LmStudio (OpenAI API). They should be avaiable for use in the commands and group join events.
+
+---
+
+Message Flow:
+1. User sends a message
+2. WhatsAppBot receives and formats the message
+3. Message is passed to EventHandler's onMessage
+4. EventHandler checks if it's a command based on prefix
+5. If it's a command, it's routed to CommandHandler
+6. CommandHandler determines the command type and executes it
+7. If not a command, it's processed by EventHandler.processNonCommandMessage (such as filters or commands that can be auto triggered)
+
+Streaming platform flow:
+1. Event for channel XXX on platform YYY is fired
+2. Check which groups are monitoring XXX@YYY
+3. For each group, generate the notificatin message based on the group configuration for this platform (simple text, media, etc.)
+3.1 Default is just a text message saying "xxx is online on link https..!" or "is offline."
+4. Send the async messages to the groups
+
+I need a simple way to test the bot without initiating a whatsapp connection.
+Create a way to fire the events async from another script (while the main bot is running).
+Like a fake version of WhatsAppBot.js that receives the events from a web api or file which can be called from a separate program and generate whatsapp-web.js objects
+No need to be a complex, a simple test.js file is ok.
+Joinig the group, should be the first one
+Even though this is a test script, everything should in the same production code and get/modify data from the real database
+
+
+Use .env file for configurations like API keys, provide .env.example
+
+Create a bat file for windows to create the folder and files structure with placeholder text (files can be empty so I can copypaste from claude)
+
+Small change to group_join
+There are 2 kinds of welcome message to be fired
+1. The bot itself joined the group: Create the group on the database and send two messages, a default one with the botinfo and a LLM generated one with the group info (title, description and number of members)
+2. Someone else joined the group: Send the defined group.greetings message with processed variables (who joined etc.)
+
+
+Issues When creating or modifying commands
+1. The loaded on memory databse is not being updated, only the persistent files. This means that after creating a custom command, the bot needs to be restarted.
+2. Media commands like stickers, images, audios, video, etc. should not save the base64 preview, but must intead download the MessageMedia and write to a file in the data/custom-cmd/media folder. The path to the saved media is what must be placed in the responses of the new command, so that sendCustomCommandResponse can properly locate and load the media into a MessageMedia
+
+
+---
+Implement new features:
+
+## New type of Command
+Normally, a command is defined if the string starts with the prefix
+Create a new type of handler that is if the message starts with the bot number mention "@${botNumber}".
+This defaults to invoking the LLM getCompletion (openrouter) method and returning the result as text
+
+## Loadreport logging
+Each WhatsAppBot.js should keep track of number of messages received and sent (in groups and outside separately) every 10 minutes
+Store this on the database and call it loadreport
+
+## Community group notifications:
+When initializing the bots, the constructor can receive 4 group IDs: grupoLogs, grupoInvites, grupoAvisos and grupoInteracao
+If set, this is the intendet behavior:
+- grupoLogs: Send log messages like the loadreport every 10 minutes, send message when initialized, send message when added/removed to/from a group
+- grupoAvisos and grupoInteracao: When receiving a donation notification, send message to these group mentioning all members
+
+## External API
+The bot should exposed an API on port 5000 with some methods.
+
+# Implement /donate_tipa (Webhook from tipa.ai)
+
+Example implementation:
+botApi.post('/donate_tipa', async function (req, res) {
+	let dadosDonate = JSON.stringify(req.headers,null,"\t")+"\n"+JSON.stringify(req.body,null,"\t");
+	
+	notifyGrupoLogs("Donate received:\n"+dadosDonate);
+
+	const headerTipa = req.headers["x-tipa-webhook-secret-token"] ?? false;
+	logger.info("[donate-tipa] Recebido request válido: ");
+
+	const nome = req.body.payload.tip.name ?? "Alguém";
+	const valor = parseFloat(req.body.payload.tip.amount);
+	const msg = req.body.payload.tip.message ?? "";
+
+	if(headerTipa === process.env.TIPA_TOKEN){
+  		logger.info(`\t[moothz] ${nome} doou R$${valor} e enviou a seguinte mensagem: ${msg}`);
+
+	  	if(valor > 0){
+	  		const dadosMeta = updateDonateMeta(valor);
+
+	  		let metaMsg = "";
+	  		if(dadosMeta){
+	  			metaMsg = `💰 *Meta*: _${dadosMeta.atual}_ de *${dadosMeta.meta}* alcançados\n${dadosMeta.motivo}\n\n`;
+	  		} else {
+	  			loggerWarn(`[donate] Erro buscando dados da meta`);
+	  		}
+
+	  		metaMsg = "";
+
+			const msgDonate = `💸 Recebemos um *DONATE* no tipa.ai! 🥳\n\n${metaMsg}*MUITO obrigado* pelos _R$${valor.toFixed(2)}, ${nome}_! 🥰\nCompartilho aqui com todos sua mensagem:\n💬 _${msg}_\n\n\`\`\`!doar ou !donate pra conhecer os outros apoiadores e doar também\`\`\``;
+			const tempoExtraDonate = Math.floor(parseFloat(valor)*300);
+
+			const msgEnviadaDonateGrupao = await client.sendMessage(configs.idGrupaoZueira, msgDonate, { linkPreview: false });
+			const msgEnviadaDonateAvisos = await client.sendMessage(configs.idGrupoAvisos, msgDonate, { linkPreview: false });
+			try{
+				msgEnviadaDonate.pin(600 + tempoExtraDonate);
+				msgEnviadaDonateAvisos.pin(600 + tempoExtraDonate);
+			} catch(e){
+				loggerWarn(`[sistema] Erro dando pin na msg donate`);
+			}
+
+
+			notifyGrupoLogs(msgDonate);
+			addValorDonate(nome,valor);
+		}
+	  	res.send('ok');
+	}  else {
+		res.send('-');
+	}
+});
+
+notifyGrupoLogs, etc. should trigger send message on all the bot instances
+They may trigger errors if the bot is not in that group, just log the error
+
+## Database for donations
+[
+  {
+    "nome": "Person Name",
+    "valor": 2400,
+    "numero": undefined
+  }
+]
+
+numero is default undefined since we don't have t from the tipa api
+Create a management commands:
+	- !g-addDonateNumero [numero] [nome]: Add number to that person donate
+	- !g-addDonateValor [valor] [nome]: Add/subtract float value to that person donate
+	- !g-mergeDonates [nome1]##[nome2]: Nomes can have space, so use a delimiter to specify both and merge values to the nome1
+
+# Implement POST /getLoad
+Reads the loadreport for all bots that happend after the provided timestamp and returns a json
+
+## Invite system
+Bots can't simply be added to groups, this is how it works:
+
+A person sends an invite link (chat.whatsapp.com) directly to the bot (not groups)
+The bot then asks the person to send a message to explain why they want the bot in the group
+After the person sends this message or it timesout (5 minutes), the bot sends 2 messages to grupoInvites: 
+1. Contains person name, number and the message explaning why
+2. Contains the formatted command tha makes the bot join the grupo using client.acceptInvite: !g-joinGrupo abcd1234
+abcd1234 is the invite code from the end of the invite link
+
+## Major change
+This needs to be thought very carefully.
+
+On the events, await should be avoided because it can lock up the thread and not process more messages
+If that's the case, make sure to use promises or callbacks on API calls and other processing like downloading message media.
+There will be function modules to download files and videos from some sources too, those will return promises and send the message only when long processing is done.
+
+Commands can have two reaction emojis defined: before and after.
+Default before is: ⏳
+Default after is: ✅
+
+As soon as a command is detected and ok to be processed (before calling the method), react to the message with the before emoji
+When the command completes and the response is to be sent (sendMessage) react with the after emoji
+
+----
+Create a new command module name ImageManipulation
+Use sharp, imagemagick, and rembg (python). Use trusted and updated npm modules for wrapping
+Those commands will manipulate the providade image (command on caption or mentioned via reply, just like sticker making) and then return the result
+
+    !removebg: Removes the image background and sharp.trim()
+    !distort: Use mogrify liquify 30- 70% intensity, scale 200%
+    Any other cool things to do with imagemagick
+
+To make us of the removebg function, also implement a new sticker command:
+* !stickerbg, !sbg: Removes the background/trim() before creating the sticker
+
+Make sure to use promises instead of await
+
+--
+## Reaction
+
+# Processing reactions
+before and after reactions are working great, but there should be a new one for error - like when the user does not provide an image for a media needed command or the api fails.
+Default emoji for error: ❌
+
+# Receiving reactions 
+A new handler ReactionsHandler. It should call a CommandHandler method to find a command by reaction to the message and create a fake message object (if needed only) to call the appropriate method. This is needed because a command reacts to the message that triggered the command, but if it's a reaction, there's no message - this is to avoid errors, but can be doen in a way you think is best.
+Example reactions to implement now:
+!sticker: 🖼
+!stickerbg: ✂️
+!removebg: 🪓
+!ai: 🤖
+
+Think of new emojis for the other commands, if you want.
+
+## !ai and mentionhandler
+[llm-service] Received response from OpenRouter API { status: 200, contentLength: 401 }
+Seems ok, but not response is being sent back. Log the initial prompt and response also to better debug why
+
+## ImageManipulation
+Small change: removebg should return media as a file, not image
+
+## Stickers.js
+When creating stickers, set the author to "ravena" and the sticker name to what's after the command, if nothing, the group name
+"!s batata" would create a sticker from the author "ravena" with the title "batata"
+
+
+----
+
+## Management
+Now that commands support reactions create:
+!g-setReact [command] [emoji] (after reaction)
+!g-setStartReact [command] [emoji] (before reaction, default none)
+Custom commands do not have reactions as default, only the error one ❌
+
+## Cooler !menu and !cmd
+If command has aliases (add property aliasFor in the commands definition) show them comma separated
+If command can be activated with a reaction, show it in parenteshis like
+!sticker, !s (🖼️)
+
+Currently it is showing Fixed and managament commands, but also create a "Group Commands" list, shown first
+
+## New Functions
+
+# !atencao, !galera
+Sends a message to the group and mention all members silently (do not show their name names on the messags, only the mentions array) (except opt-out from !ignorar command)
+
+# !ignorar
+Toggles member option to be ignored by the bot on random select functions and !atencao command
+(save this as array in the group database)
+
+# Text to speech
+!tts command to convert text to speech. Use a good local and free library for this
+
+# Speech to Text
+!stt command to convert received audio/voice to text
+
+Use a local and free library for this. Only language that needs to be supported is PT-BR
+It's okay to use exec and call an external program.
+
+If received audio outside of group (directly to bot), automatically begin converting
+For groups, add managament commando !g-autoStt that toggles this functionality (only for messages of type 'voice')
+
+# Summary
+!resumo
+Usable only inside groups.
+Fetch the last 30 text messages sent (images caption too) like
+Person 1: Message sent
+Person 2: Message sent
+
+If not possible to fetch, implement a way to keep group conversations in memory or in a json file (latest-messages-12345@g.us.json)
+
+Send this conversation to the LLM and ask for a summary of what's going on in the group chat
+
+# Interact
+!interagir
+Usable only inside groups.
+Just like !resumo, but instead ask the LLM to generate a message to blend in with the group, like the bot knows the subject and wants to interact with a single short phrase, using similar language
+
+# Search
+!buscar, !google [string to search]
+Search the web for this string.
+Return a list of items. Use DuckDuckGo if there are avaiable packages.
+
+!buscar-img to search for images, return random 5 images with their caption
+
+---
+Este projeto foi gerado pelo claude.
+
+Preciso converter todos os textos de comentários e strings de respostas para PT-BR.
+Analise arquivo por arquivo, localize para PT-BR e me envie os mesmos completos.
+
+Não altere nomes de funções e variáveis, apenas comentários e strings de respostas e logs.
+Não faça um script que faça isso, execute as mudanças aqui e irei copiá-las conferindo cada arquivo de uma vez.
+Gere um artefato para cada arquivo, com o conteúdo completo de cada um deles.
+
+---
+
+## Modificações index
+Caso CHROME_PATH esteja definido no .env, inicialize os bots com ele.
+A variável HEADLESS_MODE .env define o headless
+Padrão: true
+
+puppeteer: {
+	executablePath: chromePath,
+	args: [ "--no-sandbox", "--disable-setuid-sandbox", "--disable-extensions", '--disable-gpu', "--disable-accelerated-2d-canvas", "--no-first-run", "--no-zygote", '--disable-dev-shm-usage'],
+	headless: headlessMode
+}
+
+## Erros
+
+# LLM
+O LLM no openrouter está retornando vazio. A implementação está correta?
+
+# SearchCommands
+buscar-img não está retornando nenhuma imagem
+
+## Nova function: Jogo-RoletaRussa
+!roletarussa
+Funciona apenas em grupos
+Crie a roletarussa.json database
+
+Quando usar o comando, existe 1 em 6 chances que o membro 'morre' no jogo, por um tempo pré definido em !g-setTempoRoleta [segundos], max 3600
+Se morto, apenas reagir mensagem com ⚰️
+Não pode ser usado em sequencia pela mesma pessoa, outra precisa tentar jogar antes
+Cada grupo tem uma base de dados. O membro só morre dentro daquele grupo.
+Guarde na base de dados, por membro: quantidade de tentativas atuais, maior quantidade sem morrer e numero de mortes totais
+
+Resposta
+Não morreu: 💨🔫 *click* - Tá *safe*! \`\`\`${tentativasAtuais}\`\`\`
+Morreu: 💥🔫 *BANG* - _F no chat_ ${info}
+
+Variável info info:
+Se sobreviveu por mais tempo:
+Morreu em ${qtdTentativasAtual}, um novo record! Seu máximo antes disso era ${qtdMaximaTentativas}.\nNeste grupo, você já morreu ${qtdMortes} vezes.
+Caso contrário:
+Morreu em ${qtdTentativasAtual}.\nNeste grupo, você já morreu ${qtdMortes} vezes.
+
+
+
+!roletaranking
+Funciona apenas em grupos
+Mostra o ranking da roleta russa nesse formato:
+emojisRanking = ["","🥇","🥈","🥉","🐅","🐆","🦌","🐐","🐏","🐓","🐇"]
+
+🏆 Rankings Roleta Russa 🔫
+
+🍀 Sorte - Máx. Tentativas sem morrer
+	🥇 1°: 22 - Guilherme Recofka
+	🥈 2°: 19 - Adolfinho
+	🥉 3°: 16 - preto bosta
+	🐅 4°: 15 - Bin laden
+	🐆 5°: 15 - .
+	🦌 6°: 12 - David
+	🐐 7°: 11 - Alexandre Assis
+	🐏 8°: 8 - Lord Mamazin
+	🐓 9°: 6 - Vinicius🍎
+	🐇 10°: 6 - Dark Schneider
+
+
+🪦 Número de Mortes
+	🥇 1°: 19 - Adolfinho
+	🥈 2°: 18 - preto bosta
+	🥉 3°: 16 - Lord Mamazin
+	🐅 4°: 15 - Bin laden
+	🐆 5°: 14 - Guilherme Recofka
+	🦌 6°: 12 - Alexandre Assis
+	🐐 7°: 7 - .
+	🐏 8°: 5 - David
+	🐓 9°: 3 - Vinicius🍎
+	🐇 10°: 2 - Dark Schneider
+
+
+---
+## Roleta
+Consertar um detalhe: O raking de "Max tentativas sem morrer" deve ser atualizado a cada novo tiro do usuário, não só quando ele morre, ou seja, se a pessoa jogou e não morreu ainda, ela deveria aparecer no ranking já.
+
+## Nova functions FileManager.js
+
+Funciona também no privado do bot, o grupo seria cosiderado o Id do usuário (@c.us)
+!pastas: Lista as pastas e arquivos criadas no grupo, mostrando tamanho dos arquivos e o total utilizado no final
+!p-criar: Cria nova pasta
+!p-criar [destino]: Cria nova pasta dentro de [destino]
+!p-enviar [destino\destino]: Envia arquivo na mensagem mencionada (quotedMessage) para a pasta destino. se destino tiver uma extensão, definir nome do arquivo pra ele, se não, pegar nome do arquivo enviado
+!p-excluir [destino\arquivo.xxx]: Apaga o arquivo ou pasta especificado
+!p-baixar [destino\arquivo.xxx]: O bot envia o arquivo especificado. Se for a pasta, envia todos da pasta
+
+Tamanho máximo arquivo: 100Mb
+Tamanho máximo pasta por grupo: 1Gb
+Tamanho máximo nome arquivo: 10 caracteres, sem espaço, apenas letras, numeros e underscore _
+Caminho máximo de pastas dentro de pastas: 5
+
+Use emojis, hifens e underscores para ilustrar a estrutura de pasta de uma forma boa
+
+Armazenar os arquivos na pasta "media\12345@g.us\files"
+Criar database para arquivos por grupo/contato e saber onde cada arquivo fica
+
+Nova possibilidade de variável para CustomCommand
+!g-addCmd [comando]
+"{file-destino\arquivo.xxx}"
+
+Quando o conteudo da mensagem for este {file-xxx}, busca o arquivo espeficado na pasta do grupo e envia ele (ou a pasta).
+Funciona exatamente como um alias para !p-baixar {file-destino\arquivo.xxx}
+
+
+---
+
+## FileManager.js
+Não está listando os arquivo na pasta
+Permitir que arquivos sejam enviados para pasta "raiz", sem uma pasta especificada
+
+No cabeçalho "Arquivos e Pastas" mostrar em itálico na segunda linha o nome de cadastro do grupo ou o nome do author caso seja chat privado
+
+---
+
+## Function: YoutubeDownloader
+
+Duas funções !yt e !sr
+
+!yt baixa um video do youtube
+
+!sr baixa em formato de áudio
+
+Se for link, baixa direto, se for texto, busca o video antes.
+
+Anexei o arquivo utils/VideoCacheManager.js para ser utilizado em conjunto
+
+Crie o YoutubeDownloader.js nos padrões deste projeto.
+
+Use como exemplo o método de dowlnoad utilizado no arquivo youtube.js fornecido em conjunto
+
+Como buscar video no youtube por string:
+
+const ytSearch = require("youtube-search-api");
+
+ytSearch.GetListByKeyword(txtBusca,false,1).then(resultadoBusca => {
+
+	if videos[0] existe, foi encontrado
+
+});
+
+Ative também os 2 comandos ao mesmo tempo para quando o usuário reagir a mensagem que contenha link do youtube com o emoji ⏬
+
+## functions/FileConversions.js
+
+!getaudio: Tenta converter a mensagem mencionada em um arquivo de audio mp3 e retorna em formato de arquivo. Pode ser usado em mensagens de audio, voz e video
+
+!getvoice: Similar ao getaudio, mas envia no formato voice de mensagem
+
+!volume 0-1000: Pode ser usado em mensagens de audio, voz e video e retorna a midia no mesmo formato mas controlando o volume, 0 = mudo, 100 = mesmo volume, 1000 = 10x o volume original
+
+---
+
+## Stickers
+Caso !sticker seja usado (como resposta de mensagem) em um sticker (também vale para a reação 🖼), retorna o arquivo de midia (foto ou vídeo)
+
+## Management.js
+
+# g-addCmd
+Permitir que o comando tenha mais de 1 palavra
+!g-addCmd bom dia
+permite que o comando seja invocado com 'bom dia' e não só 'bom'
+
+# g-setPrefix
+Permitir que a função não tenha argumentos, assim o prefixo será vazio e qualquer mensagem poderá ser um comando
+
+# g-info
+Novo comando. Mostra todas as informações de cadastro do grupo de forma organizada e legível no whatsapp
+No final da resposta, listar também todos os comandos do grupo com suas respostas, sem processar as variáveis, apenas o texto que existe no array responses
+
+# !cmd, !menu
+Exibir primeiro os comandos personalizados do grupo na lista
+
+# Filters
+Implementar comandos que gerenciam os filtros
+!g-filtro-palavra [palavra ou frase]: Adiciona a frase informada como filtro. Enviar o comando novamente para remover. Sempre que adicionar ou remover alguma palavra, mostrar lista de palavras/frases filtradas atualmente
+!g-filtro-links: Habilita/desabilita que o bot apague links recebidos no grupo (usar regex pra detectar se a mensagem possui link)
+!g-filtro-pessoa [numero]: Habilita/desabilita que o bot apague mensagens recebidas de uma pessoa cujo numero possua o numero informado no filtro (argumento numero precisa ter pelo menos 8 digitos, apenas numeros, limpar o que não for numero automaticamente)
+!g-filtro-nsfw: Habilita/desabilita filtro de NSFW
+
+
+# Filtro NSFW
+Criar utils NSFWPredict
+Criar função que recebe o caminho para o arquivo e retorna se é NSFW ou não, analisando se os limiares passam de um valor pre definido
+Usar algum modulo pronto, podendo se externo (definir no .env executavel se for o caso), como o nsfw-predict em python
+Utilize modulos modernos e recomende um modelo atualizado para a detecção.
+
+Todas mensagens que se encaixarem no filtro serão apagadas pelo bot caso ele seja admin.
+Se o bot não for admin, não tenta apagar.
+Quando o usuário usar qualquer comando !g-filtro, verificar se o bot é admin e avisar o usuário que para utilizar os filtros, é preciso que o bot seja admin
+
+## Nova Funcionalidade:
+Possibilidade de criar alias usando variável em comandos personalizados
+!g-addCmd batata -> {cmd-!comando argumento}
+
+Enviar '!batata' seria o mesmo que enviar '!comando argumento'
+
+----
+# Problema com g-setPrefix
+O comando não está mais sendo reconhecido como um comando
+
+# g-info
+Adicione também informação sobre o !pastas, apenas o numero de arquivos armazenados e o tamanho total utilizado
+
+# Weather
+Remova o !weather do PlaceholderCommands e implemente o Weather.js no functions
+O comando !weather ou !clima precisa de argumentos e precisa receber ou o nome da cidade ou a localização (mensagem tipo location) como mensagem mencionada
+
+Gere uma mensagem bonita com emojis para representar o clima atual com temperatura, umidade, sensação térmica, velocidade do vento e o que mais achar interessante.
+
+Abaixo, uma lista com a previsão do tempo das próximas horas (apenas temperatura e tipo de clima, como chuva ou nublado)
+No final da mensage, a previsão do tempo para os próximos dias, resumida como a das próximas horas (temperatura e tipo de clima)
+
+--
+
+## Management
+
+Implemente agora os comandos para configurar canais da twitch, kick e youtube.
+No modelo do grupo, uma configuração exemplo ficaria assim:
+
+Sempre que configurar um canal, a única midia padrão é a text para "online"
+Texto padrão twitch e kick:
+⚠️ ATENÇÃO!⚠️\n\n🌟 *{nomeCanal}* ✨ está _online_ streamando *{jogo}*!\n_{titulo}_\n\nhttps://twitch.tv/{nomeCanal}
+
+Para Youtube:
+*⚠️ Vídeo novo! ⚠️*\n\n*${video.author}:* _${video.title}_ \n${video.link}
+
+data.twitch = [
+{
+	"channel": "channelName",
+	"onConfig": {
+		"media": [{"type": "text", "content": default},{"type": "sticker", "content": "..."}], //
+		]
+	},
+	"offConfig": // mesmo que on, mas pra quando o canal fica off
+}]
+
+
+!g-xxx-canal [canal]: Ativa monitoramento deste canal da twitch, se enviar o mesmo comando novamente, desativa
+!g-xxx-midia-on  [canal]: Usado como resposta a uma midia ou mensagem de texto. Se enviado sem parametro, apaga o conteúdo cofigurado das midias e volta o texto on para o padrão
+!g-xxx-midia-off  [canal]: Mesmo que on, mas para off, sem parametro, apenas remove todas as midias do off
+!g-xxx-mudarTitulo  [canal]: Habilita/desabilita o bot mudar o titulo do grupo quando a live fica on e off. Quando configurar, verifica se o bot é admin, se não for, informa que só é possível mudar o titulo se o bot for admin. Quando habilitar, informe o usuário que ele pode usar os comandos abaixo para definir um titulo personalizado, se não o bot apenas irá alterar a palavra ON para OFF e OFF para ON.
+!g-xxx-titulo-on [canal]: Define um titulo personalizado pro grupo quando a live ficar on. Se mandar sem argumentos, remove o titulo personalizado e informa o usuário que apenas será substituida a palavra OFF pra ON e vice versa no titulo do grupo, caso exista.
+!g-xxx-titulo-off [canal]: O mesmo que acima, mas para evento offline
+!g-xxx-usarIA [canal]: Gera e envia junto também uma mensagem de texto usando o LLMService com IA, prompt padrão "O canal XXX ficou online e está jogando, gere uma mensagem animada para convidar a galera do grupo a participar da stream."
+
+O argumento [canal] é opcional para os comandos de midia e titulo quando existir apenas um canal configurado no grupo.
+Se existir mais de um canal configurado, informe o usuário a maneira correta de usar o comando e lista de canais configurado no grupo do mesmo.
+
+## StreamMonitor
+Com as informações das streams configurada no grupo, tome as ações necessárias quando o canal fica on ou off (ou video novo no youtube).
+Envie para o grupo as mídias e mensagem de texto e altere o titulo do grupo se necessário.
+Caso o grupo não tenha titulo on/off personalizado definido, apenas altere a palavra ON para OFF e vice versa. Altere também todos os emojis verde para vermelho e vice versa, por exemplo:
+	const emojiMap = {
+		'🔴': '🟢',
+		'🟢': '🔴',
+		'❤️': '💚',
+		'💚': '❤️',
+		'🌹': '🍏',
+		'🍏': '🌹',
+		'🟥': '🟩',
+		'🟩': '🟥'
+	};
+
+---
+
+Atualize o !g-info para mostrat também todos os dados de stream configurado no grupo
+
+--
+
+## Novas funcionalidades de gerência
+
+- !g-apelido [apelido]: Define um apelido pelo qual o bot irá chamar o usuário (ao invés do author.name)
+Máximo 20 caracteres. Definido por grupo na base de dados do grupo, propriedade "nicks" {"numero": "123462c.us", "apelido": "batata"}
+
+- !g-ignorar [numero]: Ignora mensagens recebidas de uma pessoa cujo numero possua o numero informado (argumento numero precisa ter pelo menos 8 digitos, apenas numeros, limpar o que não for numero automaticamente)
+
+- !g-mute [string]: Faz com que o bot ignore frases que comecem com essa string, não sendo processadas
+
+
+## Novo comando (functions)
+
+!listas. Cria listas dentro de grupos que os usuários podem entrar e sair
+Comandos: !ll, !listas (list), !lc (create), !ld (delete), !le (entrar), !ls (sair), !lt (titulo
+), lr (remove)
+
+- !ll/!listas: Mostra as listas atuais no grupo
+- !lc nome1 nome2: Cria as listas com os nomes especificados
+- !lct nome Titulo: Cria lista já com um titulo 
+- !ld nome1 nome2: Deleta as listas com os nomes especificados
+- !le nome: Entra na lista 'nome'
+- !ls nome: Sai da lsita 'nome'
+- !lt nome Nome da Lista: Define um título para a lista
+- !lr lista nome: Apenas para administradores. Remove nome da lista
+
+Também deve ser possível reagir com os emoji de números (1️⃣, 2️⃣ , ...) na lista de listas para entrar e sair das mesmas
+
+Use a pasta da base de dados para armazenar as listas (pasta lists), um arquivo por grupo, assim como os custom-cmd
+
+
+--- 
