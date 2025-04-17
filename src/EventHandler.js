@@ -567,7 +567,8 @@ class EventHandler {
       }
       
       // Saudação padrão
-      return `Bem-vindo ao grupo, ${user.name}!`;
+      //return `Bem-vindo ao grupo, ${user.name}!`;
+      return false;
     } catch (error) {
       this.logger.error('Erro ao gerar mensagem de saudação:', error);
       return null;
@@ -594,7 +595,8 @@ class EventHandler {
       }
       
       // Despedida padrão
-      return `Adeus, ${user.name}!`;
+      //return `Adeus, ${user.name}!`;
+      return false;
     } catch (error) {
       this.logger.error('Erro ao processar mensagem de despedida:', error);
       return null;
