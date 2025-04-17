@@ -1,6 +1,8 @@
 const axios = require('axios');
-const Logger = require('../utils/Logger');
 const { MessageMedia } = require('whatsapp-web.js');
+const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('giphy-commands');
 
@@ -13,39 +15,34 @@ const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
 const GIPHY_SEARCH_URL = 'https://api.giphy.com/v1/gifs/search';
 const GIPHY_TRENDING_URL = 'https://api.giphy.com/v1/gifs/trending';
 
-const commands = [
-  {
-    name: 'gif',
-    description: 'Busca e envia um GIF do Giphy',
-    reactions: {
-      before: "🔍",
-      after: "📱"
-    },
-    method: async (bot, message, args, group) => {
-      await enviarGif(bot, message, args, group);
-    }
-  }
-];
-
 /**
  * Busca e envia um GIF do Giphy
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function enviarGif(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
+    const returnMessages = [];
     
     // Se não tiver API key configurada
     if (!GIPHY_API_KEY) {
-      await bot.sendMessage(chatId, '⚠️ API do Giphy não configurada. Defina GIPHY_API_KEY no arquivo .env');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: '⚠️ API do Giphy não configurada. Defina GIPHY_API_KEY no arquivo .env'
+      });
     }
     
     // Envia mensagem de aguarde
-    await bot.sendMessage(chatId, '🔍 Buscando GIF...');
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: '🔍 Buscando GIF...'
+      })
+    );
     
     let gifUrl, gifTitle, gifRating, gifSource, gifTrending;
     let gifData;
@@ -64,8 +61,10 @@ async function enviarGif(bot, message, args, group) {
       
       // Verifica se tem resultados
       if (!response.data || !response.data.data || response.data.data.length === 0) {
-        await bot.sendMessage(chatId, '❌ Não foi possível encontrar GIFs populares. Tente novamente mais tarde.');
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '❌ Não foi possível encontrar GIFs populares. Tente novamente mais tarde.'
+        });
       }
       
       // Seleciona um GIF aleatório da lista de trending
@@ -89,8 +88,10 @@ async function enviarGif(bot, message, args, group) {
       
       // Verifica se tem resultados
       if (!response.data || !response.data.data || response.data.data.length === 0) {
-        await bot.sendMessage(chatId, `❌ Nenhum GIF encontrado para "${searchTerm}". Tente outra busca.`);
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Nenhum GIF encontrado para "${searchTerm}". Tente outra busca.`
+        });
       }
       
       // Seleciona um GIF aleatório dos resultados
@@ -153,10 +154,15 @@ async function enviarGif(bot, message, args, group) {
     caption += `📊 *Classificação:* ${gifRating.toUpperCase()}\n`;
     caption += `🔗 *Fonte:* ${gifSource || 'Giphy'}\n`;
     
-    // Envia a mídia com legenda
-    await bot.sendMessage(chatId, media, {
-      caption: caption,
-      sendMediaAsDocument: false // Envia como mídia normal (não documento)
+    // Retorna a mídia com legenda
+    return new ReturnMessage({
+      chatId: chatId,
+      content: media,
+      options: {
+        caption: caption,
+        sendMediaAsDocument: false, // Envia como mídia normal (não documento)
+        quotedMessageId: message.origin.id._serialized
+      }
     });
     
     logger.info(`GIF enviado com sucesso para ${chatId}`);
@@ -175,9 +181,25 @@ async function enviarGif(bot, message, args, group) {
       }
     }
     
-    await bot.sendMessage(chatId, `❌ ${errorMessage}`);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `❌ ${errorMessage}`
+    });
   }
 }
+
+// Comandos utilizando a classe Command
+const commands = [
+  new Command({
+    name: 'gif',
+    description: 'Busca e envia um GIF do Giphy',
+    reactions: {
+      before: "🔍",
+      after: "📱"
+    },
+    method: enviarGif
+  })
+];
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
