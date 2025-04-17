@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
+const ReturnMessage = require('../models/ReturnMessage');
+const Command = require('../models/Command');
 
 const logger = new Logger('imdb-commands');
 
@@ -12,26 +14,13 @@ const OMDB_API_KEY = process.env.OMDB_API_KEY || '';
 // URL base da API
 const OMDB_API_URL = 'http://www.omdbapi.com/';
 
-const commands = [
-  {
-    name: 'imdb',
-    description: 'Busca informações sobre filmes ou séries no IMDB',
-    reactions: {
-      before: "🎬",
-      after: "🍿"
-    },
-    method: async (bot, message, args, group) => {
-      await buscarImdb(bot, message, args, group);
-    }
-  }
-];
-
 /**
  * Busca informações sobre um filme ou série no IMDB
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function buscarImdb(bot, message, args, group) {
   try {
@@ -39,20 +28,27 @@ async function buscarImdb(bot, message, args, group) {
     
     // Verificar se a API key está configurada
     if (!OMDB_API_KEY) {
-      await bot.sendMessage(chatId, '⚠️ API do OMDB não configurada. Defina OMDB_API_KEY no arquivo .env');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: '⚠️ API do OMDB não configurada. Defina OMDB_API_KEY no arquivo .env'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça o nome de um filme ou série para buscar. Exemplo: !imdb Inception');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça o nome de um filme ou série para buscar. Exemplo: !imdb Inception'
+      });
     }
     
     // Obtém o nome do filme/série
     const nome = args.join(' ');
     
-    // Envia mensagem de processamento
-    await bot.sendMessage(chatId, `🔍 Buscando informações sobre "${nome}"...`);
+    // Primeiro, envia mensagem de processamento
+    const processingMessage = new ReturnMessage({
+      chatId: chatId,
+      content: `🔍 Buscando informações sobre "${nome}"...`
+    });
     
     // Realiza a busca inicial para obter o ID do filme/série
     const searchResponse = await axios.get(OMDB_API_URL, {
@@ -66,8 +62,10 @@ async function buscarImdb(bot, message, args, group) {
     
     // Verifica se encontrou resultados
     if (searchResponse.data.Response === 'False' || !searchResponse.data.Search || searchResponse.data.Search.length === 0) {
-      await bot.sendMessage(chatId, `❌ Não foi possível encontrar "${nome}". Verifique se o nome está correto.`);
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `❌ Não foi possível encontrar "${nome}". Verifique se o nome está correto.`
+      });
     }
     
     // Obtém o primeiro resultado da busca
@@ -86,8 +84,10 @@ async function buscarImdb(bot, message, args, group) {
     
     // Verifica se encontrou detalhes
     if (detailResponse.data.Response === 'False') {
-      await bot.sendMessage(chatId, `❌ Erro ao buscar detalhes para "${nome}".`);
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `❌ Erro ao buscar detalhes para "${nome}".`
+      });
     }
     
     // Obtém os detalhes do filme/série
@@ -148,7 +148,10 @@ async function buscarImdb(bot, message, args, group) {
     // Adiciona sinopse
     if (data.Plot && data.Plot !== "N/A") {
       // Limita tamanho da sinopse
-      const sinopse = data.Plot.length > 300 ? data.Plot.substring(0, 297) + '...' : data.Plot;
+      const sinopse = data.Plot.length > 300 ? 
+        data.Plot.substring(0, 297) + '...' : 
+        data.Plot;
+      
       mensagem += `\n📝 *Sinopse:* ${sinopse}\n`;
     }
     
@@ -156,31 +159,41 @@ async function buscarImdb(bot, message, args, group) {
     mensagem += `\n🔗 *IMDB:* https://www.imdb.com/title/${data.imdbID}/`;
     
     // Tenta obter a imagem do poster
-    let posterUrl = data.Poster;
-    
-    if (posterUrl && posterUrl !== 'N/A') {
+    if (data.Poster && data.Poster !== 'N/A') {
       try {
         // Baixa a imagem do poster
-        const imageResponse = await axios.get(posterUrl, { responseType: 'arraybuffer' });
+        const imageResponse = await axios.get(data.Poster, { responseType: 'arraybuffer' });
         const imageBuffer = Buffer.from(imageResponse.data, 'binary');
         const base64Image = imageBuffer.toString('base64');
         
-        // Obtém o tipo de imagem (geralmente jpg, mas pode ser png)
+        // Determina o tipo de imagem (geralmente jpg, mas pode ser png)
         const contentType = imageResponse.headers['content-type'] || 'image/jpeg';
         
         // Cria a mídia para o poster
         const media = new MessageMedia(contentType, base64Image, `${data.imdbID}.jpg`);
         
-        // Envia a mensagem com o poster
-        await bot.sendMessage(chatId, media, { caption: mensagem });
+        // Retorna a mensagem com o poster
+        return new ReturnMessage({
+          chatId: chatId,
+          content: media,
+          options: {
+            caption: mensagem
+          }
+        });
       } catch (imageError) {
         logger.error('Erro ao baixar poster:', imageError);
         // Se falhar ao baixar a imagem, envia apenas o texto
-        await bot.sendMessage(chatId, mensagem);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: mensagem
+        });
       }
     } else {
       // Se não tiver poster, envia apenas o texto
-      await bot.sendMessage(chatId, mensagem);
+      return new ReturnMessage({
+        chatId: chatId,
+        content: mensagem
+      });
     }
   } catch (error) {
     logger.error('Erro ao buscar IMDB:', error);
@@ -201,11 +214,24 @@ async function buscarImdb(bot, message, args, group) {
       }
     }
     
-    await bot.sendMessage(chatId, `❌ ${errorMessage}`);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `❌ ${errorMessage}`
+    });
   }
 }
 
-// Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+// Criar array de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'imdb',
+    description: 'Busca informações sobre filmes ou séries no IMDB',
+    reactions: {
+      before: "🎬",
+      after: "🍿"
+    },
+    method: buscarImdb
+  })
+];
 
 module.exports = { commands };

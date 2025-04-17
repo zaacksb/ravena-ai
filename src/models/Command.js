@@ -50,6 +50,9 @@ class Command {
     // Estado e visibilidade
     this.active = data.active !== undefined ? data.active : true; // Se o comando está ativo
     this.hidden = data.hidden || false;             // Se o comando deve ser oculto em listagens
+    
+    // Flag para indicar se o comando usa ReturnMessage
+    this.usesReturnMessage = data.usesReturnMessage !== undefined ? data.usesReturnMessage : true;
   }
 
   /**
@@ -76,7 +79,16 @@ class Command {
       
       // Executa o método do comando
       const result = await this.method(bot, message, args, group);
-      return result;
+      
+      // Processa o resultado, convertendo para ReturnMessage(s) se necessário
+      if (this.usesReturnMessage) {
+        // O método já retorna ReturnMessage(s), apenas passa adiante
+        return result;
+      } else {
+        // Legacy mode: se o método não retornar nada, assume que
+        // já tratou o envio de mensagens manualmente
+        return result;
+      }
     } catch (error) {
       throw error;
     }
@@ -149,7 +161,8 @@ class Command {
       lastUsed: this.lastUsed,
       metadata: this.metadata,
       active: this.active,
-      hidden: this.hidden
+      hidden: this.hidden,
+      usesReturnMessage: this.usesReturnMessage
     };
   }
   

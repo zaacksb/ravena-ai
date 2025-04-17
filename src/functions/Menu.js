@@ -4,28 +4,13 @@ const path = require('path');
 const Logger = require('../utils/Logger');
 const fs = require('fs').promises;
 const Database = require('../utils/Database');
+const ReturnMessage = require('../models/ReturnMessage');
+const Command = require('../models/Command');
 
 const logger = new Logger('menu-commands');
 const database = Database.getInstance();
 
 logger.info('Módulo MenuCommands carregado');
-
-const commands = [
-  {
-    name: 'cmd',
-    description: 'Mostra todos os comandos disponíveis',
-    method: async (bot, message, args, group) => {
-      await sendCommandList(bot, message, args, group);
-    }
-  },
-  {
-    name: 'menu',
-    description: 'Mostra todos os comandos disponíveis',
-    method: async (bot, message, args, group) => {
-      await sendCommandList(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Agrupa comandos por categoria para melhor organização
@@ -88,6 +73,7 @@ function formatCommand(cmd, prefix) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com a lista de comandos
  */
 async function sendCommandList(bot, message, args, group) {
   try {
@@ -157,15 +143,40 @@ async function sendCommandList(bot, message, args, group) {
     menuText += `• *${prefix}g-filtro-pessoa*: Adiciona/remove pessoas do filtro\n`;
     menuText += `• *${prefix}g-filtro-nsfw*: Ativa/desativa filtro de conteúdo NSFW\n`;
     
-    // Envia o menu
-    await bot.sendMessage(chatId, menuText);
-    logger.debug('Lista de comandos enviada com sucesso');
+    // Retorna a mensagem com o menu
+    return new ReturnMessage({
+      chatId: chatId,
+      content: menuText
+    });
   } catch (error) {
     logger.error('Erro ao enviar lista de comandos:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao recuperar lista de comandos. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao recuperar lista de comandos. Por favor, tente novamente.'
+    });
   }
 }
+
+// Criar array de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'cmd',
+    description: 'Mostra todos os comandos disponíveis',
+    method: async (bot, message, args, group) => {
+      return await sendCommandList(bot, message, args, group);
+    }
+  }),
+  
+  new Command({
+    name: 'menu',
+    description: 'Mostra todos os comandos disponíveis',
+    method: async (bot, message, args, group) => {
+      return await sendCommandList(bot, message, args, group);
+    }
+  })
+];
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));

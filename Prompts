@@ -939,5 +939,8 @@ Utilize as functions enviadas aqui para definir o padrão da classe.
 Crie também a docuemtanção para esta classe
 
 ---
-Me envie como artefatos completos estes arquivos alterados para utilizar o sendReturnMessages e também a classe models/Command.js
+Me envie como artefatos completos os arquivos da pasta functions alterados para utilizar o sendReturnMessages e também a classe models/Command.js
+
 Caso a função retorne mais de 1 mensagem, faça proveito do fato do sendReturnMessages receber um array de ReturnMessage
+
+Se precisar de mais algum arquivo pra fazer a implementação correta, me peça antes de prosseguir

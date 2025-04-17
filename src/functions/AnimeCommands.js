@@ -2,24 +2,12 @@ const axios = require('axios');
 const malScraper = require('mal-scraper');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('anime-commands');
 
 logger.info('Módulo AnimeCommands carregado');
-
-const commands = [
-  {
-    name: 'anime',
-    description: 'Busca informações sobre um anime no MyAnimeList',
-    reactions: {
-      before: "🔍",
-      after: "🗾"
-    },
-    method: async (bot, message, args, group) => {
-      await buscarAnime(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Busca informações sobre um anime no MyAnimeList
@@ -27,29 +15,40 @@ const commands = [
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function buscarAnime(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça o nome de um anime para buscar. Exemplo: !anime Naruto');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça o nome de um anime para buscar. Exemplo: !anime Naruto'
+      });
     }
     
     // Obtém o nome do anime
     const nome = args.join(' ');
     
-    // Envia mensagem de processamento
-    await bot.sendMessage(chatId, `🔍 Buscando informações sobre "${nome}"...`);
+    // Cria array de ReturnMessages para retornar
+    const returnMessages = [];
+    
+    // Adiciona mensagem de processamento
+    returnMessages.push(new ReturnMessage({
+      chatId: chatId,
+      content: `🔍 Buscando informações sobre "${nome}"...`
+    }));
     
     // Busca informações do anime usando mal-scraper
     const data = await malScraper.getInfoFromName(nome);
     
     // Verifica se encontrou dados
     if (!data || !data.title) {
-      await bot.sendMessage(chatId, `❌ Não foi possível encontrar informações sobre "${nome}". Verifique se o nome está correto.`);
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `❌ Não foi possível encontrar informações sobre "${nome}". Verifique se o nome está correto.`
+      });
     }
     
     // Obtém dados do anime
@@ -90,16 +89,28 @@ async function buscarAnime(bot, message, args, group) {
         // Cria mídia a partir da imagem
         const media = new MessageMedia('image/jpeg', base64Image, 'anime.jpg');
         
-        // Envia a mensagem com mídia
-        await bot.sendMessage(chatId, media, { caption: mensagem });
+        // Retorna a mensagem com mídia
+        return new ReturnMessage({
+          chatId: chatId,
+          content: media,
+          options: {
+            caption: mensagem
+          }
+        });
       } catch (imageError) {
         logger.error('Erro ao baixar imagem do anime:', imageError);
         // Se falhar ao baixar a imagem, envia apenas o texto
-        await bot.sendMessage(chatId, mensagem);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: mensagem
+        });
       }
     } else {
       // Se não tiver imagem, envia apenas o texto
-      await bot.sendMessage(chatId, mensagem);
+      return new ReturnMessage({
+        chatId: chatId,
+        content: mensagem
+      });
     }
   } catch (error) {
     logger.error('Erro ao buscar anime:', error);
@@ -113,9 +124,25 @@ async function buscarAnime(bot, message, args, group) {
       errorMessage = `Tempo esgotado ao buscar informações. A API pode estar indisponível.`;
     }
     
-    await bot.sendMessage(chatId, `❌ ${errorMessage}`);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `❌ ${errorMessage}`
+    });
   }
 }
+
+// Criar array de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'anime',
+    description: 'Busca informações sobre um anime no MyAnimeList',
+    reactions: {
+      before: "🔍",
+      after: "🗾"
+    },
+    method: buscarAnime
+  })
+];
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));

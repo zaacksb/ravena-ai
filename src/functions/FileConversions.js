@@ -3,6 +3,8 @@ const fs = require('fs').promises;
 const ffmpeg = require('fluent-ffmpeg');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('file-conversions');
 const tempDir = path.join(__dirname, '../../temp');
@@ -140,8 +142,285 @@ async function cleanupTempFiles(filePaths) {
   }
 }
 
+/**
+ * Implementação do comando getaudio
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ */
+async function handleGetAudio(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    // Obtém mensagem citada
+    const quotedMsg = await message.origin.getQuotedMessage();
+    
+    // Verifica se a mensagem citada tem mídia
+    if (!quotedMsg.hasMedia) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'A mensagem citada não contém mídia.'
+      });
+    }
+    
+    // Verifica tipo de mídia
+    const quotedMedia = await quotedMsg.downloadMedia();
+    const supportedTypes = ['audio', 'voice', 'video'];
+    const mediaType = quotedMedia.mimetype.split('/')[0];
+    
+    if (!supportedTypes.includes(mediaType)) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`
+      });
+    }
+    
+    // Envia indicador de processamento
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: '⏳ Processando áudio...'
+      })
+    );
+    
+    // Salva mídia em arquivo temporário
+    let tempFiles = [];
+    
+    const inputExt = quotedMedia.mimetype.split('/')[1];
+    const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
+    tempFiles.push(inputPath);
+    
+    // Converte para MP3
+    const outputPath = await convertToMp3(inputPath);
+    tempFiles.push(outputPath);
+    
+    // Cria objeto de mídia
+    const outputMedia = await createMediaFromFile(outputPath, 'audio/mp3');
+    
+    // Limpa arquivos temporários
+    cleanupTempFiles(tempFiles).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    // Adiciona a mensagem de mídia ao retorno
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: outputMedia,
+        options: {
+          sendAudioAsVoice: false,
+          quotedMessageId: message.origin.id._serialized
+        }
+      })
+    );
+    
+    // Se só tiver uma mensagem, retorna só ela ao invés do array
+    return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
+  } catch (error) {
+    logger.error('Erro ao processar comando getaudio:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao processar áudio.'
+    });
+  }
+}
+
+/**
+ * Implementação do comando getvoice
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ */
+async function handleGetVoice(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    // Obtém mensagem citada
+    const quotedMsg = await message.origin.getQuotedMessage();
+    
+    // Verifica se a mensagem citada tem mídia
+    if (!quotedMsg.hasMedia) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'A mensagem citada não contém mídia.'
+      });
+    }
+    
+    // Verifica tipo de mídia
+    const quotedMedia = await quotedMsg.downloadMedia();
+    const supportedTypes = ['audio', 'voice', 'video'];
+    const mediaType = quotedMedia.mimetype.split('/')[0];
+    
+    if (!supportedTypes.includes(mediaType)) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`
+      });
+    }
+    
+    // Envia indicador de processamento
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: '⏳ Processando áudio...'
+      })
+    );
+    
+    // Salva mídia em arquivo temporário
+    let tempFiles = [];
+    
+    const inputExt = quotedMedia.mimetype.split('/')[1];
+    const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
+    tempFiles.push(inputPath);
+    
+    // Converte para OGG (formato de voz)
+    const outputPath = await convertToOgg(inputPath);
+    tempFiles.push(outputPath);
+    
+    // Cria objeto de mídia
+    const outputMedia = await createMediaFromFile(outputPath, 'audio/ogg; codecs=opus');
+    
+    // Limpa arquivos temporários
+    cleanupTempFiles(tempFiles).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    // Adiciona a mensagem de mídia ao retorno
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: outputMedia,
+        options: {
+          sendAudioAsVoice: true,
+          quotedMessageId: message.origin.id._serialized
+        }
+      })
+    );
+    
+    // Se só tiver uma mensagem, retorna só ela ao invés do array
+    return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
+  } catch (error) {
+    logger.error('Erro ao processar comando getvoice:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao processar áudio.'
+    });
+  }
+}
+
+/**
+ * Implementação do comando volume
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ */
+async function handleVolumeAdjust(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    // Verifica argumentos
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, especifique o nível de volume (0-1000). Exemplo: !volume 200'
+      });
+    }
+    
+    // Obtém nível de volume
+    const volumeLevel = parseInt(args[0]);
+    
+    if (isNaN(volumeLevel) || volumeLevel < 0 || volumeLevel > 1000) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Nível de volume inválido. Use um valor entre 0 e 1000.'
+      });
+    }
+    
+    // Obtém mensagem citada
+    const quotedMsg = await message.origin.getQuotedMessage();
+    
+    // Verifica se a mensagem citada tem mídia
+    if (!quotedMsg.hasMedia) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'A mensagem citada não contém mídia.'
+      });
+    }
+    
+    // Verifica tipo de mídia
+    const quotedMedia = await quotedMsg.downloadMedia();
+    const supportedTypes = ['audio', 'voice', 'video'];
+    const mediaType = quotedMedia.mimetype.split('/')[0];
+    
+    if (!supportedTypes.includes(mediaType)) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`
+      });
+    }
+    
+    // Envia indicador de processamento
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `⏳ Ajustando volume para ${volumeLevel}%...`
+      })
+    );
+    
+    // Salva mídia em arquivo temporário
+    let tempFiles = [];
+    
+    const inputExt = quotedMedia.mimetype.split('/')[1];
+    const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
+    tempFiles.push(inputPath);
+    
+    // Ajusta volume
+    const outputPath = await adjustVolume(inputPath, volumeLevel, inputExt);
+    tempFiles.push(outputPath);
+    
+    // Cria objeto de mídia
+    const outputMedia = await createMediaFromFile(outputPath, quotedMedia.mimetype);
+    
+    // Limpa arquivos temporários
+    cleanupTempFiles(tempFiles).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    // Adiciona a mensagem de mídia ao retorno
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: outputMedia,
+        options: {
+          sendAudioAsVoice: mediaType === 'voice',
+          quotedMessageId: message.origin.id._serialized
+        }
+      })
+    );
+    
+    // Se só tiver uma mensagem, retorna só ela ao invés do array
+    return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
+  } catch (error) {
+    logger.error('Erro ao processar comando volume:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao ajustar volume.'
+    });
+  }
+}
+
+// Comandos usando a classe Command
 const commands = [
-  {
+  new Command({
     name: 'getaudio',
     description: 'Converte mídia para arquivo de áudio MP3',
     reactions: {
@@ -150,63 +429,10 @@ const commands = [
       error: "❌"
     },
     needsQuotedMsg: true,
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        // Obtém mensagem citada
-        const quotedMsg = await message.origin.getQuotedMessage();
-        
-        // Verifica se a mensagem citada tem mídia
-        if (!quotedMsg.hasMedia) {
-          await bot.sendMessage(chatId, 'A mensagem citada não contém mídia.');
-          return;
-        }
-        
-        // Verifica tipo de mídia
-        const quotedMedia = await quotedMsg.downloadMedia();
-        const supportedTypes = ['audio', 'voice', 'video'];
-        const mediaType = quotedMedia.mimetype.split('/')[0];
-        
-        if (!supportedTypes.includes(mediaType)) {
-          await bot.sendMessage(chatId, `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`);
-          return;
-        }
-        
-        // Envia indicador de processamento
-        await bot.sendMessage(chatId, '⏳ Processando áudio...');
-        
-        // Salva mídia em arquivo temporário
-        let tempFiles = [];
-        
-        const inputExt = quotedMedia.mimetype.split('/')[1];
-        const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
-        tempFiles.push(inputPath);
-        
-        // Converte para MP3
-        const outputPath = await convertToMp3(inputPath);
-        tempFiles.push(outputPath);
-        
-        // Cria objeto de mídia
-        const outputMedia = await createMediaFromFile(outputPath, 'audio/mp3');
-        
-        // Envia mídia
-        await bot.sendMessage(chatId, outputMedia, {
-          sendAudioAsVoice: false
-        });
-        
-        // Limpa arquivos temporários
-        cleanupTempFiles(tempFiles).catch(error => {
-          logger.error('Erro ao limpar arquivos temporários:', error);
-        });
-        
-      } catch (error) {
-        logger.error('Erro ao processar comando getaudio:', error);
-        await bot.sendMessage(chatId, 'Erro ao processar áudio.');
-      }
-    }
-  },
-  {
+    method: handleGetAudio
+  }),
+  
+  new Command({
     name: 'getvoice',
     description: 'Converte mídia para mensagem de voz',
     reactions: {
@@ -215,63 +441,10 @@ const commands = [
       error: "❌"
     },
     needsQuotedMsg: true,
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        // Obtém mensagem citada
-        const quotedMsg = await message.origin.getQuotedMessage();
-        
-        // Verifica se a mensagem citada tem mídia
-        if (!quotedMsg.hasMedia) {
-          await bot.sendMessage(chatId, 'A mensagem citada não contém mídia.');
-          return;
-        }
-        
-        // Verifica tipo de mídia
-        const quotedMedia = await quotedMsg.downloadMedia();
-        const supportedTypes = ['audio', 'voice', 'video'];
-        const mediaType = quotedMedia.mimetype.split('/')[0];
-        
-        if (!supportedTypes.includes(mediaType)) {
-          await bot.sendMessage(chatId, `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`);
-          return;
-        }
-        
-        // Envia indicador de processamento
-        await bot.sendMessage(chatId, '⏳ Processando áudio...');
-        
-        // Salva mídia em arquivo temporário
-        let tempFiles = [];
-        
-        const inputExt = quotedMedia.mimetype.split('/')[1];
-        const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
-        tempFiles.push(inputPath);
-        
-        // Converte para OGG (formato de voz)
-        const outputPath = await convertToOgg(inputPath);
-        tempFiles.push(outputPath);
-        
-        // Cria objeto de mídia
-        const outputMedia = await createMediaFromFile(outputPath, 'audio/ogg; codecs=opus');
-        
-        // Envia mídia como voz
-        await bot.sendMessage(chatId, outputMedia, {
-          sendAudioAsVoice: true
-        });
-        
-        // Limpa arquivos temporários
-        cleanupTempFiles(tempFiles).catch(error => {
-          logger.error('Erro ao limpar arquivos temporários:', error);
-        });
-        
-      } catch (error) {
-        logger.error('Erro ao processar comando getvoice:', error);
-        await bot.sendMessage(chatId, 'Erro ao processar áudio.');
-      }
-    }
-  },
-  {
+    method: handleGetVoice
+  }),
+  
+  new Command({
     name: 'volume',
     description: 'Ajusta o volume da mídia (0-1000)',
     reactions: {
@@ -280,76 +453,8 @@ const commands = [
       error: "❌"
     },
     needsQuotedMsg: true,
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        // Verifica argumentos
-        if (args.length === 0) {
-          await bot.sendMessage(chatId, 'Por favor, especifique o nível de volume (0-1000). Exemplo: !volume 200');
-          return;
-        }
-        
-        // Obtém nível de volume
-        const volumeLevel = parseInt(args[0]);
-        
-        if (isNaN(volumeLevel) || volumeLevel < 0 || volumeLevel > 1000) {
-          await bot.sendMessage(chatId, 'Nível de volume inválido. Use um valor entre 0 e 1000.');
-          return;
-        }
-        
-        // Obtém mensagem citada
-        const quotedMsg = await message.origin.getQuotedMessage();
-        
-        // Verifica se a mensagem citada tem mídia
-        if (!quotedMsg.hasMedia) {
-          await bot.sendMessage(chatId, 'A mensagem citada não contém mídia.');
-          return;
-        }
-        
-        // Verifica tipo de mídia
-        const quotedMedia = await quotedMsg.downloadMedia();
-        const supportedTypes = ['audio', 'voice', 'video'];
-        const mediaType = quotedMedia.mimetype.split('/')[0];
-        
-        if (!supportedTypes.includes(mediaType)) {
-          await bot.sendMessage(chatId, `Tipo de mídia não suportado: ${mediaType}. Use em áudio, voz ou vídeo.`);
-          return;
-        }
-        
-        // Envia indicador de processamento
-        await bot.sendMessage(chatId, `⏳ Ajustando volume para ${volumeLevel}%...`);
-        
-        // Salva mídia em arquivo temporário
-        let tempFiles = [];
-        
-        const inputExt = quotedMedia.mimetype.split('/')[1];
-        const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
-        tempFiles.push(inputPath);
-        
-        // Ajusta volume
-        const outputPath = await adjustVolume(inputPath, volumeLevel, inputExt);
-        tempFiles.push(outputPath);
-        
-        // Cria objeto de mídia
-        const outputMedia = await createMediaFromFile(outputPath, quotedMedia.mimetype);
-        
-        // Envia mídia no mesmo formato original
-        await bot.sendMessage(chatId, outputMedia, {
-          sendAudioAsVoice: mediaType === 'voice'
-        });
-        
-        // Limpa arquivos temporários
-        cleanupTempFiles(tempFiles).catch(error => {
-          logger.error('Erro ao limpar arquivos temporários:', error);
-        });
-        
-      } catch (error) {
-        logger.error('Erro ao processar comando volume:', error);
-        await bot.sendMessage(chatId, 'Erro ao ajustar volume.');
-      }
-    }
-  }
+    method: handleVolumeAdjust
+  })
 ];
 
 // Registra os comandos sendo exportados

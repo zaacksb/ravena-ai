@@ -1,4 +1,4 @@
-Command# Documentação da Classe Command
+# Documentação da Classe Command
 
 ## Visão Geral
 
@@ -12,6 +12,7 @@ Anteriormente, os comandos eram definidos como objetos JavaScript simples nas fu
 2. Fornecer métodos auxiliares para validação e execução
 3. Implementar funcionalidades comuns como cooldown e estatísticas de uso
 4. Facilitar a serialização e desserialização de comandos
+5. Padronizar o retorno de mensagens com a classe `ReturnMessage`
 
 ## Estrutura da Classe
 
@@ -38,13 +39,14 @@ Anteriormente, os comandos eram definidos como objetos JavaScript simples nas fu
 | `middlewares` | array | Middlewares para pré-processamento | `[]` |
 | `active` | boolean | Se o comando está ativo | `true` |
 | `hidden` | boolean | Se o comando deve ser oculto em listagens | `false` |
+| `usesReturnMessage` | boolean | Se o comando usa o padrão ReturnMessage | `true` |
 
 ### Métodos
 
 | Método | Descrição |
 |--------|-----------|
 | `isValid()` | Verifica se o comando tem todos os requisitos necessários |
-| `execute(bot, message, args, group)` | Executa o comando e retorna o resultado |
+| `execute(bot, message, args, group)` | Executa o comando e retorna o resultado (ReturnMessage, array de ReturnMessage, ou resultado legacy) |
 | `trackUsage()` | Registra um uso bem-sucedido do comando |
 | `checkCooldown(userId)` | Verifica se o comando está em cooldown para um usuário |
 | `toJSON()` | Converte a instância para um objeto simples para serialização |
@@ -142,101 +144,43 @@ const multiMsgCommand = new Command({
 });
 ```
 
-## Integração com CommandHandler
-
-Para integrar a classe `Command` ao `CommandHandler`, o método `executeFixedCommand` deve ser adaptado para trabalhar com instâncias de `Command`:
+### Comando Legacy (compatibilidade retroativa)
 
 ```javascript
-async executeFixedCommand(bot, message, command, args, group) {
-  try {
-    // Verifica se é uma instância de Command
-    const isCommandInstance = command instanceof Command;
-    
-    // Verifica requisitos se for uma instância de Command
-    if (isCommandInstance) {
-      // Verifica mensagem citada
-      if (command.needsQuotedMsg) {
-        const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-        if (!quotedMsg) {
-          this.logger.debug(`Comando ${command.name} requer mensagem citada, mas nenhuma foi fornecida`);
-          return;
-        }
-      }
-      
-      // Verifica mídia
-      if (command.needsMedia) {
-        const hasDirectMedia = message.type !== 'text';
-        let hasQuotedMedia = false;
-        
-        if (!hasDirectMedia) {
-          const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-          hasQuotedMedia = quotedMsg && quotedMsg.hasMedia;
-        }
-        
-        if (!hasDirectMedia && !hasQuotedMedia) {
-          this.logger.debug(`Comando ${command.name} requer mídia, mas nenhuma foi fornecida`);
-          return;
-        }
-      }
-      
-      // Verifica argumentos
-      if (command.needsArgs && (!args || args.length < command.minArgs)) {
-        const returnMessage = new ReturnMessage({
-          chatId: message.group || message.author,
-          content: `Este comando requer pelo menos ${command.minArgs} argumento(s). Uso correto: ${command.usage}`
-        });
-        await bot.sendReturnMessages(returnMessage);
-        return;
-      }
-      
-      // Verifica cooldown
-      const cooldownCheck = command.checkCooldown(message.author);
-      if (cooldownCheck.onCooldown) {
-        const returnMessage = new ReturnMessage({
-          chatId: message.group || message.author,
-          content: `Este comando está em cooldown. Aguarde mais ${cooldownCheck.timeLeft} segundo(s).`
-        });
-        await bot.sendReturnMessages(returnMessage);
-        return;
-      }
-    }
-    
-    // Reage com emoji "antes"
-    const beforeEmoji = isCommandInstance ? command.reactions.before : (command.reactions?.before || this.defaultReactions.before);
-    await message.origin.react(beforeEmoji).catch(err => this.logger.error('Erro ao aplicar reação "antes":', err));
-    
-    // Executa o comando
-    const result = isCommandInstance 
-      ? await command.execute(bot, message, args, group)
-      : await command.method(bot, message, args, group);
-    
-    // Processa o resultado (ReturnMessage ou array de ReturnMessages)
-    if (result) {
-      if (result instanceof ReturnMessage || (Array.isArray(result) && result[0] instanceof ReturnMessage)) {
-        await bot.sendReturnMessages(result);
-        return;
-      }
-    }
-    
-    // Reage com emoji "depois" para modos legados
-    const afterEmoji = isCommandInstance ? command.reactions.after : (command.reactions?.after || this.defaultReactions.after);
-    await message.origin.react(afterEmoji).catch(err => this.logger.error('Erro ao aplicar reação "depois":', err));
-  } catch (error) {
-    this.logger.error(`Erro ao executar comando ${isCommandInstance ? command.name : command.name}:`, error);
-    
-    // Reage com emoji de erro
-    const errorEmoji = isCommandInstance ? command.reactions.error : (command.reactions?.error || this.defaultReactions.error);
-    await message.origin.react(errorEmoji).catch(err => this.logger.error('Erro ao aplicar reação de erro:', err));
-    
-    // Envia mensagem de erro
-    const returnMessage = new ReturnMessage({
-      chatId: message.group || message.author,
-      content: `Erro ao executar comando: ${isCommandInstance ? command.name : command.name}`
-    });
-    await bot.sendReturnMessages(returnMessage);
+const Command = require('../models/Command');
+
+// Definindo um comando que não usa ReturnMessage (modo legado)
+const legacyCommand = new Command({
+  name: 'legacy',
+  description: 'Comando no modo legado',
+  usesReturnMessage: false, // Indica que não usa ReturnMessage
+  method: async (bot, message, args, group) => {
+    const chatId = message.group || message.author;
+    // Usa sendMessage diretamente em vez de retornar ReturnMessage
+    await bot.sendMessage(chatId, 'Este é um comando no modo legado');
+    // Não precisa retornar nada
   }
-}
+});
 ```
+
+## Integração com CommandHandler
+
+A classe Command é projetada para trabalhar com o método `sendReturnMessages` do bot, que pode processar tanto uma única instância de ReturnMessage quanto um array de ReturnMessages. O CommandHandler executa o método `execute` da classe Command, que:
+
+1. Se `usesReturnMessage` for `true` (padrão):
+   - Espera que o método retorne uma instância de ReturnMessage ou um array de ReturnMessages
+   - Passa o resultado para `bot.sendReturnMessages`
+
+2. Se `usesReturnMessage` for `false` (modo legado):
+   - Assume que o método gerencia o envio de mensagens por conta própria
+   - Não espera um retorno significativo
+
+## Compatibilidade com FixedCommands
+
+A classe `FixedCommands` agora suporta tanto os comandos no formato de objetos simples quanto as instâncias da classe `Command`. Ao carregar os módulos de comandos, ela verifica o tipo e:
+
+1. Se for uma instância de `Command`, usa-a diretamente
+2. Se for um objeto simples, converte-o em uma instância de `Command`
 
 ## Migração de Comandos Existentes
 

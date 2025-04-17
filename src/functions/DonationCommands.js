@@ -1,42 +1,13 @@
 const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('donation-commands');
 const database = Database.getInstance();
 
 logger.info('Módulo DonationCommands carregado');
-
-const commands = [
-  {
-    name: 'donate',
-    description: 'Mostra informações de doação e link',
-    method: async (bot, message, args, group) => {
-      await showDonationInfo(bot, message, args, group);
-    }
-  },
-  {
-    name: 'doar',
-    description: 'Mostra informações de doação e link (Português)',
-    method: async (bot, message, args, group) => {
-      await showDonationInfo(bot, message, args, group);
-    }
-  },
-  {
-    name: 'doadores',
-    description: 'Mostra principais doadores',
-    method: async (bot, message, args, group) => {
-      await showTopDonors(bot, message, args, group);
-    }
-  },
-  {
-    name: 'donors',
-    description: 'Mostra principais doadores (Inglês)',
-    method: async (bot, message, args, group) => {
-      await showTopDonors(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Mostra informações de doação e link
@@ -44,6 +15,7 @@ const commands = [
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com informações de doação
  */
 async function showDonationInfo(bot, message, args, group) {
   try {
@@ -58,13 +30,20 @@ async function showDonationInfo(bot, message, args, group) {
       `🔗 *Link de Doação:* ${donationLink}\n\n` +
       `Use !donors ou !doadores para ver uma lista de doadores que já contribuíram. Obrigado!`;
     
-    await bot.sendMessage(chatId, donationMsg);
-    
     logger.debug('Informações de doação enviadas com sucesso');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: donationMsg
+    });
   } catch (error) {
     logger.error('Erro ao enviar informações de doação:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao recuperar informações de doação. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao recuperar informações de doação. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -74,6 +53,7 @@ async function showDonationInfo(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com informações da meta
  */
 async function showDonationGoal(bot, message, args, group) {
   try {
@@ -84,8 +64,10 @@ async function showDonationGoal(bot, message, args, group) {
     const goalDescription = process.env.DONATION_GOAL_DESCRIPTION;
     
     if (!goalAmount || isNaN(parseFloat(goalAmount))) {
-      await bot.sendMessage(chatId, 'Nenhuma meta de doação está definida atualmente.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Nenhuma meta de doação está definida atualmente.'
+      });
     }
     
     // Obtém todas as doações
@@ -115,13 +97,20 @@ async function showDonationGoal(bot, message, args, group) {
     
     goalMsg += `Use !donate ou !doar para nos ajudar a alcançar nossa meta!`;
     
-    await bot.sendMessage(chatId, goalMsg);
-    
     logger.debug('Informações de meta de doação enviadas com sucesso');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: goalMsg
+    });
   } catch (error) {
     logger.error('Erro ao enviar informações de meta de doação:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao recuperar informações de meta de doação. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao recuperar informações de meta de doação. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -131,6 +120,7 @@ async function showDonationGoal(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com lista de doadores
  */
 async function showTopDonors(bot, message, args, group) {
   try {
@@ -140,8 +130,10 @@ async function showTopDonors(bot, message, args, group) {
     const donations = await database.getDonations();
     
     if (!donations || donations.length === 0) {
-      await bot.sendMessage(chatId, 'Nenhuma doação foi recebida ainda. Seja o primeiro a doar!');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Nenhuma doação foi recebida ainda. Seja o primeiro a doar!'
+      });
     }
     
     // Ordena doações por valor (maior primeiro)
@@ -164,15 +156,49 @@ async function showTopDonors(bot, message, args, group) {
     
     donorsMsg += `\nUse !donate ou !doar para nos apoiar também!`;
     
-    await bot.sendMessage(chatId, donorsMsg);
-    
     logger.debug('Lista de principais doadores enviada com sucesso');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: donorsMsg
+    });
   } catch (error) {
     logger.error('Erro ao enviar lista de principais doadores:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao recuperar informações de doadores. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao recuperar informações de doadores. Por favor, tente novamente.'
+    });
   }
 }
+
+// Lista de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'donate',
+    description: 'Mostra informações de doação e link',
+    method: showDonationInfo
+  }),
+  
+  new Command({
+    name: 'doar',
+    description: 'Mostra informações de doação e link (Português)',
+    method: showDonationInfo
+  }),
+  
+  new Command({
+    name: 'doadores',
+    description: 'Mostra principais doadores',
+    method: showTopDonors
+  }),
+  
+  new Command({
+    name: 'donors',
+    description: 'Mostra principais doadores (Inglês)',
+    method: showTopDonors
+  })
+];
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));

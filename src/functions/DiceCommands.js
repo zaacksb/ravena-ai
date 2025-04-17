@@ -1,4 +1,6 @@
 const Logger = require('../utils/Logger');
+const ReturnMessage = require('../models/ReturnMessage');
+const Command = require('../models/Command');
 
 const logger = new Logger('dice-commands');
 
@@ -20,23 +22,6 @@ const MAX_SIDES = 1000;
 // Lista de comandos
 const commands = [];
 
-// Registra dinamicamente os comandos d4, d6, d8, d10, d12, d20, d100
-const COMMON_DICE = [4, 6, 8, 10, 12, 20, 100];
-
-for (const sides of COMMON_DICE) {
-  commands.push({
-    name: `d${sides}`,
-    description: `Rola um dado de ${sides} faces`,
-    reactions: {
-      before: "🎲",
-      after: "🎯"
-    },
-    method: async (bot, message, args, group) => {
-      await rollDice(bot, message, args, group, sides);
-    }
-  });
-}
-
 /**
  * Gera um número aleatório entre min e max (inclusivo)
  * @param {number} min - Valor mínimo
@@ -54,6 +39,7 @@ function getRandomInt(min, max) {
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
  * @param {number} defaultSides - Número padrão de lados (opcional)
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessage
  */
 async function rollDice(bot, message, args, group, defaultSides = null) {
   try {
@@ -81,8 +67,10 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
       const match = DICE_REGEX.exec(dicePattern);
       
       if (!match) {
-        await bot.sendMessage(chatId, 'Formato inválido. Use algo como: d20, 2d6, d8+3, 3d10-2');
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Formato inválido. Use algo como: d20, 2d6, d8+3, 3d10-2'
+        });
       }
       
       // Extrai componentes do padrão
@@ -96,14 +84,27 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
       }
     }
     
+    // Array para armazenar mensagens de retorno
+    const returnMessages = [];
+    
     // Verifica limites para evitar spam/abuso
     if (numDice > MAX_DICE) {
-      await bot.sendMessage(chatId, `⚠️ Número máximo de dados é ${MAX_DICE}.`);
+      returnMessages.push(
+        new ReturnMessage({
+          chatId: chatId,
+          content: `⚠️ Número máximo de dados é ${MAX_DICE}.`
+        })
+      );
       numDice = MAX_DICE;
     }
     
     if (numSides > MAX_SIDES) {
-      await bot.sendMessage(chatId, `⚠️ Número máximo de faces é ${MAX_SIDES}.`);
+      returnMessages.push(
+        new ReturnMessage({
+          chatId: chatId,
+          content: `⚠️ Número máximo de faces é ${MAX_SIDES}.`
+        })
+      );
       numSides = MAX_SIDES;
     }
     
@@ -188,28 +189,64 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
     // Adiciona o nome da pessoa na mensagem
     resultMessage = `${userName} rolou:\n${resultMessage}`;
     
-    // Envia resultado
-    await bot.sendMessage(chatId, resultMessage);
+    // Adiciona mensagem principal ao array de retorno
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: resultMessage,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
+      })
+    );
+    
+    // Se tiver mensagens adicionais (avisos de limite), retorna array de mensagens
+    // Caso contrário, retorna apenas a mensagem principal
+    return returnMessages.length > 1 ? returnMessages : returnMessages[0];
   } catch (error) {
     logger.error('Erro ao rolar dados:', error);
     
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, '❌ Erro ao rolar dados. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: chatId,
+      content: '❌ Erro ao rolar dados. Por favor, tente novamente.'
+    });
   }
 }
 
+// Registra dinamicamente os comandos d4, d6, d8, d10, d12, d20, d100
+const COMMON_DICE = [4, 6, 8, 10, 12, 20, 100];
+
+for (const sides of COMMON_DICE) {
+  commands.push(
+    new Command({
+      name: `d${sides}`,
+      description: `Rola um dado de ${sides} faces`,
+      reactions: {
+        before: "🎲",
+        after: "🎯"
+      },
+      method: async (bot, message, args, group) => {
+        return await rollDice(bot, message, args, group, sides);
+      }
+    })
+  );
+}
+
 // Comando especial para manipular qualquer padrão
-commands.push({
-  name: 'roll',
-  description: 'Rola dados com padrão customizado (ex: 2d6+3)',
-  reactions: {
-    before: "🎲",
-    after: "🎯"
-  },
-  method: async (bot, message, args, group) => {
-    await rollDice(bot, message, args, group);
-  }
-});
+commands.push(
+  new Command({
+    name: 'roll',
+    description: 'Rola dados com padrão customizado (ex: 2d6+3)',
+    reactions: {
+      before: "🎲",
+      after: "🎯"
+    },
+    method: async (bot, message, args, group) => {
+      return await rollDice(bot, message, args, group);
+    }
+  })
+);
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
