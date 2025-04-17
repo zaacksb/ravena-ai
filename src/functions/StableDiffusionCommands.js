@@ -12,13 +12,14 @@ logger.info('Módulo StableDiffusionCommands carregado');
 // Configuração da API SD WebUI
 const API_URL = process.env.SDWEBUI_URL || 'http://localhost:7860';
 const DEFAULT_PARAMS = {
-  width: 512,
-  height: 768,
-  steps: 30,
-  cfg_scale: 7,
-  sampler_name: 'DPM++ 2M Karras',
+  width: 832,
+  height: 1216,
+  steps: 10,
+  cfg_scale: 1,
+  sampler_name: 'k_euler_a',
   batch_size: 1,
-  n_iter: 1
+  n_iter: 1,
+  negative_prompt: "ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
 };
 
 const commands = [
