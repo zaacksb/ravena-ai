@@ -2669,7 +2669,7 @@ class Management {
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
    */
-  async function pauseGroup(bot, message, args, group) {
+  async pauseGroup(bot, message, args, group) {
     try {
       if (!group) {
         await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
