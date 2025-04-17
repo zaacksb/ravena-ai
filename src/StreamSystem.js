@@ -1,6 +1,7 @@
 const StreamMonitor = require('./services/StreamMonitor');
 const Logger = require('./utils/Logger');
 const LLMService = require('./services/LLMService');
+const ReturnMessage = require('./models/ReturnMessage');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -248,6 +249,9 @@ class StreamSystem {
         return;
       }
       
+      // Armazena as ReturnMessages para enviar
+      const returnMessages = [];
+      
       // Processa alteração de título se habilitada
       if (channelConfig.changeTitleOnEvent) {
         await this.changeGroupTitle(group, channelConfig, eventData, eventType);
@@ -255,12 +259,23 @@ class StreamSystem {
       
       // Processa notificações de mídia
       for (const mediaItem of config.media) {
-        await this.sendEventNotification(group.id, mediaItem, eventData, channelConfig);
+        const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig);
+        if (returnMessage) {
+          returnMessages.push(returnMessage);
+        }
       }
       
       // Gera mensagem de IA se habilitada
       if (channelConfig.useAI && eventType === 'online') {
-        await this.sendAINotification(group.id, eventData, channelConfig);
+        const aiMessage = await this.createAINotification(group.id, eventData, channelConfig);
+        if (aiMessage) {
+          returnMessages.push(aiMessage);
+        }
+      }
+      
+      // Envia todas as mensagens
+      if (returnMessages.length > 0) {
+        await this.bot.sendReturnMessages(returnMessages);
       }
     } catch (error) {
       this.logger.error(`Erro ao processar evento de stream para ${group.id}:`, error);
@@ -330,13 +345,14 @@ class StreamSystem {
   }
 
   /**
-   * Envia notificação de evento para um grupo
+   * Cria uma notificação de evento para um grupo
    * @param {string} groupId - ID do grupo
    * @param {Object} mediaItem - Configuração de mídia
    * @param {Object} eventData - Dados do evento
    * @param {Object} channelConfig - Configuração do canal
+   * @returns {Promise<ReturnMessage|null>} - A mensagem de retorno
    */
-  async sendEventNotification(groupId, mediaItem, eventData, channelConfig) {
+  async createEventNotification(groupId, mediaItem, eventData, channelConfig) {
     try {
       // Trata diferentes tipos de mídia
       if (mediaItem.type === 'text') {
@@ -354,8 +370,11 @@ class StreamSystem {
                           .replace(/{link}/g, eventData.url || '');
         }
         
-        // Envia a mensagem
-        await this.bot.sendMessage(groupId, content);
+        // Cria a mensagem de retorno
+        return new ReturnMessage({
+          chatId: groupId,
+          content: content
+        });
       } else if (mediaItem.type === 'image' || mediaItem.type === 'video' || 
                 mediaItem.type === 'audio' || mediaItem.type === 'sticker') {
         // Carrega arquivo de mídia
@@ -378,30 +397,41 @@ class StreamSystem {
                             .replace(/{link}/g, eventData.url || '');
           }
           
-          // Envia a mídia
-          await this.bot.sendMessage(groupId, media, {
-            caption: caption || undefined,
-            sendMediaAsSticker: mediaItem.type === 'sticker'
+          // Cria a mensagem de retorno
+          return new ReturnMessage({
+            chatId: groupId,
+            content: media,
+            options: {
+              caption: caption || undefined,
+              sendMediaAsSticker: mediaItem.type === 'sticker'
+            }
           });
         } catch (error) {
           this.logger.error(`Erro ao enviar notificação de mídia (${mediaPath}):`, error);
           
           // Fallback para mensagem de texto
-          await this.bot.sendMessage(groupId, `Erro ao enviar notificação de mídia para evento de ${eventData.platform}/${eventData.channelName}`);
+          return new ReturnMessage({
+            chatId: groupId,
+            content: `Erro ao enviar notificação de mídia para evento de ${eventData.platform}/${eventData.channelName}`
+          });
         }
       }
+      
+      return null;
     } catch (error) {
-      this.logger.error(`Erro ao enviar notificação de evento para ${groupId}:`, error);
+      this.logger.error(`Erro ao criar notificação de evento para ${groupId}:`, error);
+      return null;
     }
   }
 
   /**
-   * Envia notificação gerada por IA
+   * Cria notificação gerada por IA
    * @param {string} groupId - ID do grupo
    * @param {Object} eventData - Dados do evento
    * @param {Object} channelConfig - Configuração do canal
+   * @returns {Promise<ReturnMessage|null>} - A mensagem de retorno gerada por IA
    */
-  async sendAINotification(groupId, eventData, channelConfig) {
+  async createAINotification(groupId, eventData, channelConfig) {
     try {
       // Gera prompt com base no tipo de evento
       let prompt = '';
@@ -420,12 +450,19 @@ class StreamSystem {
         maxTokens: 200
       });
       
-      // Envia a mensagem gerada pela IA
+      // Cria mensagem de retorno com a resposta da IA
       if (aiResponse) {
-        await this.bot.sendMessage(groupId, aiResponse);
+        return new ReturnMessage({
+          chatId: groupId,
+          content: aiResponse,
+          delay: 500 // Pequeno atraso para enviar após as notificações normais
+        });
       }
+      
+      return null;
     } catch (error) {
-      this.logger.error(`Erro ao enviar notificação de IA para ${groupId}:`, error);
+      this.logger.error(`Erro ao criar notificação de IA para ${groupId}:`, error);
+      return null;
     }
   }
 

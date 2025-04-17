@@ -1,5 +1,6 @@
 const Logger = require('./utils/Logger');
 const LLMService = require('./services/LLMService');
+const ReturnMessage = require('./models/ReturnMessage');
 
 /**
  * Trata menções ao bot em mensagens
@@ -51,15 +52,16 @@ class MentionHandler {
       
       if (!prompt) {
         // Apenas uma menção sem texto, envia uma resposta padrão
-        await bot.sendMessage(message.group || message.author, "Olá! Como posso te ajudar?");
+        const chatId = message.group || message.author;
+        const returnMessage = new ReturnMessage({
+          chatId: chatId,
+          content: "Olá! Como posso te ajudar?",
+          reactions: {
+            after: this.reactions.after
+          }
+        });
         
-        // Reage com o emoji "depois"
-        try {
-          await message.origin.react(this.reactions.after);
-        } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "depois":', reactError);
-        }
-        
+        await bot.sendReturnMessages(returnMessage);
         return true;
       }
 
@@ -72,80 +74,68 @@ class MentionHandler {
         this.logger.error('Erro ao enviar indicador de digitação:', error);
       }
 
-      // Obtém resposta do LLM com Promise em vez de await para evitar bloqueio
-      this.llmService.getCompletion({
-        prompt: prompt,
-        provider: 'openrouter', // Usa OpenRouter conforme especificado
-        temperature: 0.7,
-        maxTokens: 500
-      }).then(response => {
+      // Obtém resposta do LLM
+      try {
+        const response = await this.llmService.getCompletion({
+          prompt: prompt,
+          provider: 'openrouter', // Usa OpenRouter conforme especificado
+          temperature: 0.7,
+          maxTokens: 500
+        });
+        
         if (response) {
           // Registra a resposta
           this.logger.info(`Resposta do LLM recebida: "${response.substring(0, 100)}${response.length > 100 ? '...' : ''}"`);
           
-          // Envia a resposta
-          bot.sendMessage(message.group || message.author, response, {
-            quotedMessageId: message.origin.id._serialized
-          }).then(() => {
-            // Reage com o emoji "depois"
-            try {
-              message.origin.react(this.reactions.after);
-            } catch (reactError) {
-              this.logger.error('Erro ao aplicar reação "depois":', reactError);
-            }
-          }).catch(sendError => {
-            this.logger.error('Erro ao enviar resposta do LLM:', sendError);
-            // Reage com o emoji "depois" mesmo em erro
-            try {
-              message.origin.react(this.reactions.error);
-            } catch (reactError) {
-              this.logger.error('Erro ao aplicar reação "depois":', reactError);
+          // Cria e envia a mensagem de retorno
+          const chatId = message.group || message.author;
+          const returnMessage = new ReturnMessage({
+            chatId: chatId,
+            content: response,
+            options: {
+              quotedMessageId: message.origin.id._serialized
+            },
+            reactions: {
+              after: this.reactions.after
             }
           });
+          
+          await bot.sendReturnMessages(returnMessage);
         } else {
           // Registra a resposta vazia
           this.logger.error('Resposta vazia recebida da API LLM');
-          bot.sendMessage(message.group || message.author, "Desculpe, não consegui processar sua solicitação no momento.", {
-            quotedMessageId: message.origin.id._serialized
-          }).then(() => {
-            // Reage com o emoji "depois"
-            try {
-              message.origin.react(this.reactions.after);
-            } catch (reactError) {
-              this.logger.error('Erro ao aplicar reação "depois":', reactError);
-            }
-          }).catch(sendError => {
-            this.logger.error('Erro ao enviar resposta alternativa:', sendError);
-            // Reage com o emoji "depois" mesmo em erro
-            try {
-              message.origin.react(this.reactions.after);
-            } catch (reactError) {
-              this.logger.error('Erro ao aplicar reação "depois":', reactError);
+          
+          const chatId = message.group || message.author;
+          const returnMessage = new ReturnMessage({
+            chatId: chatId,
+            content: "Desculpe, não consegui processar sua solicitação no momento.",
+            options: {
+              quotedMessageId: message.origin.id._serialized
+            },
+            reactions: {
+              after: this.reactions.after
             }
           });
+          
+          await bot.sendReturnMessages(returnMessage);
         }
-      }).catch(error => {
+      } catch (error) {
         this.logger.error('Erro ao obter conclusão do LLM para menção:', error);
-        // Envia mensagem de erro
-        bot.sendMessage(message.group || message.author, "Desculpe, encontrei um erro ao processar sua solicitação.", {
-          quotedMessageId: message.origin.id._serialized
-        }).then(() => {
-          // Reage com o emoji "depois"
-          try {
-            message.origin.react(this.reactions.after);
-          } catch (reactError) {
-            this.logger.error('Erro ao aplicar reação "depois":', reactError);
-          }
-        }).catch(sendError => {
-          this.logger.error('Erro ao enviar mensagem de erro:', sendError);
-          // Reage com o emoji "depois" mesmo em erro
-          try {
-            message.origin.react(this.reactions.after);
-          } catch (reactError) {
-            this.logger.error('Erro ao aplicar reação "depois":', reactError);
+        
+        const chatId = message.group || message.author;
+        const returnMessage = new ReturnMessage({
+          chatId: chatId,
+          content: "Desculpe, encontrei um erro ao processar sua solicitação.",
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          },
+          reactions: {
+            after: this.reactions.after
           }
         });
-      });
+        
+        await bot.sendReturnMessages(returnMessage);
+      }
       
       return true;
     } catch (error) {

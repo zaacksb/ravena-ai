@@ -5,6 +5,7 @@ const Logger = require('./utils/Logger');
 const FixedCommands = require('./commands/FixedCommands');
 const Management = require('./commands/Management');
 const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
+const ReturnMessage = require('./models/ReturnMessage');
 
 class CommandHandler {
   constructor() {
@@ -174,7 +175,11 @@ class CommandHandler {
     
     // Se em um grupo, podemos querer notificar sobre comando desconhecido (opcional)
     if (group && process.env.NOTIFY_UNKNOWN_COMMANDS === 'true') {
-      await bot.sendMessage(group.id, `Comando desconhecido: ${command}`);
+      const returnMessage = new ReturnMessage({
+        chatId: group.id,
+        content: `Comando desconhecido: ${command}`
+      });
+      await bot.sendReturnMessages(returnMessage);
     }
   }
 
@@ -207,26 +212,28 @@ class CommandHandler {
         if (targetGroup) {
           this.privateManagement[message.author] = targetGroup.id;
           this.logger.info(`Usuário ${message.author} agora está gerenciando o grupo: ${targetGroup.name} (${targetGroup.id})`);
-          await bot.sendMessage(message.author, `Você agora está gerenciando o grupo: ${targetGroup.name}`);
           
-          // Reage com o emoji "depois"
-          try {
-            await message.origin.react(this.defaultReactions.after);
-          } catch (reactError) {
-            this.logger.error('Erro ao aplicar reação "depois":', reactError);
-          }
+          const returnMessage = new ReturnMessage({
+            chatId: message.author,
+            content: `Você agora está gerenciando o grupo: ${targetGroup.name}`,
+            reactions: {
+              after: this.defaultReactions.after
+            }
+          });
+          await bot.sendReturnMessages(returnMessage);
           
           return;
         } else {
           this.logger.warn(`Grupo não encontrado: ${groupName}`);
-          await bot.sendMessage(message.author, `Grupo não encontrado: ${groupName}`);
           
-          // Reage com o emoji "depois" mesmo para erro
-          try {
-            await message.origin.react(this.defaultReactions.after);
-          } catch (reactError) {
-            this.logger.error('Erro ao aplicar reação "depois":', reactError);
-          }
+          const returnMessage = new ReturnMessage({
+            chatId: message.author,
+            content: `Grupo não encontrado: ${groupName}`,
+            reactions: {
+              after: this.defaultReactions.after
+            }
+          });
+          await bot.sendReturnMessages(returnMessage);
           
           return;
         }
@@ -235,14 +242,15 @@ class CommandHandler {
       // Comandos de gerenciamento regulares requerem um grupo
       if (!group) {
         this.logger.warn(`Comando de gerenciamento ${command} tentado em chat privado`);
-        await bot.sendMessage(message.author, 'Comandos de gerenciamento só podem ser usados em grupos');
         
-        // Reage com o emoji "depois" mesmo para erro
-        try {
-          await message.origin.react(this.defaultReactions.after);
-        } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "depois":', reactError);
-        }
+        const returnMessage = new ReturnMessage({
+          chatId: message.author,
+          content: 'Comandos de gerenciamento só podem ser usados em grupos',
+          reactions: {
+            after: this.defaultReactions.after
+          }
+        });
+        await bot.sendReturnMessages(returnMessage);
         
         return;
       }
@@ -257,7 +265,15 @@ class CommandHandler {
         await this.management[methodName](bot, message, args, group);
       } else {
         this.logger.warn(`Comando de gerenciamento desconhecido: ${managementCommand}`);
-        await bot.sendMessage(message.group, `Comando de gerenciamento desconhecido: ${managementCommand}`);
+        
+        const returnMessage = new ReturnMessage({
+          chatId: group.id,
+          content: `Comando de gerenciamento desconhecido: ${managementCommand}`,
+          reactions: {
+            after: this.defaultReactions.after
+          }
+        });
+        await bot.sendReturnMessages(returnMessage);
       }
       
       // Reage com o emoji "depois"
@@ -269,19 +285,16 @@ class CommandHandler {
       
     } catch (error) {
       this.logger.error('Erro ao processar comando de gerenciamento:', error);
-      try {
-        const chatId = message.group || message.author;
-        await bot.sendMessage(chatId, 'Erro ao processar comando de gerenciamento');
-        
-        // Reage com o emoji "depois" mesmo para erro
-        try {
-          await message.origin.react(this.defaultReactions.after);
-        } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "depois":', reactError);
+      
+      const chatId = message.group || message.author;
+      const returnMessage = new ReturnMessage({
+        chatId: chatId,
+        content: 'Erro ao processar comando de gerenciamento',
+        reactions: {
+          after: this.defaultReactions.after
         }
-      } catch (sendError) {
-        this.logger.error('Erro ao enviar mensagem de erro:', sendError);
-      }
+      });
+      await bot.sendReturnMessages(returnMessage);
     }
   }
 
@@ -333,7 +346,30 @@ class CommandHandler {
       
       // Executa método do comando
       if (typeof command.method === 'function') {
-        await command.method(bot, message, args, group);
+        const result = await command.method(bot, message, args, group);
+        
+        // Verifica se o resultado é um ReturnMessage ou array de ReturnMessages
+        if (result) {
+          if (result instanceof ReturnMessage || 
+              (Array.isArray(result) && result.length > 0 && result[0] instanceof ReturnMessage)) {
+            // Adiciona reação "depois" nas mensagens se não estiver definida
+            const afterEmoji = command.reactions?.after || this.defaultReactions.after;
+            const errorEmoji = command.reactions?.error || this.defaultReactions.error;
+            
+            const messages = Array.isArray(result) ? result : [result];
+            messages.forEach(msg => {
+              if (!msg.reactions) {
+                msg.reactions = { after: afterEmoji, error: errorEmoji };
+              }
+            });
+            
+            // Envia as ReturnMessages
+            await bot.sendReturnMessages(result);
+            this.logger.debug(`Comando ${command.name} executado com sucesso (ReturnMessage)`);
+            return;
+          }
+        }
+        
         this.logger.debug(`Comando ${command.name} executado com sucesso`);
         
         // Reage com emoji "depois" (específico do comando ou padrão)
@@ -356,20 +392,18 @@ class CommandHandler {
       }
     } catch (error) {
       this.logger.error(`Erro ao executar comando fixo ${command.name}:`, error);
-      try {
-        const chatId = message.group || message.author;
-        await bot.sendMessage(chatId, `Erro ao executar comando: ${command.name}`);
-        
-        // Aplica reação de erro
-        const errorEmoji = command.reactions?.error || this.defaultReactions.error;
-        try {
-          await message.origin.react(errorEmoji);
-        } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação de erro:', reactError);
+      
+      const chatId = message.group || message.author;
+      const errorEmoji = command.reactions?.error || this.defaultReactions.error;
+      
+      const returnMessage = new ReturnMessage({
+        chatId: chatId,
+        content: `Erro ao executar comando: ${command.name}`,
+        reactions: {
+          before: errorEmoji
         }
-      } catch (sendError) {
-        this.logger.error('Erro ao enviar mensagem de erro:', sendError);
-      }
+      });
+      await bot.sendReturnMessages(returnMessage);
     }
   }
 
@@ -411,8 +445,12 @@ class CommandHandler {
         if (timeSinceLastUse < command.cooldown * 1000) {
           const secondsLeft = Math.ceil((command.cooldown * 1000 - timeSinceLastUse) / 1000);
           this.logger.debug(`Comando ${command.startsWith} está em cooldown por mais ${secondsLeft} segundos`);
-          const response = `Comando está em cooldown. Tente novamente em ${secondsLeft} segundos.`;
-          await bot.sendMessage(message.group, response);
+          
+          const returnMessage = new ReturnMessage({
+            chatId: message.group,
+            content: `Comando está em cooldown. Tente novamente em ${secondsLeft} segundos.`
+          });
+          await bot.sendReturnMessages(returnMessage);
           return;
         }
       }
@@ -455,13 +493,27 @@ class CommandHandler {
       // Envia todas as respostas ou seleciona uma aleatória
       if (command.sendAllResponses) {
         this.logger.debug(`Enviando todas as ${responses.length} respostas para o comando ${command.startsWith}`);
+        const returnMessages = [];
+        
         for (const response of responses) {
-          await this.sendCustomCommandResponse(bot, message, response, command, group);
+          const processedMessage = await this.processCustomCommandResponse(bot, message, response, command, group);
+          if (processedMessage) {
+            returnMessages.push(processedMessage);
+          }
+        }
+        
+        // Envia todas as mensagens de retorno
+        if (returnMessages.length > 0) {
+          await bot.sendReturnMessages(returnMessages);
         }
       } else {
         const randomIndex = Math.floor(Math.random() * responses.length);
         this.logger.debug(`Enviando resposta aleatória (${randomIndex + 1}/${responses.length}) para o comando ${command.startsWith}`);
-        await this.sendCustomCommandResponse(bot, message, responses[randomIndex], command, group);
+        
+        const returnMessage = await this.processCustomCommandResponse(bot, message, responses[randomIndex], command, group);
+        if (returnMessage) {
+          await bot.sendReturnMessages(returnMessage);
+        }
       }
       
       // Reage com emoji depois (do comando ou padrão)
@@ -476,33 +528,29 @@ class CommandHandler {
       
     } catch (error) {
       this.logger.error(`Erro ao executar comando personalizado ${command.startsWith}:`, error);
-      try {
-        await bot.sendMessage(message.group, `Erro ao executar comando personalizado: ${command.startsWith}`);
-        
-        // Reage com emoji de erro
-        const errorEmoji = command.reactions?.error || "❌";
-        try {
-          if (command.react !== false) {
-            await message.origin.react(errorEmoji);
-          }
-        } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação de erro:', reactError);
+      
+      const errorEmoji = command.reactions?.error || "❌";
+      const returnMessage = new ReturnMessage({
+        chatId: message.group,
+        content: `Erro ao executar comando personalizado: ${command.startsWith}`,
+        reactions: {
+          before: command.react !== false ? errorEmoji : null
         }
-      } catch (sendError) {
-        this.logger.error('Erro ao enviar mensagem de erro:', sendError);
-      }
+      });
+      await bot.sendReturnMessages(returnMessage);
     }
   }
   
   /**
-   * Envia uma resposta para um comando personalizado
+   * Processa uma resposta para um comando personalizado
    * @param {WhatsAppBot} bot - A instância do bot
    * @param {Object} message - A mensagem original
    * @param {string} responseText - O texto da resposta
    * @param {Object} command - O objeto de comando personalizado
    * @param {Group} group - O objeto do grupo
+   * @returns {Promise<ReturnMessage|null>} - A mensagem de retorno processada
    */
-  async sendCustomCommandResponse(bot, message, responseText, command, group) {
+  async processCustomCommandResponse(bot, message, responseText, command, group) {
     try {
       this.logger.debug(`Processando resposta para comando ${command.startsWith}: ${responseText.substring(0, 50)}${responseText.length > 50 ? '...' : ''}`);
       
@@ -537,15 +585,17 @@ class CommandHandler {
           // Executamos o comando
           await this.processCommand(bot, message, embeddedCmd, embeddedArgs, group);
           
-          return; // Não continua o processamento normal
+          return null; // Não continua o processamento normal
         } catch (embeddedError) {
           this.logger.error(`Erro ao executar comando embutido: ${processedResponse.command}`, embeddedError);
-          await bot.sendMessage(
-            message.group,
-            `Erro ao executar comando embutido: ${processedResponse.command}`,
-            { quotedMessageId: command.reply ? message.origin.id._serialized : undefined }
-          );
-          return;
+          
+          return new ReturnMessage({
+            chatId: message.group,
+            content: `Erro ao executar comando embutido: ${processedResponse.command}`,
+            options: {
+              quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+            }
+          });
         }
       }
       
@@ -553,35 +603,35 @@ class CommandHandler {
       if (processedResponse && Array.isArray(processedResponse)) {
         this.logger.debug(`Enviando múltiplas respostas de mídia para comando ${command.startsWith} (via variável file para pasta)`);
         
-        // Envia cada arquivo de mídia, máximo de 5
-        for (const mediaItem of processedResponse) {
-          await bot.sendMessage(
-            message.group,
-            mediaItem.media,
-            { 
+        // Cria array de ReturnMessages, máximo de 5
+        const returnMessages = [];
+        for (let i = 0; i < Math.min(processedResponse.length, 5); i++) {
+          const mediaItem = processedResponse[i];
+          returnMessages.push(new ReturnMessage({
+            chatId: message.group,
+            content: mediaItem.media,
+            options: {
               caption: mediaItem.caption,
-              quotedMessageId: command.reply ? message.origin.id._serialized : undefined 
-            }
-          );
-          
-          // Pequena pausa para evitar flood
-          await new Promise(resolve => setTimeout(resolve, 1000));
+              quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+            },
+            delay: i * 1000 // Adiciona delay de 1 segundo entre mensagens
+          }));
         }
         
-        return;
+        return returnMessages;
       }
       
       // Verifica se a resposta é um objeto MessageMedia (caso de variável {file-...})
       if (processedResponse && typeof processedResponse === 'object' && processedResponse.mimetype) {
         this.logger.debug(`Enviando resposta de mídia para comando ${command.startsWith} (via variável file)`);
         
-        await bot.sendMessage(
-          message.group,
-          processedResponse,
-          { quotedMessageId: command.reply ? message.origin.id._serialized : undefined }
-        );
-        
-        return;
+        return new ReturnMessage({
+          chatId: message.group,
+          content: processedResponse,
+          options: {
+            quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+          }
+        });
       }
       
       // Verifica se é uma resposta de mídia (formato: "{img-filename.png} Legenda")
@@ -597,28 +647,39 @@ class CommandHandler {
         
         try {
           const media = await bot.createMedia(mediaPath);
-          await bot.sendMessage(message.group, media, {
-            caption: caption || undefined,
-            sendMediaAsSticker: mediaType === 'sticker',
-            quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+          
+          return new ReturnMessage({
+            chatId: message.group,
+            content: media,
+            options: {
+              caption: caption || undefined,
+              sendMediaAsSticker: mediaType === 'sticker',
+              quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+            }
           });
-          this.logger.debug(`Mídia enviada com sucesso para o comando ${command.startsWith}`);
         } catch (error) {
           this.logger.error(`Erro ao enviar resposta de mídia (${mediaPath}):`, error);
-          await bot.sendMessage(message.group, `Erro: Não foi possível enviar o arquivo de mídia ${fileName}`);
+          
+          return new ReturnMessage({
+            chatId: message.group,
+            content: `Erro: Não foi possível enviar o arquivo de mídia ${fileName}`
+          });
         }
       } else {
         // Resposta de texto
         this.logger.debug(`Enviando resposta de texto para o comando ${command.startsWith}`);
-        await bot.sendMessage(
-          message.group,
-          processedResponse,
-          { quotedMessageId: command.reply ? message.origin.id._serialized : undefined }
-        );
-        this.logger.debug(`Resposta de texto enviada com sucesso para o comando ${command.startsWith}`);
+        
+        return new ReturnMessage({
+          chatId: message.group,
+          content: processedResponse,
+          options: {
+            quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+          }
+        });
       }
     } catch (error) {
-      this.logger.error('Erro ao enviar resposta de comando personalizado:', error);
+      this.logger.error('Erro ao processar resposta de comando personalizado:', error);
+      return null;
     }
   }
   
