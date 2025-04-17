@@ -6,10 +6,12 @@ const { v4: uuidv4 } = require('uuid');
 const os = require('os');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const LLMService = require('../services/LLMService');
 
 const execPromise = util.promisify(exec);
 const logger = new Logger('speech-commands');
 const database = Database.getInstance();
+const llmService = new LLMService({});
 
 const espeakPath = process.env.ESPEAK_PATH || 'espeak';
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
@@ -32,7 +34,7 @@ const commands = [
     description: 'Converte texto para voz',
     category: 'group',
     reactions: {
-      before: "🎙️",
+      before: "⌛️",
       after: "🔊"
     },
     method: async (bot, message, args, group) => {
@@ -45,8 +47,8 @@ const commands = [
     category: 'group',
     needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
     reactions: {
-      before: "👂",
-      after: "📝"
+      before: "⌛️",
+      after: "👂"
     },
     method: async (bot, message, args, group) => {
       await speechToText(bot, message, args, group);
@@ -186,7 +188,7 @@ async function speechToText(bot, message, args, group) {
       return;
     }
     
-    logger.debug('Convertendo voz para texto');
+    logger.debug('[speechToText] Convertendo voz para texto');
     
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(media, 'ogg');
@@ -198,7 +200,7 @@ async function speechToText(bot, message, args, group) {
     // Usa vosk-transcriber (motor STT gratuito e offline)
     // Isso pressupõe que vosk-transcriber esteja instalado e o modelo baixado
     const { stdout } = await execPromise(
-      `vosk-transcriber -i "${wavPath}" -l pt -m /path/to/vosk-model-pt`
+      `vosk-transcriber -i "${wavPath}" -l pt -m ${process.env.VOSK_STT_MODEL}`, { encoding: 'utf8' }
     );
     
     // Extrai o texto transcrito
@@ -210,11 +212,25 @@ async function speechToText(bot, message, args, group) {
     }
     
     // Envia o texto transcrito
-    await bot.sendMessage(chatId, transcribedText, {
+    const msgEnviada = await bot.sendMessage(chatId, `_${transcribedText?.trim()}_`, {
       quotedMessageId: message.origin.id._serialized
     });
     
-    logger.info('Resultado STT enviado com sucesso');
+    logger.info(`[speechToText] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
+
+    llmService.getCompletion({
+      prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
+      provider: 'openrouter',
+      temperature: 0.7,
+      maxTokens: 300
+    }).then(respStt => {
+      const sttMelhorado = respStt.trim();
+
+      logger.info(`[speechToText] Melhoramento via LLM recebido, editando mensagem: ${sttMelhorado}`);
+      msgEnviada.edit(`_${sttMelhorado}_`);
+    }).catch(e => {
+      logger.info(`[speechToText] Melhoramento via LLM deu erro, ignorando.`);
+    });
     
     // Limpa arquivos temporários
     try {
@@ -250,7 +266,7 @@ async function processAutoSTT(bot, message, group) {
       return false;
     }
     
-    logger.debug(`Processamento Auto-STT para mensagem no grupo ${message.group}`);
+    logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no grupo ${message.group}`);
     
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(message.content, 'ogg');
@@ -261,7 +277,7 @@ async function processAutoSTT(bot, message, group) {
     
     // Usa vosk-transcriber (motor STT gratuito e offline)
     const { stdout } = await execPromise(
-      `vosk-transcriber -i "${wavPath}" -l pt -m /path/to/vosk-model-pt`
+      `vosk-transcriber -i "${wavPath}" -l pt -m ${process.env.VOSK_STT_MODEL}`, { encoding: 'utf8' }
     );
     
     // Extrai o texto transcrito
@@ -269,10 +285,26 @@ async function processAutoSTT(bot, message, group) {
     
     // Se a transcrição for bem-sucedida, envia-a
     if (transcribedText) {
-      await bot.sendMessage(message.group, `🔊 ➡ 📝: ${transcribedText}`, {
+      const msgEnviada = await bot.sendMessage(message.group, `_${transcribedText?.trim()}_`, {
         quotedMessageId: message.origin.id._serialized
       });
       
+      logger.info(`[processAutoSTT] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
+
+      llmService.getCompletion({
+        prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
+        provider: 'openrouter',
+        temperature: 0.7,
+        maxTokens: 300
+      }).then(respStt => {
+        const sttMelhorado = respStt.trim();
+
+        logger.info(`[processAutoSTT] Melhoramento via LLM recebido, editando mensagem: ${sttMelhorado}`);
+        msgEnviada.edit(`_${sttMelhorado}_`);
+      }).catch(e => {
+        logger.info(`[processAutoSTT] Melhoramento via LLM deu erro, ignorando.`);
+      });
+
       logger.info('Resultado auto-STT enviado com sucesso');
     }
     

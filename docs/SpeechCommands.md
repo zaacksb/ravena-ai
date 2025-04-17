@@ -27,14 +27,17 @@ Para o funcionamento completo deste módulo, é necessário instalar:
 - **Vosk** (para STT):
   ```bash
   pip install vosk
-  vosk-transcriber -d # Para baixar o modelo de português
   ```
+
+Baixe o modelo treinado para PT-BR do [FalaBrasil](https://alphacephei.com/vosk/models/vosk-model-pt-fb-v0.1.1-pruned.zip) em sua versão reduzida (se for rodar no linux, pode baixar a completa!).
+Extraia o mesmo para uma pasta e depois inclua a mesma no `.env`.
 
 Configure os caminhos para os executáveis no arquivo `.env`:
 
 ```env
 ESPEAK_PATH=C:/path/to/espeak.exe
 FFMPEG_PATH=C:/path/to/ffmpeg.exe
+VOSK_STT_MODEL=C:/path/to/vosk-model-ptbr
 ```
 
 ## Comandos Disponíveis

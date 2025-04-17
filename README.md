@@ -23,6 +23,7 @@
 - [x] Manipulação de mídia
 - [x] Sistema de doações pelo tipa.ai
 - [x] Servidor API
+- [x] Instruções do VOSK para speech-to-text
 - [ ] Comandos genéricos: processCustomStaticVariables implementar seleção random
 - [ ] Editar README com principais diferenças da ravena antiga (incompleto)
 - [ ] Implementar docs para todas as funções implementadas até o momento
@@ -59,6 +60,7 @@
 
 - [ ] Fix respostas LLM não chegarem pelo OpenRouter
 - [ ] Fix boas vindas enviando mesmo sem setar
+- [ ] Fix emojis e reações que o claude criou estranhos
 
 ## 📚 Documentação dos Comandos
 

@@ -28,7 +28,7 @@ class LLMService {
    * Envia uma solicitação de completação para OpenRouter
    * @param {Object} options - Opções de solicitação
    * @param {string} options.prompt - O texto do prompt
-   * @param {string} [options.model='google/gemini-2.0-flash-thinking-exp:free'] - O modelo a usar
+   * @param {string} [options.model='google/gemini-2.0-flash-exp:free'] - O modelo a usar
    * @param {number} [options.maxTokens=1000] - Número máximo de tokens a gerar
    * @param {number} [options.temperature=0.7] - Temperatura de amostragem
    * @returns {Promise<Object>} - A resposta da API
@@ -41,7 +41,7 @@ class LLMService {
       }
 
       this.logger.debug('Enviando solicitação para API OpenRouter:', { 
-        model: options.model || 'google/gemini-2.0-flash-thinking-exp:free',
+        model: options.model || 'google/gemini-2.0-flash-exp:free',
         promptLength: options.prompt.length,
         maxTokens: options.maxTokens || 1000
       });
@@ -49,7 +49,7 @@ class LLMService {
       const response = await axios.post(
         'https://openrouter.ai/api/v1/chat/completions',
         {
-          model: options.model || 'google/gemini-2.0-flash-thinking-exp:free',
+          model: options.model || 'google/gemini-2.0-flash-exp:free',
           messages: [
             { role: 'user', content: options.prompt }
           ],
@@ -59,8 +59,6 @@ class LLMService {
         {
           headers: {
             'Authorization': `Bearer ${this.openRouterKey}`,
-            'HTTP-Referer': 'https://whatsapp-bot', // Valor arbitrário para o referer
-            'X-Title': 'WhatsApp Bot', // Título da aplicação
             'Content-Type': 'application/json'
           },
           timeout: options.timeout || this.apiTimeout
@@ -69,6 +67,7 @@ class LLMService {
 
       this.logger.debug('Resposta recebida da API OpenRouter', {
         status: response.status,
+        data: response.data,
         contentLength: JSON.stringify(response.data).length
       });
 

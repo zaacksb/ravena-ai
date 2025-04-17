@@ -146,3 +146,4 @@ data/youtube-cache.json
 data/pending-invites.json
 data/load-reports.json
 data/groups.json
+/data/vosk-model-ptbr
