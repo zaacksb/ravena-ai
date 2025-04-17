@@ -162,3 +162,5 @@ async function buscarWikipedia(bot, message, args, group) {
     await bot.sendMessage(chatId, `❌ ${errorMessage}`);
   }
 }
+
+module.exports = { commands };
