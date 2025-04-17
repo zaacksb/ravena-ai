@@ -304,3 +304,25 @@ Conversão automática de voz para texto agora está *ativada* para este grupo.
 ```
 
 Este documento cobre os principais aspectos do sistema de gerenciamento do bot. Para mais detalhes sobre comandos específicos, consulte o código-fonte ou use o comando `!g-help` para obter ajuda.
+
+### Comando !g-pausar
+
+**Entrada (para pausar):**
+```
+!g-pausar
+```
+
+**Saída (quando pausando):**
+```
+⏸️ Bot pausado neste grupo. Somente o comando `!g-pausar` será processado até que seja reativado.
+```
+
+**Entrada (para retomar):**
+```
+!g-pausar
+```
+
+**Saída (quando reativando):**
+```
+▶️ Bot reativado neste grupo. Todos os comandos estão disponíveis novamente.
+```

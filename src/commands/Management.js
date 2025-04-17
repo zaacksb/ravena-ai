@@ -42,6 +42,7 @@ class Management {
       'ignorar': 'ignoreUser',
       'mute': 'muteCommand',
       'customAdmin': 'customAdmin',
+      'pausar': 'pauseGroup',
 
       // Twitch commands
       'twitch-canal': 'toggleTwitchChannel',
@@ -2658,6 +2659,39 @@ class Management {
       return `+${number.substring(0, 2)} (${number.substring(2, 4)}) ${number.substring(4, 9)}-${number.substring(9)}`;
     } else {
       return number;
+    }
+  }
+
+  /**
+   * Pausa ou retoma a atividade do bot no grupo
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   */
+  async function pauseGroup(bot, message, args, group) {
+    try {
+      if (!group) {
+        await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
+        return;
+      }
+      
+      // Alterna o estado de pausa do grupo
+      group.paused = !group.paused;
+      
+      // Salva a configuração atualizada
+      await this.database.saveGroup(group);
+      
+      if (group.paused) {
+        await bot.sendMessage(group.id, '⏸️ Bot pausado neste grupo. Somente o comando `!g-pausar` será processado até que seja reativado.');
+      } else {
+        await bot.sendMessage(group.id, '▶️ Bot reativado neste grupo. Todos os comandos estão disponíveis novamente.');
+      }
+      
+      this.logger.info(`Grupo ${group.id} ${group.paused ? 'pausado' : 'reativado'}`);
+    } catch (error) {
+      this.logger.error('Erro ao pausar/retomar grupo:', error);
+      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando. Por favor, tente novamente.');
     }
   }
 

@@ -134,7 +134,20 @@ class CommandHandler {
     // Verifica se é um comando de gerenciamento
     if (command.startsWith('g-')) {
       this.logger.debug(`Identificado como comando de gerenciamento: ${command}`);
+      
+      // Verifica se o grupo está pausado e se o comando NÃO é g-pausar
+      if (group && group.paused && command !== 'g-pausar') {
+        this.logger.info(`Ignorando comando de gerenciamento em grupo pausado: ${command}`);
+        return;
+      }
+      
       await this.processManagementCommand(bot, message, command, args, group);
+      return;
+    }
+    
+    // Verifica se o grupo está pausado (para outros tipos de comandos)
+    if (group && group.paused) {
+      this.logger.info(`Ignorando comando em grupo pausado: ${command}`);
       return;
     }
     
@@ -621,6 +634,12 @@ class CommandHandler {
       // Pula se não houver comandos personalizados para este grupo
       if (!this.customCommands[group.id]) {
         this.logger.debug(`Sem comandos personalizados para o grupo ${group.id}, pulando verificação de auto-trigger`);
+        return;
+      }
+
+      // Verifica se o grupo está pausado
+      if (group.paused) {
+        this.logger.info(`Ignorando comandos auto-acionados em grupo pausado: ${group.id}`);
         return;
       }
       

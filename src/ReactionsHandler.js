@@ -61,6 +61,12 @@ class ReactionsHandler {
         let group = null;
         if (formattedMessage.group) {
           group = await bot.eventHandler.getOrCreateGroup(formattedMessage.group);
+
+          // Se o grupo estiver pausado, ignora a reação
+          if (group.paused) {
+            this.logger.info(`Ignorando reação em grupo pausado: ${formattedMessage.group}`);
+            return false;
+          }
         }
         
         // Executa o comando

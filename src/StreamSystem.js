@@ -234,6 +234,12 @@ class StreamSystem {
    */
   async processStreamEvent(group, channelConfig, eventData, eventType) {
     try {
+      // Verifica se o grupo está pausado
+      if (group.paused) {
+        this.logger.info(`Ignorando notificação de stream para grupo pausado: ${group.id}`);
+        return;
+      }
+
       // Obtém a configuração apropriada (onConfig para eventos online, offConfig para offline)
       const config = eventType === 'online' ? channelConfig.onConfig : channelConfig.offConfig;
       

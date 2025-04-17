@@ -807,3 +807,78 @@ Crie um InviteSystem.md explicando o fluxo de convites (utilize mermaid para uma
 Me envie como artefatos
 
 --
+
+Implementar novas functions.
+Para cada uma gerada, crie também o arquivo md explicando a implementação e uso na pasta docs.
+Inclui arquivos como exemplos para se basear no padrão de desenvolvimento do projeto.
+Envie os arfetatos com o código completo para cada uma das funções geradas.
+
+# StableDiffusionCommands
+Acessar a API do SDWebui para gerar imagens e retornar pro usuário
+.env.SDWEBUI_URL define a URL base para acessar
+
+!imagine [prompt]
+
+Retorna imagem com dados da geração na legenda (prompt, modelo usado, tempo de geração, etc.)
+Antes de retornar a imagem gerada, passe a mesma para o nudenet/censor afim de verificar se ela possui conteúdo NSFW
+Se possuir, envie a imagem original gerada sem censura, mas:
+- adicione viewOnly: true nas opções do retorno
+- Envie uma mensagem extra junto, antes da imagem: 🔞 A imagem gerada pode conter conteúdo potencialmente pornográfico, abra com cautela.
+
+# LembretesCommands
+!lembrar
+
+Usar em resposta a uma mensagem acompanhado de uma data. O bot deve guardar isso numa base de dados lembretes.json, bem como as midias necessárias para o lembrete.
+Na data especificada, o bot deve enviar a mensagem guardada.
+Sugestão de biblioteca: chrono-node para interpretar as mensagens
+
+!lembrar amanhã às 10:00
+!lembrar 17/04/2025 07:300
+!lembrar 10:00 // data = hoje
+!lembrar amanhã // horário padrão: 07:00
+
+# GiphyCommands
+!gif [busca]
+Busca e retorna na api do giphy (chave em .env.GIPHY_API) um gif aleatório relacinado a busca informada.
+Se o a busca não for especificada, retornar um dos gifs populares recentes
+Incluir legenda com dados do gif, como titulo, visualizações, etc.
+
+# AnimeCommands
+!anime [nome]
+Use a biblioteca mal-scraper para buscar informações sobre o anime.
+
+Retorne a imagem de capa e dados como:
+🗾 Resultado da busca para '':
+	📅 *Lançamento*: ${lancamento} (${data.aired} @ ${data.type})
+	🍿 *Gênero*: ${generos}
+	🔢 *Episódios*: ${data.episodes} (_${data.duration}_)
+	🏆 *Nota:* ${data.score}, ${data.ranked}
+	💬 *Sinopse:* ${sinopse.trim()}
+
+Pode ser so texto se não tiver imagem de capa.
+
+# ImdbCommands
+!imdb [nome]
+Similar ao !anime, mas busca dados no IMDB, use a biblioteca que achar mais adequada
+
+# WikipediaCommands
+!wiki [busca]
+
+Busca algum artigo na wikipedia pt-br com este nome e retorna uma mensagem legal formatada com a imagem principal (se existir), titulo, reusmo e tópico principal
+
+# DiceCommands
+
+!dXX
+
+Gira um dado conforme espeficação, por exemplo
+!d20 = 0 a 20
+!d20+5 = 5 a 25
+e outros padrões de rolagem para RPG
+
+# GroupCommands
+Adiciona função "!apagar", solicitando ao bot que apague a mensagem que ele enviou
+Se for mensagem de outra pessoa, apenas tente apagar se o bot for admin, sem necessidade de retornar erro caso não seja
+
+# Management
+!g-pausar
+Pausar/continua atividade do bot no grupo. Se pausado, nada do grupo será processado além do comando !g-pausar para voltar ao normal

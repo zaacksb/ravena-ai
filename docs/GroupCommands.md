@@ -1,50 +1,44 @@
 # Comandos de Grupo
 
-O módulo `GroupCommands.js` implementa funcionalidades específicas para interação em grupos de WhatsApp, como mencionar todos os participantes e gerenciar preferências de menções.
+O módulo `GroupCommands.js` implementa funcionalidades úteis para gestão e interação em grupos do WhatsApp. Este módulo facilita a comunicação em massa e a moderação de conteúdo dentro dos grupos.
 
 ## Implementação
 
-Este módulo foi desenvolvido para oferecer ferramentas úteis em conversas de grupo, com foco em facilitar a comunicação entre múltiplos participantes e permitir que membros personalizem suas preferências de interação.
+Este módulo inclui comandos para mencionar todos os membros de um grupo de forma eficiente, permitir que usuários optem por não receber menções em massa, e recursos para moderação como apagar mensagens.
 
-As principais funcionalidades incluem:
-- Mencionar todos os membros de um grupo silenciosamente (sem notificação de som)
-- Permitir que usuários optem por ser ignorados nas menções em massa
-- Manter preferências dos usuários persistentes no banco de dados
+## Requisitos
+
+Não há requisitos especiais para este módulo, pois ele utiliza apenas as funcionalidades nativas do cliente WhatsApp Web.
 
 ## Comandos Disponíveis
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!atencao` | Menciona todos os membros do grupo silenciosamente | [mensagem] (opcional) |
-| `!galera` | Alias para `!atencao` | [mensagem] (opcional) |
-| `!ignorar` | Alterna ser ignorado nas menções de grupo | - |
+| Comando | Descrição | Observações |
+|---------|-----------|-------------|
+| `!atencao` | Menciona todos os membros do grupo | Os membros receberão uma notificação silenciosa |
+| `!galera` | Alias para o comando `!atencao` | Funcionalidade idêntica ao comando atencao |
+| `!ignorar` | Alterna o status de ser ignorado pelas menções em massa | Usuários ignorados não aparecerão nas menções |
+| `!apagar` | Apaga uma mensagem do bot | Deve ser usado como resposta a uma mensagem |
 
 ## Exemplos de Uso
 
-### Comando !atencao ou !galera
+### Comando !atencao (ou !galera)
 
 **Entrada:**
 ```
-!atencao Reunião em 5 minutos!
+!atencao Reunião em 5 minutos, pessoal!
 ```
+
+**Processo:**
+1. O bot obtém a lista de todos os participantes do grupo
+2. Filtra participantes que optaram por ser ignorados
+3. Cria uma mensagem que menciona todos os demais participantes
+4. Envia a mensagem com o texto fornecido
 
 **Saída:**
 ```
-Reunião em 5 minutos!
+🚨 Reunião em 5 minutos, pessoal!
 ```
-A mensagem menciona todos os membros do grupo (exceto aqueles que optaram por ser ignorados), mas sem gerar notificação sonora.
-
-Se nenhuma mensagem for fornecida, o bot usará uma mensagem padrão:
-
-**Entrada:**
-```
-!atencao
-```
-
-**Saída:**
-```
-🚨 Atenção pessoal! 🚨
-```
+A mensagem acima incluirá menções (@) a todos os membros não ignorados do grupo.
 
 ### Comando !ignorar
 
@@ -53,45 +47,56 @@ Se nenhuma mensagem for fornecida, o bot usará uma mensagem padrão:
 !ignorar
 ```
 
-**Saída (primeira vez):**
+**Processo:**
+1. O bot verifica se o usuário está na lista de ignorados do grupo
+2. Alterna seu status (adiciona à lista se não estiver, remove se estiver)
+3. Salva a configuração atualizada
+
+**Saída (ao ativar ignorar):**
 ```
 Você agora será ignorado nas menções de grupo.
 ```
 
-**Saída (segunda vez):**
+**Saída (ao desativar ignorar):**
 ```
 Você agora será incluído nas menções de grupo.
 ```
 
-Este comando funciona como um toggle, alternando entre ser incluído ou ignorado nas menções de grupo.
+### Comando !apagar
 
-## Funcionamento Interno
+**Uso:**
+Responda a uma mensagem do bot com o comando `!apagar`
 
-### Menções em Grupo
+**Processo:**
+1. O bot verifica se a mensagem respondida é uma mensagem enviada por ele
+2. Se for do bot: apaga a mensagem citada e apaga o comando `!apagar`
+3. Se não for do bot: verifica se o bot é administrador no grupo
+   - Se for admin: tenta apagar a mensagem de outro usuário
+   - Se não for admin: informa que não pode apagar mensagens de outros
 
-Quando um usuário executa `!atencao` ou `!galera`:
+**Comportamento Especial:**
+- Reage com ✅ quando consegue apagar a mensagem
+- Reage com ❌ quando falha ao apagar
+- Tanto o comando quanto a mensagem original são apagados em caso de sucesso
+- Em chats privados, as verificações de permissão são ignoradas
 
-1. O bot recupera a lista de todos os participantes do grupo
-2. Filtra participantes que optaram por ser ignorados
-3. Cria uma menção para cada participante
-4. Envia a mensagem com todas as menções
+## Reações com Emojis
 
-Tecnicamente, o bot está usando a funcionalidade de API do WhatsApp para criar menções que não geram som de notificação, o que é útil para obter a atenção dos membros sem ser intrusivo.
+| Comando | Antes | Depois | Erro |
+|---------|-------|--------|------|
+| `!atencao` | 📢 | ✅ | ❌ |
+| `!galera` | 📢 | ✅ | ❌ |
+| `!ignorar` | 🔇 | ✅ | ❌ |
+| `!apagar` | 🗑️ | ✅ | ❌ |
 
-### Sistema de Ignorar
+## Considerações sobre Privacidade
 
-O sistema de ignorar menções funciona da seguinte forma:
+- Usuários podem optar por não receber menções usando o comando `!ignorar`
+- A lista de usuários ignorados é armazenada no nível do grupo
+- Apenas o próprio usuário pode alterar seu status de ignorado
 
-1. Quando um usuário executa `!ignorar`, o bot verifica se o usuário já está na lista de ignorados
-2. Se não estiver, adiciona o usuário à lista
-3. Se já estiver, remove o usuário da lista
-4. A lista é armazenada no banco de dados para persistência
+## Considerações sobre Permissões
 
-Os dados são armazenados na propriedade `ignoredUsers` no objeto do grupo, que é persistido no banco de dados do bot.
-
-## Notas Adicionais
-
-- Os comandos só funcionam em grupos, não em conversas privadas
-- Administradores de grupo sempre conseguem mencionar todos os membros, mesmo aqueles que optaram por ser ignorados usando o comando do bot
-- O sistema é projetado para ser não-intrusivo, respeitando as preferências dos usuários
-- A lista de usuários ignorados é específica para cada grupo, então um usuário pode optar por ser ignorado em um grupo mas não em outro
+- O comando `!apagar` pode apagar mensagens de qualquer usuário se o bot for administrador do grupo
+- Caso contrário, só pode apagar suas próprias mensagens
+- O bot tenta apagar também a mensagem de comando para manter o chat limpo

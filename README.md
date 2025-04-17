@@ -32,21 +32,21 @@
 - [X] Comandos genéricos: processCustomStaticVariables implementar seleção random
 - [X] Dados de quem enviou convite na mensagem quando add ravena
 - [X] Additonal Admins: Bot considera outras pessoas como admin (a que add no grupo ou outra manual)
-- [ ] Editar README com principais diferenças da ravena antiga (incompleto)
+- [x] Editar README com principais diferenças da ravena antiga
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Script para migração de dados da ravena antiga
-- [ ] Comando: !lembrar e versão nova com opção de repetir
-- [ ] Comando: !gif, busca de gifs
-- [ ] Comando: !imagine, geração de imagens no sdwebui
-- [ ] Comando: !anime, info de animes
-- [ ] Comando: !imdb, info de filmes e séries
+- [x] Comando: !lembrar e versão nova com opção de repetir
+- [x] Comando: !gif, busca de gifs
+- [x] Comando: !imagine, geração de imagens no sdwebui
+- [x] Comando: !anime, info de animes
+- [x] Comando: !imdb, info de filmes e séries
+- [x] Comando: !wiki, busca na wikipédia
 - [ ] Comando: !download, baixa arquivo de link direto
-- [ ] Comando: !wiki, busca na wikipédia
-- [ ] Comando: !velharia, importa os comandos genéricos antigos da ravena
-- [ ] Comando: !dxx, comandos de dados agora como fixos
+- [x] Comando: !velharia, importa os comandos genéricos antigos da ravena
+- [x] Comando: !dxx, comandos de dados agora como fixos
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
-- [ ] Comando: !deletar, pra apagar msgs do bot
-- [ ] Comando: !g-pausar, suspende atividade do bot no grupo
+- [x] Comando: !apagar, pra apagar msgs do bot
+- [x] Comando: !g-pausar, suspende atividade do bot no grupo
 - [ ] Comando: !ajuda [topico], usar o Gemini pra gerar ajuda sobre os comandos
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
@@ -84,6 +84,13 @@ Esta seção contém documentação detalhada de cada categoria de comandos disp
 - [Monitoramento de Streams](docs/StreamCommands.md) - Comandos para gerenciar monitoramento de lives
 - [Sistema de Convites](docs/InviteSystem.md) - Gerenciamento de convites para grupos e administradores adicionais
 - [Comandos de Doação](docs/DonationCommands.md) - Comandos para visualizar informações de doação e doadores
+- [Lembretes](docs/LembretesCommands.md) - Sistema de lembretes agendados com suporte a mídia
+- [Stable Diffusion](docs/StableDiffusionCommands.md) - Geração de imagens com IA
+- [Giphy](docs/GiphyCommands.md) - Busca e envio de GIFs
+- [Anime](docs/AnimeCommands.md) - Informações sobre animes do MyAnimeList
+- [IMDB](docs/ImdbCommands.md) - Informações sobre filmes e séries
+- [Wikipedia](docs/WikipediaCommands.md) - Consulta de artigos da Wikipedia
+- [Dados para RPG](docs/DiceCommands.md) - Sistema de rolagem de dados
 
 Para saber mais sobre os comandos de gerenciamento de grupo, consulte a [documentação de Comandos de Gerenciamento](docs/Management.md).
 
@@ -146,6 +153,9 @@ OPENAI_API_KEY=         # Chave da API OpenAI (opcional)
 OPENROUTER_API_KEY=     # Chave da API OpenRouter (recomendado)
 LOCAL_LLM_ENDPOINT=     # Endpoint LLM local (ex: http://localhost:1234/v1)
 OPENWEATHER_API_KEY=    # Chave da API OpenWeather (opcional)
+SDWEBUI_URL=            # URL da API Stable Diffusion Web UI
+OMDB_API_KEY=           # Chave da API do OMDB (para comandos IMDB)
+GIPHY_API_KEY=          # Chave da API do Giphy
 
 # Configurações de doação
 DONATION_LINK=          # Link para doações tipa.ai
@@ -170,6 +180,7 @@ O bot utiliza alguns programas externos para funcionalidades avançadas:
 * [ImageMagick](docs/ImageManipulation.md) - Para manipulação de imagens
 * [FFmpeg](https://ffmpeg.org/download.html) - Para processamento de áudio e vídeo
 * [eSpeak](http://espeak.sourceforge.net/) - Para síntese de voz (opcional)
+* [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) - Para geração de imagens (opcional)
 
 Configure os caminhos destes programas no arquivo `.env`:
 
@@ -231,6 +242,14 @@ São comandos pré-definidos implementados em JavaScript na pasta `src/functions
 - `!weather <local>`: Obtém previsão do tempo
 - `!roll [lados]`: Joga um dado (padrão: 6 lados)
 - `!help`: Mostra comandos disponíveis
+- `!imagine <prompt>`: Gera imagens com Stable Diffusion
+- `!gif <termo>`: Busca e envia GIFs do Giphy
+- `!anime <nome>`: Busca informações sobre animes
+- `!imdb <título>`: Busca informações sobre filmes/séries
+- `!wiki <termo>`: Busca artigos na Wikipedia
+- `!dXX`: Comandos de dados (d20, d6, etc.)
+- `!lembrar <data/hora>`: Cria um lembrete
+- `!apagar`: Apaga mensagens do bot quando respondido
 
 ### 2. Comandos Personalizados
 
@@ -262,6 +281,7 @@ Começam com `!g-` e são usados para configurar o bot e o grupo:
 - `!g-filtro-palavra <palavra>`: Adiciona/remove palavra do filtro
 - `!g-filtro-links`: Ativa/desativa filtro de links
 - `!g-filtro-nsfw`: Ativa/desativa filtro de conteúdo NSFW
+- `!g-pausar`: Pausa/retoma todas as atividades do bot no grupo
 
 ## 🧩 Criando Novos Comandos
 
@@ -329,6 +349,7 @@ O bot pode monitorar canais do Twitch, Kick e YouTube e notificar os grupos quan
 - `!g-twitch-usarIA <canal>`: Ativa/desativa geração de mensagens com IA
 
 Comandos similares existem para Kick (`!g-kick-...`) e YouTube (`!g-youtube-...`).
+
 
 ## 📝 Licença
 

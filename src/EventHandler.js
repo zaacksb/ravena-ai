@@ -139,9 +139,20 @@ class EventHandler {
         await SummaryCommands.storeMessage(message, group);
         
         // Verifica se o grupo está pausado
-        if (group.paused) {
-          this.logger.info(`Ignorando mensagem de grupo pausado: ${group.id}`);
-          return;
+        if (group.paused) {        
+          // Obtém conteúdo de texto da mensagem (corpo ou legenda)
+          const textContent = message.type === 'text' ? message.content : message.caption;
+          
+          // Verifica se é o comando g-pausar antes de ignorar completamente
+          const prefix = (group && group.prefix !== undefined) ? group.prefix : bot.prefix;
+          const isPauseCommand = textContent && 
+                                textContent.startsWith(prefix) && 
+                                textContent.substring(prefix.length).startsWith('g-pausar');
+          
+          // Só continua o processamento se for o comando g-pausar
+          if (!isPauseCommand) {
+            return;
+          }
         }
         
         // Verifica se o usuário está ignorado
