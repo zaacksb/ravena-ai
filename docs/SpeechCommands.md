@@ -82,7 +82,7 @@ Esta funcionalidade pode ser ativada/desativada com o comando `!g-autoStt` (coma
 
 **Exemplo de saída da transcrição automática:**
 ```
-🔊 ➡ 📝: Olá pessoal, vamos nos encontrar às 15h hoje
+Olá pessoal, vamos nos encontrar às 15h hoje
 ```
 
 ## Fluxo de Trabalho
