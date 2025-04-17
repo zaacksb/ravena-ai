@@ -30,10 +30,11 @@
 - [X] Mensagem IA pra join/leave de grupo
 - [X] Comandos genéricos: Variáveis dinâmicas
 - [X] Comandos genéricos: processCustomStaticVariables implementar seleção random
+- [X] Dados de quem enviou convite na mensagem quando add ravena
+- [X] Additonal Admins: Bot considera outras pessoas como admin (a que add no grupo ou outra manual)
 - [ ] Editar README com principais diferenças da ravena antiga (incompleto)
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Script para migração de dados da ravena antiga
-- [ ] Dados de quem enviou convite na mensagem quando add ravena
 - [ ] Comando: !lembrar e versão nova com opção de repetir
 - [ ] Comando: !gif, busca de gifs
 - [ ] Comando: !imagine, geração de imagens no sdwebui
@@ -81,6 +82,7 @@ Esta seção contém documentação detalhada de cada categoria de comandos disp
 - [Comandos de Voz](docs/SpeechCommands.md) - Conversão entre texto e fala
 - [Comandos RiotGames](docs/RiotGames.md) - Dados da API da Riot Games
 - [Monitoramento de Streams](docs/StreamCommands.md) - Comandos para gerenciar monitoramento de lives
+- [Sistema de Convites](docs/InviteSystem.md) - Gerenciamento de convites para grupos e administradores adicionais
 - [Comandos de Doação](docs/DonationCommands.md) - Comandos para visualizar informações de doação e doadores
 
 Para saber mais sobre os comandos de gerenciamento de grupo, consulte a [documentação de Comandos de Gerenciamento](docs/Management.md).

@@ -157,10 +157,8 @@ class InviteSystem {
           
           await this.bot.sendMessage(this.bot.grupoInvites, infoMessage);
           
-          // Envia segunda mensagem com comando para aceitar
-          const commandMessage = 
-            `Para aceitar este convite, use o comando:\n\n` +
-            `!g-joinGrupo ${inviteCode}`;
+          // Envia segunda mensagm com comando para aceitar
+          const commandMessage =   `!g-joinGrupo ${inviteCode} ${authorId} ${userName}`;
           
           await this.bot.sendMessage(this.bot.grupoInvites, commandMessage);
         } catch (error) {

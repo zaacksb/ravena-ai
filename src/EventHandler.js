@@ -425,11 +425,48 @@ class EventHandler {
         // Caso 1: Bot entrou no grupo
         this.logger.info(`Bot entrou no grupo ${data.group.name} (${data.group.id})`);
         
+        // Busca pendingJoins para ver se esse grupo corresponde a um convite pendente
+        const pendingJoins = await this.database.getPendingJoins();
+        let foundInviter = null;
+        
+        // Obtém todos os membros do grupo para verificação
+        const members = chat.participants.map(p => p.id._serialized);
+        const stringifiedData = JSON.stringify(data);
+        
+        for (const pendingJoin of pendingJoins) {
+          // Verifica se o autor do convite está no grupo (duas abordagens)
+          if (members.includes(pendingJoin.authorId) || stringifiedData.includes(pendingJoin.authorId)) {
+            foundInviter = pendingJoin;
+            break;
+          }
+        }
+
         // Envia uma mensagem de boas-vindas padrão sobre o bot
-        const botInfoMessage = `👋 Olá! Eu sou um bot de WhatsApp. Meu prefixo de comando é "${group.prefix}". Use "${group.prefix}help" para ver os comandos disponíveis.`;
-        bot.sendMessage(data.group.id, botInfoMessage).catch(error => {
-          this.logger.error('Erro ao enviar mensagem de informações do bot:', error);
-        });
+        let botInfoMessage = `🦇 Olá, grupo! Eu sou a *ravenabot*, um bot de WhatsApp. Use "${group.prefix}cmd" para ver os comandos disponíveis.`;
+        
+        // Se encontramos o autor do convite, adiciona-o como admin adicional
+        let llm_inviterInfo = "";
+        if (foundInviter) {
+          // Inicializa additionalAdmins se não existir
+          if (!group.additionalAdmins) {
+            group.additionalAdmins = [];
+          }
+          
+          // Adiciona o autor como admin adicional se ainda não estiver na lista
+          if (!group.additionalAdmins.includes(foundInviter.authorId)) {
+            group.additionalAdmins.push(foundInviter.authorId);
+            await this.database.saveGroup(group);   
+          }
+
+          if(foundInviter.authorName){
+            botInfoMessage += `\n_(Adicionado por: ${foundInviter.authorName})_`;
+            llm_inviterInfo = ` '${foundInviter.authorName}'`;
+          }
+          
+          // Remove o join pendente
+          await this.database.removePendingJoin(foundInviter.code);
+        }
+      
         
         // Gera e envia uma mensagem com informações sobre o grupo usando LLM
         try {
@@ -440,7 +477,7 @@ class EventHandler {
             memberCount: chat.participants?.length || 0
           };
           
-          const llmPrompt = `Você é um bot de WhatsApp chamado ravenabot e foi adicionado em um grupo de whatsapp chamado '${groupInfo.name}', este grupo é sobre '${groupInfo.description}' e tem '${groupInfo.memberCount}' participantes. Envie uma mensagem agradecendo a confiança e fazendo de conta que entende do assunto do grupo enviando algo relacionado junto pra se enturmar.`;
+          const llmPrompt = `Você é um bot de WhatsApp chamado ravenabot e foi adicionado em um grupo de whatsapp chamado '${groupInfo.name}'${llm_inviterInfo}, este grupo é sobre '${groupInfo.description}' e tem '${groupInfo.memberCount}' participantes. Gere uma mensagem agradecendo a confiança e fazendo de conta que entende do assunto do grupo enviando algo relacionado junto pra se enturmar, seja natural.`;
           
           // Obtém conclusão do LLM sem bloquear
           this.llmService.getCompletion({
@@ -452,15 +489,21 @@ class EventHandler {
             // Envia a mensagem de boas-vindas gerada
             if (groupWelcomeMessage) {
               console.log(groupWelcomeMessage);
-              bot.sendMessage(data.group.id, groupWelcomeMessage).catch(error => {
+              bot.sendMessage(data.group.id, botInfoMessage+"\n\n"+groupWelcomeMessage).catch(error => {
                 this.logger.error('Erro ao enviar mensagem de boas-vindas do grupo:', error);
               });
             }
           }).catch(error => {
             this.logger.error('Erro ao gerar mensagem de boas-vindas do grupo:', error);
+            bot.sendMessage(data.group.id, botInfoMessage).catch(error => {
+              this.logger.error('Erro ao enviar mensagem de informações do bot:', error);
+            });
           });
         } catch (llmError) {
           this.logger.error('Erro ao gerar mensagem de boas-vindas do grupo:', llmError);
+          bot.sendMessage(data.group.id, botInfoMessage).catch(error => {
+            this.logger.error('Erro ao enviar mensagem de informações do bot:', error);
+          });
         }
       } else {
         // Caso 2: Outra pessoa entrou no grupo
@@ -480,18 +523,6 @@ class EventHandler {
     } catch (error) {
       this.logger.error('Erro ao processar entrada no grupo:', error);
     }
-  }
-
-  /**
-   * Manipula evento de saída do grupo
-   * @param {WhatsAppBot} bot - A instância do bot
-   * @param {Object} data - Dados do evento
-   */
-  onGroupLeave(bot, data) {
-    // Processa saída sem aguardar para evitar bloquear a thread de eventos
-    this.processGroupLeave(bot, data).catch(error => {
-      this.logger.error('Erro em processGroupLeave:', error);
-    });
   }
 
   /**

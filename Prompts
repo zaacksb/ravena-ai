@@ -779,3 +779,31 @@ Crie um RiotGames.md na pasta docs também explicando o funcionamento, inclua el
 
 Anexei o Weather como exemplo.
 ---
+
+# Invite System
+Quando o bot entrar em um grupo via !g-joinGrupo, pegue as informações do convite de quem enviou para anexar na mensagem de boas vindas
+São 3 arquivos envolvidos:
+InviteSystem.js: Pega os dados do autor que enviou.
+Neste arquivo, ele envia a mensagem "!g-joinGrupo ${inviteCode}"
+Faça ele enviar:
+!g-joinGrupo ${inviteCode} ${authorId} ${authorName}
+
+Management.js: Possui a implementação do joinGrupo, que deve ser modificada para receber os 2 parametros atuhorId e authorName (pode possuir espaços)
+EventHandler.js: processGroupJoin deve pegar os dados do authorId e authorName do comando joinGrupo.
+Como não existe um vinculo entre o join e o grupo, os dados do groupJoin devem ser analisados da seguinte forma:
+Se o authorId está dentro dos membros do grupo que o bot entrou, considere que este é o grupo o qual foi aceito o convite.
+Por exmeplo, no processGroupJoin:
+Para cada pendingInvite, pegar o authorId e ver se "JSON.stringify(data).includes(authorID)" (sugestão)
+
+
+Na base de dados/modelo do Group.js, crie uma nova propriedade: additionalAdmins, um array de numeros (["12345@c.us"]) que sempre são considerados administradores no grupo. Sempre que o bot entrar no grupo, define o usuário que adicionou com um additionalAdmin
+Implemente também comando de !g-customAdmin [numero] que permite adicionar/remover pessoas da lista de admins.
+Formate automaticamente o numero recebido como 123456789012@c.us para ficar padrão nas base de dados
+Na respota do comando, inclua também no final a lista os additionalAdmins atuais, formatados como +DD (DD) 9DDDD-DDDD
+
+Enviei arquivos de documentação como exemplo.
+
+Crie um InviteSystem.md explicando o fluxo de convites (utilize mermaid para uma seção com o fluxograma) e uma linha para adicioná-lo na sessão "Documentação dos Comandos" do README.md
+Me envie como artefatos
+
+--

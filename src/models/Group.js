@@ -14,6 +14,7 @@ class Group {
     this.prefix = data.prefix || '!';
     this.inviteCode = data.inviteCode || null;
     this.paused = data.paused || false;
+    this.additionalAdmins = data.additionalAdmins || [];
     
     // Filtros
     this.filters = data.filters || {
@@ -52,6 +53,7 @@ class Group {
       inviteCode: this.inviteCode,
       paused: this.paused,
       filters: this.filters,
+      additionalAdmins: this.additionalAdmins,
       twitch: this.twitch,
       kick: this.kick,
       youtube: this.youtube,
@@ -72,6 +74,7 @@ class Group {
     if (data.prefix) this.prefix = data.prefix;
     if (data.inviteCode) this.inviteCode = data.inviteCode;
     if (typeof data.paused === 'boolean') this.paused = data.paused;
+    if (data.additionalAdmins) this.additionalAdmins = data.additionalAdmins;
     
     // Atualiza filtros se fornecidos
     if (data.filters) {

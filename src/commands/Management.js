@@ -41,6 +41,7 @@ class Management {
       'apelido': 'setUserNickname',
       'ignorar': 'ignoreUser',
       'mute': 'muteCommand',
+      'customAdmin': 'customAdmin',
 
       // Twitch commands
       'twitch-canal': 'toggleTwitchChannel',
@@ -67,7 +68,9 @@ class Management {
       'youtube-mudarTitulo': 'toggleYoutubeTitleChange',
       'youtube-titulo-on': 'setYoutubeOnlineTitle',
       'youtube-titulo-off': 'setYoutubeOfflineTitle',
-      'youtube-usarIA': 'toggleYoutubeAI'
+      'youtube-usarIA': 'toggleYoutubeAI',
+
+
     };
   }
 
@@ -1174,12 +1177,29 @@ class Management {
       // Obtém código de convite
       const inviteCode = args[0];
       
+      // Obtém dados do autor, se fornecidos
+      let authorId = null;
+      let authorName = null;
+      
+      if (args.length > 1) {
+        authorId = args[1];
+        // O nome pode conter espaços, então juntamos o resto dos argumentos
+        if (args.length > 2) {
+          authorName = args.slice(2).join(' ');
+        }
+      }
+      
       try {
         // Aceita o convite
         const joinResult = await bot.client.acceptInvite(inviteCode);
         
         if (joinResult) {
           await bot.sendMessage(chatId, `Entrou com sucesso no grupo com código de convite ${inviteCode}`);
+          
+          // Salva os dados do autor que enviou o convite para uso posterior
+          if (authorId) {
+            await this.database.savePendingJoin(inviteCode, { authorId, authorName });
+          }
           
           // Remove dos convites pendentes se existir
           await this.database.removePendingInvite(inviteCode);
@@ -2548,6 +2568,96 @@ class Management {
     } catch (error) {
       this.logger.error('Erro ao configurar mute:', error);
       await bot.sendMessage(message.group || message.author, 'Erro ao processar comando. Por favor, tente novamente.');
+    }
+  }
+
+  /**
+   * Add custom admin
+   * @param {WhatsAppBot} bot - Bot instance
+   * @param {Object} message - Message data
+   * @param {Array} args - Command arguments
+   * @param {Object} group - Group data
+   */
+  async customAdmin(bot, message, args, group) {
+    if (!group) return;
+    
+    if (args.length === 0) {
+      // Mostra lista atual de admins adicionais
+      const admins = group.additionalAdmins || [];
+      if (admins.length === 0) {
+        await bot.sendMessage(group.id, 'Não há administradores adicionais configurados para este grupo.');
+      } else {
+        let adminList = '*Administradores adicionais:*\n';
+        for (const admin of admins) {
+          // Formata o número para exibição
+          const formattedNumber = this.formatPhoneNumber(admin);
+          adminList += `- ${formattedNumber}\n`;
+        }
+        await bot.sendMessage(group.id, adminList);
+      }
+      return;
+    }
+    
+    // Obtém e formata o número do argumento
+    let numero = args[0].replace(/\D/g, '');
+    
+    // Verifica se o número tem pelo menos 8 dígitos
+    if (numero.length < 8) {
+      await bot.sendMessage(group.id, 'O número deve ter pelo menos 8 dígitos.');
+      return;
+    }
+    
+    // Formata o número como 123456789012@c.us
+    if (!numero.includes('@')) {
+      numero = `${numero}@c.us`;
+    }
+    
+    // Inicializa additionalAdmins se não existir
+    if (!group.additionalAdmins) {
+      group.additionalAdmins = [];
+    }
+    
+    // Verifica se o número já está na lista
+    const index = group.additionalAdmins.indexOf(numero);
+    
+    if (index !== -1) {
+      // Remove o número
+      group.additionalAdmins.splice(index, 1);
+      await this.database.saveGroup(group);
+      
+      await bot.sendMessage(group.id, `Número removido da lista de administradores adicionais: ${this.formatPhoneNumber(numero)}`);
+    } else {
+      // Adiciona o número
+      group.additionalAdmins.push(numero);
+      await this.database.saveGroup(group);
+      
+      await bot.sendMessage(group.id, `Número adicionado à lista de administradores adicionais: ${this.formatPhoneNumber(numero)}`);
+    }
+    
+    // Exibe a lista atualizada
+    const admins = group.additionalAdmins || [];
+    if (admins.length === 0) {
+      await bot.sendMessage(group.id, 'Lista de administradores adicionais está vazia agora.');
+    } else {
+      let adminList = '*Lista de administradores adicionais atualizada:*\n';
+      for (const admin of admins) {
+        const formattedNumber = this.formatPhoneNumber(admin);
+        adminList += `- ${formattedNumber}\n`;
+      }
+      await bot.sendMessage(group.id, adminList);
+    }
+  }
+
+  // Método auxiliar para formatar números de telefone
+  formatPhoneNumber(phoneNumber) {
+    // Remove a parte @c.us
+    let number = phoneNumber.replace('@c.us', '');
+    
+    // Formata como +XX (XX) 9XXXX-XXXX se tiver comprimento suficiente
+    if (number.length >= 12) {
+      return `+${number.substring(0, 2)} (${number.substring(2, 4)}) ${number.substring(4, 9)}-${number.substring(9)}`;
+    } else {
+      return number;
     }
   }
 

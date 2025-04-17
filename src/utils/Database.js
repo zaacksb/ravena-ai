@@ -642,72 +642,91 @@ class Database {
   }
 
   /**
-   * Obtém convites pendentes
-   * @returns {Array} - Array de objetos de convite
+   * Obtém joins pendentes
+   * @returns {Array} - Array de objetos de join pendente
    */
-  async getPendingInvites() {
+  async getPendingJoins() {
     try {
-      const invitesPath = path.join(this.databasePath, 'pending-invites.json');
-      return this.loadJSON(invitesPath) || [];
+      const joinsPath = path.join(this.databasePath, 'pending-joins.json');
+      return this.loadJSON(joinsPath) || [];
     } catch (error) {
-      this.logger.error('Erro ao obter convites pendentes:', error);
+      this.logger.error('Erro ao obter joins pendentes:', error);
       return [];
     }
   }
 
   /**
-   * Salva convites pendentes
-   * @param {Array} invites - Array de objetos de convite
+   * Salva joins pendentes
+   * @param {Array} joins - Array de objetos de join pendente
    * @returns {boolean} - Status de sucesso
    */
-  async savePendingInvites(invites) {
+  async savePendingJoins(joins) {
     try {
-      const invitesPath = path.join(this.databasePath, 'pending-invites.json');
-      return this.saveJSON(invitesPath, invites);
+      const joinsPath = path.join(this.databasePath, 'pending-joins.json');
+      return this.saveJSON(joinsPath, joins);
     } catch (error) {
-      this.logger.error('Erro ao salvar convites pendentes:', error);
+      this.logger.error('Erro ao salvar joins pendentes:', error);
       return false;
     }
   }
 
   /**
-   * Adiciona um convite pendente
-   * @param {Object} invite - Objeto de convite
+   * Salva um join pendente
+   * @param {string} inviteCode - Código do convite
+   * @param {Object} data - Dados do join (authorId, authorName)
    * @returns {boolean} - Status de sucesso
    */
-  async addPendingInvite(invite) {
+  async savePendingJoin(inviteCode, data) {
     try {
-      // Obtém convites existentes
-      const invites = await this.getPendingInvites();
+      // Obtém joins pendentes existentes
+      const joins = await this.getPendingJoins();
       
-      // Adiciona novo convite
-      invites.push(invite);
+      // Adiciona ou atualiza o join pendente
+      const existingIndex = joins.findIndex(join => join.code === inviteCode);
       
-      // Salva convites
-      return this.savePendingInvites(invites);
+      if (existingIndex !== -1) {
+        // Atualiza existente
+        joins[existingIndex] = { 
+          code: inviteCode,
+          authorId: data.authorId,
+          authorName: data.authorName,
+          timestamp: Date.now()
+        };
+      } else {
+        // Adiciona novo
+        joins.push({
+          code: inviteCode,
+          authorId: data.authorId,
+          authorName: data.authorName,
+          timestamp: Date.now()
+        });
+      }
+      
+      // Salva joins
+      return this.savePendingJoins(joins);
     } catch (error) {
-      this.logger.error('Erro ao adicionar convite pendente:', error);
+      this.logger.error('Erro ao salvar join pendente:', error);
       return false;
     }
   }
 
   /**
-   * Remove um convite pendente
-   * @param {string} inviteCode - Código do convite a remover
+   * Remove um join pendente
+   * @param {string} inviteCode - Código do convite
    * @returns {boolean} - Status de sucesso
    */
-  async removePendingInvite(inviteCode) {
+  async removePendingJoin(inviteCode) {
     try {
-      // Obtém convites existentes
-      let invites = await this.getPendingInvites();
+      // Obtém joins existentes
+      let joins = await this.getPendingJoins();
       
-      // Filtra o convite
-      invites = invites.filter(invite => invite.code !== inviteCode);
+      // Filtra o join
+      joins = joins.filter(join => join.code !== inviteCode);
       
-      // Salva convites
-      return this.savePendingInvites(invites);
+      // Salva joins
+      return this.savePendingJoins(joins);
     } catch (error) {
-      this.logger.error('Erro ao remover convite pendente:', error);
+      this.logger.error('Erro ao remover join pendente:', error);
       return false;
     }
   }
