@@ -313,6 +313,71 @@ class WhatsAppBot {
   }
 
   /**
+   * Sends one or more ReturnMessage objects
+   * @param {ReturnMessage|Array<ReturnMessage>} returnMessages - ReturnMessage or array of ReturnMessages to send
+   * @returns {Promise<Array>} - Array of results from sending each message
+   */
+  async sendReturnMessages(returnMessages) {
+    try {
+      // Ensure returnMessages is an array
+      if (!Array.isArray(returnMessages)) {
+        returnMessages = [returnMessages];
+      }
+
+      // Filter out invalid messages
+      const validMessages = returnMessages.filter(msg => 
+        msg && msg.isValid && msg.isValid()
+      );
+
+      if (validMessages.length === 0) {
+        this.logger.warn('No valid ReturnMessages to send');
+        return [];
+      }
+
+      const results = [];
+      
+      // Process each message
+      for (const message of validMessages) {
+        // Apply any delay if specified
+        if (message.delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, message.delay));
+        }
+
+        // Send the message
+        const result = await this.sendMessage(
+          message.chatId, 
+          message.content, 
+          message.options
+        );
+
+        // Apply reactions if specified
+        if (message.reactions && result) {
+          try {
+            // React with 'before' emoji if specified
+            if (message.reactions.before) {
+              await result.react(message.reactions.before);
+            }
+
+            // Store message ID for potential future reactions
+            if (message.metadata) {
+              message.metadata.messageId = result.id._serialized;
+            }
+          } catch (reactError) {
+            this.logger.error('Error applying reaction to message:', reactError);
+          }
+        }
+
+        results.push(result);
+      }
+
+      return results;
+    } catch (error) {
+      this.logger.error('Error sending ReturnMessages:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Cria um objeto de mídia a partir de um caminho de arquivo
    * @param {string} filePath - Caminho para o arquivo de mídia
    * @returns {Promise<MessageMedia>} - O objeto de mídia

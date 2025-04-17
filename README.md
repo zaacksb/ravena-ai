@@ -2,7 +2,7 @@
 
 ![Ravenabot AI - img by chatgpt](ravenabanner.png)
 
-> Novo código da ravena completamente desenvolvido utilizando LLM Claude 3.7 Sonnet. Esta versão apresenta uma arquitetura modular, suporte a múltiplas instâncias, comandos personalizáveis e integração com plataformas de streaming. Livre para uso, sem garantias. Consulte o arquivo "Prompts" para ver as coisas que eu pedi pro Claude.
+> Novo código da ravena completamente desenvolvido utilizando LLM Claude 3.7 Sonnet. Esta versão apresenta uma arquitetura modular, suporte a múltiplas instâncias, comandos personalizáveis e integração com plataformas de streaming. Livre para uso, sem garantias. Consulte o arquivo "Prompts" para ver as coisas que eu pedi pro Claude. Leia mais sobre os [design patterns aqui](docs/DesignPatterns.md).
 
 ## ℹ️ Principais diferenças
 - Comandos de gerenciar agora são !g-
@@ -43,6 +43,7 @@
 - [x] Comando: !dxx, comandos de dados agora como fixos
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
+- [ ] Migrar as funções para utlizar o novo SingleTon ReturnMessage.js
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Script para migração de dados da ravena antiga
@@ -52,6 +53,7 @@
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
+- [ ] Melhor explicação da implementação do bot no README
 
 ## ✅ TODO-FIX-List
 > Essa lista ainda vai aumentar bastante
@@ -60,6 +62,7 @@
 - [X] Fix boas vindas enviando mesmo sem setar
 - [ ] Fix emojis e reações que o claude criou estranhos
 - [ ] Fix autoStt não triggando
+- [ ] Imagine não tá retornando img
 
 ## 📚 Documentação dos Comandos
 
@@ -142,6 +145,7 @@ DEFAULT_PREFIX=!        # Prefixo padrão para comandos
 SAFE_MODE=false         # Modo seguro (não envia mensagens reais)
 DEBUG=true              # Modo de depuração
 HEADLESS_MODE=true      # Modo headless do navegador
+YOUTUBE_DL_FOLDER=D:/youtube
 
 # Configuração da API
 API_PORT=5000           # Porta para o servidor da API

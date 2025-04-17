@@ -886,3 +886,53 @@ Pausar/continua atividade do bot no grupo. Se pausado, nada do grupo será proce
 Sobre o group.paused
 É necessário verificar esta propriedade nos messageHandler, EventHandler, ReactionsHandler e também ignorar notificação de streams assincronas e lembretes.
 Me envie a parte relevante do código que preciso alterar.
+
+---
+
+# WhatsAppBot
+
+Criar novo método baseado na sendMessage
+
+Esta função deve receber apenas 1 parâmetro: um objeto da classe ReturnMessage
+
+sendReturnMessages(returnMessages)
+
+returnMessages é um array, mas caso receba um objeto apenas, converta para um array de 1 objecto para simplificar o processamento.
+
+Este objeto deve ser definido na models/ReturnMessage.js e deve incluir todas as propriedades utilizados no restante do código, com valores default que achar mais adequados.
+
+Ela contém, obrigatoriamente,  chatId, content e options.
+
+Após processar e analisar todos os dados recebidos da ReturnMessage, chama a sendMessage para executar o envio para cad auma das returnMessages
+
+A ideia é que as functions retornem isto como um SingleTon ou array de SingleTons para melhorar o fluxo do programa.
+
+Crie um ReturnMessageModel.md descrevendo o desenvolvimento deste arquivo
+
+Me envie os códigos como artefatos.
+
+Agora, analise os arquivos enviados que utilizam a função bot.sendMessage e adapte para que os mesmos primero instanciem um objecto da ReturnMessage e utilizem o novo sendReturnMessage ao invés do sendMessage
+Complemente a classe ReturnMessage preenchendo o options com os parametros padrões. 
+
+    linkPreview boolean (default: false): Show links preview. Has no effect on multi-device accounts.
+    sendAudioAsVoice boolean (default: false): Send audio as voice message with a generated waveform
+    sendVideoAsGif boolean (default: false): Send video as gif
+    sendMediaAsSticker boolean (default: false): Send media as a sticker
+    sendMediaAsDocument boolean (default: false): Send media as a document
+    isViewOnce boolean (default: false): Send photo/video as a view once message
+    parseVCards boolean (default: true): Automatically parse vCards and send them as contacts
+    caption string: Image or video caption
+    quotedMessageId string: Id of the message that is being quoted (or replied to)
+    groupMentions Array of GroupMention: An array of object that handle group mentions
+    mentions Array of string: User IDs to mention in the message
+    sendSeen boolean (default: true): Mark the conversation as seen after sending the message
+    invokedBotWid string: Bot Wid when doing a bot mention like @Meta AI
+    stickerAuthor string: Sets the author of the sticker, (if sendMediaAsSticker is true).
+    stickerName string: Sets the name of the sticker, (if sendMediaAsSticker is true).
+    stickerCategories Array of string: Sets the categories of the sticker, (if sendMediaAsSticker is true). Provide emoji char array, can be null.
+    media MessageMedia: Media to be sent
+
+localize o arquivo em ptbr
+
+---
+
