@@ -882,3 +882,7 @@ Se for mensagem de outra pessoa, apenas tente apagar se o bot for admin, sem nec
 # Management
 !g-pausar
 Pausar/continua atividade do bot no grupo. Se pausado, nada do grupo será processado além do comando !g-pausar para voltar ao normal
+
+Sobre o group.paused
+É necessário verificar esta propriedade nos messageHandler, EventHandler, ReactionsHandler e também ignorar notificação de streams assincronas e lembretes.
+Me envie a parte relevante do código que preciso alterar.
