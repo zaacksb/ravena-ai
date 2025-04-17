@@ -24,9 +24,9 @@
 - [x] Sistema de doações pelo tipa.ai
 - [x] Servidor API
 - [x] Instruções do VOSK para speech-to-text
+- [X] Implementar docs para todas as funções implementadas até o momento
 - [ ] Comandos genéricos: processCustomStaticVariables implementar seleção random
 - [ ] Editar README com principais diferenças da ravena antiga (incompleto)
-- [ ] Implementar docs para todas as funções implementadas até o momento
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Implementar e testar comandos com variáveis para APIs personalizadas (RAB, LoL, WR, valorant, etc.)
 - [ ] Organizar/traduzir docs das funções
@@ -58,7 +58,7 @@
 ## ✅ TODO-FIX-List
 > Essa lista ainda vai aumentar bastante
 
-- [ ] Fix respostas LLM não chegarem pelo OpenRouter
+- [X] Fix respostas LLM não chegarem pelo OpenRouter
 - [ ] Fix boas vindas enviando mesmo sem setar
 - [ ] Fix emojis e reações que o claude criou estranhos
 
