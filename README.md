@@ -43,7 +43,9 @@
 - [x] Comando: !dxx, comandos de dados agora como fixos
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
-- [ ] Migrar as funções para utlizar o novo SingleTon ReturnMessage.js
+- [ ] Migrar as funções para utlizar o novo singleton ReturnMessage.js
+- [ ] Migrar as funções para utiliar o novo singleton Command.js
+- [ ] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
 - [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Script para migração de dados da ravena antiga

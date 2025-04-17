@@ -934,5 +934,10 @@ Complemente a classe ReturnMessage preenchendo o options com os parametros padr�
 
 localize o arquivo em ptbr
 
----
+No mesmo padrão da classe ReturnMessage, defina uma classe Command para que ela possa ser utilizada nas functions.
+Utilize as functions enviadas aqui para definir o padrão da classe.
+Crie também a docuemtanção para esta classe
 
+---
+Me envie como artefatos completos estes arquivos alterados para utilizar o sendReturnMessages e também a classe models/Command.js
+Caso a função retorne mais de 1 mensagem, faça proveito do fato do sendReturnMessages receber um array de ReturnMessage
