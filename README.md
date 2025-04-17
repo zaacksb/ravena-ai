@@ -43,8 +43,27 @@
 - [x] Comando: !dxx, comandos de dados agora como fixos
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
-- [ ] Migrar as funções para utlizar o novo singleton ReturnMessage.js
-- [ ] Migrar as funções para utiliar o novo singleton Command.js
+- [X] Implementar classes ReturnMessage e Command
+- [ ] Migrar as funções para utlizar as classes Command e ReturnMessage
+    - [x] AnimeCommands.js
+    - [x] DonationCommands.js
+    - [x] FileConversions.js
+    - [x] FileManager.js
+    - [x] GiphyCommands.js
+    - [ ] GroupCommands.js
+    - [ ] ImageManipulation.js
+    - [ ] LembretesCommands.js
+    - [ ] ListCommands.js
+    - [ ] RiotGamesCommands.js
+    - [ ] RoletaRussaCommands.js
+    - [ ] SearchCommands.js
+    - [ ] SpeechCommands.js
+    - [ ] StableDiffusionCommands.js
+    - [ ] StreamCommands.js
+    - [ ] SummaryCommands.js
+    - [ ] Weather.js
+    - [ ] WikipediaCommands.js
+    - [ ] YoutubeDownloader.js
 - [ ] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
 - [ ] Melhorar comando !cmd pra ficar mais organizado
@@ -65,6 +84,7 @@
 - [ ] Fix emojis e reações que o claude criou estranhos
 - [ ] Fix autoStt não triggando
 - [ ] Imagine não tá retornando img
+- [ ] !gif tá retornando img estática
 
 ## 📚 Documentação dos Comandos
 
