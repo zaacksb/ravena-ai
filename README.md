@@ -37,12 +37,15 @@
 - [x] Comando: !gif, busca de gifs
 - [x] Comando: !imagine, geração de imagens no sdwebui
 - [x] Comando: !anime, info de animes
+    - [ ] Traduzir sinopse
 - [x] Comando: !imdb, info de filmes e séries
+    - [ ] Traduzir sinopse
 - [x] Comando: !wiki, busca na wikipédia
 - [x] Comando: !velharia, importa os comandos genéricos antigos da ravena
 - [x] Comando: !dxx, comandos de dados agora como fixos
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
+- [ ] Comando: !traduzir
 - [X] Implementar classes ReturnMessage e Command
 - [ ] Migrar as funções para utlizar as classes Command e ReturnMessage
     - [x] AnimeCommands.js
