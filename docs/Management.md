@@ -85,6 +85,8 @@ O sistema de gerenciamento pode utilizar os seguintes serviços/bibliotecas exte
 Comando personalizado 'boas-vindas' adicionado com sucesso.
 ```
 
+> **Nota**: Para comandos personalizados com requisições a APIs, consulte a documentação específica em [Requisições API Personalizadas](CustomAPIRequests.md).
+
 #### Adicionar Resposta a um Comando
 
 **Entrada**:

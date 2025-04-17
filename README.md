@@ -25,19 +25,18 @@
 - [x] Servidor API
 - [x] Instruções do VOSK para speech-to-text
 - [X] Implementar docs para todas as funções implementadas até o momento
-- [ ] Comandos genéricos: processCustomStaticVariables implementar seleção random
+- [X] Implementar e testar comandos com variáveis para APIs personalizadas (RAB, LoL, WR, valorant, etc.)
+- [X] Organizar/traduzir docs das funções
+- [X] Mensagem IA pra join/leave de grupo
+- [X] Comandos genéricos: Variáveis dinâmicas
+- [X] Comandos genéricos: processCustomStaticVariables implementar seleção random
 - [ ] Editar README com principais diferenças da ravena antiga (incompleto)
 - [ ] Melhorar comando !cmd pra ficar mais organizado
-- [ ] Implementar e testar comandos com variáveis para APIs personalizadas (RAB, LoL, WR, valorant, etc.)
-- [ ] Organizar/traduzir docs das funções
 - [ ] Script para migração de dados da ravena antiga
-- [ ] Ferramentas de análise e estatísticas
-- [ ] Mensagem IA pra join/leave de grupo
 - [ ] Dados de quem enviou convite na mensagem quando add ravena
-- [ ] Comandos genéricos: Variáveis dinâmicas
+- [ ] Comando: !lembrar e versão nova com opção de repetir
 - [ ] Comando: !gif, busca de gifs
 - [ ] Comando: !imagine, geração de imagens no sdwebui
-- [ ] Comando: !lembrar e versão nova com opção de repetir
 - [ ] Comando: !anime, info de animes
 - [ ] Comando: !imdb, info de filmes e séries
 - [ ] Comando: !download, baixa arquivo de link direto
@@ -59,7 +58,7 @@
 > Essa lista ainda vai aumentar bastante
 
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
-- [ ] Fix boas vindas enviando mesmo sem setar
+- [X] Fix boas vindas enviando mesmo sem setar
 - [ ] Fix emojis e reações que o claude criou estranhos
 
 ## 📚 Documentação dos Comandos
@@ -80,6 +79,7 @@ Esta seção contém documentação detalhada de cada categoria de comandos disp
 - [Listas](docs/ListCommands.md) - Sistema para criar e gerenciar listas de membros
 - [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web
 - [Comandos de Voz](docs/SpeechCommands.md) - Conversão entre texto e fala
+- [Comandos RiotGames](docs/RiotGames.md) - Dados da API da Riot Games
 - [Monitoramento de Streams](docs/StreamCommands.md) - Comandos para gerenciar monitoramento de lives
 - [Comandos de Doação](docs/DonationCommands.md) - Comandos para visualizar informações de doação e doadores
 

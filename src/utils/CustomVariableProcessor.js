@@ -61,6 +61,9 @@ class CustomVariableProcessor {
       
       let processedText = text;
       
+      // Processa variáveis de API (nova função)
+      processedText = await this.processAPIRequest(processedText, context);
+      
       // Processa variáveis de tempo e data
       processedText = this.processSystemVariables(processedText);
       
@@ -162,14 +165,182 @@ class CustomVariableProcessor {
     
     // Verifica por variáveis personalizadas
     const customVars = this.cache.variables;
+    
+    // Rastreia quais índices já foram usados para cada variável de array
+    const usedIndices = {};
+    
     for (const [key, value] of Object.entries(customVars)) {
-      if (typeof value === 'string') {
-        // Substitui {varname} pelo seu valor
-        text = text.replace(new RegExp(`{${key}}`, 'g'), value);
+      // Cria regex para a variável
+      const regex = new RegExp(`{${key}}`, 'g');
+      
+      // Se o valor é um array, seleciona elementos aleatórios para cada ocorrência
+      if (Array.isArray(value)) {
+        // Conta ocorrências desta variável
+        const matches = text.match(regex);
+        if (!matches) continue;
+        
+        // Inicializa índices usados para esta variável
+        usedIndices[key] = [];
+        
+        // Substitui cada ocorrência por um elemento aleatório
+        for (let i = 0; i < matches.length; i++) {
+          // Obtém índices disponíveis (ainda não usados)
+          let availableIndices = Array.from({ length: value.length }, (_, i) => i)
+            .filter(idx => !usedIndices[key].includes(idx));
+          
+          // Se todos os índices já foram usados, reseta se precisarmos de mais
+          if (availableIndices.length === 0) {
+            usedIndices[key] = [];
+            availableIndices = Array.from({ length: value.length }, (_, i) => i);
+          }
+          
+          // Seleciona um índice disponível aleatório
+          const randomIndex = Math.floor(Math.random() * availableIndices.length);
+          const selectedIndex = availableIndices[randomIndex];
+          
+          // Marca este índice como usado
+          usedIndices[key].push(selectedIndex);
+          
+          // Substitui a primeira ocorrência da variável pelo valor selecionado
+          text = text.replace(regex, value[selectedIndex]);
+        }
+      } else if (typeof value === 'string') {
+        // Para valores de string, substitui normalmente
+        text = text.replace(regex, value);
       }
     }
     
     return text;
+  }
+
+  /**
+   * Processa variáveis de solicitação de API no formato {API#MÉTODO#TIPO_RESPOSTA#URL}
+   * @param {string} text - Texto contendo variáveis de API
+   * @param {Object} context - Dados de contexto (mensagem, args, etc.)
+   * @returns {Promise<string>} - Texto processado
+   */
+  async processAPIRequest(text, context) {
+    try {
+      // Expressão regular para encontrar variáveis de solicitação de API
+      const apiRegex = /{API#(GET|POST|FORM)#(TEXT|JSON)#([^}]+)}/gs;
+      
+      // Encontra todas as variáveis de solicitação de API
+      const matches = Array.from(text.matchAll(apiRegex));
+      if (matches.length === 0) return text;
+      
+      this.logger.debug(`Encontradas ${matches.length} variáveis de API para processar`);
+      
+      // Processa cada correspondência
+      for (const match of matches) {
+        const [fullMatch, method, responseType, urlAndTemplate] = match;
+        
+        // Divide URL e template (para tipo de resposta JSON)
+        let url, template;
+        if (responseType === 'JSON') {
+          // Encontra a primeira quebra de linha para separar URL do template
+          const firstLineBreak = urlAndTemplate.indexOf('\n');
+          if (firstLineBreak !== -1) {
+            url = urlAndTemplate.substring(0, firstLineBreak).trim();
+            template = urlAndTemplate.substring(firstLineBreak + 1).trim();
+          } else {
+            url = urlAndTemplate.trim();
+            template = '';
+          }
+        } else {
+          url = urlAndTemplate.trim();
+        }
+        
+        // Processa argumentos na URL (arg1, arg2, etc.)
+        if (context && context.command && Array.isArray(context.command.args)) {
+          // Substitui arg1, arg2, etc. pelos argumentos reais
+          url = url.replace(/arg(\d+)/g, (match, index) => {
+            const argIndex = parseInt(index, 10) - 1;
+            return argIndex < context.command.args.length ? encodeURIComponent(context.command.args[argIndex]) : '';
+          });
+        }
+        
+        this.logger.debug(`Processando solicitação de API: ${method} ${url}`);
+        
+        // Faz a solicitação de API real
+        let response;
+        try {
+          if (method === 'GET') {
+            response = await axios.get(url);
+          } else if (method === 'POST') {
+            // Analisa a URL para extrair dados
+            const [baseUrl, queryParams] = url.split('?');
+            const data = {};
+            
+            if (queryParams) {
+              queryParams.split('&').forEach(param => {
+                const [key, value] = param.split('=');
+                if (key && value) {
+                  data[decodeURIComponent(key)] = decodeURIComponent(value);
+                }
+              });
+            }
+            
+            response = await axios.post(baseUrl, data);
+          } else if (method === 'FORM') {
+            // Analisa a URL para extrair dados do formulário
+            const [baseUrl, queryParams] = url.split('?');
+            const formData = new URLSearchParams();
+            
+            if (queryParams) {
+              queryParams.split('&').forEach(param => {
+                const [key, value] = param.split('=');
+                if (key && value) {
+                  formData.append(decodeURIComponent(key), decodeURIComponent(value));
+                }
+              });
+            }
+            
+            response = await axios.post(baseUrl, formData, {
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              }
+            });
+          }
+          
+          // Processa a resposta com base no tipo de resposta
+          let result;
+          if (responseType === 'TEXT') {
+            // Retorna a resposta de texto bruto
+            result = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+          } else if (responseType === 'JSON') {
+            // Processa o template JSON
+            const jsonData = response.data;
+            
+            // Substitui [variavel.caminho] no template por valores da resposta JSON
+            result = template.replace(/\[([^\]]+)\]/g, (match, path) => {
+              // Navega no objeto JSON usando o caminho
+              const parts = path.split('.');
+              let value = jsonData;
+              
+              for (const part of parts) {
+                if (value === undefined || value === null) {
+                  return '[indefinido]';
+                }
+                value = value[part];
+              }
+              
+              return value !== undefined ? value : '[indefinido]';
+            });
+          }
+          
+          // Substitui a variável de API pelo resultado
+          text = text.replace(fullMatch, result);
+        } catch (apiError) {
+          this.logger.error(`Erro ao fazer solicitação de API para ${url}:`, apiError);
+          text = text.replace(fullMatch, `Erro na requisição API: ${apiError.message}`);
+        }
+      }
+      
+      return text;
+    } catch (error) {
+      this.logger.error('Erro ao processar solicitações de API:', error);
+      return text;
+    }
   }
 
   /**

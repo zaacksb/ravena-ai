@@ -719,3 +719,63 @@ Para cada arquivo dentro da pasta functions, gere um .md explicando o funcioname
 È necessário que exista também um tópico dentro do arquivo mostrandoexemplos de utilização dos comandos  (entrada e saída).
 
 Estes arquivos devem ser apontados em um novo tópico do README.md, me envie apenas o código deste tópico já com os links para cada arquivo e uma breve descrição de cada. Siga o mesmo padrão de formatação do arquivo
+
+--
+## CustomVariableProcessor
+
+# Custom
+As variáveis lidas no cache.variables, são neste formato:
+{
+	"aeronavePequena": ["A320", "B738", "B738M", "A320N", "E195", "E195E2", "A321"]
+}
+
+Então quando existir, por exemplo, {aeronavePequena}, a variável deve ser substituída por um dos elementos do array, de forma aleatória. Se a variável aparece várias vezes, substituir cada vez por uma outra aleatória, sem repetir caso exista um numero suficiente de elementos para isso.
+
+
+# Novo process: processAPIRequest
+
+Exemplo de variáveis: 
+{API#GET#TEXT#https://example.com/api}
+
+arg1, arg2, etc. devem ser variáveis extraídas do comando, por exemplo
+
+Um comando definido:
+"{API#GET#TEXT#https://example.com/api?cidade=arg1&estado=arg2}"
+
+!api_exemplo batata frita
+Faria request para:
+https://example.com/api?cidade=batata&estado=frita
+
+#TEXT ou #JSON definem o modo como a resposta da API será tratada.
+
+Para #TEXT, o comando retornará a resposta em formato texto na íntegra
+Para #JSON, é necessário que o usuário defina um texto de saída formatado com as variáveis de resposta JSON dentro de []
+
+{API#GET#JSON#https://example.com/api?cidade=arg1&estado=arg2
+Temperatura: [temperature]
+Umidade: [humidity.pct]
+}
+
+Isso seria para um objeto de retorno como:
+{
+	temperature: "12°C",
+	humidity: {pct: "10%", absolute: "300"}
+}
+
+Também é possível definir #GET, #FORM ou #POST, para o método de envio das variáveis.
+GET envia como urlParameters, POST envia dados como JSON, e #FORM envia um post urlencoded
+----
+# Nova function: RiotGamesCommands
+
+Implemente nova function que possua os seguintes comandos:
+!lol [conta]
+!wr [conta]
+!valorant [conta]
+
+Estes comandos acessam a API oficial da RIOT games (com a chave .env.RIOT_GAMES) para buscar dados sobre a conta de usuário requisitada.
+Retorne uma mensagem formatada bonita com emojis mostrando dados relevantes da conta, como ELO atual e outras coisas legais.
+
+Crie um RiotGames.md na pasta docs também explicando o funcionamento, inclua ele na seção de comandos do README.md
+
+Anexei o Weather como exemplo.
+---
