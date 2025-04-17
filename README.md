@@ -33,27 +33,25 @@
 - [X] Dados de quem enviou convite na mensagem quando add ravena
 - [X] Additonal Admins: Bot considera outras pessoas como admin (a que add no grupo ou outra manual)
 - [x] Editar README com principais diferenças da ravena antiga
-- [ ] Melhorar comando !cmd pra ficar mais organizado
-- [ ] Script para migração de dados da ravena antiga
 - [x] Comando: !lembrar e versão nova com opção de repetir
 - [x] Comando: !gif, busca de gifs
 - [x] Comando: !imagine, geração de imagens no sdwebui
 - [x] Comando: !anime, info de animes
 - [x] Comando: !imdb, info de filmes e séries
 - [x] Comando: !wiki, busca na wikipédia
-- [ ] Comando: !download, baixa arquivo de link direto
 - [x] Comando: !velharia, importa os comandos genéricos antigos da ravena
 - [x] Comando: !dxx, comandos de dados agora como fixos
-- [ ] Comando: !news, ViniMunews (antigo JrMunews)
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
+- [ ] Comando: !news, ViniMunews (antigo JrMunews)
+- [ ] Melhorar comando !cmd pra ficar mais organizado
+- [ ] Script para migração de dados da ravena antiga
 - [ ] Comando: !ajuda [topico], usar o Gemini pra gerar ajuda sobre os comandos
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
-- [ ] Pensar em novos jogos
 
 ## ✅ TODO-FIX-List
 > Essa lista ainda vai aumentar bastante
@@ -61,6 +59,7 @@
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
 - [X] Fix boas vindas enviando mesmo sem setar
 - [ ] Fix emojis e reações que o claude criou estranhos
+- [ ] Fix autoStt não triggando
 
 ## 📚 Documentação dos Comandos
 
