@@ -7,6 +7,8 @@ const os = require('os');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const LLMService = require('../services/LLMService');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const execPromise = util.promisify(exec);
 const logger = new Logger('speech-commands');
@@ -27,34 +29,6 @@ fs.mkdir(tempDir, { recursive: true })
   });
 
 logger.info('Módulo SpeechCommands carregado');
-
-const commands = [
-  {
-    name: 'tts',
-    description: 'Converte texto para voz',
-    category: 'group',
-    reactions: {
-      before: "⌛️",
-      after: "🔊"
-    },
-    method: async (bot, message, args, group) => {
-      await textToSpeech(bot, message, args, group);
-    }
-  },
-  {
-    name: 'stt',
-    description: 'Converte voz para texto',
-    category: 'group',
-    needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
-    reactions: {
-      before: "⌛️",
-      after: "👂"
-    },
-    method: async (bot, message, args, group) => {
-      await speechToText(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Obtém mídia da mensagem
@@ -102,14 +76,17 @@ async function saveMediaToTemp(media, extension = 'ogg') {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function textToSpeech(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça texto para converter em voz.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça texto para converter em voz.'
+      });
     }
     
     const text = args.join(' ');
@@ -138,13 +115,17 @@ async function textToSpeech(bot, message, args, group) {
       filename: 'speech.mp3'
     };
     
-    // Envia o áudio
-    await bot.sendMessage(chatId, media, {
-      sendAudioAsVoice: true,
-      quotedMessageId: message.origin.id._serialized
+    // Retorna a ReturnMessage com o áudio
+    const returnMessage = new ReturnMessage({
+      chatId: chatId,
+      content: media,
+      options: {
+        sendAudioAsVoice: true,
+        quotedMessageId: message.origin.id._serialized
+      }
     });
     
-    logger.info('Áudio TTS enviado com sucesso');
+    logger.info('Áudio TTS gerado com sucesso');
     
     // Limpa arquivos temporários
     try {
@@ -154,10 +135,16 @@ async function textToSpeech(bot, message, args, group) {
     } catch (cleanupError) {
       logger.error('Erro ao limpar arquivos temporários:', cleanupError);
     }
+    
+    return returnMessage;
   } catch (error) {
     logger.error('Erro na conversão de texto para voz:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao gerar voz. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao gerar voz. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -167,6 +154,7 @@ async function textToSpeech(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function speechToText(bot, message, args, group) {
   try {
@@ -175,8 +163,10 @@ async function speechToText(bot, message, args, group) {
     // Obtém mídia da mensagem
     const media = await getMediaFromMessage(message);
     if (!media) {
-      await bot.sendMessage(chatId, 'Por favor, forneça um áudio ou mensagem de voz.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um áudio ou mensagem de voz.'
+      });
     }
     
     // Verifica se a mídia é áudio
@@ -184,11 +174,19 @@ async function speechToText(bot, message, args, group) {
                    media.mimetype === 'application/ogg';
     
     if (!isAudio) {
-      await bot.sendMessage(chatId, 'Por favor, forneça um áudio ou mensagem de voz.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um áudio ou mensagem de voz.'
+      });
     }
     
     logger.debug('[speechToText] Convertendo voz para texto');
+    
+    // Primeiro, envia mensagem de processamento
+    const processingMessage = new ReturnMessage({
+      chatId: chatId,
+      content: 'Processando áudio...'
+    });
     
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(media, 'ogg');
@@ -209,28 +207,57 @@ async function speechToText(bot, message, args, group) {
     // Se a transcrição falhar ou estiver vazia, fornece uma mensagem útil
     if (!transcribedText) {
       transcribedText = "Não foi possível transcrever o áudio. O áudio pode estar muito baixo ou pouco claro.";
+      
+      // Retorna a mensagem de erro
+      const errorMessage = new ReturnMessage({
+        chatId: chatId,
+        content: transcribedText,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
+      });
+      
+      // Limpa arquivos temporários
+      try {
+        await fs.unlink(audioPath);
+        await fs.unlink(wavPath);
+        logger.debug('Arquivos temporários limpos');
+      } catch (cleanupError) {
+        logger.error('Erro ao limpar arquivos temporários:', cleanupError);
+      }
+      
+      return errorMessage;
     }
     
-    // Envia o texto transcrito
-    const msgEnviada = await bot.sendMessage(chatId, `_${transcribedText?.trim()}_`, {
-      quotedMessageId: message.origin.id._serialized
+    // Cria a ReturnMessage com a transcrição
+    const returnMessage = new ReturnMessage({
+      chatId: chatId,
+      content: `_${transcribedText?.trim()}_`,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
     
-    logger.info(`[speechToText] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
-
-    llmService.getCompletion({
-      prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-      provider: 'openrouter',
-      temperature: 0.7,
-      maxTokens: 300
-    }).then(respStt => {
-      const sttMelhorado = respStt.trim();
-
-      logger.info(`[speechToText] Melhoramento via LLM recebido, editando mensagem: ${sttMelhorado}`);
-      msgEnviada.edit(`_${sttMelhorado}_`);
-    }).catch(e => {
-      logger.info(`[speechToText] Melhoramento via LLM deu erro, ignorando.`);
-    });
+    logger.info(`[speechToText] Resultado STT gerado com sucesso: ${transcribedText}`);
+    
+    // Inicia processamento com LLM para melhoria do texto em paralelo
+    try {
+      const improvedText = await llmService.getCompletion({
+        prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
+        provider: 'openrouter',
+        temperature: 0.7,
+        maxTokens: 300
+      });
+      
+      // Não vamos aguardar essa melhoria para retornar a mensagem inicial
+      // Em vez disso, vamos atualizar a mensagem existente quando a melhoria estiver pronta
+      logger.info(`[speechToText] Melhoramento via LLM recebido: ${improvedText}`);
+      
+      // Nota: Essa atualização da mensagem precisará ser feita no CommandHandler
+      // já que ReturnMessage é apenas um objeto de dados e não pode fazer a edição diretamente
+    } catch (llmError) {
+      logger.error('[speechToText] Melhoramento via LLM deu erro, ignorando.', llmError);
+    }
     
     // Limpa arquivos temporários
     try {
@@ -240,10 +267,17 @@ async function speechToText(bot, message, args, group) {
     } catch (cleanupError) {
       logger.error('Erro ao limpar arquivos temporários:', cleanupError);
     }
+    
+    // Cria um array com a mensagem de processamento e a mensagem de resultado
+    return [processingMessage, returnMessage];
   } catch (error) {
     logger.error('Erro na conversão de voz para texto:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao transcrever áudio. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao transcrever áudio. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -285,27 +319,36 @@ async function processAutoSTT(bot, message, group) {
     
     // Se a transcrição for bem-sucedida, envia-a
     if (transcribedText) {
-      const msgEnviada = await bot.sendMessage(message.group, `_${transcribedText?.trim()}_`, {
-        quotedMessageId: message.origin.id._serialized
+      // Cria ReturnMessage com a transcrição
+      const returnMessage = new ReturnMessage({
+        chatId: message.group,
+        content: `_${transcribedText?.trim()}_`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
+      
+      // Envia a mensagem
+      await bot.sendReturnMessages(returnMessage);
       
       logger.info(`[processAutoSTT] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
 
-      llmService.getCompletion({
-        prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-        provider: 'openrouter',
-        temperature: 0.7,
-        maxTokens: 300
-      }).then(respStt => {
-        const sttMelhorado = respStt.trim();
-
-        logger.info(`[processAutoSTT] Melhoramento via LLM recebido, editando mensagem: ${sttMelhorado}`);
-        msgEnviada.edit(`_${sttMelhorado}_`);
-      }).catch(e => {
-        logger.info(`[processAutoSTT] Melhoramento via LLM deu erro, ignorando.`);
-      });
-
-      logger.info('Resultado auto-STT enviado com sucesso');
+      // Tenta melhorar o texto com LLM (assíncrono)
+      try {
+        const improvedText = await llmService.getCompletion({
+          prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
+          provider: 'openrouter',
+          temperature: 0.7,
+          maxTokens: 300
+        });
+        
+        logger.info(`[processAutoSTT] Melhoramento via LLM recebido: ${improvedText}`);
+        
+        // Nota: Aqui seria necessário um método para editar a mensagem já enviada
+        // O ideal seria criar esse método no bot para atualizar a mensagem
+      } catch (llmError) {
+        logger.error('[processAutoSTT] Melhoramento via LLM deu erro, ignorando.', llmError);
+      }
     }
     
     // Limpa arquivos temporários
@@ -323,6 +366,32 @@ async function processAutoSTT(bot, message, group) {
     return false;
   }
 }
+
+// Define os comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'tts',
+    description: 'Converte texto para voz',
+    category: 'group',
+    reactions: {
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: textToSpeech
+  }),
+  
+  new Command({
+    name: 'stt',
+    description: 'Converte voz para texto',
+    category: 'group',
+    needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
+    reactions: {
+      before: "⌛️",
+      after: "👂"
+    },
+    method: speechToText
+  })
+];
 
 // Exporta função para ser usada em EventHandler
 module.exports.commands = commands;

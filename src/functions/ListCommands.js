@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('list-commands');
 const database = Database.getInstance();
@@ -12,117 +14,6 @@ const database = Database.getInstance();
 const NUMBER_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
 logger.info('Módulo ListCommands carregado');
-
-const commands = [
-  {
-    name: 'listas',
-    description: 'Mostra as listas disponíveis no grupo',
-    category: 'group',
-    reactions: {
-      before: "📋",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await showLists(bot, message, args, group);
-    }
-  },
-  {
-    name: 'll',
-    description: 'Alias para comando listas',
-    category: 'group',
-    reactions: {
-      before: "📋",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await showLists(bot, message, args, group);
-    }
-  },
-  {
-    name: 'lc',
-    description: 'Cria uma nova lista',
-    category: 'group',
-    reactions: {
-      before: "➕",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await createList(bot, message, args, group);
-    }
-  },
-  {
-    name: 'lct',
-    description: 'Cria uma nova lista com título',
-    category: 'group',
-    reactions: {
-      before: "➕",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await createListWithTitle(bot, message, args, group);
-    }
-  },
-  {
-    name: 'ld',
-    description: 'Deleta uma lista',
-    category: 'group',
-    reactions: {
-      before: "🗑️",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await deleteList(bot, message, args, group);
-    }
-  },
-  {
-    name: 'le',
-    description: 'Entra em uma lista',
-    category: 'group',
-    reactions: {
-      before: "➡️",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await joinList(bot, message, args, group);
-    }
-  },
-  {
-    name: 'ls',
-    description: 'Sai de uma lista',
-    category: 'group',
-    reactions: {
-      before: "⬅️",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await leaveList(bot, message, args, group);
-    }
-  },
-  {
-    name: 'lt',
-    description: 'Define título de uma lista',
-    category: 'group',
-    reactions: {
-      before: "✏️",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await setListTitle(bot, message, args, group);
-    }
-  },
-  {
-    name: 'lr',
-    description: 'Remove um usuário de uma lista (admin only)',
-    category: 'group',
-    reactions: {
-      before: "❌",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await removeFromList(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Process reactions to join or leave lists
@@ -171,8 +62,11 @@ async function processListReaction(bot, reaction) {
         list.members = list.members.filter(member => member.id !== userId);
         await saveGroupLists(chat.id._serialized, lists);
         
-        // Notify user
-        await bot.sendMessage(chat.id._serialized, `${userName} saiu da lista "${list.name}"`);
+        // Return message to notify user
+        return new ReturnMessage({
+          chatId: chat.id._serialized,
+          content: `${userName} saiu da lista "${list.name}"`
+        });
       } else {
         // Join the list
         list.members.push({
@@ -182,11 +76,12 @@ async function processListReaction(bot, reaction) {
         });
         await saveGroupLists(chat.id._serialized, lists);
         
-        // Notify user
-        await bot.sendMessage(chat.id._serialized, `${userName} entrou na lista "${list.name}"`);
+        // Return message to notify user
+        return new ReturnMessage({
+          chatId: chat.id._serialized,
+          content: `${userName} entrou na lista "${list.name}"`
+        });
       }
-      
-      return true;
     }
     
     return false;
@@ -294,20 +189,25 @@ async function getUserDisplayName(bot, group, userId) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage>} ReturnMessage with list information
  */
 async function showLists(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Get lists for this group
     const lists = await getGroupLists(message.group);
     
     if (lists.length === 0) {
-      await bot.sendMessage(message.group, 'Não há listas criadas neste grupo. Use !lc <nome> para criar uma lista.');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Não há listas criadas neste grupo. Use !lc <nome> para criar uma lista.'
+      });
     }
     
     // Format the message with lists
@@ -348,14 +248,18 @@ async function showLists(bot, message, args, group) {
     listsMessage += 'Reaja com o emoji do número para entrar/sair de uma lista.\n';
     listsMessage += 'Comandos: !le <lista> (entrar), !ls <lista> (sair)';
     
-    // Send the message
-    const sentMessage = await bot.sendMessage(message.group, listsMessage);
-    
-    // Log the sent message ID for reference
-    logger.debug(`Lists message sent with ID: ${sentMessage.id._serialized}`);
+    // Return the message with lists
+    return new ReturnMessage({
+      chatId: message.group,
+      content: listsMessage
+    });
   } catch (error) {
     logger.error('Error showing lists:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao mostrar listas. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao mostrar listas. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -365,17 +269,22 @@ async function showLists(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function createList(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(message.group, 'Por favor, forneça pelo menos um nome de lista. Exemplo: !lc lista1 lista2');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça pelo menos um nome de lista. Exemplo: !lc lista1 lista2'
+      });
     }
     
     // Get lists for this group
@@ -383,6 +292,7 @@ async function createList(bot, message, args, group) {
     
     // Create each list
     const createdLists = [];
+    const returnMessages = [];
     
     for (const arg of args) {
       const listName = arg.trim();
@@ -395,7 +305,12 @@ async function createList(bot, message, args, group) {
       
       if (existingList) {
         // Skip existing lists
-        await bot.sendMessage(message.group, `Lista "${listName}" já existe.`);
+        returnMessages.push(
+          new ReturnMessage({
+            chatId: message.group,
+            content: `Lista "${listName}" já existe.`
+          })
+        );
         continue;
       }
       
@@ -417,14 +332,29 @@ async function createList(bot, message, args, group) {
       await saveGroupLists(message.group, lists);
       
       // Notify about created lists
-      await bot.sendMessage(message.group, `Lista${createdLists.length > 1 ? 's' : ''} criada${createdLists.length > 1 ? 's' : ''}: ${createdLists.join(', ')}`);
+      returnMessages.push(
+        new ReturnMessage({
+          chatId: message.group,
+          content: `Lista${createdLists.length > 1 ? 's' : ''} criada${createdLists.length > 1 ? 's' : ''}: ${createdLists.join(', ')}`
+        })
+      );
       
-      // Show all lists
-      await showLists(bot, message, [], group);
+      // Add updated list display to return messages
+      const listsResult = await showLists(bot, message, [], group);
+      returnMessages.push(listsResult);
     }
+    
+    return returnMessages.length > 0 ? returnMessages : 
+      new ReturnMessage({
+        chatId: message.group,
+        content: 'Nenhuma lista foi criada.'
+      });
   } catch (error) {
     logger.error('Error creating list:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao criar lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao criar lista. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -434,17 +364,22 @@ async function createList(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function createListWithTitle(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     if (args.length < 2) {
-      await bot.sendMessage(message.group, 'Por favor, forneça o nome da lista e o título. Exemplo: !lct lista1 Título da Lista');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça o nome da lista e o título. Exemplo: !lct lista1 Título da Lista'
+      });
     }
     
     // Get list name and title
@@ -458,8 +393,10 @@ async function createListWithTitle(bot, message, args, group) {
     const existingList = lists.find(list => list.name.toLowerCase() === listName.toLowerCase());
     
     if (existingList) {
-      await bot.sendMessage(message.group, `Lista "${listName}" já existe. Use !lt ${listName} ${listTitle} para atualizar o título.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Lista "${listName}" já existe. Use !lt ${listName} ${listTitle} para atualizar o título.`
+      });
     }
     
     // Create new list with title
@@ -476,14 +413,20 @@ async function createListWithTitle(bot, message, args, group) {
     // Save updated lists
     await saveGroupLists(message.group, lists);
     
-    // Notify about created list
-    await bot.sendMessage(message.group, `Lista criada: ${listName} (${listTitle})`);
-    
-    // Show all lists
-    await showLists(bot, message, [], group);
+    // Return both a creation confirmation and updated lists
+    return [
+      new ReturnMessage({
+        chatId: message.group,
+        content: `Lista criada: ${listName} (${listTitle})`
+      }),
+      await showLists(bot, message, [], group)
+    ];
   } catch (error) {
     logger.error('Error creating list with title:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao criar lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao criar lista. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -493,17 +436,22 @@ async function createListWithTitle(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function deleteList(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(message.group, 'Por favor, forneça pelo menos um nome de lista para excluir. Exemplo: !ld lista1 lista2');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça pelo menos um nome de lista para excluir. Exemplo: !ld lista1 lista2'
+      });
     }
     
     // Get lists for this group
@@ -511,6 +459,7 @@ async function deleteList(bot, message, args, group) {
     
     // Delete each list
     const deletedLists = [];
+    const returnMessages = [];
     
     for (const arg of args) {
       const listName = arg.trim();
@@ -523,7 +472,12 @@ async function deleteList(bot, message, args, group) {
       
       if (listIndex === -1) {
         // Skip non-existent lists
-        await bot.sendMessage(message.group, `Lista "${listName}" não encontrada.`);
+        returnMessages.push(
+          new ReturnMessage({
+            chatId: message.group,
+            content: `Lista "${listName}" não encontrada.`
+          })
+        );
         continue;
       }
       
@@ -537,16 +491,30 @@ async function deleteList(bot, message, args, group) {
       await saveGroupLists(message.group, lists);
       
       // Notify about deleted lists
-      await bot.sendMessage(message.group, `Lista${deletedLists.length > 1 ? 's' : ''} excluída${deletedLists.length > 1 ? 's' : ''}: ${deletedLists.join(', ')}`);
+      returnMessages.push(
+        new ReturnMessage({
+          chatId: message.group,
+          content: `Lista${deletedLists.length > 1 ? 's' : ''} excluída${deletedLists.length > 1 ? 's' : ''}: ${deletedLists.join(', ')}`
+        })
+      );
       
       // Show remaining lists if any
       if (lists.length > 0) {
-        await showLists(bot, message, [], group);
+        returnMessages.push(await showLists(bot, message, [], group));
       }
     }
+    
+    return returnMessages.length > 0 ? returnMessages : 
+      new ReturnMessage({
+        chatId: message.group,
+        content: 'Nenhuma lista foi excluída.'
+      });
   } catch (error) {
     logger.error('Error deleting list:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao excluir lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao excluir lista. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -556,17 +524,22 @@ async function deleteList(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function joinList(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(message.group, 'Por favor, forneça o nome da lista para entrar. Exemplo: !le lista1');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça o nome da lista para entrar. Exemplo: !le lista1'
+      });
     }
     
     const listName = args[0].trim();
@@ -578,8 +551,10 @@ async function joinList(bot, message, args, group) {
     const list = lists.find(list => list.name.toLowerCase() === listName.toLowerCase());
     
     if (!list) {
-      await bot.sendMessage(message.group, `Lista "${listName}" não encontrada.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Lista "${listName}" não encontrada.`
+      });
     }
     
     // Get user name
@@ -605,8 +580,10 @@ async function joinList(bot, message, args, group) {
     const existingMember = list.members.find(member => member.id === message.author);
     
     if (existingMember) {
-      await bot.sendMessage(message.group, `Você já está na lista "${list.title || list.name}".`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Você já está na lista "${list.title || list.name}".`
+      });
     }
     
     // Add user to the list
@@ -619,14 +596,20 @@ async function joinList(bot, message, args, group) {
     // Save updated lists
     await saveGroupLists(message.group, lists);
     
-    // Notify about joining
-    await bot.sendMessage(message.group, `${userName} entrou na lista "${list.title || list.name}".`);
-    
-    // Show all lists
-    await showLists(bot, message, [], group);
+    // Return both a joining confirmation and updated lists
+    return [
+      new ReturnMessage({
+        chatId: message.group,
+        content: `${userName} entrou na lista "${list.title || list.name}".`
+      }),
+      await showLists(bot, message, [], group)
+    ];
   } catch (error) {
     logger.error('Error joining list:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao entrar na lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao entrar na lista. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -636,17 +619,22 @@ async function joinList(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function leaveList(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(message.group, 'Por favor, forneça o nome da lista para sair. Exemplo: !ls lista1');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça o nome da lista para sair. Exemplo: !ls lista1'
+      });
     }
     
     const listName = args[0].trim();
@@ -658,8 +646,10 @@ async function leaveList(bot, message, args, group) {
     const list = lists.find(list => list.name.toLowerCase() === listName.toLowerCase());
     
     if (!list) {
-      await bot.sendMessage(message.group, `Lista "${listName}" não encontrada.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Lista "${listName}" não encontrada.`
+      });
     }
     
     // Get user name
@@ -685,8 +675,10 @@ async function leaveList(bot, message, args, group) {
     const memberIndex = list.members.findIndex(member => member.id === message.author);
     
     if (memberIndex === -1) {
-      await bot.sendMessage(message.group, `Você não está na lista "${list.title || list.name}".`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Você não está na lista "${list.title || list.name}".`
+      });
     }
     
     // Remove user from the list
@@ -695,14 +687,20 @@ async function leaveList(bot, message, args, group) {
     // Save updated lists
     await saveGroupLists(message.group, lists);
     
-    // Notify about leaving
-    await bot.sendMessage(message.group, `${userName} saiu da lista "${list.title || list.name}".`);
-    
-    // Show all lists
-    await showLists(bot, message, [], group);
+    // Return both a leaving confirmation and updated lists
+    return [
+      new ReturnMessage({
+        chatId: message.group,
+        content: `${userName} saiu da lista "${list.title || list.name}".`
+      }),
+      await showLists(bot, message, [], group)
+    ];
   } catch (error) {
     logger.error('Error leaving list:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao sair da lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao sair da lista. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -712,17 +710,22 @@ async function leaveList(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function setListTitle(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     if (args.length < 2) {
-      await bot.sendMessage(message.group, 'Por favor, forneça o nome da lista e o título. Exemplo: !lt lista1 Novo Título');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça o nome da lista e o título. Exemplo: !lt lista1 Novo Título'
+      });
     }
     
     const listName = args[0].trim();
@@ -735,8 +738,10 @@ async function setListTitle(bot, message, args, group) {
     const list = lists.find(list => list.name.toLowerCase() === listName.toLowerCase());
     
     if (!list) {
-      await bot.sendMessage(message.group, `Lista "${listName}" não encontrada.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Lista "${listName}" não encontrada.`
+      });
     }
     
     // Update list title
@@ -745,14 +750,20 @@ async function setListTitle(bot, message, args, group) {
     // Save updated lists
     await saveGroupLists(message.group, lists);
     
-    // Notify about title change
-    await bot.sendMessage(message.group, `Título da lista "${listName}" atualizado para "${listTitle}".`);
-    
-    // Show all lists
-    await showLists(bot, message, [], group);
+    // Return both a title update confirmation and updated lists
+    return [
+      new ReturnMessage({
+        chatId: message.group,
+        content: `Título da lista "${listName}" atualizado para "${listTitle}".`
+      }),
+      await showLists(bot, message, [], group)
+    ];
   } catch (error) {
     logger.error('Error setting list title:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao definir título da lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao definir título da lista. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -762,12 +773,15 @@ async function setListTitle(bot, message, args, group) {
  * @param {Object} message - Message data
  * @param {Array} args - Command arguments
  * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage or array with results
  */
 async function removeFromList(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Check if user is admin in the group
@@ -776,13 +790,17 @@ async function removeFromList(bot, message, args, group) {
     const sender = participants.find(p => p.id._serialized === message.author);
     
     if (!sender || !sender.isAdmin) {
-      await bot.sendMessage(message.group, 'Este comando só pode ser usado por administradores do grupo.');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Este comando só pode ser usado por administradores do grupo.'
+      });
     }
     
     if (args.length < 2) {
-      await bot.sendMessage(message.group, 'Por favor, forneça o nome da lista e o número do participante. Exemplo: !lr lista1 5521987654321');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Por favor, forneça o nome da lista e o número do participante. Exemplo: !lr lista1 5521987654321'
+      });
     }
     
     const listName = args[0].trim();
@@ -798,14 +816,18 @@ async function removeFromList(bot, message, args, group) {
     const list = lists.find(list => list.name.toLowerCase() === listName.toLowerCase());
     
     if (!list) {
-      await bot.sendMessage(message.group, `Lista "${listName}" não encontrada.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Lista "${listName}" não encontrada.`
+      });
     }
     
     // Check if list has members
     if (!list.members || list.members.length === 0) {
-      await bot.sendMessage(message.group, `A lista "${list.title || list.name}" não tem membros.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `A lista "${list.title || list.name}" não tem membros.`
+      });
     }
     
     // Find the member by phone number
@@ -814,8 +836,10 @@ async function removeFromList(bot, message, args, group) {
     );
     
     if (memberIndex === -1) {
-      await bot.sendMessage(message.group, `Usuário com número "${userIdentifier}" não encontrado na lista.`);
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: `Usuário com número "${userIdentifier}" não encontrado na lista.`
+      });
     }
     
     // Get member name before removal
@@ -827,16 +851,124 @@ async function removeFromList(bot, message, args, group) {
     // Save updated lists
     await saveGroupLists(message.group, lists);
     
-    // Notify about removal
-    await bot.sendMessage(message.group, `${memberName} foi removido da lista "${list.title || list.name}" por um administrador.`);
-    
-    // Show all lists
-    await showLists(bot, message, [], group);
+    // Return both a removal confirmation and updated lists
+    return [
+      new ReturnMessage({
+        chatId: message.group,
+        content: `${memberName} foi removido da lista "${list.title || list.name}" por um administrador.`
+      }),
+      await showLists(bot, message, [], group)
+    ];
   } catch (error) {
     logger.error('Error removing user from list:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao remover usuário da lista. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao remover usuário da lista. Por favor, tente novamente.'
+    });
   }
 }
+
+// Criar array de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'listas',
+    description: 'Mostra as listas disponíveis no grupo',
+    category: 'group',
+    reactions: {
+      before: "📋",
+      after: "✅"
+    },
+    method: showLists
+  }),
+  
+  new Command({
+    name: 'll',
+    description: 'Alias para comando listas',
+    category: 'group',
+    reactions: {
+      before: "📋",
+      after: "✅"
+    },
+    method: showLists
+  }),
+  
+  new Command({
+    name: 'lc',
+    description: 'Cria uma nova lista',
+    category: 'group',
+    reactions: {
+      before: "➕",
+      after: "✅"
+    },
+    method: createList
+  }),
+  
+  new Command({
+    name: 'lct',
+    description: 'Cria uma nova lista com título',
+    category: 'group',
+    reactions: {
+      before: "➕",
+      after: "✅"
+    },
+    method: createListWithTitle
+  }),
+  
+  new Command({
+    name: 'ld',
+    description: 'Deleta uma lista',
+    category: 'group',
+    reactions: {
+      before: "🗑️",
+      after: "✅"
+    },
+    method: deleteList
+  }),
+  
+  new Command({
+    name: 'le',
+    description: 'Entra em uma lista',
+    category: 'group',
+    reactions: {
+      before: "➡️",
+      after: "✅"
+    },
+    method: joinList
+  }),
+  
+  new Command({
+    name: 'ls',
+    description: 'Sai de uma lista',
+    category: 'group',
+    reactions: {
+      before: "⬅️",
+      after: "✅"
+    },
+    method: leaveList
+  }),
+  
+  new Command({
+    name: 'lt',
+    description: 'Define título de uma lista',
+    category: 'group',
+    reactions: {
+      before: "✏️",
+      after: "✅"
+    },
+    method: setListTitle
+  }),
+  
+  new Command({
+    name: 'lr',
+    description: 'Remove um usuário de uma lista (admin only)',
+    category: 'group',
+    reactions: {
+      before: "❌",
+      after: "✅"
+    },
+    method: removeFromList
+  })
+];
 
 // Export commands and reaction handler
 module.exports = { 

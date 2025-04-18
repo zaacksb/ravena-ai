@@ -1,5 +1,7 @@
 const axios = require('axios');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 // Create a new logger
 const logger = new Logger('riot-games-commands');
@@ -126,7 +128,7 @@ async function getLolSummonerData(summonerName) {
     };
   } catch (error) {
     logger.error(`Error fetching LoL data for ${summonerName}:`, error);
-    throw new Error(`Could not find LoL summoner "${summonerName}" or an error occurred while fetching data.`);
+    throw new Error(`Não foi possível encontrar o invocador "${summonerName}" ou ocorreu um erro durante a busca.`);
   }
 }
 
@@ -146,31 +148,31 @@ function formatLolMessage(data) {
     : 0;
   
   let message = `🎮 *League of Legends - ${data.name}*\n`;
-  message += `📊 Level: ${data.level}\n\n`;
+  message += `📊 Nível: ${data.level}\n\n`;
   
   // Solo/Duo queue
-  message += `*💪 Solo/Duo Rank:*\n`;
+  message += `*💪 Ranqueada Solo/Duo:*\n`;
   if (data.soloQueue.tier === 'UNRANKED') {
-    message += `Unranked\n`;
+    message += `Sem classificação\n`;
   } else {
     message += `${getRankEmoji(data.soloQueue.tier)} ${data.soloQueue.tier} ${data.soloQueue.rank} (${data.soloQueue.leaguePoints} LP)\n`;
-    message += `🏅 ${data.soloQueue.wins}W ${data.soloQueue.losses}L (${soloWinRate}% win rate)\n`;
+    message += `🏅 ${data.soloQueue.wins}V ${data.soloQueue.losses}D (${soloWinRate}% de vitórias)\n`;
   }
   
   // Flex queue
-  message += `\n*👥 Flex Rank:*\n`;
+  message += `\n*👥 Ranqueada Flex:*\n`;
   if (data.flexQueue.tier === 'UNRANKED') {
-    message += `Unranked\n`;
+    message += `Sem classificação\n`;
   } else {
     message += `${getRankEmoji(data.flexQueue.tier)} ${data.flexQueue.tier} ${data.flexQueue.rank} (${data.flexQueue.leaguePoints} LP)\n`;
-    message += `🏅 ${data.flexQueue.wins}W ${data.flexQueue.losses}L (${flexWinRate}% win rate)\n`;
+    message += `🏅 ${data.flexQueue.wins}V ${data.flexQueue.losses}D (${flexWinRate}% de vitórias)\n`;
   }
   
   // Champion mastery
-  message += `\n*🏆 Top Champions:*\n`;
+  message += `\n*🏆 Principais Campeões:*\n`;
   for (let i = 0; i < data.mastery.length; i++) {
     const champ = data.mastery[i];
-    message += `${i+1}. ${champ.championName} (Level ${champ.championLevel}, ${formatNumber(champ.championPoints)} pts)\n`;
+    message += `${i+1}. ${champ.championName} (Nível ${champ.championLevel}, ${formatNumber(champ.championPoints)} pts)\n`;
   }
   
   return message;
@@ -233,7 +235,7 @@ async function getWildRiftPlayerData(gameName, tagLine) {
     };
   } catch (error) {
     logger.error(`Error fetching Wild Rift data for ${gameName}#${tagLine}:`, error);
-    throw new Error(`Could not find Wild Rift player "${gameName}#${tagLine}" or an error occurred while fetching data.`);
+    throw new Error(`Não foi possível encontrar o jogador de Wild Rift "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
   }
 }
 
@@ -249,15 +251,15 @@ function formatWildRiftMessage(data) {
   let message = `📱 *Wild Rift - ${data.name}#${data.tagLine}*\n\n`;
   
   // Ranked info
-  message += `*🏆 Ranked:*\n`;
+  message += `*🏆 Ranqueada:*\n`;
   message += `${getRankEmoji(data.ranked.tier)} ${data.ranked.tier} ${data.ranked.rank} (${data.ranked.leaguePoints} LP)\n`;
-  message += `🏅 ${data.ranked.wins}W ${data.ranked.losses}L (${winRate}% win rate)\n`;
+  message += `🏅 ${data.ranked.wins}V ${data.ranked.losses}D (${winRate}% de vitórias)\n`;
   
   // Champion mastery
-  message += `\n*🏆 Top Champions:*\n`;
+  message += `\n*🏆 Principais Campeões:*\n`;
   for (let i = 0; i < data.mastery.length; i++) {
     const champ = data.mastery[i];
-    message += `${i+1}. ${champ.championName} (Level ${champ.championLevel}, ${formatNumber(champ.championPoints)} pts)\n`;
+    message += `${i+1}. ${champ.championName} (Nível ${champ.championLevel}, ${formatNumber(champ.championPoints)} pts)\n`;
   }
   
   return message;
@@ -326,7 +328,7 @@ async function getValorantPlayerData(gameName, tagLine) {
     };
   } catch (error) {
     logger.error(`Error fetching Valorant data for ${gameName}#${tagLine}:`, error);
-    throw new Error(`Could not find Valorant player "${gameName}#${tagLine}" or an error occurred while fetching data.`);
+    throw new Error(`Não foi possível encontrar o jogador de Valorant "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
   }
 }
 
@@ -342,16 +344,16 @@ function formatValorantMessage(data) {
   let message = `🔫 *Valorant - ${data.name}#${data.tagLine}*\n\n`;
   
   // Ranked info
-  message += `*🏆 Competitive Rank:*\n`;
+  message += `*🏆 Rank Competitivo:*\n`;
   const rankStr = data.ranked.tier === 'RADIANT' ? 'RADIANT' : `${data.ranked.tier} ${data.ranked.rank}`;
   message += `${getRankEmoji(data.ranked.tier)} ${rankStr} (${data.ranked.rr} RR)\n`;
-  message += `🏅 ${data.ranked.wins}W ${data.ranked.losses}L (${winRate}% win rate)\n`;
+  message += `🏅 ${data.ranked.wins}V ${data.ranked.losses}D (${winRate}% de vitórias)\n`;
   
   // Top agents
-  message += `\n*👤 Top Agents:*\n`;
+  message += `\n*👤 Principais Agentes:*\n`;
   for (let i = 0; i < data.agents.length; i++) {
     const agent = data.agents[i];
-    message += `${i+1}. ${agent.name} - ${agent.matches} matches, ${agent.winRate}% WR, ${agent.kda} KDA\n`;
+    message += `${i+1}. ${agent.name} - ${agent.matches} partidas, ${agent.winRate}% VIT, ${agent.kda} KDA\n`;
   }
   
   return message;
@@ -381,134 +383,212 @@ function parseRiotId(args) {
   return { gameName: input, tagLine: null };
 }
 
-// Define commands
+/**
+ * Handles the LoL command
+ * @param {WhatsAppBot} bot - Bot instance
+ * @param {Object} message - Message data
+ * @param {Array} args - Command arguments
+ * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage or array of ReturnMessages
+ */
+async function handleLolCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um nome de invocador. Exemplo: !lol Faker'
+      });
+    }
+    
+    const summonerName = args.join(' ');
+    
+    // Send a waiting message
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `🔍 Buscando invocador: ${summonerName}...`
+      })
+    );
+    
+    // Get summoner data
+    const summonerData = await getLolSummonerData(summonerName);
+    
+    // Format message
+    const formattedMessage = formatLolMessage(summonerData);
+    
+    // Send response
+    return new ReturnMessage({
+      chatId: chatId,
+      content: formattedMessage
+    });
+    
+  } catch (error) {
+    logger.error('Erro ao executar comando lol:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o invocador.'}`
+    });
+  }
+}
+
+/**
+ * Handles the WR command
+ * @param {WhatsAppBot} bot - Bot instance
+ * @param {Object} message - Message data
+ * @param {Array} args - Command arguments
+ * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage or array of ReturnMessages
+ */
+async function handleWRCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um Riot ID (ex: !wr NomeJogador#NA1)'
+      });
+    }
+    
+    // Parse the Riot ID
+    const { gameName, tagLine } = parseRiotId(args);
+    
+    if (!tagLine) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um Riot ID completo com tagline (ex: NomeJogador#NA1)'
+      });
+    }
+    
+    // Send a waiting message
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `🔍 Buscando jogador de Wild Rift: ${gameName}#${tagLine}...`
+      })
+    );
+    
+    // Get player data
+    const playerData = await getWildRiftPlayerData(gameName, tagLine);
+    
+    // Format message
+    const formattedMessage = formatWildRiftMessage(playerData);
+    
+    // Send response
+    return new ReturnMessage({
+      chatId: chatId,
+      content: formattedMessage
+    });
+    
+  } catch (error) {
+    logger.error('Erro ao executar comando wr:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o jogador.'}`
+    });
+  }
+}
+
+/**
+ * Handles the Valorant command
+ * @param {WhatsAppBot} bot - Bot instance
+ * @param {Object} message - Message data
+ * @param {Array} args - Command arguments
+ * @param {Object} group - Group data
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage or array of ReturnMessages
+ */
+async function handleValorantCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um Riot ID (ex: !valorant NomeJogador#NA1)'
+      });
+    }
+    
+    // Parse the Riot ID
+    const { gameName, tagLine } = parseRiotId(args);
+    
+    if (!tagLine) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um Riot ID completo com tagline (ex: NomeJogador#NA1)'
+      });
+    }
+    
+    // Send a waiting message
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `🔍 Buscando jogador de Valorant: ${gameName}#${tagLine}...`
+      })
+    );
+    
+    // Get player data
+    const playerData = await getValorantPlayerData(gameName, tagLine);
+    
+    // Format message
+    const formattedMessage = formatValorantMessage(playerData);
+    
+    // Send response
+    return new ReturnMessage({
+      chatId: chatId,
+      content: formattedMessage
+    });
+    
+  } catch (error) {
+    logger.error('Erro ao executar comando valorant:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o jogador.'}`
+    });
+  }
+}
+
+// Define commands using Command class
 const commands = [
-  {
+  new Command({
     name: 'lol',
-    description: 'Look up a League of Legends summoner profile',
+    description: 'Busca perfil de jogador de League of Legends',
     reactions: {
       before: "⏳",
       after: "🎮",
       error: "❌"
     },
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        if (args.length === 0) {
-          await bot.sendMessage(chatId, 'Please provide a summoner name. Example: !lol Faker');
-          return;
-        }
-        
-        const summonerName = args.join(' ');
-        
-        // Send a waiting message
-        await bot.sendMessage(chatId, `🔍 Looking up summoner: ${summonerName}...`);
-        
-        // Get summoner data
-        const summonerData = await getLolSummonerData(summonerName);
-        
-        // Format message
-        const formattedMessage = formatLolMessage(summonerData);
-        
-        // Send response
-        await bot.sendMessage(chatId, formattedMessage);
-        
-      } catch (error) {
-        logger.error('Error executing lol command:', error);
-        await bot.sendMessage(chatId, `Error: ${error.message || 'An error occurred while looking up the summoner.'}`);
-      }
-    }
-  },
-  {
+    method: handleLolCommand
+  }),
+  
+  new Command({
     name: 'wr',
-    description: 'Look up a Wild Rift player profile',
+    description: 'Busca perfil de jogador de Wild Rift',
     reactions: {
       before: "⏳",
       after: "📱",
       error: "❌"
     },
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        if (args.length === 0) {
-          await bot.sendMessage(chatId, 'Please provide a Riot ID (e.g., !wr PlayerName#NA1)');
-          return;
-        }
-        
-        // Parse the Riot ID
-        const { gameName, tagLine } = parseRiotId(args);
-        
-        if (!tagLine) {
-          await bot.sendMessage(chatId, 'Please provide a complete Riot ID with tag line (e.g., PlayerName#NA1)');
-          return;
-        }
-        
-        // Send a waiting message
-        await bot.sendMessage(chatId, `🔍 Looking up Wild Rift player: ${gameName}#${tagLine}...`);
-        
-        // Get player data
-        const playerData = await getWildRiftPlayerData(gameName, tagLine);
-        
-        // Format message
-        const formattedMessage = formatWildRiftMessage(playerData);
-        
-        // Send response
-        await bot.sendMessage(chatId, formattedMessage);
-        
-      } catch (error) {
-        logger.error('Error executing wr command:', error);
-        await bot.sendMessage(chatId, `Error: ${error.message || 'An error occurred while looking up the player.'}`);
-      }
-    }
-  },
-  {
+    method: handleWRCommand
+  }),
+  
+  new Command({
     name: 'valorant',
-    description: 'Look up a Valorant player profile',
+    description: 'Busca perfil de jogador de Valorant',
     reactions: {
       before: "⏳",
       after: "🔫",
       error: "❌"
     },
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        if (args.length === 0) {
-          await bot.sendMessage(chatId, 'Please provide a Riot ID (e.g., !valorant PlayerName#NA1)');
-          return;
-        }
-        
-        // Parse the Riot ID
-        const { gameName, tagLine } = parseRiotId(args);
-        
-        if (!tagLine) {
-          await bot.sendMessage(chatId, 'Please provide a complete Riot ID with tag line (e.g., PlayerName#NA1)');
-          return;
-        }
-        
-        // Send a waiting message
-        await bot.sendMessage(chatId, `🔍 Looking up Valorant player: ${gameName}#${tagLine}...`);
-        
-        // Get player data
-        const playerData = await getValorantPlayerData(gameName, tagLine);
-        
-        // Format message
-        const formattedMessage = formatValorantMessage(playerData);
-        
-        // Send response
-        await bot.sendMessage(chatId, formattedMessage);
-        
-      } catch (error) {
-        logger.error('Error executing valorant command:', error);
-        await bot.sendMessage(chatId, `Error: ${error.message || 'An error occurred while looking up the player.'}`);
-      }
-    }
-  }
+    method: handleValorantCommand
+  })
 ];
 
-// Register commands
-logger.debug(`Exporting ${commands.length} commands:`, commands.map(cmd => cmd.name));
+// Registra os comandos
+logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

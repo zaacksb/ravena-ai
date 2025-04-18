@@ -2,6 +2,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('roleta-russa-commands');
 const database = Database.getInstance();
@@ -22,48 +24,6 @@ const MAX_TIMEOUT = 3600;
  * Emojis para ranking
  */
 const EMOJIS_RANKING = ["","🥇","🥈","🥉","🐅","🐆","🦌","🐐","🐏","🐓","🐇"];
-
-const commands = [
-  {
-    name: 'roletarussa',
-    description: 'Joga roleta russa, risco de ser silenciado',
-    category: 'group',
-    reactions: {
-      before: "🔫",
-      after: "🎯",
-      error: "❌"
-    },
-    method: async (bot, message, args, group) => {
-      await jogarRoletaRussa(bot, message, args, group);
-    }
-  },
-  {
-    name: 'roletaranking',
-    description: 'Mostra ranking da roleta russa',
-    category: 'group',
-    reactions: {
-      before: "📊",
-      after: "🏆",
-      error: "❌"
-    },
-    method: async (bot, message, args, group) => {
-      await mostrarRanking(bot, message, args, group);
-    }
-  },
-  {
-    name: 'g-setTempoRoleta',
-    description: 'Define tempo de timeout da roleta russa (admin)',
-    category: 'management',
-    reactions: {
-      before: "⏱️",
-      after: "✅",
-      error: "❌"
-    },
-    method: async (bot, message, args, group) => {
-      await definirTempoRoleta(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Carrega os dados da roleta russa
@@ -166,13 +126,16 @@ function inicializarJogador(dados, groupId, userId) {
  * @param {Object} message Dados da mensagem
  * @param {Array} args Argumentos do comando
  * @param {Object} group Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
  */
 async function jogarRoletaRussa(bot, message, args, group) {
   try {
     // Verifica se está em um grupo
     if (!message.group) {
-      await bot.sendMessage(message.author, 'A roleta russa só pode ser jogada em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'A roleta russa só pode ser jogada em grupos.'
+      });
     }
     
     const groupId = message.group;
@@ -212,14 +175,18 @@ async function jogarRoletaRussa(bot, message, args, group) {
         logger.error('Erro ao aplicar reação de caixão:', reactError);
       }
       
-      await bot.sendMessage(groupId, `☠️ ${userName} já está morto na roleta russa. Ressuscita em ${minutos}m${segundos}s.`);
-      return;
+      return new ReturnMessage({
+        chatId: groupId,
+        content: `☠️ ${userName} já está morto na roleta russa. Ressuscita em ${minutos}m${segundos}s.`
+      });
     }
     
     // Verifica se é o mesmo jogador jogando consecutivamente
     if (dados.grupos[groupId].ultimoJogador === userId) {
-      await bot.sendMessage(groupId, `🔄 ${userName}, espere outra pessoa jogar antes de tentar novamente.`);
-      return;
+      return new ReturnMessage({
+        chatId: groupId,
+        content: `🔄 ${userName}, espere outra pessoa jogar antes de tentar novamente.`
+      });
     }
     
     // Atualiza último jogador
@@ -267,17 +234,27 @@ async function jogarRoletaRussa(bot, message, args, group) {
         logger.error('Erro ao aplicar reação de caixão:', reactError);
       }
       
-      await bot.sendMessage(groupId, `💥🔫 *BANG* - *F no chat* ${info}`);
+      return new ReturnMessage({
+        chatId: groupId,
+        content: `💥🔫 *BANG* - *F no chat* ${info}`
+      });
     } else {
       // Jogador sobreviveu
       // Salva dados
       await salvarDadosRoleta(dados);
       
-      await bot.sendMessage(groupId, `💨🔫 *click* - Tá *safe*! \`\`\`${jogadorDados.tentativasAtuais}\`\`\``);
+      return new ReturnMessage({
+        chatId: groupId,
+        content: `💨🔫 *click* - Tá *safe*! \`\`\`${jogadorDados.tentativasAtuais}\`\`\``
+      });
     }
   } catch (error) {
     logger.error('Erro ao jogar roleta russa:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao jogar roleta russa. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao jogar roleta russa. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -287,13 +264,16 @@ async function jogarRoletaRussa(bot, message, args, group) {
  * @param {Object} message Dados da mensagem
  * @param {Array} args Argumentos do comando
  * @param {Object} group Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
  */
 async function mostrarRanking(bot, message, args, group) {
   try {
     // Verifica se está em um grupo
     if (!message.group) {
-      await bot.sendMessage(message.author, 'O ranking da roleta russa só pode ser visualizado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'O ranking da roleta russa só pode ser visualizado em grupos.'
+      });
     }
     
     const groupId = message.group;
@@ -308,8 +288,10 @@ async function mostrarRanking(bot, message, args, group) {
     
     // Se não houver jogadores, exibe mensagem
     if (Object.keys(grupoData.jogadores).length === 0) {
-      await bot.sendMessage(groupId, '🏆 Ainda não há jogadores na roleta russa deste grupo.');
-      return;
+      return new ReturnMessage({
+        chatId: groupId,
+        content: '🏆 Ainda não há jogadores na roleta russa deste grupo.'
+      });
     }
     
     // Prepara arrays para ranking
@@ -379,10 +361,17 @@ async function mostrarRanking(bot, message, args, group) {
       mensagem += "\tAinda não há jogadores neste ranking\n";
     }
     
-    await bot.sendMessage(groupId, mensagem);
+    return new ReturnMessage({
+      chatId: groupId,
+      content: mensagem
+    });
   } catch (error) {
     logger.error('Erro ao mostrar ranking:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao mostrar ranking da roleta russa. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao mostrar ranking da roleta russa. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -392,21 +381,26 @@ async function mostrarRanking(bot, message, args, group) {
  * @param {Object} message Dados da mensagem
  * @param {Array} args Argumentos do comando
  * @param {Object} group Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
  */
 async function definirTempoRoleta(bot, message, args, group) {
   try {
     // Verifica se está em um grupo
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     const groupId = message.group;
     
     // Verifica se há argumento de tempo
     if (args.length === 0 || isNaN(parseInt(args[0]))) {
-      await bot.sendMessage(groupId, 'Por favor, forneça um tempo em segundos. Exemplo: !g-setTempoRoleta 300');
-      return;
+      return new ReturnMessage({
+        chatId: groupId,
+        content: 'Por favor, forneça um tempo em segundos. Exemplo: !g-setTempoRoleta 300'
+      });
     }
     
     // Obtém e valida o tempo
@@ -445,12 +439,58 @@ async function definirTempoRoleta(bot, message, args, group) {
       tempoFormatado = `${segundos} segundo(s)`;
     }
     
-    await bot.sendMessage(groupId, `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`);
+    return new ReturnMessage({
+      chatId: groupId,
+      content: `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
+    });
   } catch (error) {
     logger.error('Erro ao definir tempo de roleta:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.'
+    });
   }
 }
+
+// Lista de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'roletarussa',
+    description: 'Joga roleta russa, risco de ser silenciado',
+    category: 'group',
+    reactions: {
+      before: "🔫",
+      after: "🎯",
+      error: "❌"
+    },
+    method: jogarRoletaRussa
+  }),
+  
+  new Command({
+    name: 'roletaranking',
+    description: 'Mostra ranking da roleta russa',
+    category: 'group',
+    reactions: {
+      before: "📊",
+      after: "🏆",
+      error: "❌"
+    },
+    method: mostrarRanking
+  }),
+  
+  new Command({
+    name: 'g-setTempoRoleta',
+    description: 'Define tempo de timeout da roleta russa (admin)',
+    category: 'management',
+    reactions: {
+      before: "⏱️",
+      after: "✅",
+      error: "❌"
+    },
+    method: definirTempoRoleta
+  })
+];
 
 // Verifica o status de timeout dos jogadores periodicamente
 setInterval(async () => {

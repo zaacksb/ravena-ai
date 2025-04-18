@@ -1,9 +1,11 @@
-const path = require('path');
 const fs = require('fs').promises;
+const path = require('path');
 const chrono = require('chrono-node');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('lembretes-commands');
 const database = Database.getInstance();
@@ -14,43 +16,6 @@ logger.info('Módulo LembretesCommands carregado');
 const LEMBRETES_FILE = path.join(__dirname, '../../data/lembretes.json');
 // Diretório para armazenar mídias dos lembretes
 const LEMBRETES_MEDIA_DIR = path.join(__dirname, '../../data/lembretes-media');
-
-const commands = [
-  {
-    name: 'lembrar',
-    description: 'Configura um lembrete para uma data específica',
-    reactions: {
-      before: "⏰",
-      after: "✅"
-    },
-    needsQuotedMsg: true,
-    method: async (bot, message, args, group) => {
-      await criarLembrete(bot, message, args, group);
-    }
-  },
-  {
-    name: 'lembretes',
-    description: 'Lista os lembretes ativos',
-    reactions: {
-      before: "📋",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await listarLembretes(bot, message, args, group);
-    }
-  },
-  {
-    name: 'cancelar',
-    description: 'Cancela um lembrete por ID',
-    reactions: {
-      before: "❌",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await cancelarLembrete(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Garante que os diretórios necessários existam
@@ -66,7 +31,7 @@ async function garantirDiretorios() {
 
 /**
  * Carrega os lembretes do arquivo JSON
- * @returns {Array} - Array de objetos de lembrete
+ * @returns {Promise<Array>} - Array de objetos de lembrete
  */
 async function carregarLembretes() {
   try {
@@ -107,7 +72,7 @@ async function carregarLembretes() {
 /**
  * Salva os lembretes no arquivo JSON
  * @param {Array} lembretes - Array de objetos de lembrete
- * @returns {boolean} - Status de sucesso
+ * @returns {Promise<boolean>} - Status de sucesso
  */
 async function salvarLembretes(lembretes) {
   try {
@@ -195,6 +160,7 @@ function formatarData(data) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com resposta
  */
 async function criarLembrete(bot, message, args, group) {
   try {
@@ -202,16 +168,20 @@ async function criarLembrete(bot, message, args, group) {
     
     // Verifica se há argumentos
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça uma data/hora para o lembrete. Exemplo: !lembrar amanhã às 10:00');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma data/hora para o lembrete. Exemplo: !lembrar amanhã às 10:00'
+      });
     }
     
     // Obtém a mensagem citada
     const quotedMsg = await message.origin.getQuotedMessage();
     
     if (!quotedMsg) {
-      await bot.sendMessage(chatId, 'Este comando deve ser usado como resposta a uma mensagem.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Este comando deve ser usado como resposta a uma mensagem.'
+      });
     }
     
     // Obtém o texto do argumento para interpretar a data
@@ -243,8 +213,10 @@ async function criarLembrete(bot, message, args, group) {
       
       // Se ainda assim não conseguir, informa o erro
       if (!dataLembrete) {
-        await bot.sendMessage(chatId, 'Não foi possível interpretar a data/hora. Use formatos como "amanhã às 10:00" ou "17/04/2025 07:30".');
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Não foi possível interpretar a data/hora. Use formatos como "amanhã às 10:00" ou "17/04/2025 07:30".'
+        });
       }
     }
     
@@ -300,7 +272,11 @@ async function criarLembrete(bot, message, args, group) {
         logger.info(`Mídia salva para lembrete: ${mediaPath}`);
       } catch (mediaError) {
         logger.error('Erro ao salvar mídia para lembrete:', mediaError);
-        await bot.sendMessage(chatId, 'Não foi possível salvar a mídia para o lembrete. O lembrete será criado apenas com o texto.');
+        // Continua criando o lembrete mesmo sem mídia, mas envia aviso
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Não foi possível salvar a mídia para o lembrete. O lembrete será criado apenas com o texto.'
+        });
       }
     }
     
@@ -317,15 +293,24 @@ async function criarLembrete(bot, message, args, group) {
       // Inicia o temporizador para este lembrete
       iniciarTemporizador(bot, lembrete);
       
-      // Envia confirmação
-      await bot.sendMessage(chatId, `✅ Lembrete configurado para ${lembrete.dataFormatada} (ID: ${lembrete.id})`);
+      // Retorna mensagem de confirmação
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✅ Lembrete configurado para ${lembrete.dataFormatada} (ID: ${lembrete.id})`
+      });
     } else {
-      await bot.sendMessage(chatId, '❌ Erro ao salvar o lembrete. Por favor, tente novamente.');
+      return new ReturnMessage({
+        chatId: chatId,
+        content: '❌ Erro ao salvar o lembrete. Por favor, tente novamente.'
+      });
     }
   } catch (error) {
     logger.error('Erro ao criar lembrete:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao criar lembrete. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao criar lembrete. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -335,6 +320,7 @@ async function criarLembrete(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com lista de lembretes
  */
 async function listarLembretes(bot, message, args, group) {
   try {
@@ -356,8 +342,10 @@ async function listarLembretes(bot, message, args, group) {
     });
     
     if (lembretesFiltrados.length === 0) {
-      await bot.sendMessage(chatId, 'Não há lembretes ativos.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Não há lembretes ativos.'
+      });
     }
     
     // Ordena por data (mais próximos primeiro)
@@ -395,11 +383,17 @@ async function listarLembretes(bot, message, args, group) {
     
     mensagem += `Para cancelar um lembrete, use: !cancelar <id>`;
     
-    await bot.sendMessage(chatId, mensagem);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: mensagem
+    });
   } catch (error) {
     logger.error('Erro ao listar lembretes:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao listar lembretes. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao listar lembretes. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -409,6 +403,7 @@ async function listarLembretes(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com resposta
  */
 async function cancelarLembrete(bot, message, args, group) {
   try {
@@ -417,8 +412,10 @@ async function cancelarLembrete(bot, message, args, group) {
     
     // Verifica se foi fornecido um ID
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça o ID do lembrete a ser cancelado. Use !lembretes para ver os IDs.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça o ID do lembrete a ser cancelado. Use !lembretes para ver os IDs.'
+      });
     }
     
     const lembreteId = args[0];
@@ -430,8 +427,10 @@ async function cancelarLembrete(bot, message, args, group) {
     const index = lembretes.findIndex(l => l.id === lembreteId);
     
     if (index === -1) {
-      await bot.sendMessage(chatId, `Lembrete com ID ${lembreteId} não encontrado.`);
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `Lembrete com ID ${lembreteId} não encontrado.`
+      });
     }
     
     const lembrete = lembretes[index];
@@ -440,8 +439,10 @@ async function cancelarLembrete(bot, message, args, group) {
     // No grupo, apenas o criador do lembrete pode cancelar
     // Em chat privado, apenas lembretes criados pelo usuário podem ser cancelados
     if (lembrete.userId !== userId && (!message.group || lembrete.chatId !== chatId)) {
-      await bot.sendMessage(chatId, 'Você não tem permissão para cancelar este lembrete.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Você não tem permissão para cancelar este lembrete.'
+      });
     }
     
     // Marca o lembrete como inativo
@@ -460,14 +461,23 @@ async function cancelarLembrete(bot, message, args, group) {
         }
       }
       
-      await bot.sendMessage(chatId, `✅ Lembrete com ID ${lembreteId} foi cancelado.`);
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✅ Lembrete com ID ${lembreteId} foi cancelado.`
+      });
     } else {
-      await bot.sendMessage(chatId, '❌ Erro ao cancelar o lembrete. Por favor, tente novamente.');
+      return new ReturnMessage({
+        chatId: chatId,
+        content: '❌ Erro ao cancelar o lembrete. Por favor, tente novamente.'
+      });
     }
   } catch (error) {
     logger.error('Erro ao cancelar lembrete:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao cancelar lembrete. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao cancelar lembrete. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -596,7 +606,10 @@ async function dispararLembrete(bot, lembreteId) {
     // Formata a mensagem do lembrete
     const textoLembrete = `⏰ *LEMBRETE!*\n\n${lembrete.mensagem || ''}`;
     
-    // Envia a mensagem
+    // Usa ReturnMessage para enviar
+    let returnMessage;
+    
+    // Verifica se tem mídia
     if (lembrete.hasMedia && lembrete.mediaPath) {
       try {
         // Carrega a mídia
@@ -610,10 +623,17 @@ async function dispararLembrete(bot, lembreteId) {
           lembrete.mediaPath
         );
         
-        // Envia a mídia com a mensagem
-        await bot.sendMessage(lembrete.chatId, media, {
-          caption: textoLembrete
+        // Cria ReturnMessage com mídia
+        returnMessage = new ReturnMessage({
+          chatId: lembrete.chatId,
+          content: media,
+          options: {
+            caption: textoLembrete
+          }
         });
+        
+        // Envia a mensagem
+        await bot.sendReturnMessages(returnMessage);
         
         // Exclui o arquivo de mídia após enviar
         try {
@@ -624,11 +644,21 @@ async function dispararLembrete(bot, lembreteId) {
       } catch (mediaError) {
         logger.error('Erro ao enviar mídia do lembrete:', mediaError);
         // Se falhar, envia apenas o texto
-        await bot.sendMessage(lembrete.chatId, `${textoLembrete}\n\n_(Não foi possível enviar a mídia)_`);
+        returnMessage = new ReturnMessage({
+          chatId: lembrete.chatId,
+          content: `${textoLembrete}\n\n_(Não foi possível enviar a mídia)_`
+        });
+        
+        await bot.sendReturnMessages(returnMessage);
       }
     } else {
       // Envia apenas o texto
-      await bot.sendMessage(lembrete.chatId, textoLembrete);
+      returnMessage = new ReturnMessage({
+        chatId: lembrete.chatId,
+        content: textoLembrete
+      });
+      
+      await bot.sendReturnMessages(returnMessage);
     }
     
     logger.info(`Lembrete ${lembreteId} disparado com sucesso`);
@@ -636,6 +666,40 @@ async function dispararLembrete(bot, lembreteId) {
     logger.error(`Erro ao disparar lembrete ${lembreteId}:`, error);
   }
 }
+
+// Comandos utilizando a classe Command
+const commands = [
+  new Command({
+    name: 'lembrar',
+    description: 'Configura um lembrete para uma data específica',
+    reactions: {
+      before: "⏰",
+      after: "✅"
+    },
+    needsQuotedMsg: true,
+    method: criarLembrete
+  }),
+  
+  new Command({
+    name: 'lembretes',
+    description: 'Lista os lembretes ativos',
+    reactions: {
+      before: "📋",
+      after: "✅"
+    },
+    method: listarLembretes
+  }),
+  
+  new Command({
+    name: 'cancelar',
+    description: 'Cancela um lembrete por ID',
+    reactions: {
+      before: "❌",
+      after: "✅"
+    },
+    method: cancelarLembrete
+  })
+];
 
 // Ao carregar o módulo, inicia temporizadores para lembretes ativos
 (async () => {

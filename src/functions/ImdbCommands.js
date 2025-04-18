@@ -1,8 +1,8 @@
 const axios = require('axios');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
-const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('imdb-commands');
 
@@ -20,11 +20,12 @@ const OMDB_API_URL = 'http://www.omdbapi.com/';
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
- * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage com informações do filme/série
  */
 async function buscarImdb(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
+    const returnMessages = [];
     
     // Verificar se a API key está configurada
     if (!OMDB_API_KEY) {
@@ -44,11 +45,13 @@ async function buscarImdb(bot, message, args, group) {
     // Obtém o nome do filme/série
     const nome = args.join(' ');
     
-    // Primeiro, envia mensagem de processamento
-    const processingMessage = new ReturnMessage({
-      chatId: chatId,
-      content: `🔍 Buscando informações sobre "${nome}"...`
-    });
+    // Envia mensagem de processamento
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `🔍 Buscando informações sobre "${nome}"...`
+      })
+    );
     
     // Realiza a busca inicial para obter o ID do filme/série
     const searchResponse = await axios.get(OMDB_API_URL, {
@@ -177,7 +180,8 @@ async function buscarImdb(bot, message, args, group) {
           chatId: chatId,
           content: media,
           options: {
-            caption: mensagem
+            caption: mensagem,
+            quotedMessageId: message.origin.id._serialized
           }
         });
       } catch (imageError) {
@@ -185,14 +189,20 @@ async function buscarImdb(bot, message, args, group) {
         // Se falhar ao baixar a imagem, envia apenas o texto
         return new ReturnMessage({
           chatId: chatId,
-          content: mensagem
+          content: mensagem,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     } else {
       // Se não tiver poster, envia apenas o texto
       return new ReturnMessage({
         chatId: chatId,
-        content: mensagem
+        content: mensagem,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
   } catch (error) {
@@ -221,7 +231,7 @@ async function buscarImdb(bot, message, args, group) {
   }
 }
 
-// Criar array de comandos usando a classe Command
+// Definição de comandos usando a classe Command
 const commands = [
   new Command({
     name: 'imdb',

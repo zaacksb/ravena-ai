@@ -3,6 +3,8 @@ const axios = require('axios');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const NSFWPredict = require('../utils/NSFWPredict');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('stable-diffusion-commands');
 const nsfwPredict = NSFWPredict.getInstance();
@@ -22,33 +24,23 @@ const DEFAULT_PARAMS = {
   negative_prompt: "ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
 };
 
-const commands = [
-  {
-    name: 'imagine',
-    description: 'Gera uma imagem usando Stable Diffusion',
-    reactions: {
-      before: "🎨",
-      after: "✨"
-    },
-    method: async (bot, message, args, group) => {
-      await generateImage(bot, message, args, group);
-    }
-  }
-];
-
 /**
  * Gera uma imagem usando a API do Stable Diffusion
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function generateImage(bot, message, args, group) {
   const chatId = message.group || message.author;
+  const returnMessages = [];
   
   if (args.length === 0) {
-    await bot.sendMessage(chatId, 'Por favor, forneça um prompt para gerar a imagem. Exemplo: !imagine um gato usando chapéu de cowboy');
-    return;
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Por favor, forneça um prompt para gerar a imagem. Exemplo: !imagine um gato usando chapéu de cowboy'
+    });
   }
   
   // Obtém o prompt do usuário
@@ -57,7 +49,10 @@ async function generateImage(bot, message, args, group) {
   
   try {
     // Envia mensagem de processamento
-    await bot.sendMessage(chatId, '🖼️ Gerando imagem, isso pode levar alguns segundos...');
+    returnMessages.push(new ReturnMessage({
+      chatId: chatId,
+      content: '🖼️ Gerando imagem, isso pode levar alguns segundos...'
+    }));
     
     // Inicia cronômetro para medir tempo de geração
     const startTime = Date.now();
@@ -113,38 +108,49 @@ async function generateImage(bot, message, args, group) {
       logger.error('Erro ao verificar NSFW:', nsfwError);
     }
     
-    // Limpar arquivo temporário após análise
-    try {
-      await fs.unlink(tempImagePath);
-    } catch (unlinkError) {
-      logger.error('Erro ao excluir arquivo temporário:', unlinkError);
-    }
+    // Limpar arquivo temporário após alguns minutos
+    setTimeout((tempImg) => {
+      try {
+        await fs.unlink(tempImg);
+      } catch (unlinkError) {
+        logger.error('Erro ao excluir arquivo temporário:', tempImg, unlinkError);
+      }
+    }, 300000, tempImagePath);
     
     // Prepara a legenda com informações sobre a geração
     const caption = `🎨 *Prompt:* ${prompt}\n📊 *Modelo:* ${modelName}\n⏱️ *Tempo:* ${generationTime}s`;
     
-    // Cria objeto de mídia a partir do base64
-    const media = {
-      mimetype: 'image/jpeg',
-      data: imageBase64,
-      filename: 'stable-diffusion.jpg'
-    };
+    const media = await bot.createMedia(tempImagePath);
     
     // Se a imagem for NSFW, envia um aviso antes
     if (isNSFW) {
-      await bot.sendMessage(chatId, '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado, abra com cautela.');
+      returnMessages.push(new ReturnMessage({
+        chatId: chatId,
+        content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado, abra com cautela.'
+      }));
       
       // Envia a imagem como viewOnly
-      await bot.sendMessage(chatId, media, {
-        caption: caption,
-        viewOnce: true
-      });
+      returnMessages.push(new ReturnMessage({
+        chatId: chatId,
+        content: media,
+        options: {
+          caption: caption,
+          viewOnce: true
+        }
+      }));
     } else {
       // Envia a imagem normalmente se não for NSFW
-      await bot.sendMessage(chatId, media, {
-        caption: caption
-      });
+      returnMessages.push(new ReturnMessage({
+        chatId: chatId,
+        content: media,
+        options: {
+          caption: caption
+        }
+      }));
     }
+    
+    // Se só tiver um item no array, retorna ele diretamente
+    return returnMessages.length === 1 ? returnMessages[0] : returnMessages;
   } catch (error) {
     logger.error('Erro ao gerar imagem:', error);
     
@@ -158,9 +164,25 @@ async function generateImage(bot, message, args, group) {
       errorMessage = `Erro da API Stable Diffusion: ${error.response.status} - ${error.response.statusText}`;
     }
     
-    await bot.sendMessage(chatId, errorMessage);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: errorMessage
+    });
   }
 }
+
+// Comandos utilizando a classe Command
+const commands = [
+  new Command({
+    name: 'imagine',
+    description: 'Gera uma imagem usando Stable Diffusion',
+    reactions: {
+      before: "🎨",
+      after: "✨"
+    },
+    method: generateImage
+  })
+];
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));

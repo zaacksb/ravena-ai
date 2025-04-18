@@ -1,66 +1,15 @@
-// Cria um novo arquivo: src/functions/GroupCommands.js
+// src/functions/GroupCommands.js
 
 const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('group-commands');
 const database = Database.getInstance();
 
 logger.info('Módulo GroupCommands carregado');
-
-const commands = [
-  {
-    name: 'atencao',
-    description: 'Menciona todos os membros do grupo silenciosamente',
-    category: 'group',
-    reactions: {
-      before: "📢",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await mentionAllMembers(bot, message, args, group);
-    }
-  },
-  {
-    name: 'galera',
-    description: 'Menciona todos os membros do grupo silenciosamente',
-    category: 'group',
-    aliasFor: 'atencao',
-    reactions: {
-      before: "📢",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await mentionAllMembers(bot, message, args, group);
-    }
-  },
-  {
-    name: 'ignorar',
-    description: 'Alterna ser ignorado pelas menções de grupo',
-    category: 'group',
-    reactions: {
-      before: "🔇",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await toggleIgnore(bot, message, args, group);
-    }
-  },
-  {
-    name: 'apagar',
-    description: 'Apaga a mensagem do bot quando usado em resposta a ela',
-    category: 'group',
-    needsQuotedMsg: true,
-    reactions: {
-      before: "🗑️",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await apagarMensagem(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Menciona todos os membros em um grupo
@@ -68,19 +17,24 @@ const commands = [
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com o resultado
  */
 async function mentionAllMembers(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Obtém o chat para acessar participantes
     const chat = await message.origin.getChat();
     if (!chat.isGroup) {
-      await bot.sendMessage(message.group, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Obtém usuários ignorados para este grupo
@@ -92,8 +46,10 @@ async function mentionAllMembers(bot, message, args, group) {
     );
     
     if (participants.length === 0) {
-      await bot.sendMessage(message.group, 'Nenhum membro para mencionar.');
-      return;
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Nenhum membro para mencionar.'
+      });
     }
     
     // Cria array de menções para todos os participantes
@@ -107,15 +63,22 @@ async function mentionAllMembers(bot, message, args, group) {
       args.join(' ') : 
       '🚨 Atenção pessoal! 🚨';
     
-    // Envia mensagem com menções
-    await bot.client.sendMessage(message.group, messageText, {
-      mentions: mentions
-    });
-    
+    // Envia mensagem com menções através de ReturnMessage
     logger.info(`Mencionados ${mentions.length} membros no grupo ${message.group}`);
+    
+    return new ReturnMessage({
+      chatId: message.group,
+      content: messageText,
+      options: {
+        mentions: mentions
+      }
+    });
   } catch (error) {
     logger.error('Erro ao mencionar membros do grupo:', error);
-    await bot.sendMessage(message.group, 'Erro ao mencionar membros do grupo. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao mencionar membros do grupo. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -125,12 +88,15 @@ async function mentionAllMembers(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com o resultado
  */
 async function toggleIgnore(bot, message, args, group) {
   try {
     if (!message.group) {
-      await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Inicializa array de usuários ignorados se não existir
@@ -144,22 +110,35 @@ async function toggleIgnore(bot, message, args, group) {
       // Adiciona usuário à lista de ignorados
       group.ignoredUsers.push(message.author);
       await database.saveGroup(group);
-      await bot.sendMessage(message.group, 'Você agora será ignorado nas menções de grupo.', {
-        quotedMessageId: message.origin.id._serialized
+      
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Você agora será ignorado nas menções de grupo.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     } else {
       // Remove usuário da lista de ignorados
       group.ignoredUsers.splice(userIndex, 1);
       await database.saveGroup(group);
-      await bot.sendMessage(message.group, 'Você agora será incluído nas menções de grupo.', {
-        quotedMessageId: message.origin.id._serialized
+      
+      return new ReturnMessage({
+        chatId: message.group,
+        content: 'Você agora será incluído nas menções de grupo.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
     logger.info(`Status de ignorar alternado para usuário ${message.author} no grupo ${message.group}`);
   } catch (error) {
     logger.error('Erro ao alternar status de ignorar:', error);
-    await bot.sendMessage(message.group, 'Erro ao atualizar seu status de ignorar. Por favor, tente novamente.');
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao atualizar seu status de ignorar. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -169,6 +148,7 @@ async function toggleIgnore(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|null>} - ReturnMessage ou null
  */
 async function apagarMensagem(bot, message, args, group) {
   try {
@@ -177,7 +157,7 @@ async function apagarMensagem(bot, message, args, group) {
     
     if (!quotedMsg) {
       logger.debug('Comando apagar usado sem mensagem citada');
-      return;
+      return null;
     }
     
     // Verifica se a mensagem citada é do bot
@@ -215,7 +195,7 @@ async function apagarMensagem(bot, message, args, group) {
                 logger.error('Erro ao apagar mensagem de comando:', deleteError);
               }
               
-              return;
+              return null;
             }
           }
         } catch (chatError) {
@@ -224,8 +204,10 @@ async function apagarMensagem(bot, message, args, group) {
       }
       
       // Se chegou aqui, ou não está em grupo ou bot não é admin
-      await bot.sendMessage(message.group || message.author, 'Só posso apagar minhas próprias mensagens ou mensagens de outros se eu for admin do grupo.');
-      return;
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Só posso apagar minhas próprias mensagens ou mensagens de outros se eu for admin do grupo.'
+      });
     }
     
     // Tenta apagar a mensagem do bot
@@ -246,6 +228,8 @@ async function apagarMensagem(bot, message, args, group) {
       } catch (deleteError) {
         logger.error('Erro ao apagar mensagem de comando:', deleteError);
       }
+      
+      return null;
     } catch (error) {
       logger.error('Erro ao apagar mensagem:', error);
       
@@ -258,15 +242,67 @@ async function apagarMensagem(bot, message, args, group) {
       
       // Envia mensagem de erro apenas em grupos (em privado é desnecessário)
       if (message.group) {
-        await bot.sendMessage(message.group, 'Não foi possível apagar a mensagem. Verifique se tenho permissões necessárias.');
+        return new ReturnMessage({
+          chatId: message.group,
+          content: 'Não foi possível apagar a mensagem. Verifique se tenho permissões necessárias.'
+        });
       }
+      
+      return null;
     }
   } catch (error) {
     logger.error('Erro geral ao apagar mensagem:', error);
+    return null;
   }
 }
 
-// Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+// Lista de comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'atencao',
+    description: 'Menciona todos os membros do grupo silenciosamente',
+    category: 'group',
+    reactions: {
+      before: "📢",
+      after: "✅"
+    },
+    method: mentionAllMembers
+  }),
+  
+  new Command({
+    name: 'galera',
+    description: 'Menciona todos os membros do grupo silenciosamente',
+    category: 'group',
+    aliasFor: 'atencao',
+    reactions: {
+      before: "📢",
+      after: "✅"
+    },
+    method: mentionAllMembers
+  }),
+  
+  new Command({
+    name: 'ignorar',
+    description: 'Alterna ser ignorado pelas menções de grupo',
+    category: 'group',
+    reactions: {
+      before: "🔇",
+      after: "✅"
+    },
+    method: toggleIgnore
+  }),
+  
+  new Command({
+    name: 'apagar',
+    description: 'Apaga a mensagem do bot quando usado em resposta a ela',
+    category: 'group',
+    needsQuotedMsg: true,
+    reactions: {
+      before: "🗑️",
+      after: "✅"
+    },
+    method: apagarMensagem
+  })
+];
 
 module.exports = { commands };

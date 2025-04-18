@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('wikipedia-commands');
 
@@ -10,41 +12,36 @@ logger.info('Módulo WikipediaCommands carregado');
 const WIKI_API_URL = 'https://pt.wikipedia.org/api/rest_v1/page/summary/';
 const WIKI_SEARCH_API = 'https://pt.wikipedia.org/w/api.php';
 
-const commands = [
-  {
-    name: 'wiki',
-    description: 'Busca informações na Wikipedia',
-    reactions: {
-      before: "📚",
-      after: "🔍"
-    },
-    method: async (bot, message, args, group) => {
-      await buscarWikipedia(bot, message, args, group);
-    }
-  }
-];
-
 /**
  * Busca informações na Wikipedia
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function buscarWikipedia(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
+    const returnMessages = [];
     
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça um termo para buscar na Wikipedia. Exemplo: !wiki Brasil');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça um termo para buscar na Wikipedia. Exemplo: !wiki Brasil'
+      });
     }
     
     // Obtém o termo de busca
     const termo = args.join(' ');
     
     // Envia mensagem de processamento
-    await bot.sendMessage(chatId, `🔍 Buscando informações sobre "${termo}" na Wikipedia...`);
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `🔍 Buscando informações sobre "${termo}" na Wikipedia...`
+      })
+    );
     
     // Primeira etapa: realizar uma busca para encontrar o artigo mais relevante
     const searchResponse = await axios.get(WIKI_SEARCH_API, {
@@ -60,8 +57,10 @@ async function buscarWikipedia(bot, message, args, group) {
     
     // Verifica se encontrou resultados
     if (!searchResponse.data.query || !searchResponse.data.query.search || searchResponse.data.query.search.length === 0) {
-      await bot.sendMessage(chatId, `❌ Não foi possível encontrar informações sobre "${termo}" na Wikipedia.`);
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `❌ Não foi possível encontrar informações sobre "${termo}" na Wikipedia.`
+      });
     }
     
     // Obtém o título do artigo mais relevante
@@ -74,8 +73,10 @@ async function buscarWikipedia(bot, message, args, group) {
       
       // Verifica se encontrou informações
       if (!data || !data.title) {
-        await bot.sendMessage(chatId, `❌ Erro ao buscar informações detalhadas sobre "${termo}".`);
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao buscar informações detalhadas sobre "${termo}".`
+        });
       }
       
       // Prepara a mensagem
@@ -121,25 +122,43 @@ async function buscarWikipedia(bot, message, args, group) {
           // Cria mídia para envio
           const media = new MessageMedia(mimeType, base64Image, `wiki_${pageTitle.replace(/\s+/g, '_')}.jpg`);
           
-          // Envia a mensagem com mídia
-          await bot.sendMessage(chatId, media, { caption: mensagem });
+          // Retorna a mensagem com mídia
+          return new ReturnMessage({
+            chatId: chatId,
+            content: media,
+            options: {
+              caption: mensagem
+            }
+          });
         } catch (imageError) {
           logger.error('Erro ao baixar imagem da Wikipedia:', imageError);
           // Se falhar ao baixar a imagem, envia apenas o texto
-          await bot.sendMessage(chatId, mensagem);
+          return new ReturnMessage({
+            chatId: chatId,
+            content: mensagem
+          });
         }
       } else {
         // Se não tiver imagem, envia apenas o texto
-        await bot.sendMessage(chatId, mensagem);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: mensagem
+        });
       }
     } catch (summaryError) {
       logger.error('Erro ao buscar sumário da Wikipedia:', summaryError);
       
       // Trata erro de não encontrado especificamente
       if (summaryError.response && summaryError.response.status === 404) {
-        await bot.sendMessage(chatId, `❌ Não foi possível encontrar uma página completa sobre "${termo}" na Wikipedia.`);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Não foi possível encontrar uma página completa sobre "${termo}" na Wikipedia.`
+        });
       } else {
-        await bot.sendMessage(chatId, `❌ Erro ao buscar informações detalhadas sobre "${termo}". Tente novamente mais tarde.`);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao buscar informações detalhadas sobre "${termo}". Tente novamente mais tarde.`
+        });
       }
     }
   } catch (error) {
@@ -159,8 +178,24 @@ async function buscarWikipedia(bot, message, args, group) {
       }
     }
     
-    await bot.sendMessage(chatId, `❌ ${errorMessage}`);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `❌ ${errorMessage}`
+    });
   }
 }
+
+// Comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'wiki',
+    description: 'Busca informações na Wikipedia',
+    reactions: {
+      before: "📚",
+      after: "🔍"
+    },
+    method: buscarWikipedia
+  })
+];
 
 module.exports = { commands };

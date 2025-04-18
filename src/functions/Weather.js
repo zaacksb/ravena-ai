@@ -1,5 +1,7 @@
 const axios = require('axios');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 // Cria novo logger
 const logger = new Logger('weather-commands');
@@ -305,8 +307,100 @@ function formatWeatherMessage(weatherData) {
   }
 }
 
+/**
+ * Implementação do comando clima
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} ReturnMessage ou array de ReturnMessages
+ */
+async function handleWeatherCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  try {
+    let latitude, longitude, locationName;
+    
+    // Caso 1: Usuário menciona uma mensagem de localização
+    if (args.length === 0) {
+      // Verifica se é uma resposta a uma mensagem
+      const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+      
+      if (!quotedMsg) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo'
+        });
+      }
+      
+      // Verifica se a mensagem citada é uma localização
+      if (quotedMsg.type === 'location') {
+        latitude = quotedMsg.location.latitude;
+        longitude = quotedMsg.location.longitude;
+        locationName = quotedMsg.location.description || 'localização compartilhada';
+      } else {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo'
+        });
+      }
+    } 
+    // Caso 2: Usuário fornece o nome de uma cidade
+    else {
+      const cityName = args.join(' ');
+      
+      // Envia mensagem de aguarde
+      returnMessages.push(
+        new ReturnMessage({
+          chatId: chatId,
+          content: `🔍 Buscando informações de clima para ${cityName}...`
+        })
+      );
+      
+      try {
+        // Obtém coordenadas da cidade
+        const coordinates = await getCityCoordinates(cityName);
+        latitude = coordinates.lat;
+        longitude = coordinates.lon;
+        locationName = cityName;
+      } catch (error) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Não foi possível encontrar a cidade: ${cityName}. Verifique o nome e tente novamente.`
+        });
+      }
+    }
+    
+    // Obtém dados do clima para as coordenadas
+    const weatherData = await getWeatherData(latitude, longitude);
+    
+    // Formata mensagem de clima
+    const weatherMessage = formatWeatherMessage(weatherData);
+    
+    // Retorna a mensagem do clima
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: weatherMessage
+      })
+    );
+    
+    // Se tiver mais de uma mensagem no array, retorna o array
+    // Caso contrário, retorna só a mensagem do clima
+    return returnMessages.length > 1 ? returnMessages : returnMessages[returnMessages.length - 1];
+    
+  } catch (error) {
+    logger.error('Erro ao executar comando clima:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao obter informações de clima. Por favor, tente novamente mais tarde.'
+    });
+  }
+}
+
 const commands = [
-  {
+  new Command({
     name: 'clima',
     description: 'Mostra o clima atual e previsão para uma localização',
     reactions: {
@@ -314,67 +408,10 @@ const commands = [
       after: "☀️",
       error: "❌"
     },
-    method: async (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      try {
-        let latitude, longitude, locationName;
-        
-        // Caso 1: Usuário menciona uma mensagem de localização
-        if (args.length === 0) {
-          // Verifica se é uma resposta a uma mensagem
-          const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-          
-          if (!quotedMsg) {
-            await bot.sendMessage(chatId, 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo');
-            return;
-          }
-          
-          // Verifica se a mensagem citada é uma localização
-          if (quotedMsg.type === 'location') {
-            latitude = quotedMsg.location.latitude;
-            longitude = quotedMsg.location.longitude;
-            locationName = quotedMsg.location.description || 'localização compartilhada';
-          } else {
-            await bot.sendMessage(chatId, 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo');
-            return;
-          }
-        } 
-        // Caso 2: Usuário fornece o nome de uma cidade
-        else {
-          const cityName = args.join(' ');
-          
-          // Envia mensagem de aguarde
-          await bot.sendMessage(chatId, `🔍 Buscando informações de clima para ${cityName}...`);
-          
-          try {
-            // Obtém coordenadas da cidade
-            const coordinates = await getCityCoordinates(cityName);
-            latitude = coordinates.lat;
-            longitude = coordinates.lon;
-            locationName = cityName;
-          } catch (error) {
-            await bot.sendMessage(chatId, `❌ Não foi possível encontrar a cidade: ${cityName}. Verifique o nome e tente novamente.`);
-            return;
-          }
-        }
-        
-        // Obtém dados do clima para as coordenadas
-        const weatherData = await getWeatherData(latitude, longitude);
-        
-        // Formata mensagem de clima
-        const weatherMessage = formatWeatherMessage(weatherData);
-        
-        // Envia resposta
-        await bot.sendMessage(chatId, weatherMessage);
-        
-      } catch (error) {
-        logger.error('Erro ao executar comando clima:', error);
-        await bot.sendMessage(chatId, 'Erro ao obter informações de clima. Por favor, tente novamente mais tarde.');
-      }
-    }
-  },
-  {
+    method: handleWeatherCommand
+  }),
+  
+  new Command({
     name: 'weather',
     description: 'Show weather forecast for a location (English version)',
     reactions: {
@@ -383,14 +420,8 @@ const commands = [
       error: "❌"
     },
     // Usa o mesmo método que o comando 'clima'
-    method: async (bot, message, args, group) => {
-      // Chama o método do comando 'clima'
-      const climaCommand = commands.find(cmd => cmd.name === 'clima');
-      if (climaCommand) {
-        await climaCommand.method(bot, message, args, group);
-      }
-    }
-  }
+    method: handleWeatherCommand
+  })
 ];
 
 // Registra os comandos

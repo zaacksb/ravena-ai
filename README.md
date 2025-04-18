@@ -45,28 +45,32 @@
 - [x] Comando: !dxx, comandos de dados agora como fixos
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
-- [ ] Comando: !traduzir
+- [x] Comando: !traduzir + reações de bandeira
 - [X] Implementar classes ReturnMessage e Command
-- [ ] Migrar as funções para utlizar as classes Command e ReturnMessage
+- [x] Migrar as funções para utlizar as classes Command e ReturnMessage
     - [x] AnimeCommands.js
     - [x] DonationCommands.js
     - [x] FileConversions.js
     - [x] FileManager.js
     - [x] GiphyCommands.js
-    - [ ] GroupCommands.js
-    - [ ] ImageManipulation.js
-    - [ ] LembretesCommands.js
-    - [ ] ListCommands.js
-    - [ ] RiotGamesCommands.js
-    - [ ] RoletaRussaCommands.js
-    - [ ] SearchCommands.js
-    - [ ] SpeechCommands.js
-    - [ ] StableDiffusionCommands.js
-    - [ ] StreamCommands.js
-    - [ ] SummaryCommands.js
-    - [ ] Weather.js
-    - [ ] WikipediaCommands.js
-    - [ ] YoutubeDownloader.js
+    - [x] GroupCommands.js
+    - [x] ImageManipulation.js
+    - [X] ImdbCommands.js
+    - [x] LembretesCommands.js
+    - [x] ListCommands.js
+    - [x] Menu.js
+    - [x] PlaceholderCommands.js
+    - [x] RiotGamesCommands.js
+    - [x] RoletaRussaCommands.js
+    - [x] SearchCommands.js
+    - [X] SpeechCommands.js
+    - [x] StableDiffusionCommands.js
+    - [x] Stickers.js
+    - [x] StreamCommands.js
+    - [x] SummaryCommands.js
+    - [x] Weather.js
+    - [x] WikipediaCommands.js
+    - [x] YoutubeDownloader.js
 - [ ] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
 - [ ] Melhorar comando !cmd pra ficar mais organizado
@@ -88,6 +92,7 @@
 - [ ] Fix autoStt não triggando
 - [ ] Imagine não tá retornando img
 - [ ] !gif tá retornando img estática
+- [ ] Fix TTS com eSpeak
 
 ## 📚 Documentação dos Comandos
 

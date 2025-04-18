@@ -1,38 +1,13 @@
 const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('stream-commands');
 const database = Database.getInstance();
 
 logger.info('Módulo StreamCommands carregado');
-
-const commands = [
-  {
-    name: 'streams',
-    description: 'Lista todos os canais configurados para monitoramento',
-    category: 'stream',
-    reactions: {
-      before: "📺",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await listMonitoredChannels(bot, message, args, group);
-    }
-  },
-  {
-    name: 'streamstatus',
-    description: 'Mostra status dos canais monitorados',
-    category: 'stream',
-    reactions: {
-      before: "📊",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await showStreamStatus(bot, message, args, group);
-    }
-  }
-];
 
 /**
  * Lista todos os canais configurados para monitoramento no grupo
@@ -40,14 +15,17 @@ const commands = [
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com a lista de canais
  */
 async function listMonitoredChannels(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     
     if (!group) {
-      await bot.sendMessage(chatId, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Verifica se há canais configurados
@@ -58,8 +36,10 @@ async function listMonitoredChannels(bot, message, args, group) {
     const totalChannels = twitchChannels.length + kickChannels.length + youtubeChannels.length;
     
     if (totalChannels === 0) {
-      await bot.sendMessage(chatId, 'Nenhum canal configurado para monitoramento neste grupo.\n\nUse os comandos:\n!g-twitch-canal\n!g-kick-canal\n!g-youtube-canal');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Nenhum canal configurado para monitoramento neste grupo.\n\nUse os comandos:\n!g-twitch-canal\n!g-kick-canal\n!g-youtube-canal'
+      });
     }
     
     // Constrói mensagem
@@ -109,10 +89,17 @@ async function listMonitoredChannels(bot, message, args, group) {
       }
     }
     
-    await bot.sendMessage(chatId, response);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: response
+    });
   } catch (error) {
     logger.error('Erro ao listar canais monitorados:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao listar canais monitorados. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao listar canais monitorados. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -122,20 +109,25 @@ async function listMonitoredChannels(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com status dos canais
  */
 async function showStreamStatus(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     
     if (!group) {
-      await bot.sendMessage(chatId, 'Este comando só pode ser usado em grupos.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
     }
     
     // Verifica se o StreamMonitor está inicializado
     if (!bot.streamMonitor) {
-      await bot.sendMessage(chatId, 'O sistema de monitoramento de streams não está inicializado.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'O sistema de monitoramento de streams não está inicializado.'
+      });
     }
     
     // Obtém canais configurados para este grupo
@@ -146,8 +138,10 @@ async function showStreamStatus(bot, message, args, group) {
     const totalChannels = twitchChannels.length + kickChannels.length + youtubeChannels.length;
     
     if (totalChannels === 0) {
-      await bot.sendMessage(chatId, 'Nenhum canal configurado para monitoramento neste grupo.');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Nenhum canal configurado para monitoramento neste grupo.'
+      });
     }
     
     // Obtém status atual dos streams
@@ -220,12 +214,44 @@ async function showStreamStatus(bot, message, args, group) {
       }
     }
     
-    await bot.sendMessage(chatId, response);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: response
+    });
   } catch (error) {
     logger.error('Erro ao mostrar status dos streams:', error);
-    await bot.sendMessage(message.group || message.author, 'Erro ao mostrar status dos streams. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao mostrar status dos streams. Por favor, tente novamente.'
+    });
   }
 }
+
+// Lista de comandos utilizando a classe Command
+const commands = [
+  new Command({
+    name: 'streams',
+    description: 'Lista todos os canais configurados para monitoramento',
+    category: 'stream',
+    reactions: {
+      before: "📺",
+      after: "✅"
+    },
+    method: listMonitoredChannels
+  }),
+  
+  new Command({
+    name: 'streamstatus',
+    description: 'Mostra status dos canais monitorados',
+    category: 'stream',
+    reactions: {
+      before: "📊",
+      after: "✅"
+    },
+    method: showStreamStatus
+  })
+];
 
 // Registra os comandos sendo exportados
 logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));

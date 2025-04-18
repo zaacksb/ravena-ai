@@ -944,3 +944,16 @@ Me envie como artefatos completos os arquivos da pasta functions alterados para 
 Caso a função retorne mais de 1 mensagem, faça proveito do fato do sendReturnMessages receber um array de ReturnMessage
 
 Se precisar de mais algum arquivo pra fazer a implementação correta, me peça antes de prosseguir
+
+---
+Implemente uma nova function:
+
+!traduzir [idioma] [texto]
+
+ou
+
+!traduzir [idioma] em resposta a alguma mensagem
+
+Use alguma biblioteca grátis e livre para a tradução.
+
+Também deve ser possível reagir a uma mensagem com a bandeira do país para solicitar a tradução. Use todos os emojis de bandeira possíveis.

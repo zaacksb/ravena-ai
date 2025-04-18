@@ -1,6 +1,8 @@
 const axios = require('axios');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('search-commands');
 
@@ -16,49 +18,23 @@ function decodeHtmlEntities(text) {
 
 logger.info('Módulo SearchCommands carregado');
 
-const commands = [
-  {
-    name: 'buscar',
-    description: 'Busca na web',
-    category: 'group',
-    aliases: ['google', 'search'],
-    reactions: {
-      before: "🔍",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await searchWeb(bot, message, args, group);
-    }
-  },
-  {
-    name: 'buscar-img',
-    description: 'Busca por imagens',
-    category: 'group',
-    aliases: ['img', 'imagem'],
-    reactions: {
-      before: "🖼️",
-      after: "✅"
-    },
-    method: async (bot, message, args, group) => {
-      await searchImages(bot, message, args, group);
-    }
-  }
-];
-
 /**
  * Busca na web usando DuckDuckGo
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com os resultados da busca
  */
 async function searchWeb(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça uma consulta de busca. Exemplo: !buscar tutorial javascript');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar tutorial javascript'
+      });
     }
     
     const query = args.join(' ');
@@ -134,14 +110,21 @@ async function searchWeb(bot, message, args, group) {
       }
     }
     
-    // Envia os resultados
-    await bot.sendMessage(chatId, resultsMessage);
+    // Retorna os resultados
+    return new ReturnMessage({
+      chatId: chatId,
+      content: resultsMessage
+    });
     
     logger.info(`Resultados de busca enviados com sucesso para "${query}"`);
   } catch (error) {
     logger.error('Erro na busca web:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao realizar busca na web. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao realizar busca na web. Por favor, tente novamente.'
+    });
   }
 }
 
@@ -151,14 +134,18 @@ async function searchWeb(bot, message, args, group) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function searchImages(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
+    const returnMessages = [];
     
     if (args.length === 0) {
-      await bot.sendMessage(chatId, 'Por favor, forneça uma consulta de busca. Exemplo: !buscar-img gatos fofos');
-      return;
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar-img gatos fofos'
+      });
     }
     
     const query = args.join(' ');
@@ -172,7 +159,12 @@ async function searchImages(bot, message, args, group) {
     }
     
     // Informa o usuário
-    await bot.sendMessage(chatId, `🔍 Buscando imagens para "${query}"...`);
+    returnMessages.push(
+      new ReturnMessage({
+        chatId: chatId,
+        content: `🔍 Buscando imagens para "${query}"...`
+      })
+    );
     
     try {
       // Utiliza Unsplash API para buscar imagens - uma alternativa gratuita
@@ -190,11 +182,14 @@ async function searchImages(bot, message, args, group) {
       const results = response.data.results;
       
       if (!results || results.length === 0) {
-        await bot.sendMessage(chatId, `Não foram encontradas imagens para "${query}". Tente outra consulta.`);
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Não foram encontradas imagens para "${query}". Tente outra consulta.`
+        });
       }
       
-      // Envia até 3 imagens
+      // Retorna até 3 imagens
+      const imageMessages = [];
       for (let i = 0; i < Math.min(3, results.length); i++) {
         try {
           const imgUrl = results[i].urls.regular;
@@ -208,81 +203,132 @@ async function searchImages(bot, message, args, group) {
           // Determina o tipo MIME
           const contentType = imgResponse.headers['content-type'] || 'image/jpeg';
           
-          // Cria mídia de mensagem
+          // Cria mídia
           const media = new MessageMedia(
             contentType,
             Buffer.from(imgResponse.data).toString('base64'),
             `image-${i + 1}.jpg`
           );
           
-          // Envia imagem
-          const caption = `Resultado ${i + 1} para "${query}" | Fonte: Unsplash`;
-          await bot.sendMessage(chatId, media, {
-            caption: caption
-          });
-          
-          // Adiciona um pequeno atraso entre imagens
-          if (i < Math.min(3, results.length) - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          }
+          // Adiciona mensagem com a imagem
+          imageMessages.push(
+            new ReturnMessage({
+              chatId: chatId,
+              content: media,
+              options: {
+                caption: `Resultado ${i + 1} para "${query}" | Fonte: Unsplash`
+              },
+              delay: i * 1500 // Adiciona um pequeno atraso entre imagens
+            })
+          );
         } catch (imgError) {
           logger.error(`Erro ao enviar imagem ${i + 1}:`, imgError);
         }
       }
       
-      logger.info(`Resultados de busca de imagem enviados com sucesso para "${query}"`);
+      // Retorna as imagens encontradas
+      if (imageMessages.length > 0) {
+        return imageMessages;
+      } else {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Erro ao processar imagens para "${query}". Tente novamente mais tarde.`
+        });
+      }
     } catch (apiError) {
       logger.error('Erro na API de imagens:', apiError);
       
       // Fallback para imagens de placeholder se a API falhar
-      const placeholderImages = [
-        {
-          url: `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 1')}`,
-          caption: `Resultado 1 para "${query}"`
-        },
-        {
-          url: `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 2')}`,
-          caption: `Resultado 2 para "${query}"`
-        },
-        {
-          url: `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 3')}`,
-          caption: `Resultado 3 para "${query}"`
-        }
+      const placeholderMessages = [];
+      
+      // URLs para imagens de placeholder
+      const placeholderUrls = [
+        `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 1')}`,
+        `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 2')}`,
+        `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 3')}`
       ];
       
-      // Envia imagens de placeholder
-      for (const img of placeholderImages.slice(0, 3)) {
+      // Tenta obter imagens de placeholder
+      for (let i = 0; i < 3; i++) {
         try {
           // Obtém dados da imagem
-          const response = await axios.get(img.url, {
+          const response = await axios.get(placeholderUrls[i], {
             responseType: 'arraybuffer',
             timeout: 10000
           });
           
-          // Cria mídia de mensagem
+          // Cria mídia
           const media = new MessageMedia(
             'image/jpeg',
-            Buffer.from(response.data).toString('base64')
+            Buffer.from(response.data).toString('base64'),
+            `placeholder-${i + 1}.jpg`
           );
           
-          // Envia imagem
-          await bot.sendMessage(chatId, media, {
-            caption: img.caption
-          });
-          
-          // Adiciona um pequeno atraso entre imagens
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Adiciona mensagem com a imagem
+          placeholderMessages.push(
+            new ReturnMessage({
+              chatId: chatId,
+              content: media,
+              options: {
+                caption: `Resultado ${i + 1} para "${query}"`
+              },
+              delay: i * 1000 // Adiciona um pequeno atraso entre imagens
+            })
+          );
         } catch (imgError) {
           logger.error(`Erro ao enviar imagem de placeholder:`, imgError);
         }
+      }
+      
+      // Retorna as imagens de placeholder encontradas
+      if (placeholderMessages.length > 0) {
+        return placeholderMessages;
+      } else {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Erro ao buscar imagens para "${query}". Tente novamente mais tarde.`
+        });
       }
     }
   } catch (error) {
     logger.error('Erro na busca de imagens:', error);
     const chatId = message.group || message.author;
-    await bot.sendMessage(chatId, 'Erro ao realizar busca de imagens. Por favor, tente novamente.');
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao realizar busca de imagens. Por favor, tente novamente.'
+    });
   }
 }
 
-// Exporta comandos
+// Comandos usando a classe Command
+const commands = [
+  new Command({
+    name: 'buscar',
+    description: 'Busca na web',
+    category: 'group',
+    aliases: ['google', 'search'],
+    reactions: {
+      before: "🔍",
+      after: "✅"
+    },
+    method: searchWeb
+  }),
+  
+  new Command({
+    name: 'buscar-img',
+    description: 'Busca por imagens',
+    category: 'group',
+    aliases: ['img', 'imagem'],
+    reactions: {
+      before: "🖼️",
+      after: "✅"
+    },
+    method: searchImages
+  })
+];
+
+// Registra os comandos sendo exportados
+logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+
 module.exports = { commands };

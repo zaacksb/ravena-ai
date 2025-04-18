@@ -7,6 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const imagemagick = require('imagemagick');
 const util = require('util');
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
 
 const execPromise = util.promisify(exec);
 const logger = new Logger('image-commands');
@@ -185,9 +187,312 @@ function cleanupTempFiles(files) {
   );
 }
 
-// Implementações de comandos
+/**
+ * Remove o fundo de uma imagem
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessage
+ */
+async function handleRemoveBg(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  const returnMessages = [];
+  
+  // Cadeia de promessas sem bloqueio
+  try {
+    const media = await getMediaFromMessage(message);
+    if (!media) {
+      // Aplica reação de erro
+      try {
+        await message.origin.react("❌");
+      } catch (reactError) {
+        logger.error('Erro ao aplicar reação de erro:', reactError);
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.'
+      });
+    }
+    
+    const inputPath = await saveMediaToTemp(media);
+    logger.debug(`Imagem de entrada salva em ${inputPath}`);
+    
+    // Armazena caminhos para limpeza
+    const filePaths = [inputPath];
+    
+    // Processa imagem com cadeia de promessas
+    const noBgPath = await removeBackground(inputPath);
+    logger.debug(`Fundo removido, salvo em ${noBgPath}`);
+    filePaths.push(noBgPath);
+    
+    const trimmedPath = await trimImage(noBgPath);
+    logger.debug(`Imagem recortada, salva em ${trimmedPath}`);
+    filePaths.push(trimmedPath);
+    
+    const resultMedia = await bot.createMedia(trimmedPath);
+    
+    // Limpa arquivos após envio
+    cleanupTempFiles(filePaths).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: resultMedia,
+      options: {
+        caption: 'Fundo removido e salvo como arquivo',
+        sendMediaAsDocument: true, // Envia como arquivo em vez de imagem
+        quotedMessageId: message.origin.id._serialized
+      }
+    });
+  } catch (error) {
+    logger.error('Erro no comando removebg:', error);
+    
+    // Aplica reação de erro
+    try {
+      await message.origin.react("❌");
+    } catch (reactError) {
+      logger.error('Erro ao aplicar reação de erro:', reactError);
+    }
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.'
+    });
+  }
+}
+
+/**
+ * Aplica efeito de distorção a uma imagem
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessage
+ */
+async function handleDistort(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  
+  // Obtém intensidade dos args se fornecida
+  let intensity = 50; // Padrão
+  if (args.length > 0 && !isNaN(args[0])) {
+    intensity = Math.max(30, Math.min(70, parseInt(args[0])));
+  }
+  
+  try {
+    const media = await getMediaFromMessage(message);
+    if (!media) {
+      // Aplica reação de erro
+      try {
+        await message.origin.react("❌");
+      } catch (reactError) {
+        logger.error('Erro ao aplicar reação de erro:', reactError);
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.'
+      });
+    }
+    
+    const inputPath = await saveMediaToTemp(media);
+    logger.debug(`Imagem de entrada salva em ${inputPath}`);
+    
+    // Armazena caminhos para limpeza
+    const filePaths = [inputPath];
+    
+    // Processa imagem com distorção
+    const distortedPath = await distortImage(inputPath, intensity);
+    logger.debug(`Distorção aplicada, salva em ${distortedPath}`);
+    filePaths.push(distortedPath);
+    
+    const resultMedia = await bot.createMedia(distortedPath);
+    
+    // Limpa arquivos após obter a mídia processada
+    cleanupTempFiles(filePaths).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: resultMedia,
+      options: {
+        caption: `Distorção aplicada (intensidade: ${intensity}%)`,
+        quotedMessageId: message.origin.id._serialized
+      }
+    });
+  } catch (error) {
+    logger.error('Erro no comando distort:', error);
+    
+    // Aplica reação de erro
+    try {
+      await message.origin.react("❌");
+    } catch (reactError) {
+      logger.error('Erro ao aplicar reação de erro:', reactError);
+    }
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.'
+    });
+  }
+}
+
+/**
+ * Cria um sticker após remover o fundo
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessage
+ */
+async function handleStickerBg(bot, message, args, group) {
+  const chatId = message.group || message.author;
+  
+  try {
+    const media = await getMediaFromMessage(message);
+    if (!media) {
+      // Aplica reação de erro
+      try {
+        await message.origin.react("❌");
+      } catch (reactError) {
+        logger.error('Erro ao aplicar reação de erro:', reactError);
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.'
+      });
+    }
+    
+    const inputPath = await saveMediaToTemp(media);
+    logger.debug(`Imagem de entrada salva em ${inputPath}`);
+    
+    // Armazena caminhos para limpeza
+    const filePaths = [inputPath];
+    
+    // Processa imagem com remoção de fundo e recorte
+    const noBgPath = await removeBackground(inputPath);
+    logger.debug(`Fundo removido, salvo em ${noBgPath}`);
+    filePaths.push(noBgPath);
+    
+    const trimmedPath = await trimImage(noBgPath);
+    logger.debug(`Imagem recortada, salva em ${trimmedPath}`);
+    filePaths.push(trimmedPath);
+    
+    const resultMedia = await bot.createMedia(trimmedPath);
+    
+    // Extrai nome do sticker dos args ou usa nome do grupo
+    const stickerName = args.length > 0 ? args.join(' ') : (group ? group.name : 'sticker');
+    
+    // Limpa arquivos temporários
+    cleanupTempFiles(filePaths).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: resultMedia,
+      options: {
+        sendMediaAsSticker: true,
+        stickerAuthor: "ravena",
+        stickerName: stickerName,
+        quotedMessageId: message.origin.id._serialized
+      }
+    });
+  } catch (error) {
+    logger.error('Erro no comando stickerbg:', error);
+    
+    // Aplica reação de erro
+    try {
+      await message.origin.react("❌");
+    } catch (reactError) {
+      logger.error('Erro ao aplicar reação de erro:', reactError);
+    }
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.'
+    });
+  }
+}
+
+/**
+ * Aplica um efeito artístico a uma imagem
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @param {string} effect - Nome do efeito a ser aplicado
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessage
+ */
+async function handleArtisticEffect(bot, message, args, group, effect) {
+  const chatId = message.group || message.author;
+  
+  try {
+    const media = await getMediaFromMessage(message);
+    if (!media) {
+      // Aplica reação de erro
+      try {
+        await message.origin.react("❌");
+      } catch (reactError) {
+        logger.error('Erro ao aplicar reação de erro:', reactError);
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.'
+      });
+    }
+    
+    const inputPath = await saveMediaToTemp(media);
+    logger.debug(`Imagem de entrada salva em ${inputPath}`);
+    
+    // Armazena caminhos para limpeza
+    const filePaths = [inputPath];
+    
+    // Aplica efeito artístico
+    const effectPath = await applyArtistic(inputPath, effect);
+    logger.debug(`Efeito ${effect} aplicado, salvo em ${effectPath}`);
+    filePaths.push(effectPath);
+    
+    const resultMedia = await bot.createMedia(effectPath);
+    
+    // Limpa arquivos temporários
+    cleanupTempFiles(filePaths).catch(error => {
+      logger.error('Erro ao limpar arquivos temporários:', error);
+    });
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: resultMedia,
+      options: {
+        caption: `Efeito ${effect} aplicado`,
+        quotedMessageId: message.origin.id._serialized
+      }
+    });
+  } catch (error) {
+    logger.error(`Erro no comando ${effect}:`, error);
+    
+    // Aplica reação de erro
+    try {
+      await message.origin.react("❌");
+    } catch (reactError) {
+      logger.error('Erro ao aplicar reação de erro:', reactError);
+    }
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.'
+    });
+  }
+}
+
+// Comandos usando a classe Command
 const commands = [
-  {
+  new Command({
     name: 'removebg',
     description: 'Remove o fundo de uma imagem',
     needsMedia: true,
@@ -196,83 +501,10 @@ const commands = [
       after: "✨",
       error: "❌"
     },
-    method: (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      // Cadeia de promessas sem bloqueio
-      getMediaFromMessage(message)
-        .then(media => {
-          if (!media) {
-            return bot.sendMessage(chatId, 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.')
-              .then(() => {
-                // Aplica reação de erro
-                try {
-                  message.origin.react("❌");
-                } catch (reactError) {
-                  logger.error('Erro ao aplicar reação de erro:', reactError);
-                }
-                throw new Error('Nenhuma mídia fornecida');
-              });
-          }
-          return media;
-        })
-        .then(media => saveMediaToTemp(media))
-        .then(inputPath => {
-          logger.debug(`Imagem de entrada salva em ${inputPath}`);
-          
-          // Armazena caminhos para limpeza
-          const filePaths = [inputPath];
-          
-          // Processa imagem com cadeia de promessas
-          return removeBackground(inputPath)
-            .then(noBgPath => {
-              logger.debug(`Fundo removido, salvo em ${noBgPath}`);
-              filePaths.push(noBgPath);
-              return trimImage(noBgPath);
-            })
-            .then(trimmedPath => {
-              logger.debug(`Imagem recortada, salva em ${trimmedPath}`);
-              filePaths.push(trimmedPath);
-              return { trimmedPath, filePaths };
-            });
-        })
-        .then(({ trimmedPath, filePaths }) => {
-          return bot.createMedia(trimmedPath)
-            .then(resultMedia => {
-              return bot.sendMessage(chatId, resultMedia, {
-                caption: 'Fundo removido e salvo como arquivo',
-                sendMediaAsDocument: true, // Envia como arquivo em vez de imagem
-                quotedMessageId: message.origin.id._serialized
-              })
-              .then(() => filePaths);
-            });
-        })
-        .then(filePaths => {
-          // Limpa arquivos após envio
-          return cleanupTempFiles(filePaths);
-        })
-        .catch(error => {
-          if (error.message !== 'Nenhuma mídia fornecida') {
-            logger.error('Erro no comando removebg:', error);
-            bot.sendMessage(chatId, 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.')
-              .catch(sendError => {
-                logger.error('Erro ao enviar mensagem de erro:', sendError);
-              });
-            
-            // Aplica reação de erro
-            try {
-              message.origin.react("❌");
-            } catch (reactError) {
-              logger.error('Erro ao aplicar reação de erro:', reactError);
-            }
-          }
-        });
-      
-      // Retorna imediatamente para evitar bloqueio
-      return Promise.resolve();
-    }
-  },
-  {
+    method: handleRemoveBg
+  }),
+  
+  new Command({
     name: 'distort',
     description: 'Aplica efeito de distorção a uma imagem',
     needsMedia: true,
@@ -281,83 +513,10 @@ const commands = [
       after: "🤪",
       error: "❌"
     },
-    method: (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      // Obtém intensidade dos args se fornecida
-      let intensity = 50; // Padrão
-      if (args.length > 0 && !isNaN(args[0])) {
-        intensity = Math.max(30, Math.min(70, parseInt(args[0])));
-      }
-      
-      // Cadeia de promessas sem bloqueio
-      getMediaFromMessage(message)
-        .then(media => {
-          if (!media) {
-            return bot.sendMessage(chatId, 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.')
-              .then(() => {
-                // Aplica reação de erro
-                try {
-                  message.origin.react("❌");
-                } catch (reactError) {
-                  logger.error('Erro ao aplicar reação de erro:', reactError);
-                }
-                throw new Error('Nenhuma mídia fornecida');
-              });
-          }
-          return media;
-        })
-        .then(media => saveMediaToTemp(media))
-        .then(inputPath => {
-          logger.debug(`Imagem de entrada salva em ${inputPath}`);
-          
-          // Armazena caminhos para limpeza
-          const filePaths = [inputPath];
-          
-          // Processa imagem com distorção
-          return distortImage(inputPath, intensity)
-            .then(distortedPath => {
-              logger.debug(`Distorção aplicada, salva em ${distortedPath}`);
-              filePaths.push(distortedPath);
-              return { distortedPath, filePaths };
-            });
-        })
-        .then(({ distortedPath, filePaths }) => {
-          return bot.createMedia(distortedPath)
-            .then(resultMedia => {
-              return bot.sendMessage(chatId, resultMedia, {
-                caption: `Distorção aplicada (intensidade: ${intensity}%)`,
-                quotedMessageId: message.origin.id._serialized
-              })
-              .then(() => filePaths);
-            });
-        })
-        .then(filePaths => {
-          // Limpa arquivos após envio
-          return cleanupTempFiles(filePaths);
-        })
-        .catch(error => {
-          if (error.message !== 'Nenhuma mídia fornecida') {
-            logger.error('Erro no comando distort:', error);
-            bot.sendMessage(chatId, 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.')
-              .catch(sendError => {
-                logger.error('Erro ao enviar mensagem de erro:', sendError);
-              });
-            
-            // Aplica reação de erro
-            try {
-              message.origin.react("❌");
-            } catch (reactError) {
-              logger.error('Erro ao aplicar reação de erro:', reactError);
-            }
-          }
-        });
-      
-      // Retorna imediatamente para evitar bloqueio
-      return Promise.resolve();
-    }
-  },
-  {
+    method: handleDistort
+  }),
+  
+  new Command({
     name: 'stickerbg',
     description: 'Cria um sticker após remover o fundo',
     aliases: ['sbg'],
@@ -367,180 +526,42 @@ const commands = [
       after: "🎯",
       error: "❌"
     },
-    method: (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      // Cadeia de promessas sem bloqueio
-      getMediaFromMessage(message)
-        .then(media => {
-          if (!media) {
-            return bot.sendMessage(chatId, 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.')
-              .then(() => {
-                // Aplica reação de erro
-                try {
-                  message.origin.react("❌");
-                } catch (reactError) {
-                  logger.error('Erro ao aplicar reação de erro:', reactError);
-                }
-                throw new Error('Nenhuma mídia fornecida');
-              });
-          }
-          return media;
-        })
-        .then(media => saveMediaToTemp(media))
-        .then(inputPath => {
-          logger.debug(`Imagem de entrada salva em ${inputPath}`);
-          
-          // Armazena caminhos para limpeza
-          const filePaths = [inputPath];
-          
-          // Processa imagem com remoção de fundo e recorte
-          return removeBackground(inputPath)
-            .then(noBgPath => {
-              logger.debug(`Fundo removido, salvo em ${noBgPath}`);
-              filePaths.push(noBgPath);
-              return trimImage(noBgPath);
-            })
-            .then(trimmedPath => {
-              logger.debug(`Imagem recortada, salva em ${trimmedPath}`);
-              filePaths.push(trimmedPath);
-              return { trimmedPath, filePaths };
-            });
-        })
-        .then(({ trimmedPath, filePaths }) => {
-          return bot.createMedia(trimmedPath)
-            .then(resultMedia => {
-              // Extrai nome do sticker dos args ou usa nome do grupo
-              const stickerName = args.length > 0 ? args.join(' ') : (group ? group.name : 'sticker');
-              
-              return bot.sendMessage(chatId, resultMedia, {
-                asSticker: true,
-                stickerAuthor: "ravena",
-                stickerName: stickerName,
-                quotedMessageId: message.origin.id._serialized
-              })
-              .then(() => filePaths);
-            });
-        })
-        .then(filePaths => {
-          // Limpa arquivos após envio
-          return cleanupTempFiles(filePaths);
-        })
-        .catch(error => {
-          if (error.message !== 'Nenhuma mídia fornecida') {
-            logger.error('Erro no comando stickerbg:', error);
-            bot.sendMessage(chatId, 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.')
-              .catch(sendError => {
-                logger.error('Erro ao enviar mensagem de erro:', sendError);
-              });
-            
-            // Aplica reação de erro
-            try {
-              message.origin.react("❌");
-            } catch (reactError) {
-              logger.error('Erro ao aplicar reação de erro:', reactError);
-            }
-          }
-        });
-      
-      // Retorna imediatamente para evitar bloqueio
-      return Promise.resolve();
-    }
-  }
+    method: handleStickerBg
+  })
 ];
 
-// Adiciona modelos para os efeitos artísticos restantes
+// Adiciona comandos para efeitos artísticos
 ['sketch', 'oil', 'neon', 'pixelate'].forEach(effect => {
-  commands.push({
-    name: effect,
-    description: `Aplica efeito ${effect} a uma imagem`,
-    needsMedia: true,
-    reactions: {
-      before: "🎨",
-      after: "✨",
-      error: "❌"
-    },
-    method: (bot, message, args, group) => {
-      const chatId = message.group || message.author;
-      
-      // Cadeia de promessas sem bloqueio
-      getMediaFromMessage(message)
-        .then(media => {
-          if (!media) {
-            return bot.sendMessage(chatId, 'Por favor, forneça uma imagem ou responda a uma imagem com este comando.')
-              .then(() => {
-                // Aplica reação de erro
-                try {
-                  message.origin.react("❌");
-                } catch (reactError) {
-                  logger.error('Erro ao aplicar reação de erro:', reactError);
-                }
-                throw new Error('Nenhuma mídia fornecida');
-              });
-          }
-          return media;
-        })
-        .then(media => saveMediaToTemp(media))
-        .then(inputPath => {
-          logger.debug(`Imagem de entrada salva em ${inputPath}`);
-          
-          // Armazena caminhos para limpeza
-          const filePaths = [inputPath];
-          
-          // Aplica efeito
-          return applyArtistic(inputPath, effect)
-            .then(effectPath => {
-              logger.debug(`Efeito ${effect} aplicado, salvo em ${effectPath}`);
-              filePaths.push(effectPath);
-              return { effectPath, filePaths };
-            });
-        })
-        .then(({ effectPath, filePaths }) => {
-          return bot.createMedia(effectPath)
-            .then(resultMedia => {
-              return bot.sendMessage(chatId, resultMedia, {
-                caption: `Efeito ${effect} aplicado`,
-                quotedMessageId: message.origin.id._serialized
-              })
-              .then(() => filePaths);
-            });
-        })
-        .then(filePaths => {
-          // Limpa arquivos após envio
-          return cleanupTempFiles(filePaths);
-        })
-        .catch(error => {
-          if (error.message !== 'Nenhuma mídia fornecida') {
-            logger.error(`Erro no comando ${effect}:`, error);
-            bot.sendMessage(chatId, 'Erro ao processar imagem. Certifique-se de que a imagem é válida e tente novamente.')
-              .catch(sendError => {
-                logger.error('Erro ao enviar mensagem de erro:', sendError);
-              });
-            
-            // Aplica reação de erro
-            try {
-              message.origin.react("❌");
-            } catch (reactError) {
-              logger.error('Erro ao aplicar reação de erro:', reactError);
-            }
-          }
-        });
-      
-      // Retorna imediatamente para evitar bloqueio
-      return Promise.resolve();
-    }
-  });
+  commands.push(
+    new Command({
+      name: effect,
+      description: `Aplica efeito ${effect} a uma imagem`,
+      needsMedia: true,
+      reactions: {
+        before: "🎨",
+        after: "✨",
+        error: "❌"
+      },
+      method: async (bot, message, args, group) => {
+        return await handleArtisticEffect(bot, message, args, group, effect);
+      }
+    })
+  );
 });
 
 // Adiciona alias para stickerbg -> sbg
-const stickerbgCommand = commands.find(cmd => cmd.name === 'stickerbg');
-if (stickerbgCommand) {
-  const sbgCommand = {
-    ...stickerbgCommand,
-    name: 'sbg'
-  };
-  commands.push(sbgCommand);
-}
+const sbgCommand = new Command({
+  name: 'sbg',
+  description: 'Alias para comando stickerbg',
+  needsMedia: true,
+  reactions: {
+    before: "✂️",
+    after: "🎯",
+    error: "❌"
+  },
+  method: handleStickerBg
+});
+commands.push(sbgCommand);
 
 // Registra os comandos sendo exportados
 logger.info(`Módulo ImageManipulation carregado. Exportados ${commands.length} comandos.`);
