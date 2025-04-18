@@ -82,6 +82,9 @@
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
 - [ ] Melhor explicação da implementação do bot no README
+- [x] Simulador de mensagens do whats pra fazer tutoriais
+    - [ ] Gerador de código de mockup para os tutoriais
+    - [ ] Tutoriais
 
 ## ✅ TODO-FIX-List
 > Essa lista ainda vai aumentar bastante
