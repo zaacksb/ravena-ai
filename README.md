@@ -93,7 +93,8 @@
 - [X] Fix boas vindas enviando mesmo sem setar
 - [ ] Fix emojis e reações que o claude criou estranhos
 - [ ] Fix autoStt não triggando
-- [ ] Imagine não tá retornando img
+- [x] Imagine não tá retornando img
+    - [ ] Problema no NSFWdetect, usar nudenet
 - [ ] !gif tá retornando img estática
 - [ ] Fix TTS com eSpeak
 

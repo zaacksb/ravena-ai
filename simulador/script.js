@@ -220,7 +220,7 @@ function simulateRealTyping(message) {
     if (message.tipo === 'audio') {
         simulateAudioRecording(message);
         return;
-    } else if (message.tipo === 'imagem' || message.tipo === 'video') {
+    } else if (message.tipo === '   ' || message.tipo === 'video') {
         simulateCameraUsage(message);
         return;
     }

@@ -105,6 +105,8 @@ if __name__ == "__main__":
    * @returns {Promise<{isNSFW: boolean, scores: Object}>} - Resultado da detecção
    */
   async detectNSFW(imagePath) {
+    logger.info(`[detectNSFW] -> ${imagePath}`);
+    
     return new Promise((resolve) => {
       try {
         if (!fs.existsSync(imagePath)) {

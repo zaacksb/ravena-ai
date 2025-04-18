@@ -98,20 +98,22 @@ async function generateImage(bot, message, args, group) {
     const imageBuffer = Buffer.from(imageBase64, 'base64');
     await fs.writeFile(tempImagePath, imageBuffer);
     
+    logger.info(`Recebida resposta, savaldno imagem em: ${tempImagePath}`);
+
     // Verificar NSFW
-    let isNSFW = false;
-    try {
-      const nsfwResult = await nsfwPredict.detectNSFW(tempImagePath);
-      isNSFW = nsfwResult.isNSFW;
-      logger.info(`Imagem analisada: NSFW = ${isNSFW}, Scores: ${JSON.stringify(nsfwResult.scores)}`);
-    } catch (nsfwError) {
-      logger.error('Erro ao verificar NSFW:', nsfwError);
-    }
+      let isNSFW = false;
+    // try {
+    //   const nsfwResult = await nsfwPredict.detectNSFW(tempImagePath);
+    //   isNSFW = nsfwResult.isNSFW;
+    //   logger.info(`Imagem analisada: NSFW = ${isNSFW}, Scores: ${JSON.stringify(nsfwResult.scores)}`);
+    // } catch (nsfwError) {
+    //   logger.error('Erro ao verificar NSFW:', nsfwError);
+    // }
     
     // Limpar arquivo temporário após alguns minutos
     setTimeout((tempImg) => {
       try {
-        await fs.unlink(tempImg);
+        fs.unlink(tempImg);
       } catch (unlinkError) {
         logger.error('Erro ao excluir arquivo temporário:', tempImg, unlinkError);
       }
@@ -121,6 +123,7 @@ async function generateImage(bot, message, args, group) {
     const caption = `🎨 *Prompt:* ${prompt}\n📊 *Modelo:* ${modelName}\n⏱️ *Tempo:* ${generationTime}s`;
     
     const media = await bot.createMedia(tempImagePath);
+    logger.info(media);
     
     // Se a imagem for NSFW, envia um aviso antes
     if (isNSFW) {
