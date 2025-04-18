@@ -47,7 +47,7 @@ let sampleConversation = [
     {"id": 1, "origem": "remetente", "tipo": "audio", "duracao": "0:12", "delay": 0},
     {"id": 2, "origem": "remetente", "mensagem": "!stt", "replyId": 1, "delay": 500},
     {"id": 3, "origem": "destinatario", "mensagem": "<i>Oi, teste de speech-to-text</i>", "delay": 1000}
-    // {"id": 8, "origem": "destinatario", "tipo": "mensagem", "legenda": "Veja essa imagem do produto", "delay": 1000},
+    // {"id": 8, "origem": "destinatario", "tipo": "imagem", "legenda": "Veja essa imagem do produto", "delay": 1000},
     // {"id": 9, "origem": "remetente", "tipo": "video", "legenda": "Aqui está um tutorial de como resolver", "delay": 1000}
 ];
 
