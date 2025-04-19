@@ -423,7 +423,7 @@ async function handleTranslation(bot, message, args, group) {
 async function processTranslationReaction(bot, reaction) {
   try {
     // Verificar se o emoji é uma bandeira
-    const emoji = reaction.emoji;
+    const emoji = reaction.reaction;
     if (!FLAG_TO_LANGUAGE[emoji]) {
       return false;
     }
@@ -431,7 +431,7 @@ async function processTranslationReaction(bot, reaction) {
     const targetLanguage = FLAG_TO_LANGUAGE[emoji];
     
     // Obter a mensagem que está sendo reagida
-    const message = await bot.client.getMessage(reaction.messageId);
+    const message = await bot.client.getMessageById(reaction.msgId._serialized);
     if (!message || !message.body) {
       return false;
     }
@@ -448,7 +448,7 @@ async function processTranslationReaction(bot, reaction) {
     
     // Enviar a tradução
     await bot.sendMessage(chatId, response, {
-      quotedMessageId: reaction.messageId
+      quotedMessageId: reaction.msgId.id
     });
     
     return true;

@@ -9,7 +9,7 @@ class ReactionsHandler {
     
     // Mapa de emojis de reação para nomes de comandos
     this.reactionCommands = {
-      '🖼': 'sticker',     // Comando de sticker
+      '🖼️': 'sticker',     // Comando de sticker
       '✂️': 'stickerbg',   // Sticker com remoção de fundo
       '🪓': 'removebg',    // Remover fundo
       '🤖': 'ai',          // Resposta de IA
@@ -29,19 +29,19 @@ class ReactionsHandler {
    */
   async processReaction(bot, reaction) {
     try {
-      this.logger.info(`Processando reação: ${reaction.emoji} de ${reaction.senderId} na mensagem ${reaction.messageId}`);
+      this.logger.info(`Processando reação: ${reaction.reaction} de ${reaction.senderId} na mensagem ${reaction.msgId._serialized}`);
       
       // Verifica se este emoji mapeia para um comando
-      const commandName = this.reactionCommands[reaction.emoji];
+      const commandName = this.reactionCommands[reaction.reaction];
       if (!commandName) {
-        this.logger.debug(`Nenhum comando mapeado para o emoji: ${reaction.emoji}`);
+        this.logger.debug(`Nenhum comando mapeado para o emoji: ${reaction.reaction}`);
         return false;
       }
       
       // Obtém a mensagem que recebeu a reação
-      const message = await bot.client.getMessage(reaction.messageId);
+      const message = await bot.client.getMessageById(reaction.msgId._serialized);
       if (!message) {
-        this.logger.warn(`Não foi possível encontrar mensagem com ID: ${reaction.messageId}`);
+        this.logger.warn(`Não foi possível encontrar mensagem com ID: ${reaction.msgId._serialized}`);
         return false;
       }
       
@@ -51,7 +51,7 @@ class ReactionsHandler {
       // Encontra e executa o comando
       const command = bot.eventHandler.commandHandler.fixedCommands.getCommand(commandName);
       if (command) {
-        this.logger.info(`Executando comando ${commandName} via reação ${reaction.emoji}`);
+        this.logger.info(`Executando comando ${commandName} via reação ${reaction.reaction}`);
         
         // Extrai argumentos do conteúdo da mensagem, se disponível
         const msgText = formattedMessage.type === 'text' ? formattedMessage.content : formattedMessage.caption;
@@ -73,7 +73,7 @@ class ReactionsHandler {
         await bot.eventHandler.commandHandler.executeFixedCommand(bot, formattedMessage, command, args, group);
         return true;
       } else {
-        this.logger.warn(`Comando ${commandName} mapeado do emoji ${reaction.emoji} não encontrado`);
+        this.logger.warn(`Comando ${commandName} mapeado do emoji ${reaction.reaction} não encontrado`);
       }
       
       return false;

@@ -24,11 +24,11 @@ logger.info('Módulo ListCommands carregado');
 async function processListReaction(bot, reaction) {
   try {
     // Check if reaction is a number emoji
-    const emojiIndex = NUMBER_EMOJIS.indexOf(reaction.emoji);
+    const emojiIndex = NUMBER_EMOJIS.indexOf(reaction.reaction);
     if (emojiIndex === -1) return false;
     
     // Get the original message
-    const message = await bot.client.getMessage(reaction.messageId);
+    const message = await bot.client.getMessageById(reaction.msgId._serialized);
     if (!message) return false;
     
     // Check if the message is from the bot and contains lists
