@@ -987,3 +987,208 @@ Por enquanto, apenas estes comandos a serem implementadas:
 # Needs Fixing
 - buscar-img está retornando um erro. A API key necessária é grátis, onde posso criar uma?
 - RiotGamesCommands não está retornando. Crie um debug melhor para que possamos identificar o problema
+
+----
+
+# Nova function: MuNewsCommands
+
+Similar ao SpeechCommands.processAutoSTT no processNonCommandMessage (EventHandler.js)
+Criar MuNews.detectNews que recebe a mensagem de texto e verifica se ela é uma "MuNews"
+Caso seja detectado, salvar em arquivo neste formato: data/munews/2025-19-04.news
+
+FixedComand: !news (mesmo arquivo)
+!news [data]: A data é opcional, padrão hoje
+Busca um arquivo de munews na pasta com a data e retorna o conteúdo do mesmo
+
+Se não existir, informe que ainda não recebeu as Munews desta data e que elas geralmente chega entrem 06:00 e 7:30 da manhã.
+
+Funções exemplo que funcionam, mas que podem/devem ser melhoradas para integração
+function extractDate(text) {
+	const regex = /(\d{1,2})\s+de\s+([\wÇç]+)\s+de\s+(\d{4})/i;
+	const match = text.match(regex);
+	
+	if (match) {
+		const [, day, month, year] = match;
+		const monthMap = {
+			janeiro: '01',
+			fevereiro: '02',
+			março: '03',
+			marco: '03',
+			abril: '04',
+			maio: '05',
+			junho: '06',
+			julho: '07',
+			agosto: '08',
+			setembro: '09',
+			outubro: '10',
+			novembro: '11',
+			dezembro: '12'
+		};
+		
+		const formattedMonth = monthMap[month.toLowerCase()];
+		const formattedDay = day.padStart(2, '0');
+		
+		return `${year}-${formattedMonth}-${formattedDay}`;
+	}
+	
+	return false;
+}
+
+function parseJrMunews(msgBody){
+	const mensagem = msgBody.toLowerCase();
+
+	/*
+		MsgBody tem que tger:
+		- 'vinimunews' nos primeiros 200 caracteres
+		- a data nos primeiros 200 caracteres
+		- ter mais de 5 mil caraceteres
+		- ter vindo de um grupo com id especifico definido em .env.GRUPO_MUNEWS
+
+	*/
+	if(mensagem.length > 5000){
+		const header = mensagem.substring(0,200).toLowerCase();
+		if(header.includes("vinimunews")){
+			const data = extractDate(header);
+			if(data){
+				// Verificar se já existe um arquivo pra essa data
+				// Se não existir, criar o mesmo e colocar o conteúdo da mensagem (original) dentro dele
+			} 
+		} 
+	}
+
+	return false;
+}
+
+
+# Nova function: LastFMCommands
+
+Código de exemplo para adaptar para este bot nos padrões dos outros commandos:
+`
+const { loggerInfo, loggerWarn } = require("./logger");
+var LastFmNode = require('lastfm').LastFmNode;
+
+/*
+Application name 	ravenabot
+API key 	62f5658e810b6148fa70c87de866e73f
+Shared secret 	bca8f01839bd4f107edc0670a75e0625
+Registered to 	moothz
+*/
+
+
+var lastfm = new LastFmNode({
+  api_key: process.env.LASTFM_APIKEY,	// sign-up for a key at http://www.last.fm/api
+  secret: process.env.bca8f01839bd4f107edc0670a75e0625,
+  useragent: 'moothz/v0.1 ravenabot' // optional. defaults to lastfm-node.
+});
+
+
+function formatarTS(ts){
+	if(ts){
+		const d = new Date(ts*1000);
+
+		const dia = (d.getDate() < 10) ? `0${d.getDate()}`: d.getDate();
+		const mes = (d.getMonth() < 9) ? `0${d.getMonth()+1}`: d.getMonth()+1;
+		const ano = (d.getFullYear());
+		const hora = (d.getHours() < 10) ? `0${d.getHours()}`: d.getHours();
+		const minuto = (d.getMinutes() < 10) ? `0${d.getMinutes()}`: d.getMinutes();
+
+		const data = `${dia}/${mes}/${ano}`;
+		const horario = `${hora}:${minuto}`;
+		
+		return `${data} às ${horario}`;
+	} else {
+		return "??/??/???? às ??:??";
+	}
+}
+
+function getUserInfo(usuario, callback){
+	loggerInfo(`[last.fm][getUserInfo] -> ${usuario}`);
+	var request = lastfm.request("user.getInfo", {
+		user: usuario,
+		handlers: {success: (data) => callback(data.user), error: (e) => callback(false)}
+	});
+}
+
+function getUserRecentTracks(usuario, callback){
+	loggerInfo(`[last.fm][getUserRecentTracks] -> ${usuario}`);
+	var request = lastfm.request("user.getRecentTracks", {
+		user: usuario,
+		limit: 1,
+		handlers: {success: (data) => callback(data.recenttracks.track[0]), error: (e) => callback(false)}
+	});
+}
+
+function getUserTracks(usuario, periodo, callback){
+	loggerInfo(`[last.fm][getUserTracks] -> ${usuario} (${periodo})`);
+	var request = lastfm.request("user.getTopTracks", {
+		user: usuario,
+		period: periodo,
+		limit: 3,
+		handlers: {success: (data) => callback(data.toptracks.track), error: (e) => callback(false)}
+	});
+}
+
+function getUserArtists(usuario, periodo, callback){
+	loggerInfo(`[last.fm][getUserArtists] -> ${usuario} (${periodo})`);
+	var request = lastfm.request("user.getTopArtists", {
+		user: usuario,
+		period: periodo,
+		limit: 3,
+		handlers: {success: (data) => callback(data.topartists.artist), error: (e) => callback(false)}
+	});
+}
+
+
+function processalastFM(u, callback){
+	loggerInfo(`[processalastFM] Usuario: ${u}`);
+	getUserInfo(u, (usuario) =>{
+		getUserTracks(u, "overall", (musicas) => {
+			getUserArtists(u, "overall", (artistas) => {
+				getUserRecentTracks(u, (recente) => {
+					console.log("usuario: ", usuario);
+					console.log("musicas: ", musicas);
+					console.log("artistas: ", artistas);
+
+					console.log("recente: ", recente);
+					if(usuario && musicas && artistas && recente){
+						const ouvindoAgora = "";
+						const scrobbles = 10;
+						const idade = parseInt(usuario.age) > 0 ? `, ${usuario.age}` : "";
+						const subscriber = parseInt(usuario.subscriber) ? "👑 " : "";
+						const dataRegistro = formatarTS(parseInt(usuario.registered.unixtime));
+
+						const nowPlaying = recente["@attr"]?.nowplaying == "true";
+
+						const quando = nowPlaying ? "Ouvindo _agora_" : "Ouvido por último";
+						const dataQuando = nowPlaying ? "" : ` _(em ${formatarTS(parseInt(recente.date.uts))})_`;
+						const retorno = `📻 _last.fm_ ${subscriber}*${usuario.name}* _(${usuario.country}${idade})_
+	🍼 Usuário desde *${dataRegistro}*
+	🎶 *${usuario.playcount}* scrobbles
+	🎙 *${usuario.track_count}* músicas e *${usuario.album_count}* albuns de *${usuario.artist_count}* artistas diferentes
+
+	🎧 *${quando}*: ${recente.artist["#text"]} - _${recente.name}_${dataQuando}
+
+	📊 *Top Artistas*
+		🥇 ${artistas[0]?.name ?? "-"}
+		🥈 ${artistas[1]?.name ?? "-"}
+		🥉 ${artistas[2]?.name ?? "-"}
+
+	📊 *Top Músicas*
+		🥇 ${musicas[0]?.artist?.name ?? "-"} - _${musicas[0]?.name ?? "-"}_
+		🥈 ${musicas[1]?.artist?.name ?? "-"} - _${musicas[1]?.name ?? "-"}_
+		🥉 ${musicas[2]?.artist?.name ?? "-"} - _${musicas[2]?.name ?? "-"}_
+
+
+🔗 ${usuario.url}`;
+						callback(false, [{msg: retorno, react: "📻", reply: true}]);
+					} else {
+						callback(false, [{msg: `*lastm.fm*: Ocorreu um erro buscando os dados do perfil '${u}'. Verifique o nome e tente novamente.`, react: "❌", reply: true}]);
+					}
+				});
+			});
+		});
+	});
+}
+
+module.exports = { processalastFM }
+`

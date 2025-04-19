@@ -7,6 +7,7 @@ const SpeechCommands = require('./functions/SpeechCommands');
 const SummaryCommands = require('./functions/SummaryCommands');
 const NSFWPredict = require('./utils/NSFWPredict');
 const { processListReaction } = require('./functions/ListCommands');
+const MuNewsCommands = require('./functions/MuNewsCommands');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -250,6 +251,21 @@ class EventHandler {
     // Verifica se é uma mensagem de voz para processamento automático de STT    
     const processed = await SpeechCommands.processAutoSTT(bot, message, group);
     if (processed) return;
+
+    if (group && message.type === 'text') {
+      try {
+        const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
+        if (isNewsDetected) {
+          // Opcionalmente, envia uma confirmação de que a MuNews foi detectada e salva
+          bot.sendMessage(process.env.GRUPO_LOGS, "📰 *MuNews detectada e salva!*").catch(error => {
+            this.logger.error('Erro ao enviar confirmação de MuNews:', error);
+          });
+          return;
+        }
+      } catch (error) {
+        this.logger.error('Erro ao verificar MuNews:', error);
+      }
+    }
         
     // Manipula comandos personalizados acionados automaticamente (aqueles que não requerem prefixo)
     if (group) {

@@ -48,8 +48,8 @@
 - [x] Comando: !traduzir + reações de bandeira
 - [X] Implementar classes ReturnMessage e Command
 - [x] Migrar as funções para utlizar as classes Command e ReturnMessage
+- [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [ ] Comando: !lastfm
-- [ ] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
 - [ ] Script para migração de dados da ravena antiga
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
