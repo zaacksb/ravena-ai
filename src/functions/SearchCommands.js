@@ -160,14 +160,18 @@ async function searchImages(bot, message, args, group) {
     );
     
     try {
-      // Utiliza Unsplash API para buscar imagens - uma alternativa gratuita
-      // Obs: Em produção, você deve registrar uma chave de API Unsplash
-      // Aqui estamos usando a API pública que tem limite de requisições
+      // Obtém a API key do .env
+      const unsplashApiKey = process.env.UNSPLASH_API_KEY;
+      
+      // Adiciona logging para debug
+      logger.debug(`Usando API key: ${unsplashApiKey.substring(0, 5)}...`);
+      
+      // Utiliza Unsplash API para buscar imagens
       const response = await axios.get('https://api.unsplash.com/search/photos', {
         params: {
           query: query,
           per_page: 3,
-          client_id: 'XfOu2zO_AYjXMUKw7-LDCrn8tYBQSWKIKbfj6vzf0R8' // Demo key com limites
+          client_id: unsplashApiKey
         },
         timeout: 10000
       });
@@ -181,11 +185,15 @@ async function searchImages(bot, message, args, group) {
         });
       }
       
+      // Adiciona logging para debug
+      logger.debug(`Encontradas ${results.length} imagens para "${query}"`);
+      
       // Retorna até 3 imagens
       const imageMessages = [];
       for (let i = 0; i < Math.min(3, results.length); i++) {
         try {
           const imgUrl = results[i].urls.regular;
+          logger.debug(`Processando imagem ${i+1}: ${imgUrl}`);
           
           // Obtém dados da imagem
           const imgResponse = await axios.get(imgUrl, {
@@ -214,15 +222,19 @@ async function searchImages(bot, message, args, group) {
               delay: i * 1500 // Adiciona um pequeno atraso entre imagens
             })
           );
+          
+          logger.debug(`Imagem ${i+1} processada com sucesso`);
         } catch (imgError) {
-          logger.error(`Erro ao enviar imagem ${i + 1}:`, imgError);
+          logger.error(`Erro ao processar imagem ${i + 1}:`, imgError);
         }
       }
       
       // Retorna as imagens encontradas
       if (imageMessages.length > 0) {
+        logger.info(`Enviando ${imageMessages.length} imagens para "${query}"`);
         return imageMessages;
       } else {
+        logger.warn(`Nenhuma imagem processada com sucesso para "${query}"`);
         return new ReturnMessage({
           chatId: chatId,
           content: `Erro ao processar imagens para "${query}". Tente novamente mais tarde.`
@@ -230,6 +242,19 @@ async function searchImages(bot, message, args, group) {
       }
     } catch (apiError) {
       logger.error('Erro na API de imagens:', apiError);
+      logger.debug(`Detalhes do erro: ${JSON.stringify(apiError.response?.data || 'Sem dados')}`);
+      
+      // Verifica erro específico de limite da API
+      const isRateLimitError = apiError.response && 
+                              (apiError.response.status === 429 || 
+                               apiError.response.data?.errors?.includes('Rate Limit Exceeded'));
+      
+      if (isRateLimitError) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Limite de requisições de API excedido. Por favor, tente novamente mais tarde ou configure uma chave de API válida no arquivo .env (UNSPLASH_API_KEY=sua_chave_aqui).`
+        });
+      }
       
       // Fallback para imagens de placeholder se a API falhar
       const placeholderMessages = [];
@@ -240,6 +265,8 @@ async function searchImages(bot, message, args, group) {
         `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 2')}`,
         `https://via.placeholder.com/800x600?text=${encodeURIComponent(query + ' 3')}`
       ];
+      
+      logger.info(`Usando imagens de placeholder como fallback para "${query}"`);
       
       // Tenta obter imagens de placeholder
       for (let i = 0; i < 3; i++) {

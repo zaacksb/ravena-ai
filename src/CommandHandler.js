@@ -4,6 +4,7 @@ const Database = require('./utils/Database');
 const Logger = require('./utils/Logger');
 const FixedCommands = require('./commands/FixedCommands');
 const Management = require('./commands/Management');
+const SuperAdmin = require('./commands/SuperAdmin');
 const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
 const ReturnMessage = require('./models/ReturnMessage');
 
@@ -13,6 +14,7 @@ class CommandHandler {
     this.database = Database.getInstance();
     this.fixedCommands = new FixedCommands();
     this.management = new Management();
+    this.superAdmin = new SuperAdmin();
     this.variableProcessor = new CustomVariableProcessor();
     this.customCommands = {}; // Agrupados por groupId
     this.privateManagement = {}; // Para gerenciar grupos a partir de chats privados
@@ -93,9 +95,44 @@ class CommandHandler {
     try {
       // Obtém a primeira palavra como nome do comando
       const [command, ...args] = commandText.trim().split(/\s+/);
-      
+
+
       this.logger.debug(`Processando comando: ${command}, args: ${args.join(', ')}`);
       
+      // Verifica se é um comando de super admin (começa com 'sa-')
+      if (command.startsWith('sa-')) {
+          // Verifica se o usuário é um super admin
+          if (this.superAdmin.isSuperAdmin(message.author)) {
+              const saCommand = command.substring(3); // Remove o prefixo 'sa-'
+              const methodName = this.superAdmin.getCommandMethod(saCommand);
+              
+              if (methodName && typeof this.superAdmin[methodName] === 'function') {
+                  this.logger.debug(`Executando método de super admin: ${methodName}`);
+                  const result = await this.superAdmin[methodName](bot, message, args, group);
+                  if (result) {
+                      await bot.sendReturnMessages(result);
+                  }
+              } else {
+                  const chatId = message.group || message.author;
+                  const returnMessage = new ReturnMessage({
+                      chatId: chatId,
+                      content: `Comando de super admin desconhecido: ${saCommand}`
+                  });
+                  await bot.sendReturnMessages(returnMessage);
+              }
+              return;
+          } else {
+              // Usuário não é super admin
+              const chatId = message.group || message.author;
+              const returnMessage = new ReturnMessage({
+                  chatId: chatId,
+                  content: '⛔ Apenas super administradores podem usar estes comandos.'
+              });
+              await bot.sendReturnMessages(returnMessage);
+              return;
+          }
+      }
+
       // Verifica se é um comando de gerenciamento privado
       if (!message.group && this.privateManagement[message.author]) {
         const managedGroupId = this.privateManagement[message.author];

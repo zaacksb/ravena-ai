@@ -957,3 +957,33 @@ ou
 Use alguma biblioteca grátis e livre para a tradução.
 
 Também deve ser possível reagir a uma mensagem com a bandeira do país para solicitar a tradução. Use todos os emojis de bandeira possíveis.
+
+----
+Caso precise de algum arquivo ou informação extra, me peça antes de prosseguir.
+
+# Adequação Management.js e FixedCommands.js
+Refatorar os retornos para utilizar a classe `models/ReturnMessage`
+
+# SuperAdmins
+Definidos no .env como
+SUPER_ADMINS=123456@c.us,789041@c.us
+Id do chat separado por virgula
+
+Implementar arquivi `commands/SuperAdmin.js`
+Usar como base para o desenvolvimento o Management.js
+O prefixo para estes comandos é 'sa'
+
+Remover estes comandos do Management e transferir para superadmin
+- sa-joinGrupo
+- addDonateNumero
+- addDonateValor
+
+Por enquanto, apenas estes comandos a serem implementadas:
+- sa-block [contato]: Bloqueia esta pessoa. O numero pode vir em vários formatos, como "+11 11 9999-9999", ou "111199999999@.cus"
+- sa-leaveGrupo [id]: Recebe ID de grupo como 1234556@g.us ou name de cadastro na base de dados (group.name) para buscar o id
+- sa-foto: Se estiver na legenda de uma foto, altera a foto do perfil do bot para a foto enviada
+
+
+# Needs Fixing
+- buscar-img está retornando um erro. A API key necessária é grátis, onde posso criar uma?
+- RiotGamesCommands não está retornando. Crie um debug melhor para que possamos identificar o problema

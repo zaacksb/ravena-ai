@@ -60,6 +60,7 @@
 - [ ] Interface web para administração
 - [ ] Melhor explicação da implementação do bot no README
 - [ ] Melhorar comando !cmd pra ficar mais organizado
+- [ ] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais

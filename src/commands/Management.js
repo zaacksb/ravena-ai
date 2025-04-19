@@ -27,10 +27,7 @@ class Management {
       'setWelcome': 'setWelcomeMessage',
       'setFarewell': 'setFarewellMessage',
       'help': 'showManagementHelp',
-      'addDonateNumero': 'addDonorNumber',
-      'addDonateValor': 'updateDonationAmount',
       'mergeDonates': 'mergeDonors',
-      'joinGrupo': 'joinGroup',
       'setReact': 'setReaction',
       'setStartReact': 'setStartReaction',
       'autoStt': 'toggleAutoStt',
@@ -72,8 +69,6 @@ class Management {
       'youtube-titulo-on': 'setYoutubeOnlineTitle',
       'youtube-titulo-off': 'setYoutubeOfflineTitle',
       'youtube-usarIA': 'toggleYoutubeAI',
-
-
     };
   }
 
@@ -101,13 +96,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setGroupName(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça um novo nome para o grupo. Exemplo: !g-setName NovoNomeGrupo');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça um novo nome para o grupo. Exemplo: !g-setName NovoNomeGrupo'
+      });
     }
     
     const newName = args.join(' ');
@@ -116,7 +119,10 @@ class Management {
     group.name = newName.toLowerCase().replace(/\s+/g, '').substring(0, 16);
     await this.database.saveGroup(group);
     
-    await bot.sendMessage(group.id, `Nome do grupo atualizado para: ${group.name}`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Nome do grupo atualizado para: ${group.name}`
+    });
   }
   
   /**
@@ -125,22 +131,31 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async addCustomCommand(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Verifica se a mensagem é uma resposta
     const quotedMsg = await message.origin.getQuotedMessage();
 
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem.');
-      console.log(message.origin);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem.'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça um gatilho para o comando personalizado. Exemplo: !g-addCmd saudação');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça um gatilho para o comando personalizado. Exemplo: !g-addCmd saudação'
+      });
     }
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
@@ -187,8 +202,10 @@ class Management {
         responseContent = `{${mediaType}-${fileName}}${caption ? ' ' + caption : ''}`;
       } catch (error) {
         this.logger.error('Erro ao salvar mídia para comando personalizado:', error);
-        await bot.sendMessage(group.id, 'Erro ao salvar mídia para comando personalizado.');
-        return;
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Erro ao salvar mídia para comando personalizado.'
+        });
       }
     } else {
       responseContent = quotedMsg.body ?? quotedMsg._data.body;
@@ -221,7 +238,10 @@ class Management {
     // Recarrega comandos
     await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
     
-    await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' adicionado com sucesso.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando personalizado '${commandTrigger}' adicionado com sucesso.`
+    });
   }
   
   /**
@@ -230,20 +250,30 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async addCustomCommandReply(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Verifica se a mensagem é uma resposta
     const quotedMsg = await message.origin.getQuotedMessage();
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem.'
+      });
     }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o comando para adicionar uma resposta. Exemplo: !g-addCmdReply saudação');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o comando para adicionar uma resposta. Exemplo: !g-addCmdReply saudação'
+      });
     }
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
@@ -254,8 +284,10 @@ class Management {
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
-      await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' não encontrado.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Comando personalizado '${commandTrigger}' não encontrado.`
+      });
     }
     
     // Obtém o conteúdo da mensagem citada
@@ -295,8 +327,10 @@ class Management {
         responseContent = `{${mediaType}-${fileName}}${quotedMsg.caption ? ' ' + quotedMsg.caption : ''}`;
       } catch (error) {
         this.logger.error('Erro ao salvar mídia para resposta de comando personalizado:', error);
-        await bot.sendMessage(group.id, 'Erro ao salvar mídia para resposta de comando personalizado.');
-        return;
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Erro ao salvar mídia para resposta de comando personalizado.'
+        });
       }
     }
     
@@ -315,7 +349,10 @@ class Management {
     // Recarrega comandos
     await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
     
-    await bot.sendMessage(group.id, `Adicionada nova resposta ao comando personalizado '${commandTrigger}'.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Adicionada nova resposta ao comando personalizado '${commandTrigger}'.`
+    });
   }
   
   /**
@@ -324,13 +361,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async deleteCustomCommand(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o comando personalizado a ser excluído. Exemplo: !g-delCmd saudação');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o comando personalizado a ser excluído. Exemplo: !g-delCmd saudação'
+      });
     }
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
@@ -341,8 +386,10 @@ class Management {
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
-      await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' não encontrado.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Comando personalizado '${commandTrigger}' não encontrado.`
+      });
     }
     
     // Marca comando como excluído
@@ -358,7 +405,10 @@ class Management {
     // Recarrega comandos
     await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
     
-    await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' excluído.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando personalizado '${commandTrigger}' excluído.`
+    });
   }
   
   /**
@@ -367,13 +417,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async enableCustomCommand(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o comando personalizado a ser habilitado. Exemplo: !g-enableCmd saudação');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o comando personalizado a ser habilitado. Exemplo: !g-enableCmd saudação'
+      });
     }
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
@@ -384,8 +442,10 @@ class Management {
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
-      await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' não encontrado.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Comando personalizado '${commandTrigger}' não encontrado.`
+      });
     }
     
     // Habilita comando
@@ -400,7 +460,10 @@ class Management {
     // Recarrega comandos
     await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
     
-    await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' habilitado.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando personalizado '${commandTrigger}' habilitado.`
+    });
   }
   
   /**
@@ -409,13 +472,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async disableCustomCommand(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o comando personalizado a ser desabilitado. Exemplo: !g-disableCmd saudação');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o comando personalizado a ser desabilitado. Exemplo: !g-disableCmd saudação'
+      });
     }
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
@@ -426,8 +497,10 @@ class Management {
     const command = commands.find(cmd => cmd.startsWith === commandTrigger && !cmd.deleted);
     
     if (!command) {
-      await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' não encontrado.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Comando personalizado '${commandTrigger}' não encontrado.`
+      });
     }
     
     // Desabilita comando
@@ -442,7 +515,10 @@ class Management {
     // Recarrega comandos
     await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
     
-    await bot.sendMessage(group.id, `Comando personalizado '${commandTrigger}' desabilitado.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando personalizado '${commandTrigger}' desabilitado.`
+    });
   }
   
   /**
@@ -451,9 +527,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setCustomPrefix(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // MELHORIA: Permite definir prefixo vazio quando não há argumentos
     let newPrefix = '';
@@ -467,9 +549,15 @@ class Management {
     
     // Mensagem especial para prefixo vazio
     if (newPrefix === '') {
-      await bot.sendMessage(group.id, `Prefixo de comando removido. Qualquer mensagem agora pode ser um comando.`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Prefixo de comando removido. Qualquer mensagem agora pode ser um comando.`
+      });
     } else {
-      await bot.sendMessage(group.id, `Prefixo de comando atualizado para: ${newPrefix}`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Prefixo de comando atualizado para: ${newPrefix}`
+      });
     }
   }
   
@@ -479,13 +567,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setWelcomeMessage(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça uma mensagem de boas-vindas. Exemplo: !g-setWelcome Bem-vindo ao grupo, {pessoa}!');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça uma mensagem de boas-vindas. Exemplo: !g-setWelcome Bem-vindo ao grupo, {pessoa}!'
+      });
     }
     
     const welcomeText = args.join(' ');
@@ -497,7 +593,10 @@ class Management {
     group.greetings.text = welcomeText;
     await this.database.saveGroup(group);
     
-    await bot.sendMessage(group.id, `Mensagem de boas-vindas atualizada para: ${welcomeText}`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Mensagem de boas-vindas atualizada para: ${welcomeText}`
+    });
   }
   
   /**
@@ -506,13 +605,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setFarewellMessage(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça uma mensagem de despedida. Exemplo: !g-setFarewell Adeus, {pessoa}!');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça uma mensagem de despedida. Exemplo: !g-setFarewell Adeus, {pessoa}!'
+      });
     }
     
     const farewellText = args.join(' ');
@@ -524,7 +631,10 @@ class Management {
     group.farewells.text = farewellText;
     await this.database.saveGroup(group);
     
-    await bot.sendMessage(group.id, `Mensagem de despedida atualizada para: ${farewellText}`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Mensagem de despedida atualizada para: ${farewellText}`
+    });
   }
   
   /**
@@ -533,6 +643,7 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async showManagementHelp(bot, message, args, group) {
     const chatId = group ? group.id : message.author;
@@ -564,7 +675,10 @@ class Management {
 {time} - Hora atual
 {cmd-!comando arg} - Executa outro comando (criando um alias)`;
 
-    await bot.sendMessage(chatId, helpText);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: helpText
+    });
   }
 
 
@@ -574,9 +688,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async showGroupInfo(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     try {
       // Obtém comandos personalizados para este grupo
@@ -789,11 +909,16 @@ class Management {
         infoMessage += `_... e mais ${activeCommands.length - maxCommands} comandos_\n`;
       }
       
-      // Envia a mensagem
-      await bot.sendMessage(group.id, infoMessage);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: infoMessage
+      });
     } catch (error) {
       this.logger.error('Erro ao mostrar informações do grupo:', error);
-      await bot.sendMessage(group.id, 'Erro ao recuperar informações do grupo. Por favor, tente novamente.');
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Erro ao recuperar informações do grupo. Por favor, tente novamente.'
+      });
     }
   }
 
@@ -846,9 +971,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async filterWord(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Verifica se o bot é admin para filtros efetivos
     const isAdmin = await this.isBotAdmin(bot, group.id);
@@ -862,8 +993,10 @@ class Management {
         ? group.filters.words.join(', ')
         : 'Nenhuma palavra filtrada';
       
-      await bot.sendMessage(group.id, `*Palavras filtradas atualmente:*\n${wordFilters}\n\nPara adicionar ou remover uma palavra do filtro, use: !g-filtro-palavra <palavra ou frase>`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `*Palavras filtradas atualmente:*\n${wordFilters}\n\nPara adicionar ou remover uma palavra do filtro, use: !g-filtro-palavra <palavra ou frase>`
+      });
     }
     
     // Inicializa filtros se não existirem
@@ -886,21 +1019,30 @@ class Management {
       group.filters.words.splice(index, 1);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `✅ Palavra removida do filtro: "${word}"`);
+      // Mostra lista atualizada
+      const wordFilters = group.filters.words.length > 0
+        ? group.filters.words.join(', ')
+        : 'Nenhuma palavra filtrada';
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Palavra removida do filtro: "${word}"\n\n*Palavras filtradas atualmente:*\n${wordFilters}`
+      });
     } else {
       // Adiciona a palavra
       group.filters.words.push(word);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `✅ Palavra adicionada ao filtro: "${word}"`);
+      // Mostra lista atualizada
+      const wordFilters = group.filters.words.length > 0
+        ? group.filters.words.join(', ')
+        : 'Nenhuma palavra filtrada';
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Palavra adicionada ao filtro: "${word}"\n\n*Palavras filtradas atualmente:*\n${wordFilters}`
+      });
     }
-    
-    // Mostra lista atualizada
-    const wordFilters = group.filters.words.length > 0
-      ? group.filters.words.join(', ')
-      : 'Nenhuma palavra filtrada';
-    
-    await bot.sendMessage(group.id, `*Palavras filtradas atualmente:*\n${wordFilters}`);
   }
   
   /**
@@ -909,9 +1051,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async filterLinks(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Verifica se o bot é admin para filtros efetivos
     const isAdmin = await this.isBotAdmin(bot, group.id);
@@ -929,9 +1077,15 @@ class Management {
     await this.database.saveGroup(group);
     
     if (group.filters.links) {
-      await bot.sendMessage(group.id, '✅ Filtro de links ativado. Mensagens contendo links serão apagadas automaticamente.');
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '✅ Filtro de links ativado. Mensagens contendo links serão apagadas automaticamente.'
+      });
     } else {
-      await bot.sendMessage(group.id, '❌ Filtro de links desativado. Mensagens contendo links não serão mais filtradas.');
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '❌ Filtro de links desativado. Mensagens contendo links não serão mais filtradas.'
+      });
     }
   }
   
@@ -941,9 +1095,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async filterPerson(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Verifica se o bot é admin para filtros efetivos
     const isAdmin = await this.isBotAdmin(bot, group.id);
@@ -966,8 +1126,10 @@ class Management {
         ? group.filters.people.join(', ')
         : 'Nenhuma pessoa filtrada';
       
-      await bot.sendMessage(group.id, `*Pessoas filtradas atualmente:*\n${personFilters}\n\nPara adicionar ou remover uma pessoa do filtro, use: !g-filtro-pessoa <número>`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `*Pessoas filtradas atualmente:*\n${personFilters}\n\nPara adicionar ou remover uma pessoa do filtro, use: !g-filtro-pessoa <número>`
+      });
     }
     
     // Obtém número do primeiro argumento
@@ -975,8 +1137,10 @@ class Management {
     
     // Verifica se o número tem pelo menos 8 dígitos
     if (numero.length < 8) {
-      await bot.sendMessage(group.id, '❌ O número deve ter pelo menos 8 dígitos.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '❌ O número deve ter pelo menos 8 dígitos.'
+      });
     }
     
     // Adiciona @c.us ao número se não estiver completo
@@ -992,21 +1156,30 @@ class Management {
       group.filters.people.splice(index, 1);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `✅ Pessoa removida do filtro: ${numero}`);
+      // Mostra lista atualizada
+      const personFilters = group.filters.people.length > 0
+        ? group.filters.people.join(', ')
+        : 'Nenhuma pessoa filtrada';
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Pessoa removida do filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
+      });
     } else {
       // Adiciona o número
       group.filters.people.push(numero);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `✅ Pessoa adicionada ao filtro: ${numero}`);
+      // Mostra lista atualizada
+      const personFilters = group.filters.people.length > 0
+        ? group.filters.people.join(', ')
+        : 'Nenhuma pessoa filtrada';
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Pessoa adicionada ao filtro: ${numero}\n\n*Pessoas filtradas atualmente:*\n${personFilters}`
+      });
     }
-    
-    // Mostra lista atualizada
-    const personFilters = group.filters.people.length > 0
-      ? group.filters.people.join(', ')
-      : 'Nenhuma pessoa filtrada';
-    
-    await bot.sendMessage(group.id, `*Pessoas filtradas atualmente:*\n${personFilters}`);
   }
   
   /**
@@ -1015,9 +1188,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async filterNSFW(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Verifica se o bot é admin para filtros efetivos
     const isAdmin = await this.isBotAdmin(bot, group.id);
@@ -1035,88 +1214,15 @@ class Management {
     await this.database.saveGroup(group);
     
     if (group.filters.nsfw) {
-      await bot.sendMessage(group.id, '✅ Filtro de conteúdo NSFW ativado. Imagens e vídeos detectados como conteúdo adulto serão automaticamente removidos.');
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '✅ Filtro de conteúdo NSFW ativado. Imagens e vídeos detectados como conteúdo adulto serão automaticamente removidos.'
+      });
     } else {
-      await bot.sendMessage(group.id, '❌ Filtro de conteúdo NSFW desativado. Imagens e vídeos não serão filtrados para conteúdo adulto.');
-    }
-  }
-
-  /**
-   * Adiciona ou atualiza o número de WhatsApp de um doador
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   */
-  async addDonorNumber(bot, message, args, group) {
-    try {
-      const chatId = message.group || message.author;
-      
-      if (args.length < 2) {
-        await bot.sendMessage(chatId, 'Por favor, forneça um número e nome do doador. Exemplo: !g-addDonateNumero 5512345678901 João Silva');
-        return;
-      }
-      
-      // Extrai número e nome
-      const numero = args[0].replace(/\D/g, ''); // Remove não-dígitos
-      const donorName = args.slice(1).join(' ');
-      
-      if (!numero || numero.length < 10) {
-        await bot.sendMessage(chatId, 'Por favor, forneça um número válido com código de país. Exemplo: 5512345678901');
-        return;
-      }
-      
-      // Atualiza número do doador no banco de dados
-      const success = await this.database.updateDonorNumber(donorName, numero);
-      
-      if (success) {
-        await bot.sendMessage(chatId, `Número ${numero} adicionado com sucesso ao doador ${donorName}`);
-      } else {
-        await bot.sendMessage(chatId, `Falha ao atualizar doador. Certifique-se que ${donorName} existe no banco de dados de doações.`);
-      }
-    } catch (error) {
-      this.logger.error('Erro no comando addDonorNumber:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando.');
-    }
-  }
-
-  /**
-   * Atualiza valor de doação para um doador
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   */
-  async updateDonationAmount(bot, message, args, group) {
-    try {
-      const chatId = message.group || message.author;
-      
-      if (args.length < 2) {
-        await bot.sendMessage(chatId, 'Por favor, forneça um valor e nome do doador. Exemplo: !g-addDonateValor 50.5 João Silva');
-        return;
-      }
-      
-      // Extrai valor e nome
-      const amountStr = args[0].replace(',', '.'); // Trata vírgula como separador decimal
-      const amount = parseFloat(amountStr);
-      const donorName = args.slice(1).join(' ');
-      
-      if (isNaN(amount)) {
-        await bot.sendMessage(chatId, 'Por favor, forneça um valor válido. Exemplo: 50.5');
-        return;
-      }
-      
-      // Atualiza valor de doação no banco de dados
-      const success = await this.database.updateDonationAmount(donorName, amount);
-      
-      if (success) {
-        await bot.sendMessage(chatId, `${amount >= 0 ? 'Adicionado' : 'Subtraído'} ${Math.abs(amount).toFixed(2)} com sucesso ao doador ${donorName}`);
-      } else {
-        await bot.sendMessage(chatId, `Falha ao atualizar doação. Certifique-se que ${donorName} existe no banco de dados de doações.`);
-      }
-    } catch (error) {
-      this.logger.error('Erro no comando updateDonationAmount:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando.');
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '❌ Filtro de conteúdo NSFW desativado. Imagens e vídeos não serão filtrados para conteúdo adulto.'
+      });
     }
   }
 
@@ -1126,6 +1232,7 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async mergeDonors(bot, message, args, group) {
     try {
@@ -1135,87 +1242,42 @@ class Management {
       const fullText = args.join(' ');
       
       if (!fullText.includes('##')) {
-        await bot.sendMessage(chatId, 'Por favor, use o formato: !g-mergeDonates PrimeiroDoador##SegundoDoador');
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, use o formato: !g-mergeDonates PrimeiroDoador##SegundoDoador'
+        });
       }
       
       // Divide os nomes
       const [targetName, sourceName] = fullText.split('##').map(name => name.trim());
       
       if (!targetName || !sourceName) {
-        await bot.sendMessage(chatId, 'Ambos os nomes de doadores devem ser fornecidos. Formato: !g-mergeDonates PrimeiroDoador##SegundoDoador');
-        return;
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Ambos os nomes de doadores devem ser fornecidos. Formato: !g-mergeDonates PrimeiroDoador##SegundoDoador'
+        });
       }
       
       // Une doadores no banco de dados
       const success = await this.database.mergeDonors(targetName, sourceName);
       
       if (success) {
-        await bot.sendMessage(chatId, `Doador ${sourceName} unido com sucesso a ${targetName}`);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Doador ${sourceName} unido com sucesso a ${targetName}`
+        });
       } else {
-        await bot.sendMessage(chatId, `Falha ao unir doadores. Certifique-se que tanto ${targetName} quanto ${sourceName} existem no banco de dados de doações.`);
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Falha ao unir doadores. Certifique-se que tanto ${targetName} quanto ${sourceName} existem no banco de dados de doações.`
+        });
       }
     } catch (error) {
       this.logger.error('Erro no comando mergeDonors:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando.');
-    }
-  }
-
-  /**
-   * Entra em um grupo via link de convite
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   */
-  async joinGroup(bot, message, args, group) {
-    try {
-      const chatId = message.group || message.author;
-      
-      if (args.length === 0) {
-        await bot.sendMessage(chatId, 'Por favor, forneça um código de convite. Exemplo: !g-joinGrupo abcd1234');
-        return;
-      }
-      
-      // Obtém código de convite
-      const inviteCode = args[0];
-      
-      // Obtém dados do autor, se fornecidos
-      let authorId = null;
-      let authorName = null;
-      
-      if (args.length > 1) {
-        authorId = args[1];
-        // O nome pode conter espaços, então juntamos o resto dos argumentos
-        if (args.length > 2) {
-          authorName = args.slice(2).join(' ');
-        }
-      }
-      
-      try {
-        // Aceita o convite
-        const joinResult = await bot.client.acceptInvite(inviteCode);
-        
-        if (joinResult) {
-          await bot.sendMessage(chatId, `Entrou com sucesso no grupo com código de convite ${inviteCode}`);
-          
-          // Salva os dados do autor que enviou o convite para uso posterior
-          if (authorId) {
-            await this.database.savePendingJoin(inviteCode, { authorId, authorName });
-          }
-          
-          // Remove dos convites pendentes se existir
-          await this.database.removePendingInvite(inviteCode);
-        } else {
-          await bot.sendMessage(chatId, `Falha ao entrar no grupo com código de convite ${inviteCode}`);
-        }
-      } catch (error) {
-        this.logger.error('Erro ao aceitar convite de grupo:', error);
-        await bot.sendMessage(chatId, `Erro ao entrar no grupo: ${error.message}`);
-      }
-    } catch (error) {
-      this.logger.error('Erro no comando joinGroup:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando.');
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao processar comando.'
+      });
     }
   }
 
@@ -1225,13 +1287,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setReaction(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length < 2) {
-      await bot.sendMessage(group.id, 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-setReact sticker 🎯');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-setReact sticker 🎯'
+      });
     }
     
     const commandName = args[0].toLowerCase();
@@ -1251,8 +1321,10 @@ class Management {
         fixedCommand.reactions.after = emoji;
       }
       
-      await bot.sendMessage(group.id, `Definida reação 'depois' de '${commandName}' para ${emoji}`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Definida reação 'depois' de '${commandName}' para ${emoji}`
+      });
     }
     
     // Verifica se é um comando personalizado
@@ -1279,11 +1351,16 @@ class Management {
       // Recarrega comandos
       await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
       
-      await bot.sendMessage(group.id, `Definida reação 'depois' de '${commandName}' para ${emoji}`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Definida reação 'depois' de '${commandName}' para ${emoji}`
+      });
     }
     
-    await bot.sendMessage(group.id, `Comando '${commandName}' não encontrado.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando '${commandName}' não encontrado.`
+    });
   }
 
   /**
@@ -1292,13 +1369,21 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setStartReaction(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length < 2) {
-      await bot.sendMessage(group.id, 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-setStartReact sticker 🎯');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-setStartReact sticker 🎯'
+      });
     }
     
     const commandName = args[0].toLowerCase();
@@ -1318,8 +1403,10 @@ class Management {
         fixedCommand.reactions.before = emoji;
       }
       
-      await bot.sendMessage(group.id, `Definida reação 'antes' de '${commandName}' para ${emoji}`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Definida reação 'antes' de '${commandName}' para ${emoji}`
+      });
     }
     
     // Verifica se é um comando personalizado
@@ -1346,11 +1433,16 @@ class Management {
       // Recarrega comandos
       await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
       
-      await bot.sendMessage(group.id, `Definida reação 'antes' de '${commandName}' para ${emoji}`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Definida reação 'antes' de '${commandName}' para ${emoji}`
+      });
     }
     
-    await bot.sendMessage(group.id, `Comando '${commandName}' não encontrado.`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando '${commandName}' não encontrado.`
+    });
   }
 
   /**
@@ -1359,9 +1451,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleAutoStt(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Alterna a configuração de auto-STT
     group.autoStt = !group.autoStt;
@@ -1374,7 +1472,10 @@ class Management {
       'Conversão automática de voz para texto agora está *ativada* para este grupo.' : 
       'Conversão automática de voz para texto agora está *desativada* para este grupo.';
     
-    await bot.sendMessage(group.id, statusMsg);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: statusMsg
+    });
   }
 
   /**
@@ -1421,8 +1522,10 @@ class Management {
     const channels = this.getChannelConfig(group, platform);
     
     if (channels.length === 0) {
-      await bot.sendMessage(group.id, `Nenhum canal de ${platform} configurado. Use !g-${platform}-canal <nome do canal> para configurar.`);
-      return null;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Nenhum canal de ${platform} configurado. Use !g-${platform}-canal <nome do canal> para configurar.`
+      });
     }
     
     if (channels.length === 1) {
@@ -1431,13 +1534,13 @@ class Management {
     
     // If multiple channels, show list and instructions
     const channelsList = channels.map(c => c.channel).join(', ');
-    await bot.sendMessage(group.id, 
-      `Múltiplos canais de ${platform} configurados. Especifique o canal:\n` +
-      `!g-${platform}-midia-on <canal>\n\n` +
-      `Canais configurados: ${channelsList}`
-    );
     
-    return null;
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Múltiplos canais de ${platform} configurados. Especifique o canal:\n` +
+        `!g-${platform}-midia-on <canal>\n\n` +
+        `Canais configurados: ${channelsList}`
+    });
   }
 
   /**
@@ -1466,19 +1569,27 @@ class Management {
     };
   }
 
-    /**
+  /**
    * Toggles monitoring of a Twitch channel
    * @param {WhatsAppBot} bot - The bot instance
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleTwitchChannel(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o nome do canal da Twitch. Exemplo: !g-twitch-canal nomeDoCanal');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do canal da Twitch. Exemplo: !g-twitch-canal nomeDoCanal'
+      });
     }
     
     const channelName = args[0].toLowerCase();
@@ -1495,12 +1606,16 @@ class Management {
       group.twitch = updatedChannels;
       
       await this.database.saveGroup(group);
-      await bot.sendMessage(group.id, `Canal da Twitch removido: ${channelName}`);
       
       // Unsubscribe from StreamMonitor if it exists
       if (bot.streamMonitor) {
         bot.streamMonitor.unsubscribe(channelName, 'twitch');
       }
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch removido: ${channelName}`
+      });
     } else {
       // Add channel with default configuration
       const newChannel = {
@@ -1516,16 +1631,21 @@ class Management {
       channels.push(newChannel);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, 
-        `Canal da Twitch adicionado: ${channelName}\n\n` +
-        `Configuração padrão de notificação "online" definida. Use !g-twitch-midia-on ${channelName} para personalizar.`
-      );
-      
       // Subscribe to the channel in StreamMonitor
       if (bot.streamMonitor) {
         bot.streamMonitor.subscribe(channelName, 'twitch');
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Canal da Twitch adicionado: ${channelName}\n\n` +
+            `Configuração padrão de notificação "online" definida. Use !g-twitch-midia-on ${channelName} para personalizar.`
+        });
       } else {
-        await bot.sendMessage(group.id, `⚠️ Aviso: O monitoramento de streams não está inicializado no bot. Entre em contato com o administrador.`);
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Canal da Twitch adicionado: ${channelName}\n\n` +
+            `⚠️ Aviso: O monitoramento de streams não está inicializado no bot. Entre em contato com o administrador.`
+        });
       }
     }
   }
@@ -1536,20 +1656,32 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setTwitchOnlineMedia(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     // Find the channel configuration
     const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
     }
     
     // Verify if this is a reply to a message
@@ -1560,13 +1692,17 @@ class Management {
       channelConfig.onConfig = this.createDefaultNotificationConfig('twitch', channelName);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "online" para o canal ${channelName} redefinida para o padrão.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "online" para o canal ${channelName} redefinida para o padrão.`
+      });
     }
     
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
+      });
     }
     
     // Handle media message
@@ -1614,10 +1750,17 @@ class Management {
       
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "online" para o canal ${channelName} atualizada com sucesso.`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "online" para o canal ${channelName} atualizada com sucesso.`
+      });
     } catch (error) {
       this.logger.error(`Erro ao configurar notificação "online" para o canal ${channelName}:`, error);
-      await bot.sendMessage(group.id, `Erro ao configurar notificação: ${error.message}`);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Erro ao configurar notificação: ${error.message}`
+      });
     }
   }
 
@@ -1627,20 +1770,32 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setTwitchOfflineMedia(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     // Find the channel configuration
     const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
     }
     
     // Verify if this is a reply to a message
@@ -1653,13 +1808,17 @@ class Management {
       };
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "offline" para o canal ${channelName} removida.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "offline" para o canal ${channelName} removida.`
+      });
     }
     
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
+      });
     }
     
     // Handle media message (similar to setTwitchOnlineMedia)
@@ -1707,10 +1866,17 @@ class Management {
       
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "offline" para o canal ${channelName} atualizada com sucesso.`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "offline" para o canal ${channelName} atualizada com sucesso.`
+      });
     } catch (error) {
       this.logger.error(`Erro ao configurar notificação "offline" para o canal ${channelName}:`, error);
-      await bot.sendMessage(group.id, `Erro ao configurar notificação: ${error.message}`);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Erro ao configurar notificação: ${error.message}`
+      });
     }
   }
 
@@ -1720,31 +1886,43 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleTwitchTitleChange(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     // Find the channel configuration
     const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
     }
     
     // Check if bot is admin in the group
     const isAdmin = await this.isBotAdmin(bot, group.id);
     
     if (!isAdmin) {
-      await bot.sendMessage(group.id, 
-        '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador. ' +
-        'Por favor, adicione o bot como administrador e tente novamente.'
-      );
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador. ' +
+          'Por favor, adicione o bot como administrador e tente novamente.'
+      });
     }
     
     // Toggle the setting
@@ -1754,14 +1932,20 @@ class Management {
     
     const status = channelConfig.changeTitleOnEvent ? 'ativada' : 'desativada';
     
-    await bot.sendMessage(group.id, 
-      `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
-      (channelConfig.changeTitleOnEvent ? 
-        `Você pode definir títulos personalizados com:\n` +
-        `!g-twitch-titulo-on ${channelName} [título]\n` +
-        `!g-twitch-titulo-off ${channelName} [título]` : 
-        '')
-    );
+    if (channelConfig.changeTitleOnEvent) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
+          `Você pode definir títulos personalizados com:\n` +
+          `!g-twitch-titulo-on ${channelName} [título]\n` +
+          `!g-twitch-titulo-off ${channelName} [título]`
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Alteração de título para eventos do canal ${channelName} ${status}.`
+      });
+    }
   }
 
   /**
@@ -1770,13 +1954,21 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setTwitchOnlineTitle(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo-on nomeDoCanal Título Personalizado');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo-on nomeDoCanal Título Personalizado'
+      });
     }
     
     // Get channel name (first arg) and title (remaining args)
@@ -1797,20 +1989,23 @@ class Management {
     } else {
       // Multiple channels, none specified
       const channelsList = channels.map(c => c.channel).join(', ');
-      await bot.sendMessage(group.id, 
-        `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
-        `!g-twitch-titulo-on <canal> <título>\n\n` +
-        `Canais configurados: ${channelsList}`
-      );
-      return;
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
+          `!g-twitch-titulo-on <canal> <título>\n\n` +
+          `Canais configurados: ${channelsList}`
+      });
     }
     
     // Find the channel configuration
     const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
     }
     
     // If no title provided, remove custom title
@@ -1818,11 +2013,11 @@ class Management {
       delete channelConfig.onlineTitle;
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, 
-        `Título personalizado para eventos "online" do canal ${channelName} removido.\n` +
-        `O bot irá substituir automaticamente "OFF" por "ON" no título do grupo quando o canal ficar online.`
-      );
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "online" do canal ${channelName} removido.\n` +
+          `O bot irá substituir automaticamente "OFF" por "ON" no título do grupo quando o canal ficar online.`
+      });
     }
     
     // Set custom title
@@ -1831,12 +2026,22 @@ class Management {
     // Make sure title change is enabled
     if (!channelConfig.changeTitleOnEvent) {
       channelConfig.changeTitleOnEvent = true;
-      await bot.sendMessage(group.id, `Alteração de título para eventos foi automaticamente ativada.`);
+      
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"\n` +
+          `Alteração de título para eventos foi automaticamente ativada.`
+      });
     }
     
     await this.database.saveGroup(group);
     
-    await bot.sendMessage(group.id, `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"`
+    });
   }
 
   /**
@@ -1845,13 +2050,21 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setTwitchOfflineTitle(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo-off nomeDoCanal Título Personalizado');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo-off nomeDoCanal Título Personalizado'
+      });
     }
     
     // Get channel name (first arg) and title (remaining args)
@@ -1872,20 +2085,23 @@ class Management {
     } else {
       // Multiple channels, none specified
       const channelsList = channels.map(c => c.channel).join(', ');
-      await bot.sendMessage(group.id, 
-        `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
-        `!g-twitch-titulo-off <canal> <título>\n\n` +
-        `Canais configurados: ${channelsList}`
-      );
-      return;
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
+          `!g-twitch-titulo-off <canal> <título>\n\n` +
+          `Canais configurados: ${channelsList}`
+      });
     }
     
     // Find the channel configuration
     const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
     }
     
     // If no title provided, remove custom title
@@ -1893,11 +2109,11 @@ class Management {
       delete channelConfig.offlineTitle;
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, 
-        `Título personalizado para eventos "offline" do canal ${channelName} removido.\n` +
-        `O bot irá substituir automaticamente "ON" por "OFF" no título do grupo quando o canal ficar offline.`
-      );
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "offline" do canal ${channelName} removido.\n` +
+          `O bot irá substituir automaticamente "ON" por "OFF" no título do grupo quando o canal ficar offline.`
+      });
     }
     
     // Set custom title
@@ -1906,12 +2122,22 @@ class Management {
     // Make sure title change is enabled
     if (!channelConfig.changeTitleOnEvent) {
       channelConfig.changeTitleOnEvent = true;
-      await bot.sendMessage(group.id, `Alteração de título para eventos foi automaticamente ativada.`);
+      
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"\n` +
+          `Alteração de título para eventos foi automaticamente ativada.`
+      });
     }
     
     await this.database.saveGroup(group);
     
-    await bot.sendMessage(group.id, `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"`);
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"`
+    });
   }
 
   /**
@@ -1920,20 +2146,32 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleTwitchAI(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     // Find the channel configuration
     const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
     }
     
     // Toggle the setting
@@ -1943,12 +2181,18 @@ class Management {
     
     const status = channelConfig.useAI ? 'ativadas' : 'desativadas';
     
-    await bot.sendMessage(group.id, 
-      `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.\n\n` +
-      (channelConfig.useAI ? 
-        `O bot usará IA para gerar mensagens personalizadas quando o canal ficar online.` : 
-        '')
-    );
+    if (channelConfig.useAI) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.\n\n` +
+          `O bot usará IA para gerar mensagens personalizadas quando o canal ficar online.`
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.`
+      });
+    }
   }
 
   /**
@@ -1957,13 +2201,21 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleKickChannel(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o nome do canal do Kick. Exemplo: !g-kick-canal nomeDoCanal');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do canal do Kick. Exemplo: !g-kick-canal nomeDoCanal'
+      });
     }
     
     const channelName = args[0].toLowerCase();
@@ -1976,16 +2228,21 @@ class Management {
     
     if (existingChannel) {
       // Remove channel
+      // Remove channel
       const updatedChannels = channels.filter(c => c.channel.toLowerCase() !== channelName.toLowerCase());
       group.kick = updatedChannels;
       
       await this.database.saveGroup(group);
-      await bot.sendMessage(group.id, `Canal do Kick removido: ${channelName}`);
       
       // Unsubscribe from StreamMonitor if it exists
       if (bot.streamMonitor) {
         bot.streamMonitor.unsubscribe(channelName, 'kick');
       }
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick removido: ${channelName}`
+      });
     } else {
       // Add channel with default configuration
       const newChannel = {
@@ -2001,16 +2258,21 @@ class Management {
       channels.push(newChannel);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, 
-        `Canal do Kick adicionado: ${channelName}\n\n` +
-        `Configuração padrão de notificação "online" definida. Use !g-kick-midia-on ${channelName} para personalizar.`
-      );
-      
       // Subscribe to the channel in StreamMonitor
       if (bot.streamMonitor) {
         bot.streamMonitor.subscribe(channelName, 'kick');
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Canal do Kick adicionado: ${channelName}\n\n` +
+            `Configuração padrão de notificação "online" definida. Use !g-kick-midia-on ${channelName} para personalizar.`
+        });
       } else {
-        await bot.sendMessage(group.id, `⚠️ Aviso: O monitoramento de streams não está inicializado no bot. Entre em contato com o administrador.`);
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Canal do Kick adicionado: ${channelName}\n\n` +
+            `⚠️ Aviso: O monitoramento de streams não está inicializado no bot. Entre em contato com o administrador.`
+        });
       }
     }
   }
@@ -2021,19 +2283,32 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setKickOnlineMedia(bot, message, args, group) {
     // This is identical to setTwitchOnlineMedia except for platform name differences
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
+    // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     const channelConfig = this.findChannelConfig(group, 'kick', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
     }
     
     const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
@@ -2042,13 +2317,17 @@ class Management {
       channelConfig.onConfig = this.createDefaultNotificationConfig('kick', channelName);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "online" para o canal ${channelName} redefinida para o padrão.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "online" para o canal ${channelName} redefinida para o padrão.`
+      });
     }
     
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
+      });
     }
     
     try {
@@ -2091,10 +2370,17 @@ class Management {
       
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "online" para o canal ${channelName} atualizada com sucesso.`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "online" para o canal ${channelName} atualizada com sucesso.`
+      });
     } catch (error) {
       this.logger.error(`Erro ao configurar notificação "online" para o canal ${channelName}:`, error);
-      await bot.sendMessage(group.id, `Erro ao configurar notificação: ${error.message}`);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Erro ao configurar notificação: ${error.message}`
+      });
     }
   }
 
@@ -2104,19 +2390,32 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setKickOfflineMedia(bot, message, args, group) {
     // Identical to setTwitchOfflineMedia with platform name differences
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
+    // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     const channelConfig = this.findChannelConfig(group, 'kick', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
     }
     
     const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
@@ -2125,13 +2424,17 @@ class Management {
       channelConfig.offConfig = { media: [] };
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "offline" para o canal ${channelName} removida.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "offline" para o canal ${channelName} removida.`
+      });
     }
     
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
+      });
     }
     
     try {
@@ -2176,57 +2479,335 @@ class Management {
       
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação "offline" para o canal ${channelName} atualizada com sucesso.`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "offline" para o canal ${channelName} atualizada com sucesso.`
+      });
     } catch (error) {
       this.logger.error(`Erro ao configurar notificação "offline" para o canal ${channelName}:`, error);
-      await bot.sendMessage(group.id, `Erro ao configurar notificação: ${error.message}`);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Erro ao configurar notificação: ${error.message}`
+      });
     }
   }
 
-  // Other Kick command handlers (toggleKickTitleChange, setKickOnlineTitle, setKickOfflineTitle, toggleKickAI)
-  // follow identical patterns to the Twitch versions with platform name changes
-
   /**
    * Toggles title change on Kick stream events
+   * @param {WhatsAppBot} bot - The bot instance
+   * @param {Object} message - The message object
+   * @param {Array} args - Command arguments
+   * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleKickTitleChange(bot, message, args, group) {
     // Identical to Twitch version with platform name differences
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
+    // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     const channelConfig = this.findChannelConfig(group, 'kick', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
     }
     
     const isAdmin = await this.isBotAdmin(bot, group.id);
     
     if (!isAdmin) {
-      await bot.sendMessage(group.id, 
-        '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador. ' +
-        'Por favor, adicione o bot como administrador e tente novamente.'
-      );
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador. ' +
+          'Por favor, adicione o bot como administrador e tente novamente.'
+      });
     }
     
+    // Toggle the setting
     channelConfig.changeTitleOnEvent = !channelConfig.changeTitleOnEvent;
     
     await this.database.saveGroup(group);
     
     const status = channelConfig.changeTitleOnEvent ? 'ativada' : 'desativada';
     
-    await bot.sendMessage(group.id, 
-      `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
-      (channelConfig.changeTitleOnEvent ? 
-        `Você pode definir títulos personalizados com:\n` +
-        `!g-kick-titulo-on ${channelName} [título]\n` +
-        `!g-kick-titulo-off ${channelName} [título]` : 
-        '')
-    );
+    if (channelConfig.changeTitleOnEvent) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
+          `Você pode definir títulos personalizados com:\n` +
+          `!g-kick-titulo-on ${channelName} [título]\n` +
+          `!g-kick-titulo-off ${channelName} [título]`
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Alteração de título para eventos do canal ${channelName} ${status}.`
+      });
+    }
+  }
+
+  /**
+   * Sets the custom "online" title for a Kick channel
+   * @param {WhatsAppBot} bot - The bot instance
+   * @param {Object} message - The message object
+   * @param {Array} args - Command arguments
+   * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setKickOnlineTitle(bot, message, args, group) {
+    // Identical to Twitch version with platform name differences
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo-on nomeDoCanal Título Personalizado'
+      });
+    }
+    
+    // Get channel name (first arg) and title (remaining args)
+    let channelName, customTitle;
+    
+    // Check if first argument is a configured channel
+    const firstArg = args[0].toLowerCase();
+    const channels = this.getChannelConfig(group, 'kick');
+    const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
+    
+    if (isChannelArg) {
+      channelName = firstArg;
+      customTitle = args.slice(1).join(' ');
+    } else if (channels.length === 1) {
+      // If only one channel is configured, use it
+      channelName = channels[0].channel;
+      customTitle = args.join(' ');
+    } else {
+      // Multiple channels, none specified
+      const channelsList = channels.map(c => c.channel).join(', ');
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Múltiplos canais do Kick configurados. Especifique o canal:\n` +
+          `!g-kick-titulo-on <canal> <título>\n\n` +
+          `Canais configurados: ${channelsList}`
+      });
+    }
+    
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // If no title provided, remove custom title
+    if (!customTitle) {
+      delete channelConfig.onlineTitle;
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "online" do canal ${channelName} removido.\n` +
+          `O bot irá substituir automaticamente "OFF" por "ON" no título do grupo quando o canal ficar online.`
+      });
+    }
+    
+    // Set custom title
+    channelConfig.onlineTitle = customTitle;
+    
+    // Make sure title change is enabled
+    if (!channelConfig.changeTitleOnEvent) {
+      channelConfig.changeTitleOnEvent = true;
+      
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"\n` +
+          `Alteração de título para eventos foi automaticamente ativada.`
+      });
+    }
+    
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Título personalizado para eventos "online" do canal ${channelName} definido: "${customTitle}"`
+    });
+  }
+
+  /**
+   * Sets the custom "offline" title for a Kick channel
+   * @param {WhatsAppBot} bot - The bot instance
+   * @param {Object} message - The message object
+   * @param {Array} args - Command arguments
+   * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setKickOfflineTitle(bot, message, args, group) {
+    // Identical to Twitch version with platform name differences
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo-off nomeDoCanal Título Personalizado'
+      });
+    }
+    
+    // Get channel name (first arg) and title (remaining args)
+    let channelName, customTitle;
+    
+    // Check if first argument is a configured channel
+    const firstArg = args[0].toLowerCase();
+    const channels = this.getChannelConfig(group, 'kick');
+    const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
+    
+    if (isChannelArg) {
+      channelName = firstArg;
+      customTitle = args.slice(1).join(' ');
+    } else if (channels.length === 1) {
+      // If only one channel is configured, use it
+      channelName = channels[0].channel;
+      customTitle = args.join(' ');
+    } else {
+      // Multiple channels, none specified
+      const channelsList = channels.map(c => c.channel).join(', ');
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Múltiplos canais do Kick configurados. Especifique o canal:\n` +
+          `!g-kick-titulo-off <canal> <título>\n\n` +
+          `Canais configurados: ${channelsList}`
+      });
+    }
+    
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // If no title provided, remove custom title
+    if (!customTitle) {
+      delete channelConfig.offlineTitle;
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "offline" do canal ${channelName} removido.\n` +
+          `O bot irá substituir automaticamente "ON" por "OFF" no título do grupo quando o canal ficar offline.`
+      });
+    }
+    
+    // Set custom title
+    channelConfig.offlineTitle = customTitle;
+    
+    // Make sure title change is enabled
+    if (!channelConfig.changeTitleOnEvent) {
+      channelConfig.changeTitleOnEvent = true;
+      
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"\n` +
+          `Alteração de título para eventos foi automaticamente ativada.`
+      });
+    }
+    
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Título personalizado para eventos "offline" do canal ${channelName} definido: "${customTitle}"`
+    });
+  }
+
+  /**
+   * Toggles AI generated messages for Kick stream events
+   * @param {WhatsAppBot} bot - The bot instance
+   * @param {Object} message - The message object
+   * @param {Array} args - Command arguments
+   * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async toggleKickAI(bot, message, args, group) {
+    // Identical to Twitch version with platform name differences
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Validate and get channel name
+    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Toggle the setting
+    channelConfig.useAI = !channelConfig.useAI;
+    
+    await this.database.saveGroup(group);
+    
+    const status = channelConfig.useAI ? 'ativadas' : 'desativadas';
+    
+    if (channelConfig.useAI) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.\n\n` +
+          `O bot usará IA para gerar mensagens personalizadas quando o canal ficar online.`
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Mensagens geradas por IA para eventos do canal ${channelName} ${status}.`
+      });
+    }
   }
 
   /**
@@ -2235,13 +2816,21 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async toggleYoutubeChannel(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
-      await bot.sendMessage(group.id, 'Por favor, forneça o nome ou ID do canal do YouTube. Exemplo: !g-youtube-canal nomeDoCanal');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome ou ID do canal do YouTube. Exemplo: !g-youtube-canal nomeDoCanal'
+      });
     }
     
     const channelName = args[0];
@@ -2258,12 +2847,16 @@ class Management {
       group.youtube = updatedChannels;
       
       await this.database.saveGroup(group);
-      await bot.sendMessage(group.id, `Canal do YouTube removido: ${channelName}`);
       
       // Unsubscribe from StreamMonitor if it exists
       if (bot.streamMonitor) {
         bot.streamMonitor.unsubscribe(channelName, 'youtube');
       }
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do YouTube removido: ${channelName}`
+      });
     } else {
       // Add channel with default configuration
       const newChannel = {
@@ -2279,16 +2872,21 @@ class Management {
       channels.push(newChannel);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, 
-        `Canal do YouTube adicionado: ${channelName}\n\n` +
-        `Configuração padrão de notificação de vídeo definida. Use !g-youtube-midia-on ${channelName} para personalizar.`
-      );
-      
       // Subscribe to the channel in StreamMonitor
       if (bot.streamMonitor) {
         bot.streamMonitor.subscribe(channelName, 'youtube');
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Canal do YouTube adicionado: ${channelName}\n\n` +
+            `Configuração padrão de notificação de vídeo definida. Use !g-youtube-midia-on ${channelName} para personalizar.`
+        });
       } else {
-        await bot.sendMessage(group.id, `⚠️ Aviso: O monitoramento de canais não está inicializado no bot. Entre em contato com o administrador.`);
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Canal do YouTube adicionado: ${channelName}\n\n` +
+            `⚠️ Aviso: O monitoramento de canais não está inicializado no bot. Entre em contato com o administrador.`
+        });
       }
     }
   }
@@ -2299,19 +2897,32 @@ class Management {
    * @param {Object} message - The message object
    * @param {Array} args - Command arguments
    * @param {Object} group - The group object
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setYoutubeOnlineMedia(bot, message, args, group) {
     // Similar to Twitch/Kick but with YouTube specific terms
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
+    // Validate and get channel name
     const channelName = await this.validateChannelName(bot, message, args, group, 'youtube');
-    if (!channelName) return;
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
     
     const channelConfig = this.findChannelConfig(group, 'youtube', channelName);
     
     if (!channelConfig) {
-      await bot.sendMessage(group.id, `Canal do YouTube não configurado: ${channelName}. Use !g-youtube-canal ${channelName} para configurar.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do YouTube não configurado: ${channelName}. Use !g-youtube-canal ${channelName} para configurar.`
+      });
     }
     
     const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
@@ -2320,13 +2931,17 @@ class Management {
       channelConfig.onConfig = this.createDefaultNotificationConfig('youtube', channelName);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação de vídeo para o canal ${channelName} redefinida para o padrão.`);
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação de vídeo para o canal ${channelName} redefinida para o padrão.`
+      });
     }
     
     if (!quotedMsg) {
-      await bot.sendMessage(group.id, 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
+      });
     }
     
     // Rest of the method is identical to Twitch/Kick versions with platform name differences
@@ -2371,10 +2986,17 @@ class Management {
       
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Configuração de notificação de vídeo para o canal ${channelName} atualizada com sucesso.`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação de vídeo para o canal ${channelName} atualizada com sucesso.`
+      });
     } catch (error) {
       this.logger.error(`Erro ao configurar notificação de vídeo para o canal ${channelName}:`, error);
-      await bot.sendMessage(group.id, `Erro ao configurar notificação: ${error.message}`);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Erro ao configurar notificação: ${error.message}`
+      });
     }
   }
 
@@ -2384,23 +3006,31 @@ class Management {
    * @param {Object} message - Message data
    * @param {Array} args - Command arguments
    * @param {Object} group - Group data
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async setUserNickname(bot, message, args, group) {
     try {
       if (!group) {
-        await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-        return;
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
       }
       
       // If no args, show current nickname if exists
       if (args.length === 0) {
         const userNick = this.getUserNickname(group, message.author);
         if (userNick) {
-          await bot.sendMessage(group.id, `Seu apelido atual é: ${userNick}`);
+          return new ReturnMessage({
+            chatId: group.id,
+            content: `Seu apelido atual é: ${userNick}`
+          });
         } else {
-          await bot.sendMessage(group.id, 'Você não tem um apelido definido. Use !g-apelido [apelido] para definir um.');
+          return new ReturnMessage({
+            chatId: group.id,
+            content: 'Você não tem um apelido definido. Use !g-apelido [apelido] para definir um.'
+          });
         }
-        return;
       }
       
       // Get nickname from arguments
@@ -2409,7 +3039,11 @@ class Management {
       // Limit to 20 characters
       if (nickname.length > 20) {
         nickname = nickname.substring(0, 20);
-        await bot.sendMessage(group.id, `O apelido foi limitado a 20 caracteres: ${nickname}`);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `O apelido foi limitado a 20 caracteres: ${nickname}`
+        });
       }
       
       // Initialize nicks array if it doesn't exist
@@ -2434,10 +3068,17 @@ class Management {
       // Save group data
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Apelido definido: ${nickname}`);
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Apelido definido: ${nickname}`
+      });
     } catch (error) {
       this.logger.error('Erro ao definir apelido:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao definir apelido. Por favor, tente novamente.');
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao definir apelido. Por favor, tente novamente.'
+      });
     }
   }
 
@@ -2462,26 +3103,35 @@ class Management {
    * @param {Object} message - Message data
    * @param {Array} args - Command arguments
    * @param {Object} group - Group data
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async ignoreUser(bot, message, args, group) {
     try {
       if (!group) {
-        await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-        return;
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
       }
       
       if (args.length === 0) {
         // Show currently ignored users
         if (!group.ignoredNumbers || !Array.isArray(group.ignoredNumbers) || group.ignoredNumbers.length === 0) {
-          await bot.sendMessage(group.id, 'Nenhum número está sendo ignorado neste grupo.');
+          return new ReturnMessage({
+            chatId: group.id,
+            content: 'Nenhum número está sendo ignorado neste grupo.'
+          });
         } else {
           let ignoredList = '*Números ignorados:*\n';
           group.ignoredNumbers.forEach(number => {
             ignoredList += `- ${number}\n`;
           });
-          await bot.sendMessage(group.id, ignoredList);
+          
+          return new ReturnMessage({
+            chatId: group.id,
+            content: ignoredList
+          });
         }
-        return;
       }
       
       // Get number from argument and clean it (keep only digits)
@@ -2489,8 +3139,10 @@ class Management {
       
       // Check if number has at least 8 digits
       if (number.length < 8) {
-        await bot.sendMessage(group.id, 'O número deve ter pelo menos 8 dígitos.');
-        return;
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'O número deve ter pelo menos 8 dígitos.'
+        });
       }
       
       // Initialize ignoredNumbers array if it doesn't exist
@@ -2505,16 +3157,28 @@ class Management {
         // Remove number from ignored list
         group.ignoredNumbers.splice(index, 1);
         await this.database.saveGroup(group);
-        await bot.sendMessage(group.id, `O número ${number} não será mais ignorado.`);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `O número ${number} não será mais ignorado.`
+        });
       } else {
         // Add number to ignored list
         group.ignoredNumbers.push(number);
         await this.database.saveGroup(group);
-        await bot.sendMessage(group.id, `O número ${number} será ignorado.`);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `O número ${number} será ignorado.`
+        });
       }
     } catch (error) {
       this.logger.error('Erro ao ignorar usuário:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando. Por favor, tente novamente.');
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao processar comando. Por favor, tente novamente.'
+      });
     }
   }
 
@@ -2524,26 +3188,35 @@ class Management {
    * @param {Object} message - Message data
    * @param {Array} args - Command arguments
    * @param {Object} group - Group data
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async muteCommand(bot, message, args, group) {
     try {
       if (!group) {
-        await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-        return;
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
       }
       
       if (args.length === 0) {
         // Show currently muted strings
         if (!group.mutedStrings || !Array.isArray(group.mutedStrings) || group.mutedStrings.length === 0) {
-          await bot.sendMessage(group.id, 'Nenhuma string está sendo ignorada neste grupo.');
+          return new ReturnMessage({
+            chatId: group.id,
+            content: 'Nenhuma string está sendo ignorada neste grupo.'
+          });
         } else {
           let mutedList = '*Strings ignoradas:*\n';
           group.mutedStrings.forEach(str => {
             mutedList += `- "${str}"\n`;
           });
-          await bot.sendMessage(group.id, mutedList);
+          
+          return new ReturnMessage({
+            chatId: group.id,
+            content: mutedList
+          });
         }
-        return;
       }
       
       // Get the string to mute (full argument string)
@@ -2561,16 +3234,28 @@ class Management {
         // Remove string from muted list
         group.mutedStrings.splice(index, 1);
         await this.database.saveGroup(group);
-        await bot.sendMessage(group.id, `Mensagens começando com "${muteString}" não serão mais ignoradas.`);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Mensagens começando com "${muteString}" não serão mais ignoradas.`
+        });
       } else {
         // Add string to muted list
         group.mutedStrings.push(muteString);
         await this.database.saveGroup(group);
-        await bot.sendMessage(group.id, `Mensagens começando com "${muteString}" serão ignoradas.`);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Mensagens começando com "${muteString}" serão ignoradas.`
+        });
       }
     } catch (error) {
       this.logger.error('Erro ao configurar mute:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando. Por favor, tente novamente.');
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao processar comando. Por favor, tente novamente.'
+      });
     }
   }
 
@@ -2580,15 +3265,24 @@ class Management {
    * @param {Object} message - Message data
    * @param {Array} args - Command arguments
    * @param {Object} group - Group data
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async customAdmin(bot, message, args, group) {
-    if (!group) return;
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
     
     if (args.length === 0) {
       // Mostra lista atual de admins adicionais
       const admins = group.additionalAdmins || [];
       if (admins.length === 0) {
-        await bot.sendMessage(group.id, 'Não há administradores adicionais configurados para este grupo.');
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Não há administradores adicionais configurados para este grupo.'
+        });
       } else {
         let adminList = '*Administradores adicionais:*\n';
         for (const admin of admins) {
@@ -2596,9 +3290,12 @@ class Management {
           const formattedNumber = this.formatPhoneNumber(admin);
           adminList += `- ${formattedNumber}\n`;
         }
-        await bot.sendMessage(group.id, adminList);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: adminList
+        });
       }
-      return;
     }
     
     // Obtém e formata o número do argumento
@@ -2606,8 +3303,10 @@ class Management {
     
     // Verifica se o número tem pelo menos 8 dígitos
     if (numero.length < 8) {
-      await bot.sendMessage(group.id, 'O número deve ter pelo menos 8 dígitos.');
-      return;
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'O número deve ter pelo menos 8 dígitos.'
+      });
     }
     
     // Formata o número como 123456789012@c.us
@@ -2628,26 +3327,44 @@ class Management {
       group.additionalAdmins.splice(index, 1);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Número removido da lista de administradores adicionais: ${this.formatPhoneNumber(numero)}`);
+      // Exibe a lista atualizada
+      const admins = group.additionalAdmins || [];
+      if (admins.length === 0) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Número removido da lista de administradores adicionais: ${this.formatPhoneNumber(numero)}\n\n` +
+            `Lista de administradores adicionais está vazia agora.`
+        });
+      } else {
+        let adminList = '*Administradores adicionais:*\n';
+        for (const admin of admins) {
+          const formattedNumber = this.formatPhoneNumber(admin);
+          adminList += `- ${formattedNumber}\n`;
+        }
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Número removido da lista de administradores adicionais: ${this.formatPhoneNumber(numero)}\n\n` +
+            adminList
+        });
+      }
     } else {
       // Adiciona o número
       group.additionalAdmins.push(numero);
       await this.database.saveGroup(group);
       
-      await bot.sendMessage(group.id, `Número adicionado à lista de administradores adicionais: ${this.formatPhoneNumber(numero)}`);
-    }
-    
-    // Exibe a lista atualizada
-    const admins = group.additionalAdmins || [];
-    if (admins.length === 0) {
-      await bot.sendMessage(group.id, 'Lista de administradores adicionais está vazia agora.');
-    } else {
-      let adminList = '*Lista de administradores adicionais atualizada:*\n';
-      for (const admin of admins) {
+      // Exibe a lista atualizada
+      let adminList = '*Administradores adicionais:*\n';
+      for (const admin of group.additionalAdmins) {
         const formattedNumber = this.formatPhoneNumber(admin);
         adminList += `- ${formattedNumber}\n`;
       }
-      await bot.sendMessage(group.id, adminList);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Número adicionado à lista de administradores adicionais: ${this.formatPhoneNumber(numero)}\n\n` +
+          adminList
+      });
     }
   }
 
@@ -2670,12 +3387,15 @@ class Management {
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
   async pauseGroup(bot, message, args, group) {
     try {
       if (!group) {
-        await bot.sendMessage(message.author, 'Este comando só pode ser usado em grupos.');
-        return;
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
       }
       
       // Alterna o estado de pausa do grupo
@@ -2685,15 +3405,23 @@ class Management {
       await this.database.saveGroup(group);
       
       if (group.paused) {
-        await bot.sendMessage(group.id, '⏸️ Bot pausado neste grupo. Somente o comando `!g-pausar` será processado até que seja reativado.');
+        return new ReturnMessage({
+          chatId: group.id,
+          content: '⏸️ Bot pausado neste grupo. Somente o comando `!g-pausar` será processado até que seja reativado.'
+        });
       } else {
-        await bot.sendMessage(group.id, '▶️ Bot reativado neste grupo. Todos os comandos estão disponíveis novamente.');
+        return new ReturnMessage({
+          chatId: group.id,
+          content: '▶️ Bot reativado neste grupo. Todos os comandos estão disponíveis novamente.'
+        });
       }
-      
-      this.logger.info(`Grupo ${group.id} ${group.paused ? 'pausado' : 'reativado'}`);
     } catch (error) {
       this.logger.error('Erro ao pausar/retomar grupo:', error);
-      await bot.sendMessage(message.group || message.author, 'Erro ao processar comando. Por favor, tente novamente.');
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao processar comando. Por favor, tente novamente.'
+      });
     }
   }
 
