@@ -46,6 +46,7 @@ async function saveMediaToTemp(media, extension) {
   const mediaBuffer = Buffer.from(media.data, 'base64');
   
   await fs.writeFile(tempFilePath, mediaBuffer);
+  logger.info(`[saveMediaToTemp] -> ${tempFilePath}`);
   return tempFilePath;
 }
 
@@ -121,6 +122,8 @@ async function createMediaFromFile(filePath, mimetype) {
   const fileData = await fs.readFile(filePath);
   const base64Data = fileData.toString('base64');
   
+  logger.info(`[createMediaFromFile] ${mimetype} -> ${filePath}`);
+
   return new MessageMedia(
     mimetype,
     base64Data,
@@ -189,7 +192,7 @@ async function handleGetAudio(bot, message, args, group) {
     // Salva mídia em arquivo temporário
     let tempFiles = [];
     
-    const inputExt = quotedMedia.mimetype.split('/')[1];
+    const inputExt = quotedMedia.mimetype.split('/')[1].split(';')[0];
     const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
     tempFiles.push(inputPath);
     
@@ -275,7 +278,7 @@ async function handleGetVoice(bot, message, args, group) {
     // Salva mídia em arquivo temporário
     let tempFiles = [];
     
-    const inputExt = quotedMedia.mimetype.split('/')[1];
+    const inputExt = quotedMedia.mimetype.split('/')[1].split(';')[0];
     const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
     tempFiles.push(inputPath);
     
@@ -379,11 +382,14 @@ async function handleVolumeAdjust(bot, message, args, group) {
     // Salva mídia em arquivo temporário
     let tempFiles = [];
     
-    const inputExt = quotedMedia.mimetype.split('/')[1];
+    let inputExt = quotedMedia.mimetype.split('/')[1].split(';')[0];
     const inputPath = await saveMediaToTemp(quotedMedia, inputExt);
     tempFiles.push(inputPath);
     
     // Ajusta volume
+    if(quotedMedia.mimetype.includes("audio")){
+      inputExt = "mp3"; // Força Mp3 pq mpeg e outros dá bug pra gerar MessageMedia
+    }
     const outputPath = await adjustVolume(inputPath, volumeLevel, inputExt);
     tempFiles.push(outputPath);
     

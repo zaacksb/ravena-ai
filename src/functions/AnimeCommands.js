@@ -4,6 +4,7 @@ const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('anime-commands');
 
@@ -54,7 +55,7 @@ async function buscarAnime(bot, message, args, group) {
     // Obtém dados do anime
     const titulo = data.title;
     const tituloJapones = data.japaneseTitle || 'N/A';
-    const sinopse = data.synopsis || 'Sinopse não disponível.';
+    const sinopse = (await translateText(data.synopsis, "pt")) || 'Sinopse não disponível.';
     const lancamento = data.aired ? data.aired.split(' to ')[0] : 'N/A';
     const finalizado = data.status || 'N/A';
     const episodios = data.episodes || 'N/A';

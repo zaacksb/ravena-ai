@@ -68,42 +68,6 @@ async function aiCommand(bot, message, args, group) {
   }
 }
 
-async function echoCommand(bot, message, args, group) {
-  const chatId = message.group || message.author;
-  
-  if (args.length === 0) {
-    logger.debug('Comando echo chamado sem texto');
-    return new ReturnMessage({
-      chatId: chatId,
-      content: 'Por favor, forneça algum texto para repetir.'
-    });
-  }
-  
-  const text = args.join(' ');
-  logger.debug(`Comando echo com texto: ${text}`);
-  
-  return new ReturnMessage({
-    chatId: chatId,
-    content: text
-  });
-}
-
-async function rollCommand(bot, message, args, group) {
-  const chatId = message.group || message.author;
-  
-  let sides = 6;
-  if (args.length > 0 && !isNaN(args[0])) {
-    sides = parseInt(args[0]);
-  }
-  
-  logger.debug(`Comando roll com ${sides} lados`);
-  const result = Math.floor(Math.random() * sides) + 1;
-  
-  return new ReturnMessage({
-    chatId: chatId,
-    content: `🎲 Você tirou ${result} (d${sides})`
-  });
-}
 
 // Criar array de comandos usando a classe Command
 const commands = [
@@ -125,26 +89,6 @@ const commands = [
       after: "✨"
     },
     method: aiCommand
-  }),
-  
-  new Command({
-    name: 'echo',
-    description: 'Repete o texto fornecido',
-    reactions: {
-      before: "📝",
-      after: "🔊"
-    },
-    method: echoCommand
-  }),
-  
-  new Command({
-    name: 'roll',
-    description: 'Joga um dado (padrão: 6 lados)',
-    reactions: {
-      before: "🎲",
-      after: "🎯"
-    },
-    method: rollCommand
   })
 ];
 

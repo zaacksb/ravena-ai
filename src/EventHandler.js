@@ -246,18 +246,11 @@ class EventHandler {
    * @param {Group} group - O objeto do grupo (se em grupo)
    */
   async processNonCommandMessage(bot, message, group) {
-    // Verifica se é uma mensagem de voz para processamento automático de STT
-    if (message.type === 'voice' && group && group.autoStt) {
-      const processed = await SpeechCommands.processAutoSTT(bot, message, group);
-      if (processed) return;
-    }
-    
-    // Manipula mensagens de voz privadas automaticamente
-    if (!message.group && message.type === 'voice') {
-      const processed = await SpeechCommands.processAutoSTT(bot, message, null);
-      if (processed) return;
-    }
-    
+
+    // Verifica se é uma mensagem de voz para processamento automático de STT    
+    const processed = await SpeechCommands.processAutoSTT(bot, message, group);
+    if (processed) return;
+        
     // Manipula comandos personalizados acionados automaticamente (aqueles que não requerem prefixo)
     if (group) {
       try {
@@ -317,7 +310,7 @@ class EventHandler {
     }
     
     // Verifica filtro de pessoas
-    if (filters.people && Array.isArray(filters.people) && filters.people.includes(message.author)) {
+    if (filters.people && Array.isArray(filters.people) && filters.people.some(person => message.author.includes(person))) {
       this.logger.info(`Mensagem filtrada no grupo ${group.id} - de usuário banido: ${message.author}`);
       
       // Deleta a mensagem se possível - não bloqueia

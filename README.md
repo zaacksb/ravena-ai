@@ -37,9 +37,9 @@
 - [x] Comando: !gif, busca de gifs
 - [x] Comando: !imagine, geração de imagens no sdwebui
 - [x] Comando: !anime, info de animes
-    - [ ] Traduzir sinopse
+    - [x] Traduzir sinopse
 - [x] Comando: !imdb, info de filmes e séries
-    - [ ] Traduzir sinopse
+    - [x] Traduzir sinopse
 - [x] Comando: !wiki, busca na wikipédia
 - [x] Comando: !velharia, importa os comandos genéricos antigos da ravena
 - [x] Comando: !dxx, comandos de dados agora como fixos
@@ -48,41 +48,19 @@
 - [x] Comando: !traduzir + reações de bandeira
 - [X] Implementar classes ReturnMessage e Command
 - [x] Migrar as funções para utlizar as classes Command e ReturnMessage
-    - [x] AnimeCommands.js
-    - [x] DonationCommands.js
-    - [x] FileConversions.js
-    - [x] FileManager.js
-    - [x] GiphyCommands.js
-    - [x] GroupCommands.js
-    - [x] ImageManipulation.js
-    - [X] ImdbCommands.js
-    - [x] LembretesCommands.js
-    - [x] ListCommands.js
-    - [x] Menu.js
-    - [x] PlaceholderCommands.js
-    - [x] RiotGamesCommands.js
-    - [x] RoletaRussaCommands.js
-    - [x] SearchCommands.js
-    - [X] SpeechCommands.js
-    - [x] StableDiffusionCommands.js
-    - [x] Stickers.js
-    - [x] StreamCommands.js
-    - [x] SummaryCommands.js
-    - [x] Weather.js
-    - [x] WikipediaCommands.js
-    - [x] YoutubeDownloader.js
+- [ ] Comando: !lastfm
 - [ ] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [ ] Comando: !news, ViniMunews (antigo JrMunews)
-- [ ] Melhorar comando !cmd pra ficar mais organizado
 - [ ] Script para migração de dados da ravena antiga
-- [ ] Comando: !ajuda [topico], usar o Gemini pra gerar ajuda sobre os comandos
+- [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
 - [ ] Melhor explicação da implementação do bot no README
-- [x] Simulador de mensagens do whats pra fazer tutoriais
+- [ ] Melhorar comando !cmd pra ficar mais organizado
+- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
 
@@ -92,11 +70,13 @@
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
 - [X] Fix boas vindas enviando mesmo sem setar
 - [ ] Fix emojis e reações que o claude criou estranhos
-- [ ] Fix autoStt não triggando
+- [x] Fix autoStt não triggando
 - [x] Imagine não tá retornando img
     - [ ] Problema no NSFWdetect, usar nudenet
-- [ ] !gif tá retornando img estática
+- [x] !gif tá retornando img estática
 - [ ] Fix TTS com eSpeak
+- [x] Busca img não funciona
+- [ ] Não salvando algumas propriedades de grupo
 
 ## 📚 Documentação dos Comandos
 

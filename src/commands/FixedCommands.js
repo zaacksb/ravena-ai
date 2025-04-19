@@ -32,6 +32,7 @@ class FixedCommands {
 
       this.logger.info(`Encontrados ${jsFiles.length} arquivos de comando`);
 
+      const modulosComErro = [];
       // Carrega cada módulo de comando
       for (const file of jsFiles) {
         try {
@@ -65,10 +66,14 @@ class FixedCommands {
           }
         } catch (error) {
           this.logger.error(`Erro ao carregar módulo de comando ${file}:`, error);
+          modulosComErro.push(file);
         }
       }
 
       this.logger.info(`Carregados ${this.commands.length} comandos fixos`);
+      if(modulosComErro.length > 0){
+        this.logger.warn(`ATENÇÃO: ${modulosComErro.length} módulos com erro:\n ${modulosComErro.join("\n- ")}`);
+      }
       
     } catch (error) {
       this.logger.error('Erro ao carregar comandos:', error);

@@ -381,7 +381,7 @@ async function listarLembretes(bot, message, args, group) {
       mensagem += `*Mensagem:* ${mensagemCurta}${temMidia}\n\n`;
     }
     
-    mensagem += `Para cancelar um lembrete, use: !cancelar <id>`;
+    mensagem += `Para cancelar um lembrete, use: !l-cancelar <id>`;
     
     return new ReturnMessage({
       chatId: chatId,
@@ -691,7 +691,7 @@ const commands = [
   }),
   
   new Command({
-    name: 'cancelar',
+    name: 'l-cancelar',
     description: 'Cancela um lembrete por ID',
     reactions: {
       before: "❌",

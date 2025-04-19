@@ -11,6 +11,7 @@ const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem');
 const LLMService = require('./services/LLMService');
 const { processListReaction } = require('./functions/ListCommands');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 class WhatsAppBot {
   /**
@@ -79,7 +80,8 @@ class WhatsAppBot {
     await this.client.initialize();
     
     this.logger.info(`Bot ${this.id} inicializado`);
-    
+    await sleep(5000);
+
     // Envia notificação de inicialização para o grupo de logs
     if (this.grupoLogs && this.isConnected) {
       try {
@@ -766,6 +768,8 @@ class WhatsAppBot {
         this.logger.error('Erro ao enviar notificação de desligamento:', error);
       }
     }
+
+    await sleep(5000);
     
     if (this.client) {
       await this.client.destroy();

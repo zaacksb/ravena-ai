@@ -1,20 +1,12 @@
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
-const translate = require('@vitalets/google-translate-api');
-const { wrapper } = require('@vitalets/google-translate-api/dist/cjs/middleware/rateLimiter');
-
-// Set up the translation API with rate limiting to avoid IP blocks
-const translateWithRateLimiter = wrapper(translate, {
-  delay: 500, // 500ms delay between requests
-  maxRetries: 3 // Retry up to 3 times if rate limit is hit
-});
 
 const logger = new Logger('translation-commands');
 
 logger.info('Módulo TranslationCommands carregado');
 
-// Mapping of language codes to full names
+// Mapeamento de códigos de idioma para nomes completos
 const LANGUAGE_NAMES = {
   'af': 'Afrikaans',
   'sq': 'Albanian',
@@ -125,7 +117,7 @@ const LANGUAGE_NAMES = {
   'zh': 'Chinese (Simplified)'
 };
 
-// Mapping of flags to language codes
+// Mapeamento de bandeiras para códigos de idioma
 const FLAG_TO_LANGUAGE = {
   '🇦🇷': 'es', // Argentina - Spanish
   '🇦🇹': 'de', // Austria - German
@@ -181,7 +173,7 @@ const FLAG_TO_LANGUAGE = {
   '🇿🇦': 'en'  // South Africa - English
 };
 
-// Mapping of common language name variations to language codes
+// Mapeamento de variações comuns de nomes de idiomas para códigos de idioma
 const LANGUAGE_ALIASES = {
   'inglês': 'en',
   'ingles': 'en',
@@ -219,24 +211,24 @@ const LANGUAGE_ALIASES = {
 };
 
 /**
- * Gets language code from language name or alias
- * @param {string} languageName - Language name or alias
- * @returns {string|null} - Language code or null if not found
+ * Obtém o código do idioma a partir do nome ou alias do idioma
+ * @param {string} languageName - Nome ou alias do idioma
+ * @returns {string|null} - Código do idioma ou null se não encontrado
  */
 function getLanguageCode(languageName) {
   const lowercaseLanguage = languageName.toLowerCase().trim();
   
-  // Check if it's a direct language code
+  // Verifica se é um código de idioma direto
   if (LANGUAGE_NAMES[lowercaseLanguage]) {
     return lowercaseLanguage;
   }
   
-  // Check if it's an alias
+  // Verifica se é um alias
   if (LANGUAGE_ALIASES[lowercaseLanguage]) {
     return LANGUAGE_ALIASES[lowercaseLanguage];
   }
   
-  // Search in language names
+  // Busca nos nomes de idiomas
   for (const [code, name] of Object.entries(LANGUAGE_NAMES)) {
     if (name.toLowerCase() === lowercaseLanguage) {
       return code;
@@ -247,36 +239,101 @@ function getLanguageCode(languageName) {
 }
 
 /**
- * Translates text to the specified language
- * @param {string} text - Text to translate
- * @param {string} targetLanguage - Target language code
- * @returns {Promise<string>} - Translated text
+ * Implementação de rate limiting simples para evitar bloqueios por excesso de requisições
+ * @param {function} func - Função a ser limitada
+ * @param {number} delay - Tempo de espera entre requisições em ms
+ * @param {number} maxRetries - Número máximo de tentativas
+ * @returns {function} - Função com rate limiting
+ */
+const wrapWithRateLimit = (func, delay = 500, maxRetries = 3) => {
+  let lastCallTime = 0;
+  
+  return async function(...args) {
+    // Garantir intervalo mínimo entre requisições
+    const now = Date.now();
+    const timeElapsed = now - lastCallTime;
+    
+    if (timeElapsed < delay) {
+      await new Promise(resolve => setTimeout(resolve, delay - timeElapsed));
+    }
+    
+    lastCallTime = Date.now();
+    
+    // Fazer tentativas com backoff exponencial
+    let retries = 0;
+    
+    while (retries <= maxRetries) {
+      try {
+        return await func(...args);
+      } catch (error) {
+        if (error.message && (
+          error.message.includes('rate limit') || 
+          error.message.includes('too many requests') ||
+          error.message.includes('429')
+        )) {
+          retries++;
+          if (retries > maxRetries) {
+            throw new Error(`Limite de taxa excedido após ${maxRetries} tentativas`);
+          }
+          // Esperar com backoff exponencial
+          await new Promise(resolve => 
+            setTimeout(resolve, delay * Math.pow(2, retries))
+          );
+        } else {
+          // Outro tipo de erro, propagar imediatamente
+          throw error;
+        }
+      }
+    }
+  };
+};
+
+/**
+ * Traduz texto para o idioma especificado
+ * @param {string} text - Texto a ser traduzido
+ * @param {string} targetLanguage - Código do idioma de destino
+ * @returns {Promise<string>} - Texto traduzido
  */
 async function translateText(text, targetLanguage) {
   try {
-    const result = await translateWithRateLimiter(text, { to: targetLanguage });
-    return result.text;
+    // Importar o módulo 'translate' dinamicamente
+    const translateModule = await import('translate');
+    const translate = translateModule.default;
+    
+    // Configurar o mecanismo de tradução (padrão é 'google')
+    translate.engine = 'google';
+    // Se você tiver uma chave API, pode configurá-la assim:
+    // translate.key = process.env.TRANSLATE_API_KEY;
+    
+    // Aplicar rate limiting à tradução
+    const translateWithRateLimit = wrapWithRateLimit(async (text, options) => {
+      return await translate(text, options);
+    });
+    
+    // Traduzir o texto
+    const translatedText = await translateWithRateLimit(text, { to: targetLanguage });
+    return translatedText;
   } catch (error) {
-    logger.error('Error translating text:', error);
+    logger.error('Erro ao traduzir texto:', error);
     throw error;
   }
 }
 
 /**
- * Handles the translation command
- * @param {WhatsAppBot} bot - Bot instance
- * @param {Object} message - Message data
- * @param {Array} args - Command arguments
- * @param {Object} group - Group data
- * @returns {Promise<ReturnMessage>} - Return message with translation
+ * Processa o comando de tradução
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - Mensagem de retorno com a tradução
  */
 async function handleTranslation(bot, message, args, group) {
   const chatId = message.group || message.author;
   
   try {
-    // Prepare to handle different formats:
+    // Preparar para lidar com diferentes formatos:
     // 1. !traduzir en Hello, world!
-    // 2. !traduzir en (in reply to a message)
+    // 2. !traduzir en (em resposta a uma mensagem)
     
     if (args.length === 0) {
       return new ReturnMessage({
@@ -287,7 +344,7 @@ async function handleTranslation(bot, message, args, group) {
       });
     }
     
-    // Get target language code
+    // Obter código do idioma de destino
     const languageArg = args[0].toLowerCase();
     const targetLanguage = getLanguageCode(languageArg);
     
@@ -302,7 +359,7 @@ async function handleTranslation(bot, message, args, group) {
     let textToTranslate;
     let quotedText = '';
     
-    // Check if it's a reply to a message
+    // Verificar se é uma resposta a uma mensagem
     if (args.length === 1) {
       try {
         const quotedMsg = await message.origin.getQuotedMessage();
@@ -316,14 +373,14 @@ async function handleTranslation(bot, message, args, group) {
         textToTranslate = quotedMsg.body;
         quotedText = `Original: "${textToTranslate}"\n\n`;
       } catch (error) {
-        logger.error('Error getting quoted message:', error);
+        logger.error('Erro ao obter mensagem citada:', error);
         return new ReturnMessage({
           chatId,
           content: 'Erro ao obter a mensagem citada. Por favor, tente novamente.'
         });
       }
     } else {
-      // Text is provided in the command
+      // Texto fornecido no comando
       textToTranslate = args.slice(1).join(' ');
     }
     
@@ -334,10 +391,10 @@ async function handleTranslation(bot, message, args, group) {
       });
     }
     
-    // Translate the text
+    // Traduzir o texto
     const translatedText = await translateText(textToTranslate, targetLanguage);
     
-    // Create the response
+    // Criar a resposta
     const languageName = LANGUAGE_NAMES[targetLanguage];
     const response = `🌐 *Tradução para ${languageName}*\n\n${quotedText}${translatedText}`;
     
@@ -349,23 +406,23 @@ async function handleTranslation(bot, message, args, group) {
       }
     });
   } catch (error) {
-    logger.error('Error in translation command:', error);
+    logger.error('Erro no comando de tradução:', error);
     return new ReturnMessage({
       chatId,
-      content: 'Erro ao traduzir o texto. Por favor, tente novamente.'
+      content: `Erro ao traduzir o texto. Por favor, tente novamente.\n${error.message}`
     });
   }
 }
 
 /**
- * Processes a reaction to potentially translate a message
- * @param {WhatsAppBot} bot - Bot instance
- * @param {Object} reaction - Reaction data
- * @returns {Promise<boolean>} - True if the reaction was processed
+ * Processa uma reação para potencialmente traduzir uma mensagem
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} reaction - Dados da reação
+ * @returns {Promise<boolean>} - True se a reação foi processada
  */
 async function processTranslationReaction(bot, reaction) {
   try {
-    // Check if the emoji is a flag
+    // Verificar se o emoji é uma bandeira
     const emoji = reaction.emoji;
     if (!FLAG_TO_LANGUAGE[emoji]) {
       return false;
@@ -373,7 +430,7 @@ async function processTranslationReaction(bot, reaction) {
     
     const targetLanguage = FLAG_TO_LANGUAGE[emoji];
     
-    // Get the message being reacted to
+    // Obter a mensagem que está sendo reagida
     const message = await bot.client.getMessage(reaction.messageId);
     if (!message || !message.body) {
       return false;
@@ -382,26 +439,26 @@ async function processTranslationReaction(bot, reaction) {
     const textToTranslate = message.body;
     const chatId = reaction.chatId;
     
-    // Translate the text
+    // Traduzir o texto
     const translatedText = await translateText(textToTranslate, targetLanguage);
     
-    // Create the response
+    // Criar a resposta
     const languageName = LANGUAGE_NAMES[targetLanguage];
     const response = `🌐 *Tradução para ${languageName}*\n\n${translatedText}`;
     
-    // Send the translation
+    // Enviar a tradução
     await bot.sendMessage(chatId, response, {
       quotedMessageId: reaction.messageId
     });
     
     return true;
   } catch (error) {
-    logger.error('Error processing translation reaction:', error);
+    logger.error('Erro ao processar reação de tradução:', error);
     return false;
   }
 }
 
-// Command definition
+// Definição do comando
 const commands = [
   new Command({
     name: 'traduzir',
@@ -416,8 +473,9 @@ const commands = [
   })
 ];
 
-// Export commands and reaction handler
+// Exportar comandos e manipulador de reação
 module.exports = {
   commands,
-  processTranslationReaction
+  processTranslationReaction,
+  translateText
 };

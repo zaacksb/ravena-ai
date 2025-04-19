@@ -290,17 +290,18 @@ async function speechToText(bot, message, args, group) {
  */
 async function processAutoSTT(bot, message, group) {
   try {
-    // Pula se não for mensagem de voz ou sem grupo
-    if (!message.group || message.type !== 'voice') {
+    const idChat = message.group ?? message.author;
+    // Pula se não for mensagem de voz/áudio
+    if (message.type !== 'voice' && message.type !== 'audio') {
       return false;
     }
     
     // Verifica se o auto-STT está habilitado para este grupo
-    if (!group || !group.autoStt) {
+    if (group && !group.autoStt) {
       return false;
     }
     
-    logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no grupo ${message.group}`);
+    logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no chat ${idChat}`);
     
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(message.content, 'ogg');
@@ -321,7 +322,7 @@ async function processAutoSTT(bot, message, group) {
     if (transcribedText) {
       // Cria ReturnMessage com a transcrição
       const returnMessage = new ReturnMessage({
-        chatId: message.group,
+        chatId: idChat,
         content: `_${transcribedText?.trim()}_`,
         options: {
           quotedMessageId: message.origin.id._serialized

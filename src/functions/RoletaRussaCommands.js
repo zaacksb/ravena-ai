@@ -16,11 +16,6 @@ logger.info('Módulo RoletaRussaCommands carregado');
 const ROLETA_RUSSA_FILE = path.join(__dirname, '../../data/roletarussa.json');
 
 /**
- * Tempo máximo de timeout em segundos (1 hora)
- */
-const MAX_TIMEOUT = 3600;
-
-/**
  * Emojis para ranking
  */
 const EMOJIS_RANKING = ["","🥇","🥈","🥉","🐅","🐆","🦌","🐐","🐏","🐓","🐇"];
@@ -375,83 +370,6 @@ async function mostrarRanking(bot, message, args, group) {
   }
 }
 
-/**
- * Define tempo de timeout da roleta russa (comando de administrador)
- * @param {WhatsAppBot} bot Instância do bot
- * @param {Object} message Dados da mensagem
- * @param {Array} args Argumentos do comando
- * @param {Object} group Dados do grupo
- * @returns {Promise<ReturnMessage>} Mensagem de retorno
- */
-async function definirTempoRoleta(bot, message, args, group) {
-  try {
-    // Verifica se está em um grupo
-    if (!message.group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
-    }
-    
-    const groupId = message.group;
-    
-    // Verifica se há argumento de tempo
-    if (args.length === 0 || isNaN(parseInt(args[0]))) {
-      return new ReturnMessage({
-        chatId: groupId,
-        content: 'Por favor, forneça um tempo em segundos. Exemplo: !g-setTempoRoleta 300'
-      });
-    }
-    
-    // Obtém e valida o tempo
-    let segundos = parseInt(args[0]);
-    
-    // Limita o tempo máximo
-    if (segundos > MAX_TIMEOUT) {
-      segundos = MAX_TIMEOUT;
-    } else if (segundos < 10) {
-      segundos = 10; // Mínimo de 10 segundos
-    }
-    
-    // Carrega dados da roleta
-    let dados = await carregarDadosRoleta();
-    
-    // Inicializa dados do grupo se necessário
-    dados = inicializarGrupo(dados, groupId);
-    
-    // Atualiza tempo de timeout
-    dados.grupos[groupId].tempoTimeout = segundos;
-    
-    // Salva dados
-    await salvarDadosRoleta(dados);
-    
-    // Formata tempo para exibição
-    const minutos = Math.floor(segundos / 60);
-    const segundosRestantes = segundos % 60;
-    let tempoFormatado = '';
-    
-    if (minutos > 0) {
-      tempoFormatado += `${minutos} minuto(s)`;
-      if (segundosRestantes > 0) {
-        tempoFormatado += ` e ${segundosRestantes} segundo(s)`;
-      }
-    } else {
-      tempoFormatado = `${segundos} segundo(s)`;
-    }
-    
-    return new ReturnMessage({
-      chatId: groupId,
-      content: `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
-    });
-  } catch (error) {
-    logger.error('Erro ao definir tempo de roleta:', error);
-    
-    return new ReturnMessage({
-      chatId: message.group || message.author,
-      content: 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.'
-    });
-  }
-}
 
 // Lista de comandos usando a classe Command
 const commands = [
@@ -477,18 +395,6 @@ const commands = [
       error: "❌"
     },
     method: mostrarRanking
-  }),
-  
-  new Command({
-    name: 'g-setTempoRoleta',
-    description: 'Define tempo de timeout da roleta russa (admin)',
-    category: 'management',
-    reactions: {
-      before: "⏱️",
-      after: "✅",
-      error: "❌"
-    },
-    method: definirTempoRoleta
   })
 ];
 

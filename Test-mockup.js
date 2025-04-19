@@ -253,8 +253,7 @@ async function runTests() {
     // await simulator.simulateTextMessage(testUser, testGroup, '!ping');
 
     // Test 5: Send ping command in group
-    logger.info('TEST 5: Add');
-    await simulator.simulateTextMessage(testUser, testGroup, '!ai receita de pudim');
+    await simulator.simulateTextMessage(testUser, testGroup, '!gif batata');
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 1000));

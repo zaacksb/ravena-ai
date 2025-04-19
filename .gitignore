@@ -150,3 +150,5 @@ data/groups.json
 data/lembretes.json
 /data/lembretes-media
 /temp
+/.baileys_auth_info
+/data/lists

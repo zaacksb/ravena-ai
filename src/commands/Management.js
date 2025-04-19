@@ -3,6 +3,7 @@ const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const NSFWPredict = require('../utils/NSFWPredict');
+const ReturnMessage = require('../models/ReturnMessage');
 
 /**
  * Manipula comandos de gerenciamento para grupos
@@ -43,6 +44,7 @@ class Management {
       'mute': 'muteCommand',
       'customAdmin': 'customAdmin',
       'pausar': 'pauseGroup',
+      'setTempoRoleta': 'definirTempoRoleta',
 
       // Twitch commands
       'twitch-canal': 'toggleTwitchChannel',
@@ -2695,6 +2697,83 @@ class Management {
     }
   }
 
+  /**
+   * Define tempo de timeout da roleta russa (comando de administrador)
+   * @param {WhatsAppBot} bot Instância do bot
+   * @param {Object} message Dados da mensagem
+   * @param {Array} args Argumentos do comando
+   * @param {Object} group Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async definirTempoRoleta(bot, message, args, group) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      const groupId = message.group;
+      
+      // Verifica se há argumento de tempo
+      if (args.length === 0 || isNaN(parseInt(args[0]))) {
+        return new ReturnMessage({
+          chatId: groupId,
+          content: 'Por favor, forneça um tempo em segundos. Exemplo: !g-setTempoRoleta 300'
+        });
+      }
+      
+      // Obtém e valida o tempo
+      let segundos = parseInt(args[0]);
+      
+      // Limita o tempo máximo
+      if (segundos > 3600) {
+        segundos = 3600;
+      } else if (segundos < 10) {
+        segundos = 10; // Mínimo de 10 segundos
+      }
+      
+      // Carrega dados da roleta
+      let dados = await carregarDadosRoleta();
+      
+      // Inicializa dados do grupo se necessário
+      dados = inicializarGrupo(dados, groupId);
+      
+      // Atualiza tempo de timeout
+      dados.grupos[groupId].tempoTimeout = segundos;
+      
+      // Salva dados
+      await salvarDadosRoleta(dados);
+      
+      // Formata tempo para exibição
+      const minutos = Math.floor(segundos / 60);
+      const segundosRestantes = segundos % 60;
+      let tempoFormatado = '';
+      
+      if (minutos > 0) {
+        tempoFormatado += `${minutos} minuto(s)`;
+        if (segundosRestantes > 0) {
+          tempoFormatado += ` e ${segundosRestantes} segundo(s)`;
+        }
+      } else {
+        tempoFormatado = `${segundos} segundo(s)`;
+      }
+      
+      return new ReturnMessage({
+        chatId: groupId,
+        content: `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
+      });
+    } catch (error) {
+      this.logger.error('Erro ao definir tempo de roleta:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.'
+      });
+    }
+  }
 }
 
 module.exports = Management;

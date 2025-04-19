@@ -10,9 +10,9 @@ const logger = new Logger('riot-games-commands');
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
 
 // Base URLs for different Riot APIs
-const LOL_BASE_URL = 'https://na1.api.riotgames.com/lol'; // Default to NA region
-const VALORANT_BASE_URL = 'https://na.api.riotgames.com/val';
-const WR_BASE_URL = 'https://americas.api.riotgames.com/riot/account/v1';
+const LOL_BASE_URL = 'https://br1.api.riotgames.com/lol'; // Default to NA region
+const VALORANT_BASE_URL = 'https://br1.api.riotgames.com/val';
+const WR_BASE_URL = 'https://br1.api.riotgames.com/riot/account/v1';
 
 // Emoji mapping for ranked tiers
 const RANK_EMOJIS = {
@@ -127,7 +127,7 @@ async function getLolSummonerData(summonerName) {
       mastery: masteryData
     };
   } catch (error) {
-    logger.error(`Error fetching LoL data for ${summonerName}:`, error);
+    logger.error(`Error fetching LoL data for ${summonerName}:`, error.message);
     throw new Error(`Não foi possível encontrar o invocador "${summonerName}" ou ocorreu um erro durante a busca.`);
   }
 }

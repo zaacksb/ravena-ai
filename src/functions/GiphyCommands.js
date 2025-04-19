@@ -3,6 +3,9 @@ const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const ffmpeg = require('fluent-ffmpeg');
+const { generateTempFilePath } = require('./FileConversions');
+const fs = require('fs').promises;
 
 const logger = new Logger('giphy-commands');
 
@@ -101,7 +104,8 @@ async function enviarGif(bot, message, args, group) {
     }
     
     // Extrai dados do GIF
-    gifUrl = gifData.images.original.url;
+    // MUDANÇA AQUI: Usamos a versão MP4 do GIF para garantir compatibilidade com WhatsApp
+    gifUrl = gifData.images.original.mp4 || gifData.images.original.url;
     gifTitle = gifData.title || 'GIF do Giphy';
     gifRating = gifData.rating || 'g';
     gifSource = gifData.source_tld || 'giphy.com';
@@ -122,10 +126,48 @@ async function enviarGif(bot, message, args, group) {
     // Baixa o GIF
     const gifResponse = await axios.get(gifUrl, { responseType: 'arraybuffer' });
     const gifBuffer = Buffer.from(gifResponse.data, 'binary');
-    const gifBase64 = gifBuffer.toString('base64');
     
-    // Cria mídia para o GIF
-    const media = new MessageMedia('image/gif', gifBase64, 'giphy.gif');
+    // Determina o tipo MIME correto com base na URL
+    const isMP4 = gifUrl.endsWith('.mp4');
+    
+    // Variável para armazenar o buffer final a ser enviado
+    let finalBuffer;
+    let finalMimeType = 'video/mp4'; // Sempre enviaremos como MP4
+    
+    if (isMP4) {
+        // Se já for MP4, usamos diretamente
+        finalBuffer = gifBuffer;
+    } else {
+        // Se for GIF, convertemos para MP4 usando FFMPEG
+        logger.info('Convertendo GIF para MP4...');
+        
+        // Salvamos o GIF temporariamente
+        const inputPath = generateTempFilePath('gif');
+        await fs.writeFile(inputPath, gifBuffer);
+        
+        try {
+            // Convertemos para MP4 sem áudio
+            const outputPath = await convertGifToMp4(inputPath);
+            
+            // Lemos o arquivo convertido
+            finalBuffer = await fs.readFile(outputPath);
+            
+            // Limpamos os arquivos temporários
+            await fs.unlink(inputPath).catch(e => logger.error('Erro ao excluir arquivo temporário:', e));
+            await fs.unlink(outputPath).catch(e => logger.error('Erro ao excluir arquivo temporário:', e));
+        } catch (error) {
+            logger.error('Erro ao converter GIF para MP4:', error);
+            // Em caso de falha na conversão, usamos o GIF original
+            finalBuffer = gifBuffer;
+            finalMimeType = 'image/gif';
+        }
+    }
+    
+    // Convertemos para base64
+    const finalBase64 = finalBuffer.toString('base64');
+    
+    // Cria mídia para o GIF/MP4
+    const media = new MessageMedia(finalMimeType, finalBase64, 'giphy.mp4');
     
     // Prepara a legenda
     let caption = '';
@@ -154,13 +196,14 @@ async function enviarGif(bot, message, args, group) {
     caption += `📊 *Classificação:* ${gifRating.toUpperCase()}\n`;
     caption += `🔗 *Fonte:* ${gifSource || 'Giphy'}\n`;
     
-    // Retorna a mídia com legenda
+    // Retorna a mídia com legenda e configuração correta para GIF
     return new ReturnMessage({
       chatId: chatId,
       content: media,
       options: {
         caption: caption,
-        sendMediaAsDocument: false, // Envia como mídia normal (não documento)
+        sendMediaAsDocument: false,
+        sendVideoAsGif: true, // IMPORTANTE: Define para enviar como GIF animado
         quotedMessageId: message.origin.id._serialized
       }
     });
@@ -186,6 +229,31 @@ async function enviarGif(bot, message, args, group) {
       content: `❌ ${errorMessage}`
     });
   }
+}
+
+/**
+ * Converte um GIF para MP4 sem áudio usando FFMPEG
+ * @param {string} inputPath - Caminho do arquivo GIF
+ * @returns {Promise<string>} - Caminho do arquivo MP4 gerado
+ */
+async function convertGifToMp4(inputPath) {
+  const outputPath = generateTempFilePath('mp4');
+  
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .output(outputPath)
+      .noAudio() // Sem áudio
+      .videoCodec('libx264') // Codec de vídeo H.264
+      .outputOptions([
+        '-pix_fmt yuv420p', // Formato de pixel compatível
+        '-movflags +faststart', // Otimização para streaming
+        '-preset ultrafast', // Conversão rápida
+        '-crf 23' // Qualidade razoável (valores menores = melhor qualidade)
+      ])
+      .on('end', () => resolve(outputPath))
+      .on('error', (err) => reject(err))
+      .run();
+  });
 }
 
 // Comandos utilizando a classe Command

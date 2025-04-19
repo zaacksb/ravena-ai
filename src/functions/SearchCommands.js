@@ -39,14 +39,7 @@ async function searchWeb(bot, message, args, group) {
     
     const query = args.join(' ');
     logger.info(`Buscando na web por: ${query}`);
-    
-    // Envia indicador de digitação
-    try {
-      await bot.client.sendPresenceUpdate('composing', chatId);
-    } catch (error) {
-      logger.error('Erro ao enviar indicador de digitação:', error);
-    }
-    
+        
     // Usa API DuckDuckGo
     const response = await axios.get('https://api.duckduckgo.com/', {
       params: {

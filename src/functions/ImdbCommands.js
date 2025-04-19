@@ -3,6 +3,7 @@ const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('imdb-commands');
 
@@ -151,10 +152,11 @@ async function buscarImdb(bot, message, args, group) {
     // Adiciona sinopse
     if (data.Plot && data.Plot !== "N/A") {
       // Limita tamanho da sinopse
-      const sinopse = data.Plot.length > 300 ? 
+      let sinopse = data.Plot.length > 300 ? 
         data.Plot.substring(0, 297) + '...' : 
         data.Plot;
       
+      sinopse = (await translateText(sinopse, "pt")) || sinopse;
       mensagem += `\n📝 *Sinopse:* ${sinopse}\n`;
     }
     
