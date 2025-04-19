@@ -16,12 +16,14 @@ class LLMService {
     this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234/v1';
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 10000;
     
+    /*  
     this.logger.debug('LLMService inicializado com configuração:', {
       hasOpenRouterKey: !!this.openRouterKey,
       hasOpenAIKey: !!this.openAIKey,
       localEndpoint: this.localEndpoint,
       apiTimeout: this.apiTimeout
     });
+    */
   }
 
   /**

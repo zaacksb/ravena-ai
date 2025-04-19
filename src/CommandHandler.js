@@ -52,10 +52,10 @@ class CommandHandler {
         this.logger.debug(`Carregados comandos personalizados para ${groups.length} grupos`);
         
         // Imprime comandos personalizados por grupo
-        for (const groupId in this.customCommands) {
-          this.logger.debug(`Comandos personalizados para o grupo ${groupId}:`, 
-            this.customCommands[groupId].map(cmd => cmd.startsWith));
-        }
+        // for (const groupId in this.customCommands) {
+        //   this.logger.debug(`Comandos personalizados para o grupo ${groupId}:`, 
+        //     this.customCommands[groupId].map(cmd => cmd.startsWith));
+        // }
       }
       
       this.logger.info('Todos os comandos carregados com sucesso');
@@ -73,10 +73,12 @@ class CommandHandler {
       const customCommands = await this.database.getCustomCommands(groupId);
       if (customCommands && Array.isArray(customCommands)) {
         this.customCommands[groupId] = customCommands.filter(cmd => cmd.active && !cmd.deleted);
-        this.logger.info(`Carregados ${this.customCommands[groupId].length} comandos personalizados para o grupo ${groupId}`);
+        if(this.customCommands[groupId].length > 0){
+          this.logger.info(`Carregados ${this.customCommands[groupId].length} comandos personalizados para o grupo ${groupId}`);
+        }
       } else {
         this.customCommands[groupId] = [];
-        this.logger.debug(`Nenhum comando personalizado encontrado para o grupo ${groupId}`);
+        //this.logger.debug(`Nenhum comando personalizado encontrado para o grupo ${groupId}`);
       }
     } catch (error) {
       this.logger.error(`Erro ao carregar comandos personalizados para o grupo ${groupId}:`, error);

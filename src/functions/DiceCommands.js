@@ -4,7 +4,7 @@ const Command = require('../models/Command');
 
 const logger = new Logger('dice-commands');
 
-logger.info('Módulo DiceCommands carregado');
+//logger.info('Módulo DiceCommands carregado');
 
 // Regex para reconhecer padrões de dados
 // Exemplos: d20, 2d6, d20+5, 3d8-2, etc.
@@ -223,8 +223,8 @@ for (const sides of COMMON_DICE) {
       name: `d${sides}`,
       description: `Rola um dado de ${sides} faces`,
       reactions: {
-        before: "🎲",
-        after: "🎯"
+        before: "⏳",
+        after: "🎲"
       },
       method: async (bot, message, args, group) => {
         return await rollDice(bot, message, args, group, sides);
@@ -239,8 +239,8 @@ commands.push(
     name: 'roll',
     description: 'Rola dados com padrão customizado (ex: 2d6+3)',
     reactions: {
-      before: "🎲",
-      after: "🎯"
+      before: "⏳",
+      after: "🎲"
     },
     method: async (bot, message, args, group) => {
       return await rollDice(bot, message, args, group);
@@ -249,6 +249,6 @@ commands.push(
 );
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

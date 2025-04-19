@@ -6,7 +6,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('wikipedia-commands');
 
-logger.info('Módulo WikipediaCommands carregado');
+//logger.info('Módulo WikipediaCommands carregado');
 
 // URL base da API da Wikipedia
 const WIKI_API_URL = 'https://pt.wikipedia.org/api/rest_v1/page/summary/';
@@ -191,8 +191,8 @@ const commands = [
     name: 'wiki',
     description: 'Busca informações na Wikipedia',
     reactions: {
-      before: "📚",
-      after: "🔍"
+      before: "⏳",
+      after: "📚"
     },
     method: buscarWikipedia
   })

@@ -12,7 +12,7 @@ const logger = new Logger('youtube-downloader');
 const database = Database.getInstance();
 const videoCacheManager = new VideoCacheManager(youtubedl, database.databasePath);
 
-logger.info('Módulo YoutubeDownloader carregado');
+//logger.info('Módulo YoutubeDownloader carregado');
 
 /**
  * Extrai o ID do vídeo de uma URL do YouTube
@@ -511,6 +511,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands, processYoutubeReaction };

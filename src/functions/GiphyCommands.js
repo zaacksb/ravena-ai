@@ -9,7 +9,7 @@ const fs = require('fs').promises;
 
 const logger = new Logger('giphy-commands');
 
-logger.info('Módulo GiphyCommands carregado');
+//logger.info('Módulo GiphyCommands carregado');
 
 // Chave da API do Giphy
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY;
@@ -262,7 +262,7 @@ const commands = [
     name: 'gif',
     description: 'Busca e envia um GIF do Giphy',
     reactions: {
-      before: "🔍",
+      before: "⏳",
       after: "📱"
     },
     method: enviarGif
@@ -270,6 +270,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

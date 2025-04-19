@@ -8,7 +8,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('roleta-russa-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo RoletaRussaCommands carregado');
+//logger.info('Módulo RoletaRussaCommands carregado');
 
 /**
  * Caminho para o arquivo JSON de dados da Roleta Russa
@@ -378,8 +378,7 @@ const commands = [
     description: 'Joga roleta russa, risco de ser silenciado',
     category: 'group',
     reactions: {
-      before: "🔫",
-      after: "🎯",
+      after: "🔫",
       error: "❌"
     },
     method: jogarRoletaRussa
@@ -390,7 +389,6 @@ const commands = [
     description: 'Mostra ranking da roleta russa',
     category: 'group',
     reactions: {
-      before: "📊",
       after: "🏆",
       error: "❌"
     },

@@ -9,7 +9,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('file-conversions');
 const tempDir = path.join(__dirname, '../../temp');
 
-logger.info('Módulo FileConversions carregado');
+//logger.info('Módulo FileConversions carregado');
 
 /**
  * Gera um nome de arquivo temporário único
@@ -464,6 +464,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

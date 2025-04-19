@@ -409,22 +409,10 @@ const commands = [
       error: "❌"
     },
     method: handleWeatherCommand
-  }),
-  
-  new Command({
-    name: 'weather',
-    description: 'Show weather forecast for a location (English version)',
-    reactions: {
-      before: "⏳",
-      after: "☀️",
-      error: "❌"
-    },
-    // Usa o mesmo método que o comando 'clima'
-    method: handleWeatherCommand
   })
 ];
 
 // Registra os comandos
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

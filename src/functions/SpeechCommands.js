@@ -4,8 +4,12 @@ const { exec } = require('child_process');
 const util = require('util');
 const { v4: uuidv4 } = require('uuid');
 const os = require('os');
+const axios = require('axios');
+const FormData = require('form-data');
+const { URLSearchParams } = require('url');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const crypto = require('crypto');
 const LLMService = require('../services/LLMService');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
@@ -15,8 +19,20 @@ const logger = new Logger('speech-commands');
 const database = Database.getInstance();
 const llmService = new LLMService({});
 
-const espeakPath = process.env.ESPEAK_PATH || 'espeak';
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
+const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';
+const alltalkOutputFolder = path.join(process.env.ALLTALK_FOLDER, "outputs");
+
+const whisperPath = path.join(process.env.ALLTALK_FOLDER, "alltalk_environment", "env", "Scripts", "Whisper.exe");
+
+// Definição dos personagens para TTS
+const ttsCharacters = {
+  "ravena": "ravena_sample.wav",
+  "mulher": "female_01.wav",
+  "homem": "male_01.wav",
+  "clint": "Clint_Eastwood CC3 (enhanced).wav",
+  "morgan": "Morgan_Freeman CC3.wav"
+};
 
 // Cria diretório temporário para arquivos de áudio
 const tempDir = path.join(os.tmpdir(), 'whatsapp-bot-speech');
@@ -28,7 +44,7 @@ fs.mkdir(tempDir, { recursive: true })
     logger.error('Erro ao criar diretório temporário:', error);
   });
 
-logger.info('Módulo SpeechCommands carregado');
+logger.info(`Módulo SpeechCommands carregado, whisperPath: ${whisperPath}`);
 
 /**
  * Obtém mídia da mensagem
@@ -71,14 +87,15 @@ async function saveMediaToTemp(media, extension = 'ogg') {
 }
 
 /**
- * Converte texto para voz usando espeak
+ * Converte texto para voz usando AllTalk API (XTTS)
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @param {string} character - Personagem a ser usado (opcional)
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
-async function textToSpeech(bot, message, args, group) {
+async function textToSpeech(bot, message, args, group, character = "ravena") {
   try {
     const chatId = message.group || message.author;
     
@@ -90,30 +107,47 @@ async function textToSpeech(bot, message, args, group) {
     }
     
     const text = args.join(' ');
-    logger.debug(`Convertendo texto para voz: ${text}`);
+    logger.debug(`Convertendo texto para voz (${character}): ${text}`);
     
-    // Gera nomes de arquivo únicos
-    const outputWav = path.join(tempDir, `${uuidv4()}.wav`);
-    const outputMp3 = path.join(tempDir, `${uuidv4()}.mp3`);
+    // Nome do arquivo de saída
+    const hash = crypto.randomBytes(2).toString('hex');
+    const outputFilename = `tts_audio_${hash}`;
+    const localArquivo = path.join(alltalkOutputFolder, `${outputFilename}.mp3`);
     
-    // Usa espeak (motor TTS gratuito) para gerar voz
-    // -v pt-br seleciona voz em português brasileiro
-    await execPromise(`"${espeakPath}" -v pt-br -f - -w "${outputWav}"`, {
-      input: text
+    // Monta a URL para a API do AllTalk
+    const apiUrl = `${allTalkAPI}api/tts-generate`;
+    
+    // Cria os parâmetros para a requisição usando URLSearchParams
+    const params = new URLSearchParams({
+      text_input: text,
+      text_filtering: "standard",
+      character_voice_gen: ttsCharacters[character],
+      narrator_enabled: "false",
+      narrator_voice_gen: "",
+      text_not_inside: "character",
+      language: "pt",
+      output_file_name: outputFilename,
+      output_file_timestamp: "false",
+      autoplay: "false",
+      autoplay_volume: "0.8"
     });
     
-    // Converte para MP3 para melhor compatibilidade com WhatsApp usando ffmpeg
-    await execPromise(`"${ffmpegPath}" -i "${outputWav}" -acodec libmp3lame -ab 128k "${outputMp3}"`);
+    // Faz a requisição para a API
+    const response = await axios({
+      method: 'post',
+      url: apiUrl,
+      data: params,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
     
-    // Lê o arquivo de áudio gerado
-    const audio = await fs.readFile(outputMp3);
+    if (response.data.status !== "generate-success") {
+      throw new Error(`Falha na geração de voz: ${response.data.status}`);
+    }
     
-    // Cria mídia a partir do áudio
-    const media = {
-      mimetype: 'audio/mp3',
-      data: audio.toString('base64'),
-      filename: 'speech.mp3'
-    };
+    logger.info(`Criando mídia de '${localArquivo}'`);
+    const media = await bot.createMedia(localArquivo);
     
     // Retorna a ReturnMessage com o áudio
     const returnMessage = new ReturnMessage({
@@ -125,12 +159,11 @@ async function textToSpeech(bot, message, args, group) {
       }
     });
     
-    logger.info('Áudio TTS gerado com sucesso');
+    logger.info(`Áudio TTS gerado com sucesso usando personagem ${character}`);
     
     // Limpa arquivos temporários
     try {
-      await fs.unlink(outputWav);
-      await fs.unlink(outputMp3);
+      await fs.unlink(localArquivo);
       logger.debug('Arquivos temporários limpos');
     } catch (cleanupError) {
       logger.error('Erro ao limpar arquivos temporários:', cleanupError);
@@ -147,16 +180,16 @@ async function textToSpeech(bot, message, args, group) {
     });
   }
 }
-
 /**
- * Converte voz para texto usando vosk
+ * Converte voz para texto usando o executável Whisper diretamente
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
+ * @param {boolean} optimizeWithLLM - Se deve otimizar o texto com LLM
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
-async function speechToText(bot, message, args, group) {
+async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
   try {
     const chatId = message.group || message.author;
     
@@ -191,18 +224,29 @@ async function speechToText(bot, message, args, group) {
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(media, 'ogg');
     
-    // Converte para formato WAV para melhor compatibilidade com motores STT
+    // Converte para formato WAV para melhor compatibilidade
     const wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
-    await execPromise(`ffmpeg -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
+    await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
     
-    // Usa vosk-transcriber (motor STT gratuito e offline)
-    // Isso pressupõe que vosk-transcriber esteja instalado e o modelo baixado
-    const { stdout } = await execPromise(
-      `vosk-transcriber -i "${wavPath}" -l pt -m ${process.env.VOSK_STT_MODEL}`, { encoding: 'utf8' }
-    );
+    // Execute whisper diretamente
+    // Usar o modelo large-v3-turbo e definir o idioma para português
+    const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo --language pt --output_dir "${tempDir}" --output_format txt`;
     
-    // Extrai o texto transcrito
-    let transcribedText = stdout.trim();
+    logger.debug(`[speechToText] Executando comando: ${whisperCommand}`);
+    
+    await execPromise(whisperCommand);
+    
+    // O arquivo de saída vai ter o mesmo nome que o arquivo de entrada mas com extensão .txt
+    const whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
+    
+    // Lê o texto transcrito
+    let transcribedText = '';
+    try {
+      transcribedText = await fs.readFile(whisperOutputPath, 'utf8');
+      transcribedText = transcribedText.trim();
+    } catch (readError) {
+      logger.error('[speechToText] Erro ao ler arquivo de transcrição:', readError);
+    }
     
     // Se a transcrição falhar ou estiver vazia, fornece uma mensagem útil
     if (!transcribedText) {
@@ -221,6 +265,9 @@ async function speechToText(bot, message, args, group) {
       try {
         await fs.unlink(audioPath);
         await fs.unlink(wavPath);
+        if (await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
+          await fs.unlink(whisperOutputPath);
+        }
         logger.debug('Arquivos temporários limpos');
       } catch (cleanupError) {
         logger.error('Erro ao limpar arquivos temporários:', cleanupError);
@@ -240,29 +287,32 @@ async function speechToText(bot, message, args, group) {
     
     logger.info(`[speechToText] Resultado STT gerado com sucesso: ${transcribedText}`);
     
-    // Inicia processamento com LLM para melhoria do texto em paralelo
-    try {
-      const improvedText = await llmService.getCompletion({
-        prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-        provider: 'openrouter',
-        temperature: 0.7,
-        maxTokens: 300
-      });
-      
-      // Não vamos aguardar essa melhoria para retornar a mensagem inicial
-      // Em vez disso, vamos atualizar a mensagem existente quando a melhoria estiver pronta
-      logger.info(`[speechToText] Melhoramento via LLM recebido: ${improvedText}`);
-      
-      // Nota: Essa atualização da mensagem precisará ser feita no CommandHandler
-      // já que ReturnMessage é apenas um objeto de dados e não pode fazer a edição diretamente
-    } catch (llmError) {
-      logger.error('[speechToText] Melhoramento via LLM deu erro, ignorando.', llmError);
+    // Inicia processamento com LLM para melhoria do texto em paralelo, se habilitado
+    if (optimizeWithLLM) {
+      try {
+        const improvedText = await llmService.getCompletion({
+          prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
+          provider: 'openrouter',
+          temperature: 0.7,
+          maxTokens: 300
+        });
+        
+        // Não vamos aguardar essa melhoria para retornar a mensagem inicial
+        logger.info(`[speechToText] Melhoramento via LLM recebido: ${improvedText}`);
+        
+        // Nota: Essa atualização da mensagem precisará ser feita no CommandHandler
+      } catch (llmError) {
+        logger.error('[speechToText] Melhoramento via LLM deu erro, ignorando.', llmError);
+      }
     }
     
     // Limpa arquivos temporários
     try {
       await fs.unlink(audioPath);
       await fs.unlink(wavPath);
+      if (await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
+        await fs.unlink(whisperOutputPath);
+      }
       logger.debug('Arquivos temporários limpos');
     } catch (cleanupError) {
       logger.error('Erro ao limpar arquivos temporários:', cleanupError);
@@ -306,17 +356,30 @@ async function processAutoSTT(bot, message, group) {
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(message.content, 'ogg');
     
-    // Converte para formato WAV para melhor compatibilidade com motores STT
+    // Converte para formato WAV para melhor compatibilidade
     const wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
-    await execPromise(`ffmpeg -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
+    await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
     
-    // Usa vosk-transcriber (motor STT gratuito e offline)
-    const { stdout } = await execPromise(
-      `vosk-transcriber -i "${wavPath}" -l pt -m ${process.env.VOSK_STT_MODEL}`, { encoding: 'utf8' }
-    );
+    // Execute whisper diretamente
+    // Usar o modelo large-v3-turbo e definir o idioma para português
+    const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo --language pt --output_dir "${tempDir}" --output_format txt`;
     
-    // Extrai o texto transcrito
-    let transcribedText = stdout.trim();
+    logger.debug(`[processAutoSTT] Executando comando: ${whisperCommand}`);
+    
+    await execPromise(whisperCommand);
+    
+    // O arquivo de saída vai ter o mesmo nome que o arquivo de entrada mas com extensão .txt
+    const whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
+    
+    // Lê o texto transcrito
+    let transcribedText = '';
+    try {
+      transcribedText = await fs.readFile(whisperOutputPath, 'utf8');
+      transcribedText = transcribedText.trim();
+    } catch (readError) {
+      logger.error('[processAutoSTT] Erro ao ler arquivo de transcrição:', readError);
+      return false;
+    }
     
     // Se a transcrição for bem-sucedida, envia-a
     if (transcribedText) {
@@ -346,7 +409,6 @@ async function processAutoSTT(bot, message, group) {
         logger.info(`[processAutoSTT] Melhoramento via LLM recebido: ${improvedText}`);
         
         // Nota: Aqui seria necessário um método para editar a mensagem já enviada
-        // O ideal seria criar esse método no bot para atualizar a mensagem
       } catch (llmError) {
         logger.error('[processAutoSTT] Melhoramento via LLM deu erro, ignorando.', llmError);
       }
@@ -356,6 +418,9 @@ async function processAutoSTT(bot, message, group) {
     try {
       await fs.unlink(audioPath);
       await fs.unlink(wavPath);
+      if (await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
+        await fs.unlink(whisperOutputPath);
+      }
       logger.debug('Arquivos temporários limpos');
     } catch (cleanupError) {
       logger.error('Erro ao limpar arquivos temporários:', cleanupError);
@@ -368,19 +433,32 @@ async function processAutoSTT(bot, message, group) {
   }
 }
 
-// Define os comandos usando a classe Command
-const commands = [
-  new Command({
-    name: 'tts',
-    description: 'Converte texto para voz',
+// Função para criar o comando TTS para um personagem específico
+function createTTSCommandForCharacter(character) {
+  const commandName = character === 'ravena' ? 'tts' : `tts-${character}`;
+  
+  return new Command({
+    name: commandName,
+    description: `Converte texto para voz usando personagem ${character}`,
     category: 'group',
     reactions: {
       before: "⌛️",
       after: "🔊"
     },
-    method: textToSpeech
-  }),
-  
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, character)
+  });
+}
+
+// Define os comandos usando a classe Command
+const commands = [];
+
+// Adiciona comandos TTS para cada personagem
+Object.keys(ttsCharacters).forEach(character => {
+  commands.push(createTTSCommandForCharacter(character));
+});
+
+// Adiciona comando STT
+commands.push(
   new Command({
     name: 'stt',
     description: 'Converte voz para texto',
@@ -392,7 +470,7 @@ const commands = [
     },
     method: speechToText
   })
-];
+);
 
 // Exporta função para ser usada em EventHandler
 module.exports.commands = commands;

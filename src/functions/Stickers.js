@@ -8,7 +8,7 @@ const Command = require('../models/Command');
 const logger = new Logger('sticker-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo StickerCommands carregado');
+//logger.info('Módulo StickerCommands carregado');
 
 /**
  * Processa comando para converter mídia em sticker
@@ -136,8 +136,9 @@ const commands = [
     description: 'Converte mídia em sticker',
     needsMedia: true, // Verificará tanto mídia direta quanto mídia de mensagem citada
     reactions: {
-      before: "🖼",
-      after: "✅",
+      trigger: "🖼",
+      before: "⏳",
+      after: "🖼",
       error: "❌"
     },
     method: stickerCommand
@@ -148,8 +149,9 @@ const commands = [
     description: 'Alias curto para comando sticker',
     needsMedia: true,
     reactions: {
-      before: "🖼",
-      after: "✅",
+      trigger: "🖼",
+      before: "⏳",
+      after: "🖼",
       error: "❌"
     },
     method: async (bot, message, args, group) => {
@@ -160,6 +162,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

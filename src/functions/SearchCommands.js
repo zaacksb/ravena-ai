@@ -16,7 +16,7 @@ function decodeHtmlEntities(text) {
     .replace(/&amp;/g, '&');
 }
 
-logger.info('Módulo SearchCommands carregado');
+//logger.info('Módulo SearchCommands carregado');
 
 /**
  * Busca na web usando DuckDuckGo
@@ -329,8 +329,9 @@ const commands = [
     category: 'group',
     aliases: ['google', 'search'],
     reactions: {
-      before: "🔍",
-      after: "✅"
+      trigger: "🔍",
+      before: "⏳",
+      after: "🔍"
     },
     method: searchWeb
   }),
@@ -341,14 +342,14 @@ const commands = [
     category: 'group',
     aliases: ['img', 'imagem'],
     reactions: {
-      before: "🖼️",
-      after: "✅"
+      before: "⏳",
+      after: "🖼️"
     },
     method: searchImages
   })
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

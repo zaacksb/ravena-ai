@@ -10,7 +10,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('lembretes-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo LembretesCommands carregado');
+//logger.info('Módulo LembretesCommands carregado');
 
 // Caminho para o arquivo JSON de lembretes
 const LEMBRETES_FILE = path.join(__dirname, '../../data/lembretes.json');
@@ -673,8 +673,8 @@ const commands = [
     name: 'lembrar',
     description: 'Configura um lembrete para uma data específica',
     reactions: {
-      before: "⏰",
-      after: "✅"
+      before: "⏳",
+      after: "⏰"
     },
     needsQuotedMsg: true,
     method: criarLembrete
@@ -684,8 +684,8 @@ const commands = [
     name: 'lembretes',
     description: 'Lista os lembretes ativos',
     reactions: {
-      before: "📋",
-      after: "✅"
+      before: "⏳",
+      after: "📋"
     },
     method: listarLembretes
   }),
@@ -694,8 +694,8 @@ const commands = [
     name: 'l-cancelar',
     description: 'Cancela um lembrete por ID',
     reactions: {
-      before: "❌",
-      after: "✅"
+      before: "⏳",
+      after: "🗑"
     },
     method: cancelarLembrete
   })
@@ -740,7 +740,7 @@ const commands = [
 })();
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { 
   commands,

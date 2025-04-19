@@ -4,7 +4,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('translation-commands');
 
-logger.info('Módulo TranslationCommands carregado');
+//logger.info('Módulo TranslationCommands carregado');
 
 // Mapeamento de códigos de idioma para nomes completos
 const LANGUAGE_NAMES = {
@@ -448,7 +448,7 @@ async function processTranslationReaction(bot, reaction) {
     
     // Enviar a tradução
     await bot.sendMessage(chatId, response, {
-      quotedMessageId: reaction.msgId.id
+      quotedMessageId: reaction.msgId._serialized
     });
     
     return true;

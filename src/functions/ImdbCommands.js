@@ -7,7 +7,7 @@ const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('imdb-commands');
 
-logger.info('Módulo ImdbCommands carregado');
+//logger.info('Módulo ImdbCommands carregado');
 
 // API key do OMDB (baseado na API do IMDB)
 const OMDB_API_KEY = process.env.OMDB_API_KEY || '';
@@ -239,8 +239,8 @@ const commands = [
     name: 'imdb',
     description: 'Busca informações sobre filmes ou séries no IMDB',
     reactions: {
-      before: "🎬",
-      after: "🍿"
+      before: "⏳",
+      after: "🎬"
     },
     method: buscarImdb
   })

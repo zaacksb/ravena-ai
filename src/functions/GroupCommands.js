@@ -9,7 +9,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('group-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo GroupCommands carregado');
+//logger.info('Módulo GroupCommands carregado');
 
 /**
  * Menciona todos os membros em um grupo

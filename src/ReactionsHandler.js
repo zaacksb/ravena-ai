@@ -1,3 +1,5 @@
+const fs = require('fs').promises;
+const path = require('path');
 const Logger = require('./utils/Logger');
 
 /**
@@ -6,19 +8,84 @@ const Logger = require('./utils/Logger');
 class ReactionsHandler {
   constructor() {
     this.logger = new Logger('reaction-handler');
-    
-    // Mapa de emojis de reação para nomes de comandos
-    this.reactionCommands = {
-      '🖼️': 'sticker',     // Comando de sticker
-      '✂️': 'stickerbg',   // Sticker com remoção de fundo
-      '🪓': 'removebg',    // Remover fundo
-      '🤖': 'ai',          // Resposta de IA
-      '🤪': 'distort',     // Efeito de distorção
-      '📝': 'sketch',      // Efeito de esboço
-      '🎭': 'neon',        // Efeito neon
-      '🧩': 'pixelate',    // Efeito de pixelização
-      '🖌️': 'oil'         // Efeito de pintura a óleo
-    };
+    this.reactionCommands = {};
+    this.functionsPath = path.join(__dirname, 'functions');
+
+    this.loadCommands();
+  }
+
+  /**
+   * Carrega todos os comandos que possuem triggers de reação
+   */
+  async loadCommands() {
+    try {
+      // Verifica se o diretório functions existe
+      try {
+        await fs.access(this.functionsPath);
+      } catch (error) {
+        this.logger.info('Diretório functions não existe, criando-o');
+        await fs.mkdir(this.functionsPath, { recursive: true });
+      }
+
+      // Obtém todos os arquivos no diretório functions
+      const files = await fs.readdir(this.functionsPath);
+      const jsFiles = files.filter(file => file.endsWith('.js'));
+
+      this.logger.info(`Encontrados ${jsFiles.length} arquivos de função para verificar reações`);
+
+      const modulosComErro = [];
+      // Carrega cada módulo de função
+      for (const file of jsFiles) {
+        try {
+          const commandModule = require(path.join(this.functionsPath, file));
+          
+          // Verifica se o módulo exporta comandos
+          if (commandModule.commands && Array.isArray(commandModule.commands)) {
+            // Processa cada comando para encontrar os que têm triggers de reação
+            commandModule.commands.forEach(cmd => {
+              if (cmd.reactions && cmd.reactions.trigger) {
+                this.processCommandTriggers(cmd);
+              }
+            });
+          }
+        } catch (error) {
+          this.logger.error(`Erro ao carregar módulo para reações ${file}:`, error);
+          modulosComErro.push(file);
+        }
+      }
+
+      const numReactionCommands = Object.keys(this.reactionCommands).length;
+      this.logger.info(`Carregados ${numReactionCommands} comandos de reação`);
+      
+      if (modulosComErro.length > 0) {
+        this.logger.warn(`ATENÇÃO: ${modulosComErro.length} módulos com erro:\n ${modulosComErro.join("\n- ")}`);
+      }
+      
+    } catch (error) {
+      this.logger.error('Erro ao carregar comandos de reação:', error);
+    }
+  }
+
+  /**
+   * Processa os triggers de um comando e os adiciona ao mapa de reactionCommands
+   * @param {Command} cmd - O objeto de comando
+   */
+  processCommandTriggers(cmd) {
+    try {
+      const triggers = Array.isArray(cmd.reactions.trigger) 
+        ? cmd.reactions.trigger 
+        : [cmd.reactions.trigger];
+      
+      // Adiciona cada trigger ao mapa
+      triggers.forEach(emoji => {
+        if (emoji && typeof emoji === 'string') {
+          this.reactionCommands[emoji] = cmd.name;
+          this.logger.debug(`Mapeado emoji ${emoji} para comando ${cmd.name}`);
+        }
+      });
+    } catch (error) {
+      this.logger.error(`Erro ao processar triggers do comando ${cmd.name}:`, error);
+    }
   }
 
   /**

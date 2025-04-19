@@ -9,7 +9,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('stable-diffusion-commands');
 const nsfwPredict = NSFWPredict.getInstance();
 
-logger.info('Módulo StableDiffusionCommands carregado');
+//logger.info('Módulo StableDiffusionCommands carregado');
 
 // Configuração da API SD WebUI
 const API_URL = process.env.SDWEBUI_URL || 'http://localhost:7860';
@@ -180,7 +180,8 @@ const commands = [
     name: 'imagine',
     description: 'Gera uma imagem usando Stable Diffusion',
     reactions: {
-      before: "🎨",
+      trigger: "✨",
+      before: "🔍",
       after: "✨"
     },
     method: generateImage
@@ -188,6 +189,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

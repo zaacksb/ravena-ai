@@ -10,7 +10,7 @@ const Command = require('../models/Command');
 const logger = new Logger('menu-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo MenuCommands carregado');
+//logger.info('Módulo MenuCommands carregado');
 
 /**
  * Agrupa comandos por categoria para melhor organização
@@ -55,8 +55,8 @@ function formatCommand(cmd, prefix) {
   }
   
   // Adiciona reação se disponível
-  if (cmd.reactions && cmd.reactions.before) {
-    result += ` (${cmd.reactions.before})`;
+  if (cmd.reactions && cmd.reactions.trigger) {
+    result += ` (${cmd.reactions.trigger})`;
   }
   
   // Adiciona descrição
@@ -101,8 +101,8 @@ async function sendCommandList(bot, message, args, group) {
       menuText += '*Comandos Personalizados:*\n';
       for (const cmd of customCommands) {
         let cmdText = `• *${prefix}${cmd.startsWith}*`;
-        if (cmd.reactions && cmd.reactions.before) {
-          cmdText += ` (${cmd.reactions.before})`;
+        if (cmd.reactions && cmd.reactions.trigger) {
+          cmdText += ` (${cmd.reactions.trigger})`;
         }
         menuText += `${cmdText}\n`;
       }
@@ -179,6 +179,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

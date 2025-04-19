@@ -13,7 +13,7 @@ const database = Database.getInstance();
 // Emoji numbers for reactions
 const NUMBER_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
-logger.info('Módulo ListCommands carregado');
+//logger.info('Módulo ListCommands carregado');
 
 /**
  * Process reactions to join or leave lists
@@ -875,8 +875,8 @@ const commands = [
     description: 'Mostra as listas disponíveis no grupo',
     category: 'group',
     reactions: {
-      before: "📋",
-      after: "✅"
+      before: "⏳",
+      after: "📋"
     },
     method: showLists
   }),
@@ -886,8 +886,8 @@ const commands = [
     description: 'Alias para comando listas',
     category: 'group',
     reactions: {
-      before: "📋",
-      after: "✅"
+      before: "⏳",
+      after: "📋"
     },
     method: showLists
   }),
@@ -897,8 +897,8 @@ const commands = [
     description: 'Cria uma nova lista',
     category: 'group',
     reactions: {
-      before: "➕",
-      after: "✅"
+      before: "⏳",
+      after: "➕"
     },
     method: createList
   }),
@@ -908,8 +908,8 @@ const commands = [
     description: 'Cria uma nova lista com título',
     category: 'group',
     reactions: {
-      before: "➕",
-      after: "✅"
+      before: "⏳",
+      after: "➕"
     },
     method: createListWithTitle
   }),
@@ -919,8 +919,8 @@ const commands = [
     description: 'Deleta uma lista',
     category: 'group',
     reactions: {
-      before: "🗑️",
-      after: "✅"
+      before: "⏳",
+      after: "🗑️"
     },
     method: deleteList
   }),
@@ -930,8 +930,8 @@ const commands = [
     description: 'Entra em uma lista',
     category: 'group',
     reactions: {
-      before: "➡️",
-      after: "✅"
+      before: "⏳",
+      after: "➡️"
     },
     method: joinList
   }),
@@ -941,8 +941,8 @@ const commands = [
     description: 'Sai de uma lista',
     category: 'group',
     reactions: {
-      before: "⬅️",
-      after: "✅"
+      before: "⏳",
+      after: "⬅️"
     },
     method: leaveList
   }),
@@ -952,8 +952,8 @@ const commands = [
     description: 'Define título de uma lista',
     category: 'group',
     reactions: {
-      before: "✏️",
-      after: "✅"
+      before: "⏳",
+      after: "✏️"
     },
     method: setListTitle
   }),
@@ -963,8 +963,8 @@ const commands = [
     description: 'Remove um usuário de uma lista (admin only)',
     category: 'group',
     reactions: {
-      before: "❌",
-      after: "✅"
+      before: "⏳",
+      after: "❌"
     },
     method: removeFromList
   })

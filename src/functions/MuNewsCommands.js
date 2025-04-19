@@ -278,7 +278,7 @@ const commands = [
     description: 'Exibe as MuNews para uma data específica (padrão: hoje)',
     usage: '!news [YYYY-MM-DD]',
     reactions: {
-      before: "🔍",
+      before: "⏳",
       after: "📰",
       error: "❌"
     },

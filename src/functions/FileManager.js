@@ -22,7 +22,7 @@ const CONFIG = {
 // Nome do banco de dados de arquivos
 const FILES_DB_FILE = 'files-db.json';
 
-logger.info('Módulo FileManager carregado');
+//logger.info('Módulo FileManager carregado');
 
 /**
  * Estrutura do banco de dados de arquivos:
@@ -1074,8 +1074,8 @@ const commands = [
     name: 'pastas',
     description: 'Lista as pastas e arquivos criadas no grupo/chat',
     reactions: {
-      before: "📂",
-      after: "✅"
+      before: "⏳",
+      after: "📂"
     },
     method: listFiles
   }),
@@ -1084,8 +1084,8 @@ const commands = [
     name: 'p-criar',
     description: 'Cria nova pasta',
     reactions: {
-      before: "📁",
-      after: "✅"
+      before: "⏳",
+      after: "📁"
     },
     method: createFolder
   }),
@@ -1094,8 +1094,8 @@ const commands = [
     name: 'p-enviar',
     description: 'Envia arquivo para a pasta destino',
     reactions: {
-      before: "📤",
-      after: "✅"
+      before: "⏳",
+      after: "📤"
     },
     method: uploadFile
   }),
@@ -1104,8 +1104,8 @@ const commands = [
     name: 'p-excluir',
     description: 'Apaga arquivo ou pasta',
     reactions: {
-      before: "🗑️",
-      after: "✅"
+      before: "⏳",
+      after: "🗑️"
     },
     method: deleteFile
   }),
@@ -1114,15 +1114,15 @@ const commands = [
     name: 'p-baixar',
     description: 'Baixa arquivo ou pasta',
     reactions: {
-      before: "📥",
-      after: "✅"
+      before: "⏳",
+      after: "📥"
     },
     method: downloadFile
   })
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { 
   commands,

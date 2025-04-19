@@ -117,28 +117,36 @@ class Database {
    * @param {string} filePath - Caminho para o arquivo JSON
    * @returns {Object|Array|null} - Os dados JSON analisados ou null em caso de erro
    */
-  loadJSON(filePath) {
+  loadJSON(filePath, debug = true) {
     try {
       if (!fs.existsSync(filePath)) {
-        this.logger.debug(`Arquivo não existe: ${filePath}`);
+        if(debug){
+          this.logger.debug(`Arquivo não existe: ${filePath}`);
+        }
         return null;
       }
       
       const data = fs.readFileSync(filePath, 'utf8');
       if (!data || data.trim() === '') {
-        this.logger.warn(`Arquivo está vazio: ${filePath}`);
+        if(debug){
+          this.logger.warn(`Arquivo está vazio: ${filePath}`);
+        }
         return null;
       }
       
       try {
         return JSON.parse(data);
       } catch (parseError) {
-        this.logger.error(`Erro ao analisar JSON de ${filePath}:`, parseError);
+        if(debug){
+          this.logger.error(`Erro ao analisar JSON de ${filePath}:`, parseError);
+        }
         // Tenta carregar do backup se disponível
         return this.loadLatestBackup(filePath);
       }
     } catch (error) {
-      this.logger.error(`Erro ao carregar JSON de ${filePath}:`, error);
+      if(debug){
+        this.logger.error(`Erro ao carregar JSON de ${filePath}:`, error);
+      }
       
       // Tenta carregar do backup se disponível
       return this.loadLatestBackup(filePath);
@@ -295,7 +303,7 @@ class Database {
     }
     
     const customCmdPath = path.join(this.databasePath, 'custom-cmd', `${groupId}.json`);
-    const commands = this.loadJSON(customCmdPath) || [];
+    const commands = this.loadJSON(customCmdPath, false) || [];
     
     // Atualiza cache
     this.cache.commands[groupId] = commands;

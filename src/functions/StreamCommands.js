@@ -7,7 +7,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('stream-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo StreamCommands carregado');
+//logger.info('Módulo StreamCommands carregado');
 
 /**
  * Lista todos os canais configurados para monitoramento no grupo
@@ -235,8 +235,8 @@ const commands = [
     description: 'Lista todos os canais configurados para monitoramento',
     category: 'stream',
     reactions: {
-      before: "📺",
-      after: "✅"
+      before: "⏳",
+      after: "📺"
     },
     method: listMonitoredChannels
   }),
@@ -246,14 +246,14 @@ const commands = [
     description: 'Mostra status dos canais monitorados',
     category: 'stream',
     reactions: {
-      before: "📊",
-      after: "✅"
+      before: "⏳",
+      after: "📊"
     },
     method: showStreamStatus
   })
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

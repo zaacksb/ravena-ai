@@ -8,7 +8,7 @@ const { translateText } = require('./TranslationCommands');
 
 const logger = new Logger('anime-commands');
 
-logger.info('Módulo AnimeCommands carregado');
+//logger.info('Módulo AnimeCommands carregado');
 
 /**
  * Busca informações sobre um anime no MyAnimeList
@@ -138,7 +138,8 @@ const commands = [
     name: 'anime',
     description: 'Busca informações sobre um anime no MyAnimeList',
     reactions: {
-      before: "🔍",
+      trigger: "🗾",
+      before: "⏳",
       after: "🗾"
     },
     method: buscarAnime
@@ -146,6 +147,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

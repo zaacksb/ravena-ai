@@ -51,6 +51,8 @@
 - [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [x] Comando: !lastfm
 - [x] Comando: !news, ViniMunews (antigo JrMunews)
+- [ ] Status do bot no status do whats
+- [ ] Interagir automatico em grupo com chance setada
 - [ ] Script para migração de dados da ravena antiga
     - [ ] Grupos
     - [ ] Lembretes
@@ -60,6 +62,7 @@
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
+- [ ] Novo Jogo: Anagrama
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
@@ -75,12 +78,12 @@
 
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
 - [X] Fix boas vindas enviando mesmo sem setar
-- [ ] Fix emojis e reações que o claude criou estranhos
+- [x] Fix emojis e reações que o claude criou estranhos
 - [x] Fix autoStt não triggando
 - [x] Imagine não tá retornando img
     - [ ] Problema no NSFWdetect, usar nudenet
 - [x] !gif tá retornando img estática
-- [ ] Fix TTS com eSpeak
+- [x] Fix TTS com AllTalk V2
 - [x] Busca img não funciona
 - [ ] Não salvando algumas propriedades de grupo
 
@@ -202,14 +205,14 @@ O bot utiliza alguns programas externos para funcionalidades avançadas:
 
 * [ImageMagick](docs/ImageManipulation.md) - Para manipulação de imagens
 * [FFmpeg](https://ffmpeg.org/download.html) - Para processamento de áudio e vídeo
-* [eSpeak](http://espeak.sourceforge.net/) - Para síntese de voz (opcional)
+* [AllTalk V2](https://github.com/erew123/alltalk_tts/tree/alltalkbeta) - Para síntese de voz (opcional)
+* [Whisper](https://github.com/openai/whisper) - Para transcrição de áudios (opcional)
 * [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) - Para geração de imagens (opcional)
 
 Configure os caminhos destes programas no arquivo `.env`:
 
 ```env
 # Programas
-ESPEAK_PATH=C:/path/to/espeak/espeak.exe
 FFMPEG_PATH=C:/path/to/ffmpeg/bin/ffmpeg.exe
 CHROME_PATH=             # Caminho personalizado para o Chrome (opcional)
 ```

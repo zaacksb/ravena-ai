@@ -497,8 +497,8 @@ const commands = [
     description: 'Remove o fundo de uma imagem',
     needsMedia: true,
     reactions: {
-      before: "📸",
-      after: "✨",
+      before: "⏳",
+      after: "✂️",
       error: "❌"
     },
     method: handleRemoveBg
@@ -509,8 +509,8 @@ const commands = [
     description: 'Aplica efeito de distorção a uma imagem',
     needsMedia: true,
     reactions: {
-      before: "🌀",
-      after: "🤪",
+      before: "⏳",
+      after: "🌀",
       error: "❌"
     },
     method: handleDistort
@@ -522,8 +522,8 @@ const commands = [
     aliases: ['sbg'],
     needsMedia: true,
     reactions: {
-      before: "✂️",
-      after: "🎯",
+      before: "⏳",
+      after: "✂️",
       error: "❌"
     },
     method: handleStickerBg
@@ -538,8 +538,8 @@ const commands = [
       description: `Aplica efeito ${effect} a uma imagem`,
       needsMedia: true,
       reactions: {
-        before: "🎨",
-        after: "✨",
+        before: "⏳",
+        after: "🎨",
         error: "❌"
       },
       method: async (bot, message, args, group) => {
@@ -555,8 +555,8 @@ const sbgCommand = new Command({
   description: 'Alias para comando stickerbg',
   needsMedia: true,
   reactions: {
-    before: "✂️",
-    after: "🎯",
+    before: "⏳",
+    after: "✂️",
     error: "❌"
   },
   method: handleStickerBg

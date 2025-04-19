@@ -7,7 +7,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('donation-commands');
 const database = Database.getInstance();
 
-logger.info('Módulo DonationCommands carregado');
+//logger.info('Módulo DonationCommands carregado');
 
 /**
  * Mostra informações de doação e link
@@ -201,6 +201,6 @@ const commands = [
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

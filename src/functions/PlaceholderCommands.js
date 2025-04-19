@@ -9,7 +9,7 @@ const logger = new Logger('placeholder-commands');
 // Cria instância do serviço LLM com configuração padrão
 const llmService = new LLMService({});
 
-logger.info('Módulo PlaceholderCommands carregado');
+//logger.info('Módulo PlaceholderCommands carregado');
 
 // Define os métodos de comando separadamente
 async function pingCommand(bot, message, args, group) {
@@ -85,14 +85,15 @@ const commands = [
     name: 'ai',
     description: 'Pergunte algo à IA',
     reactions: {
-      before: "🧠",
-      after: "✨"
+      trigger: "🤖",
+      before: "⏳",
+      after: "🤖"
     },
     method: aiCommand
   })
 ];
 
 // Registra os comandos sendo exportados
-logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
+//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

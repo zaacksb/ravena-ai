@@ -22,7 +22,7 @@ fs.mkdir(dataDir, { recursive: true })
     logger.error('Erro ao criar diretório de conversas:', error);
   });
 
-logger.info('Módulo SummaryCommands carregado');
+//logger.info('Módulo SummaryCommands carregado');
 
 /**
  * Resume conversa de grupo
@@ -328,8 +328,8 @@ const commands = [
     description: 'Resume conversas recentes do grupo',
     category: 'group',
     reactions: {
-      before: "📋",
-      after: "✅"
+      before: "⏳",
+      after: "📋"
     },
     method: summarizeConversation
   }),
@@ -339,8 +339,8 @@ const commands = [
     description: 'Gera uma mensagem interativa baseada na conversa',
     category: 'group',
     reactions: {
-      before: "💬",
-      after: "✅"
+      before: "⏳",
+      after: "💬"
     },
     method: interactWithConversation
   })

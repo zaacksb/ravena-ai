@@ -1192,3 +1192,56 @@ function processalastFM(u, callback){
 
 module.exports = { processalastFM }
 `
+----
+
+# ReactionHandler
+Importação automática das functions para preencher vetor reactionCommands
+
+Assim como o FixedCommands, este arquivo deve implementar uma loadCommands em this.functionsPath
+Lendo todos os arquivos js e buscando pelo export command
+
+O reactionCommands deve ser preenchido da mesma maneira que é atualmente:
+
+{
+	"🙂": "methodName"
+}
+
+Apenas os commands que tiverem a propriedade reactions.trigger devem ir para esta lista
+reactions.trigger pode ser apenas 1 emoji ou 1 vetor de emojis. Se for um vetor, incluir múltiplas entradas no reactionCommands
+
+
+--
+# SpeechCommands com AllTalk
+Refatore este arquivo.
+* Não será mais usado eSpeak
+* Não será mais usado vosk-transcriber
+
+A partir de agora, use a API local do "AllTalk V2"
+O endereço base deve ser definido na .env como
+
+ALLTALK_API=http://localhost:7852/
+
+## Text-to-speech
+* Use o modelo XTTS 
+Existe mais de um character.
+Crie um objeto que define eles:
+{
+"ravena": "ravena_sample.wav",
+"mulher": "female_01.wav",
+"homem": "male_01.wav",
+"clint": "Clint_Eastwood CC3 (enhanced).wav",
+"morgan": "Morgan_Freeman CC3.wav"
+}
+
+Uso:
+!tts-[character]
+O character padrão é "ravena" (para usar quando usuário informar !tts apenas)
+
+Você pode definir os comandos de personagem usando um for:
+[... value/keys dos characters ...].forEach(effect => {
+  commands.push(
+    new Command({}))...
+
+## Speech-to-text
+* Use o modelo whisper turbo
+Mantenha a otimização pelo LLM, mas como uma variável opcional na chamada da função (padrão: true)
