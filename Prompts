@@ -1285,10 +1285,13 @@ Os comandos que não estiverem neste vetor, ficam após os que estiverem, na sua
 ----
 Refatore o arquivo NSFWPredict.js para utilizar o exec e capturar o JSON da saída. Não crie um script python.
 
-Implemente também uma função que recebe um objeto MessageMedia da biblioteca whatsapp-web.js, a qual decodica o mesmo, salva numa pasta tempo de depois chama a 
+Implemente também uma função que recebe um objeto MessageMedia da biblioteca whatsapp-web.js, a qual decodica o mesmo, salva numa pasta tempo de depois chama/retorna a detectNSFW com o caminho do arquivo temp, apagando o mesmo logo em seguida.
 
-Aqui está um código de exemplo que já utilizei e funciona bem:
 
+"configs.nsfwpredict" é uma variável que contém o caminho completo do comando já com o modelo especificado, ex.:
+'...Python310\\Scripts\\nsfw-predict.exe --saved_model_path "C:\\mobilenet_v2_140_224"'
+
+Aqui está um código de exemplo que já utilizei e funciona bem, mas siga os padrões do projeto.
 `
 async function isMessageMediaNSFWSync(attachmentData, limiar, callback){
 
@@ -1369,3 +1372,46 @@ async function isMessageMediaNSFWSync(attachmentData, limiar, callback){
 	}
 
 }`
+
+---
+# Nova função: Blocked Ignore
+Ao inicializar o bot (READY), invoque o método client.getBlockedContacts() e armazene em uma variável acessível por outras partes do código (WhatsaAppBot.js) a lista destes contatos bloqueados.
+A ideia é que quando o bot receber um evento de um destes contatos dentro de grupo, a pessoa seja ignorada, diretamente no EventHandler.
+
+# Nova função: Interação automática
+No CommandHandler->checkAutoTriggeredCommands, verifique se o grupo permite interações (grupo.interact.enabled)
+Caso permita, o bot tem grupo.interact.chance de interagir, onde o valor 1000 é o máximo e representa 10% de chance
+Cooldown: g-interagir-cd
+
+## Management: !g-interagir
+Criar comandos para controlar a interação
+!g-interagir: Ativa/desativa o grupo.interact
+!g-interagir-cd [tempo minutos]: Tempo de cooldown entre interações, padrão: 30 minutos, minimo 5 minutos, maximo 30 dias
+!g-interagir-chance [1-1000]: Chance do bot interagir, 1 = 0.1%, 1000 = 10%
+
+# LoadReport
+O report está funcionado bem.
+Nova funcionalidade: Atualiza status do whatsapp com informações da carga
+bot.client.setStatus(string)
+
+Formato:
+{loadEmoji} DD/MM hh:mm | {msgs/h}m/h|!cmd, !info | ravena.moothz.win
+
+[msgs/h]: A carga é medida em mensagens por hora, baseada nos últimos 3 reports
+
+[loadEmoji]
+Escolhe um emoji com base na carga atual do bot (msgs/h)
+A medida máxima é acima de 2000
+loadLevels = ["⬜", "🟩", "🟨", "🟧", "🟥", "⬛"]
+
+
+# Bot Joins Group
+EventHandler -> // Caso 1: Bot entrou no grupo
+Atualmente, ele envia um astring botInfoMessage quando entra.
+Ao invés da string, ler conteudo do arquivo "data/textos/groupJoin.txt", texto plano
+
+Usar a string apenas como fallback.
+
+# Problema com g-autoStt
+A propriedade para autoStt não está sendo salva na base dados, apenas em tempo de execução.
+Verificar o problema e corrigir.

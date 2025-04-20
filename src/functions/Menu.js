@@ -47,7 +47,7 @@ const COMMAND_ORDER = ["cmd","doar","clima","news","apagar","atencao","ignorar",
  */
 async function readMenuHeader() {
   try {
-    const headerPath = path.join(process.cwd(), 'data', 'cmd_header');
+    const headerPath = path.join(process.cwd(), 'data', 'textos', 'cmd_header.txt');
     const headerContent = await fs.readFile(headerPath, 'utf8');
     return headerContent.trim();
   } catch (error) {

@@ -18,6 +18,7 @@
 - [x] Variáveis personalizadas em respostas
 - [x] Integração com LLM (OpenRouter, LM Studio)
 - [x] Monitoramento de streams (Twitch, Kick, YouTube)
+    - [ ] Nova função: Alterar imagem do grupo borda verde
 - [x] Sistema de convites
 - [x] Detecção de conteúdo NSFW
 - [x] Manipulação de mídia
@@ -52,28 +53,28 @@
 - [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [x] Comando: !lastfm
 - [x] Comando: !news, ViniMunews (antigo JrMunews)
+- [ ] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
 - [ ] Status do bot no status do whats
 - [ ] Interagir automatico em grupo com chance setada
+- [ ] Mensagem boas vindas fixa
+- [ ] Novo Jogo: Geoguesser
+- [ ] Novo Jogo: Stop/Adedonha
+- [ ] Novo Jogo: Anagrama
+- [ ] Interface web para status dos bots
+- [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
+- [x] Melhorar comando !cmd pra ficar mais organizado
+- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
+    - [ ] Gerador de código de mockup para os tutoriais
+    - [ ] Tutoriais
 - [ ] Script para migração de dados da ravena antiga
     - [ ] Grupos
     - [ ] Lembretes
     - [ ] Listas
     - [ ] Outros
     - [x] News
-- [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
-- [ ] Novo Jogo: Geoguesser
-- [ ] Novo Jogo: Stop/Adedonha
-- [ ] Novo Jogo: Anagrama
 - [ ] Implementar ADB para digitar code de login automaticamente
-- [ ] Interface web para status dos bots
-- [ ] Interface web para administração
 - [ ] Melhor explicação da implementação do bot no README
-- [x] Melhorar comando !cmd pra ficar mais organizado
-- [ ] Mensagem boas vindas fixa
-- [ ] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
-- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
-    - [ ] Gerador de código de mockup para os tutoriais
-    - [ ] Tutoriais
+- [ ] Interface web para administração
 
 ## ✅ TODO-FIX-List
 > Essa lista ainda vai aumentar bastante
