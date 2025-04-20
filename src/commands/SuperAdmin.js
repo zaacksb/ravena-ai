@@ -25,6 +25,7 @@ class SuperAdmin {
       'joinGrupo': 'joinGroup',
       'addDonateNumero': 'addDonorNumber',
       'addDonateValor': 'updateDonationAmount',
+      'mergeDonates': 'mergeDonors',
       'block': 'blockUser',
       'leaveGrupo': 'leaveGroup',
       'foto': 'changeProfilePicture'
@@ -188,6 +189,61 @@ class SuperAdmin {
       return new ReturnMessage({
         chatId: message.group || message.author,
         content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+  
+  /**
+   * Une dois doadores
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async mergeDonors(bot, message, args, group) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Obtém o texto completo do argumento
+      const fullText = args.join(' ');
+      
+      if (!fullText.includes('##')) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, use o formato: !g-mergeDonates PrimeiroDoador##SegundoDoador'
+        });
+      }
+      
+      // Divide os nomes
+      const [targetName, sourceName] = fullText.split('##').map(name => name.trim());
+      
+      if (!targetName || !sourceName) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Ambos os nomes de doadores devem ser fornecidos. Formato: !g-mergeDonates PrimeiroDoador##SegundoDoador'
+        });
+      }
+      
+      // Une doadores no banco de dados
+      const success = await this.database.mergeDonors(targetName, sourceName);
+      
+      if (success) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Doador ${sourceName} unido com sucesso a ${targetName}`
+        });
+      } else {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Falha ao unir doadores. Certifique-se que tanto ${targetName} quanto ${sourceName} existem no banco de dados de doações.`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando mergeDonors:', error);
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao processar comando.'
       });
     }
   }

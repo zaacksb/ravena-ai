@@ -39,20 +39,7 @@ const CATEGORY_EMOJIS = {
  * Ordem personalizada para comandos por nome
  * Os comandos não listados aparecem depois na ordem original
  */
-const COMMAND_ORDER = [
-  "menu",
-  "cmd", 
-  "help",
-  "ping",
-  "info",
-  "roletarussa",
-  "roletaranking",
-  "roll",
-  "d10",
-  "lol",
-  "valorant",
-  "wr"
-];
+const COMMAND_ORDER = ["cmd","doar","clima","news","apagar","atencao","ignorar","stt","traduzir","lembretes","lembrar","l-cancelar","s","sticker","sbg, stickerbg","removebg","distort","neon","oil","pixelate","sketch","ai","imagine","resumo","interagir","yt","sr","roletarussa","roletaranking","roll","d10","lol","valorant","wr","anime","imdb","volume","getaudio","getvoice","tts","tts-mulher","tts-homem","buscar","buscar-ig","gif","wiki","lastfm","listas","lc","lct","ld","le","ls","lt","lr","pastas","p-enviar","p-criar","p-baixar","p-excluir","g-ajuda","g-setName","g-addCmd","g-delCmd","g-setPrefixo","g-setBemvindo","g-setDespedida","g-cmdReact","g-cmdStartReact","g-filtro-palavra","g-filtro-links","g-filtro-nsfw","g-filtro-pessoa","g-info","g-enableCmd","g-disableCmd"];
 
 /**
  * Lê o arquivo de cabeçalho do menu

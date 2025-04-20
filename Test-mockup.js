@@ -10,6 +10,8 @@ const EventEmitter = require('events');
 const WhatsAppBot = require('./src/WhatsAppBot');
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
+const NSFWPredict = require('./src/utils/NSFWPredict');
+
 
 // Create logger for test script
 const logger = new Logger('test');
@@ -23,6 +25,7 @@ class MockClient extends EventEmitter {
         _serialized: '1234567890@c.us' 
       } 
     };
+
   }
 
   async initialize() {

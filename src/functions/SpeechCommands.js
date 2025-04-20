@@ -463,7 +463,8 @@ const commands = [
   }),
   new Command({
     name: "tts-mulher",
-    description: `Converte texto para voz usando personagem 'mulher'`,
+    description: `Converte texto para voz usando personagem feminina`,
+    group: "ttsMulher",
     category: "tts",
     reactions: {
       trigger: "👩",
@@ -474,7 +475,8 @@ const commands = [
   }),
   new Command({
     name: "tts-carioca",
-    description: `Converte texto para voz usando personagem 'carioca'`,
+    description: `Converte texto para voz usando personagem feminina`,
+    group: "ttsMulher",
     category: "tts",
     reactions: {
       before: "⌛️",
@@ -485,7 +487,8 @@ const commands = [
 
   new Command({
     name: "tts-carioco",
-    description: `Converte texto para voz usando personagem 'carioco'`,
+    description: `Converte texto para voz usando personagem masculino`,
+    group: "ttsHomem",
     category: "tts",
     reactions: {
       before: "⌛️",
@@ -496,7 +499,8 @@ const commands = [
 
   new Command({
     name: "tts-sensual",
-    description: `Converte texto para voz usando personagem 'sensual'`,
+    description: `Converte texto para voz usando personagem feminina`,
+    group: "ttsMulher",
     category: "tts",
     reactions: {
       trigger: "💋",
@@ -507,8 +511,9 @@ const commands = [
   }),
   new Command({
     name: "tts-sensuel",
-    description: `Converte texto para voz usando personagem 'sensuel'`,
+    description: `Converte texto para voz usando personagem masculino`,
     category: "tts",
+    group: "ttsHomem",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -518,8 +523,9 @@ const commands = [
 
   new Command({
     name: "tts-homem",
-    description: `Converte texto para voz usando personagem 'homem'`,
+    description: `Converte texto para voz usando personagem masculino`,
     category: "tts",
+    group: "ttsHomem",
     reactions: {
       trigger: "👨",
       before: "⌛️",
@@ -529,8 +535,9 @@ const commands = [
   }),
   new Command({
     name: "tts-clint",
-    description: `Converte texto para voz usando personagem 'clint'`,
+    description: `Converte texto para voz usando personagem masculino`,
     category: "tts",
+    group: "ttsHomem",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -540,8 +547,9 @@ const commands = [
 
   new Command({
     name: "tts-morgan",
-    description: `Converte texto para voz usando personagem 'morgan'`,
+    description: `Converte texto para voz usando personagem masculino`,
     category: "tts",
+    group: "ttsHomem",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -551,7 +559,8 @@ const commands = [
 
   new Command({
     name: "tts-narrador",
-    description: `Converte texto para voz usando personagem 'narrador'`,
+    description: `Converte texto para voz usando personagem masculino`,
+    group: "ttsHomem",
     category: "tts",
     reactions: {
       trigger: "🎙️",

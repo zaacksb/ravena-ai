@@ -1281,3 +1281,91 @@ O header deve ser lido do arquivo data/cmd_header, arquivo de texto.
 Crie um vetor onde é possivel colocar em ordem os comandos por nome.
 Este vetor pode conter comandos que não existem e também não precisa conter todos os comandos.
 Os comandos que não estiverem neste vetor, ficam após os que estiverem, na sua ordenação original.
+
+----
+Refatore o arquivo NSFWPredict.js para utilizar o exec e capturar o JSON da saída. Não crie um script python.
+
+Implemente também uma função que recebe um objeto MessageMedia da biblioteca whatsapp-web.js, a qual decodica o mesmo, salva numa pasta tempo de depois chama a 
+
+Aqui está um código de exemplo que já utilizei e funciona bem:
+
+`
+async function isMessageMediaNSFWSync(attachmentData, limiar, callback){
+
+	let nRand = Math.floor(Math.random() * 1000000); 
+
+	//let buff = new Buffer(attachmentData.data, 'base64');
+
+	let buff = Buffer.from(attachmentData.data, 'base64');
+
+	const arquivoTempEntrada = path.join(configs.rootFolder,"media","temp",`isnsfw-${nRand}.${mime.extension(attachmentData.mimetype)}`);
+
+	const pctDistort = getRandomInt(20,65);
+
+	loggerInfo(`[isMessageMediaNSFWSync] IsNSFW? ${arquivoTempEntrada} (${arquivoResumido(attachmentData.data)})`);
+
+	fs.writeFileSync(arquivoTempEntrada, buff);
+
+	loggerInfo(`[isMessageMediaNSFWSync] ${configs.nsfwpredict} --image_source	"${arquivoTempEntrada}"`);
+
+	try{
+
+		//mogrify -resize 512x512^ -liquid-rescale 50% -scale 200% manu1.jpg
+
+		exec(`${configs.nsfwpredict} --image_source "${arquivoTempEntrada}"`, (error, stdout, stderr) => {
+
+			//loggerInfo(`[isMessageMediaNSFWSync] stdout: ${stdout}`);
+
+			const output = extractJSON(stdout);
+
+			if(output){
+
+				//loggerInfo(`[isMessageMediaNSFWSync] output: ${JSON.stringify(output,null,"\t")}`);
+
+				let resultado;
+
+				if(Array.isArray(output)){
+
+					resultado = Object.values(output[0])[0];
+
+				} else {
+
+					resultado = output[arquivoTempEntrada] ?? output;
+
+				}
+
+				const maiorRating = Math.max(resultado?.sexy,resultado?.porn,resultado?.hentai,0);
+
+				loggerInfo(`[isMessageMediaNSFWSync] maiorRating: ${maiorRating} / resultado: ${JSON.stringify(resultado)}`);
+
+				let nsfw = (maiorRating > limiar) && resultado.neutral < 0.5;
+
+				apagarArquivo(arquivoTempEntrada, 1800000);
+
+				callback(nsfw);
+
+			} else {
+
+				loggerInfo(`[isMessageMediaNSFWSync] Erro lendo arquivo '${arquivoTempEntrada}'`);
+
+				callback(false);
+
+			}
+
+		});
+
+	} catch(e){
+
+		loggerWarn(`[isMessageMediaNSFWSync] Erro mogrifying await spawn:\n${e}`);
+
+		//loggerInfo(e.stdout.toString());
+
+		//loggerInfo(e.stderr.toString());
+
+		loggerWarn(e);
+
+		callback(false);
+
+	}
+
+}`

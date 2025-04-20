@@ -509,6 +509,7 @@ const commands = [
     name: 'distort',
     description: 'Aplica efeito de distorção a uma imagem',
     category: "midia",
+    group: "imageEffect",
     needsMedia: true,
     reactions: {
       before: "⏳",

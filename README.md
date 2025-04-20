@@ -68,7 +68,8 @@
 - [ ] Interface web para status dos bots
 - [ ] Interface web para administração
 - [ ] Melhor explicação da implementação do bot no README
-- [ ] Melhorar comando !cmd pra ficar mais organizado
+- [x] Melhorar comando !cmd pra ficar mais organizado
+- [ ] Mensagem boas vindas fixa
 - [ ] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
@@ -82,7 +83,6 @@
 - [x] Fix emojis e reações que o claude criou estranhos
 - [x] Fix autoStt não triggando
 - [x] Imagine não tá retornando img
-    - [ ] Problema no NSFWdetect, usar nudenet
 - [x] !gif tá retornando img estática
 - [x] Fix TTS com AllTalk V2
 - [x] Busca img não funciona

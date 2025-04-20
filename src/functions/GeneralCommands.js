@@ -4,12 +4,11 @@ const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 
-const logger = new Logger('placeholder-commands');
+const logger = new Logger('general-commands');
 
 // Cria instância do serviço LLM com configuração padrão
 const llmService = new LLMService({});
 
-//logger.info('Módulo PlaceholderCommands carregado');
 
 // Define os métodos de comando separadamente
 async function pingCommand(bot, message, args, group) {
@@ -84,6 +83,8 @@ const commands = [
   new Command({
     name: 'ping',
     description: 'Verifica se o bot está online',
+    category: "geral",
+    hidden: "true",
     reactions: {
       before: "⏳",
       after: "✅"

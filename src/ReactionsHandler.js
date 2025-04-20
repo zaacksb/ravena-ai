@@ -102,7 +102,7 @@ class ReactionsHandler {
       const commandName = this.reactionCommands[reaction.reaction];
       if (!commandName) {
         this.logger.debug(`Nenhum comando mapeado para o emoji: ${reaction.reaction}`);
-        console.log(this.reactionCommands);
+        //console.log(this.reactionCommands);
         return false;
       }
       

@@ -60,7 +60,7 @@ async function generateImage(bot, message, args, group) {
     // Parâmetros para a API
     const payload = {
       prompt: prompt,
-      negative_prompt: "nsfw, nudity, pornography, (worst quality:1.2), (low quality:1.2), (lowres:1.1), bad anatomy, bad hands, text, missing fingers, extra digit, fewer digits, cropped, low-res, worst quality, jpeg artifacts, signature, watermark, username, blurry",
+      negative_prompt: "(worst quality:1.2), (low quality:1.2), (lowres:1.1), bad anatomy, bad hands, text, missing fingers, extra digit, fewer digits, cropped, low-res, worst quality, jpeg artifacts, signature, watermark, username, blurry",
       ...DEFAULT_PARAMS
     };
     
@@ -102,13 +102,13 @@ async function generateImage(bot, message, args, group) {
 
     // Verificar NSFW
       let isNSFW = false;
-    // try {
-    //   const nsfwResult = await nsfwPredict.detectNSFW(tempImagePath);
-    //   isNSFW = nsfwResult.isNSFW;
-    //   logger.info(`Imagem analisada: NSFW = ${isNSFW}, Scores: ${JSON.stringify(nsfwResult.scores)}`);
-    // } catch (nsfwError) {
-    //   logger.error('Erro ao verificar NSFW:', nsfwError);
-    // }
+    try {
+      const nsfwResult = await nsfwPredict.detectNSFW(tempImagePath);
+      isNSFW = nsfwResult.isNSFW;
+      logger.info(`Imagem analisada: NSFW = ${isNSFW}, Scores: ${JSON.stringify(nsfwResult.scores)}`);
+    } catch (nsfwError) {
+      logger.error('Erro ao verificar NSFW:', nsfwError);
+    }
     
     // Limpar arquivo temporário após alguns minutos
     setTimeout((tempImg) => {
@@ -127,20 +127,27 @@ async function generateImage(bot, message, args, group) {
     
     // Se a imagem for NSFW, envia um aviso antes
     if (isNSFW) {
-      returnMessages.push(new ReturnMessage({
-        chatId: chatId,
-        content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado, abra com cautela.'
-      }));
-      
-      // Envia a imagem como viewOnly
-      returnMessages.push(new ReturnMessage({
-        chatId: chatId,
-        content: media,
-        options: {
-          caption: caption,
-          viewOnce: true
-        }
-      }));
+      if(group.filters.nsfw){
+        returnMessages.push(new ReturnMessage({
+          chatId: chatId,
+          content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado e este grupo está filtrando conteúdo NSFW, por isso o resultado não foi enviado.'
+        }));
+      } else {      
+        returnMessages.push(new ReturnMessage({
+          chatId: chatId,
+          content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado, abra com cautela.'
+        }));
+        
+        // Envia a imagem como viewOnly
+        returnMessages.push(new ReturnMessage({
+          chatId: chatId,
+          content: media,
+          options: {
+            caption: caption,
+            isViewOnce: true
+          }
+        }));
+      }
     } else {
       // Envia a imagem normalmente se não for NSFW
       returnMessages.push(new ReturnMessage({
