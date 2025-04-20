@@ -176,26 +176,16 @@ async function showTopDonors(bot, message, args, group) {
 // Lista de comandos usando a classe Command
 const commands = [
   new Command({
-    name: 'donate',
-    description: 'Mostra informações de doação e link',
-    method: showDonationInfo
-  }),
-  
-  new Command({
     name: 'doar',
     description: 'Mostra informações de doação e link (Português)',
+    category: "geral",
     method: showDonationInfo
   }),
   
   new Command({
     name: 'doadores',
     description: 'Mostra principais doadores',
-    method: showTopDonors
-  }),
-  
-  new Command({
-    name: 'donors',
-    description: 'Mostra principais doadores (Inglês)',
+    category: "geral",
     method: showTopDonors
   })
 ];

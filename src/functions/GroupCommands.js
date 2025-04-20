@@ -260,44 +260,32 @@ async function apagarMensagem(bot, message, args, group) {
 const commands = [
   new Command({
     name: 'atencao',
-    description: 'Menciona todos os membros do grupo silenciosamente',
-    category: 'group',
+    description: 'Menciona todos os membros do grupo',
+    category: 'grupo',
     reactions: {
+      trigger: "📢", 
       before: "📢",
       after: "✅"
     },
     method: mentionAllMembers
   }),
-  
-  new Command({
-    name: 'galera',
-    description: 'Menciona todos os membros do grupo silenciosamente',
-    category: 'group',
-    aliasFor: 'atencao',
-    reactions: {
-      before: "📢",
-      after: "✅"
-    },
-    method: mentionAllMembers
-  }),
-  
   new Command({
     name: 'ignorar',
     description: 'Alterna ser ignorado pelas menções de grupo',
-    category: 'group',
+    category: 'grupo',
     reactions: {
       before: "🔇",
       after: "✅"
     },
     method: toggleIgnore
   }),
-  
   new Command({
     name: 'apagar',
     description: 'Apaga a mensagem do bot quando usado em resposta a ela',
-    category: 'group',
+    category: 'grupo',
     needsQuotedMsg: true,
     reactions: {
+      trigger: "🗑️", 
       before: "🗑️",
       after: "✅"
     },

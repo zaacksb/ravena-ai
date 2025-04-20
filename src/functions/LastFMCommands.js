@@ -264,6 +264,8 @@ const commands = [
     name: 'lastfm',
     description: 'Exibe informações de um perfil do Last.fm',
     usage: '!lastfm username',
+    category: "busca",
+    group: "lastfm",
     reactions: {
       before: "⏳",
       after: "📻",
@@ -277,6 +279,8 @@ const commands = [
     name: 'lfm',
     description: 'Alias para o comando lastfm',
     usage: '!lfm username',
+    category: "busca",
+    group: "lastfm",
     reactions: {
       before: "⏳",
       after: "📻",

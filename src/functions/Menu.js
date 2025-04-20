@@ -164,6 +164,8 @@ const commands = [
   new Command({
     name: 'cmd',
     description: 'Mostra todos os comandos disponíveis',
+    category: "geral",
+    group: "menu",
     method: async (bot, message, args, group) => {
       return await sendCommandList(bot, message, args, group);
     }
@@ -171,6 +173,8 @@ const commands = [
   
   new Command({
     name: 'menu',
+    category: "geral",
+    group: "menu",
     description: 'Mostra todos os comandos disponíveis',
     method: async (bot, message, args, group) => {
       return await sendCommandList(bot, message, args, group);

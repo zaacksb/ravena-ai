@@ -301,7 +301,8 @@ class CommandHandler {
       const methodName = this.management.getCommandMethod(managementCommand);
       if (methodName && typeof this.management[methodName] === 'function') {
         this.logger.debug(`Executando método de gerenciamento: ${methodName}`);
-        await this.management[methodName](bot, message, args, group);
+        const managementResponse = await this.management[methodName](bot, message, args, group);
+        await bot.sendReturnMessages(managementResponse);
       } else {
         this.logger.warn(`Comando de gerenciamento desconhecido: ${managementCommand}`);
         

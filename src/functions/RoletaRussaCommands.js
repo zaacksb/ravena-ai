@@ -376,7 +376,7 @@ const commands = [
   new Command({
     name: 'roletarussa',
     description: 'Joga roleta russa, risco de ser silenciado',
-    category: 'group',
+    category: "jogos",
     reactions: {
       after: "🔫",
       error: "❌"
@@ -387,7 +387,7 @@ const commands = [
   new Command({
     name: 'roletaranking',
     description: 'Mostra ranking da roleta russa',
-    category: 'group',
+    category: "jogos",
     reactions: {
       after: "🏆",
       error: "❌"

@@ -221,7 +221,9 @@ for (const sides of COMMON_DICE) {
   commands.push(
     new Command({
       name: `d${sides}`,
-      description: `Rola um dado de ${sides} faces`,
+      category: "jogos",
+      group: "dices",
+      description: `Rola um dado de X faces`,
       reactions: {
         before: "⏳",
         after: "🎲"
@@ -238,6 +240,7 @@ commands.push(
   new Command({
     name: 'roll',
     description: 'Rola dados com padrão customizado (ex: 2d6+3)',
+    category: "jogos",
     reactions: {
       before: "⏳",
       after: "🎲"

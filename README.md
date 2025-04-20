@@ -29,6 +29,7 @@
 - [X] Organizar/traduzir docs das funções
 - [X] Mensagem IA pra join/leave de grupo
 - [X] Comandos genéricos: Variáveis dinâmicas
+    - [ ] Implementar comando !g- pra mostrar todas
 - [X] Comandos genéricos: processCustomStaticVariables implementar seleção random
 - [X] Dados de quem enviou convite na mensagem quando add ravena
 - [X] Additonal Admins: Bot considera outras pessoas como admin (a que add no grupo ou outra manual)

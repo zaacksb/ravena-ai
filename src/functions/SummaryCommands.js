@@ -326,7 +326,7 @@ const commands = [
   new Command({
     name: 'resumo',
     description: 'Resume conversas recentes do grupo',
-    category: 'group',
+    category: 'ia',
     reactions: {
       before: "⏳",
       after: "📋"
@@ -337,7 +337,7 @@ const commands = [
   new Command({
     name: 'interagir',
     description: 'Gera uma mensagem interativa baseada na conversa',
-    category: 'group',
+    category: 'ia',
     reactions: {
       before: "⏳",
       after: "💬"

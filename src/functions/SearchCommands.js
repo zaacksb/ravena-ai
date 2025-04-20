@@ -326,7 +326,7 @@ const commands = [
   new Command({
     name: 'buscar',
     description: 'Busca na web',
-    category: 'group',
+    category: "busca",
     aliases: ['google', 'search'],
     reactions: {
       trigger: "🔍",
@@ -339,7 +339,7 @@ const commands = [
   new Command({
     name: 'buscar-img',
     description: 'Busca por imagens',
-    category: 'group',
+    category: "busca",
     aliases: ['img', 'imagem'],
     reactions: {
       before: "⏳",

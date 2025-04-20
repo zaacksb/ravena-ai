@@ -261,6 +261,7 @@ const commands = [
   new Command({
     name: 'gif',
     description: 'Busca e envia um GIF do Giphy',
+    category: "busca",
     reactions: {
       before: "⏳",
       after: "📱"

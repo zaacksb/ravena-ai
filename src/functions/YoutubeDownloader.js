@@ -100,7 +100,7 @@ async function processYoutubeReaction(bot, message, emoji) {
       content: 'Baixando vídeo do YouTube...'
     });
     
-    await bot.sendReturnMessages(processingMsg);
+    bot.sendReturnMessages(processingMsg);
     
     // Baixa como vídeo
     baixarVideoYoutube(videoId, message.author, false, async (error, result) => {
@@ -309,12 +309,10 @@ async function ytCommand(bot, message, args, group) {
   if (!videoId) {
     logger.debug(`Buscando vídeo no YouTube: "${input}"`);
     
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: `🔍 Buscando: "${input}" no YouTube...`
-      })
-    );
+    bot.sendReturnMessages(new ReturnMessage({
+      chatId: chatId,
+      content: `🔍 Buscando: "${input}" no YouTube...`
+    }));
     
     videoId = await searchYoutubeVideo(input);
     
@@ -327,13 +325,7 @@ async function ytCommand(bot, message, args, group) {
   }
   
   logger.debug(`Baixando vídeo: ${videoId}`);
-  
-  returnMessages.push(
-    new ReturnMessage({
-      chatId: chatId,
-      content: '⏬ Baixando vídeo...'
-    })
-  );
+
   
   // Retorna as mensagens de processamento e deixa que o callback do baixarVideoYoutube 
   // se encarregue de enviar o vídeo final ao usuário
@@ -412,12 +404,10 @@ async function srCommand(bot, message, args, group) {
   if (!videoId) {
     logger.debug(`Buscando vídeo no YouTube: "${input}"`);
     
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: `🔍 Buscando: "${input}" no YouTube...`
-      })
-    );
+    bot.sendReturnMessages(new ReturnMessage({
+      chatId: chatId,
+      content: `🔍 Buscando: "${input}" no YouTube...`
+    }));
     
     videoId = await searchYoutubeVideo(input);
     
@@ -431,13 +421,7 @@ async function srCommand(bot, message, args, group) {
   
   logger.debug(`Baixando áudio: ${videoId}`);
   
-  returnMessages.push(
-    new ReturnMessage({
-      chatId: chatId,
-      content: '⏬ Baixando áudio...'
-    })
-  );
-  
+
   // Retorna as mensagens de processamento e deixa que o callback do baixarMusicaYoutube 
   // se encarregue de enviar o áudio final ao usuário
   return new Promise((resolve) => {

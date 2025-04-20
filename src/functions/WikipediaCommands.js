@@ -190,6 +190,7 @@ const commands = [
   new Command({
     name: 'wiki',
     description: 'Busca informações na Wikipedia',
+    category: "busca",
     reactions: {
       before: "⏳",
       after: "📚"

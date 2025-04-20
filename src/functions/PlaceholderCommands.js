@@ -25,7 +25,18 @@ async function pingCommand(bot, message, args, group) {
 async function aiCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
   
-  if (args.length === 0) {
+  let question = args.join(' ');
+  const quotedMsg = await message.origin.getQuotedMessage();
+  if(quotedMsg){
+    // Tem mensagem marcada, junta o conteudo (menos que tenha vindo de reação)
+    if(!message.originReaction){
+      if(quotedMsg.body.length > 10){
+        question += `\n\n${quotedMsg.body}`;
+      }
+    }
+  }
+
+  if (question.length < 5) {
     logger.debug('Comando ai chamado sem pergunta');
     return new ReturnMessage({
       chatId: chatId,
@@ -33,7 +44,6 @@ async function aiCommand(bot, message, args, group) {
     });
   }
   
-  const question = args.join(' ');
   logger.debug(`Comando ai com pergunta: ${question}`);
   
   // Primeiro, envia uma mensagem indicando que está processando
@@ -84,6 +94,20 @@ const commands = [
   new Command({
     name: 'ai',
     description: 'Pergunte algo à IA',
+    category: "ia",
+    group: "askia",
+    reactions: {
+      trigger: "🤖",
+      before: "⏳",
+      after: "🤖"
+    },
+    method: aiCommand
+  }),
+  new Command({
+    name: 'ia',
+    description: 'Alias para AI',
+    category: "ia",
+    group: "askia",
     reactions: {
       trigger: "🤖",
       before: "⏳",

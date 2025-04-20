@@ -670,8 +670,19 @@ async function dispararLembrete(bot, lembreteId) {
 // Comandos utilizando a classe Command
 const commands = [
   new Command({
+    name: 'lembretes',
+    description: 'Lista os lembretes ativos',
+    category: "utilidades",
+    reactions: {
+      before: "⏳",
+      after: "📋"
+    },
+    method: listarLembretes
+  }),
+  new Command({
     name: 'lembrar',
     description: 'Configura um lembrete para uma data específica',
+    category: "utilidades",
     reactions: {
       before: "⏳",
       after: "⏰"
@@ -680,19 +691,11 @@ const commands = [
     method: criarLembrete
   }),
   
-  new Command({
-    name: 'lembretes',
-    description: 'Lista os lembretes ativos',
-    reactions: {
-      before: "⏳",
-      after: "📋"
-    },
-    method: listarLembretes
-  }),
   
   new Command({
     name: 'l-cancelar',
     description: 'Cancela um lembrete por ID',
+    category: "utilidades",
     reactions: {
       before: "⏳",
       after: "🗑"

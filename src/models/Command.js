@@ -13,6 +13,7 @@ class Command {
     this.description = data.description || '';      // Descrição do comando
     this.usage = data.usage || '';                  // Exemplo de uso do comando
     this.category = data.category || 'general';     // Categoria do comando
+    this.group = data.group || false;               // Agrupar comandos parecido
     
     // Requisitos
     this.needsMedia = data.needsMedia || false;     // Se o comando requer mídia

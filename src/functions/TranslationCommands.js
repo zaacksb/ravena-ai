@@ -371,7 +371,7 @@ async function handleTranslation(bot, message, args, group) {
         }
         
         textToTranslate = quotedMsg.body;
-        quotedText = `Original: "${textToTranslate}"\n\n`;
+        //quotedText = `Original: "${textToTranslate}"\n\n`;
       } catch (error) {
         logger.error('Erro ao obter mensagem citada:', error);
         return new ReturnMessage({
@@ -396,7 +396,7 @@ async function handleTranslation(bot, message, args, group) {
     
     // Criar a resposta
     const languageName = LANGUAGE_NAMES[targetLanguage];
-    const response = `🌐 *Tradução para ${languageName}*\n\n${quotedText}${translatedText}`;
+    const response = `🌐 *Tradução para ${languageName}*\n\n${translatedText}`;
     
     return new ReturnMessage({
       chatId,
@@ -420,8 +420,14 @@ async function handleTranslation(bot, message, args, group) {
  * @param {Object} reaction - Dados da reação
  * @returns {Promise<boolean>} - True se a reação foi processada
  */
-async function processTranslationReaction(bot, reaction) {
+async function processTranslationReaction(bot, message, args, group) {
   try {
+    if(!message.originReaction){
+      logger.error(`[processTranslationReaction] Fui chamado sem uma originReaction.`);
+      return false;
+    }
+    const reaction = message.originReaction;
+
     // Verificar se o emoji é uma bandeira
     const emoji = reaction.reaction;
     if (!FLAG_TO_LANGUAGE[emoji]) {
@@ -429,29 +435,25 @@ async function processTranslationReaction(bot, reaction) {
     }
     
     const targetLanguage = FLAG_TO_LANGUAGE[emoji];
-    
-    // Obter a mensagem que está sendo reagida
-    const message = await bot.client.getMessageById(reaction.msgId._serialized);
-    if (!message || !message.body) {
-      return false;
-    }
-    
-    const textToTranslate = message.body;
-    const chatId = reaction.chatId;
+        
+    const textToTranslate = message.content;
+    const chatId = message.group || message.author;
     
     // Traduzir o texto
     const translatedText = await translateText(textToTranslate, targetLanguage);
     
     // Criar a resposta
     const languageName = LANGUAGE_NAMES[targetLanguage];
-    const response = `🌐 *Tradução para ${languageName}*\n\n${translatedText}`;
+    const response = `🌐 *Tradução para ${languageName} (${reaction.reaction})*\n\n${translatedText}`;
     
     // Enviar a tradução
-    await bot.sendMessage(chatId, response, {
-      quotedMessageId: reaction.msgId._serialized
+    return new ReturnMessage({
+      chatId,
+      content: response,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
-    
-    return true;
   } catch (error) {
     logger.error('Erro ao processar reação de tradução:', error);
     return false;
@@ -463,19 +465,26 @@ const commands = [
   new Command({
     name: 'traduzir',
     description: 'Traduz um texto para o idioma especificado',
+    category: "utilidades",
     usage: '!traduzir [idioma] [texto] ou !traduzir [idioma] em resposta a uma mensagem',
     reactions: {
-      before: "🌐",
-      after: "✅",
+      before: "⏳",
+      after: "🌐",
       error: "❌"
     },
     method: handleTranslation
+  }),
+  new Command({
+    name: "translationReactionHelper",
+    description: "Invocado apenas pelo ReactionsHandler",
+    reactions: {
+      trigger: Object.keys(FLAG_TO_LANGUAGE)
+    },
+    usage: "",
+    hidden: true,
+    method: processTranslationReaction
   })
 ];
 
 // Exportar comandos e manipulador de reação
-module.exports = {
-  commands,
-  processTranslationReaction,
-  translateText
-};
+module.exports = { commands, translateText };

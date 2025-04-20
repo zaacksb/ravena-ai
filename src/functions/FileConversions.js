@@ -429,6 +429,7 @@ const commands = [
   new Command({
     name: 'getaudio',
     description: 'Converte mídia para arquivo de áudio MP3',
+    category: "áudio",
     reactions: {
       before: "⏳",
       after: "🎵",
@@ -441,6 +442,7 @@ const commands = [
   new Command({
     name: 'getvoice',
     description: 'Converte mídia para mensagem de voz',
+    category: "áudio",
     reactions: {
       before: "⏳",
       after: "🎤",
@@ -453,6 +455,7 @@ const commands = [
   new Command({
     name: 'volume',
     description: 'Ajusta o volume da mídia (0-1000)',
+    category: "áudio",
     reactions: {
       before: "⏳",
       after: "🔊",

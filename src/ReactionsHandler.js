@@ -80,7 +80,7 @@ class ReactionsHandler {
       triggers.forEach(emoji => {
         if (emoji && typeof emoji === 'string') {
           this.reactionCommands[emoji] = cmd.name;
-          this.logger.debug(`Mapeado emoji ${emoji} para comando ${cmd.name}`);
+          this.logger.debug(`Mapeado emoji '${emoji}' para comando ${cmd.name}`);
         }
       });
     } catch (error) {
@@ -102,6 +102,7 @@ class ReactionsHandler {
       const commandName = this.reactionCommands[reaction.reaction];
       if (!commandName) {
         this.logger.debug(`Nenhum comando mapeado para o emoji: ${reaction.reaction}`);
+        console.log(this.reactionCommands);
         return false;
       }
       
@@ -114,6 +115,7 @@ class ReactionsHandler {
       
       // Cria um objeto de mensagem formatado
       const formattedMessage = await bot.formatMessage(message);
+      formattedMessage.originReaction = reaction; // Para comandos com reactions dinâmicas
       
       // Encontra e executa o comando
       const command = bot.eventHandler.commandHandler.fixedCommands.getCommand(commandName);

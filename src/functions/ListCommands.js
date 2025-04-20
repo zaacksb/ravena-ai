@@ -873,7 +873,8 @@ const commands = [
   new Command({
     name: 'listas',
     description: 'Mostra as listas disponíveis no grupo',
-    category: 'group',
+    category: 'listas',
+    group: "llistas",
     reactions: {
       before: "⏳",
       after: "📋"
@@ -884,7 +885,8 @@ const commands = [
   new Command({
     name: 'll',
     description: 'Alias para comando listas',
-    category: 'group',
+    category: 'listas',
+    group: "llistas",
     reactions: {
       before: "⏳",
       after: "📋"
@@ -895,7 +897,7 @@ const commands = [
   new Command({
     name: 'lc',
     description: 'Cria uma nova lista',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "➕"
@@ -906,7 +908,7 @@ const commands = [
   new Command({
     name: 'lct',
     description: 'Cria uma nova lista com título',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "➕"
@@ -917,7 +919,7 @@ const commands = [
   new Command({
     name: 'ld',
     description: 'Deleta uma lista',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "🗑️"
@@ -928,7 +930,7 @@ const commands = [
   new Command({
     name: 'le',
     description: 'Entra em uma lista',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "➡️"
@@ -939,7 +941,7 @@ const commands = [
   new Command({
     name: 'ls',
     description: 'Sai de uma lista',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "⬅️"
@@ -950,7 +952,7 @@ const commands = [
   new Command({
     name: 'lt',
     description: 'Define título de uma lista',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "✏️"
@@ -961,7 +963,7 @@ const commands = [
   new Command({
     name: 'lr',
     description: 'Remove um usuário de uma lista (admin only)',
-    category: 'group',
+    category: 'listas',
     reactions: {
       before: "⏳",
       after: "❌"

@@ -238,6 +238,7 @@ const commands = [
   new Command({
     name: 'imdb',
     description: 'Busca informações sobre filmes ou séries no IMDB',
+    category: "cultura",
     reactions: {
       before: "⏳",
       after: "🎬"

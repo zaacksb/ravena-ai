@@ -557,6 +557,7 @@ const commands = [
   new Command({
     name: 'lol',
     description: 'Busca perfil de jogador de League of Legends',
+    category: "jogos",
     reactions: {
       before: "⏳",
       after: "🎮",
@@ -568,6 +569,7 @@ const commands = [
   new Command({
     name: 'wr',
     description: 'Busca perfil de jogador de Wild Rift',
+    category: "jogos",
     reactions: {
       before: "⏳",
       after: "📱",
@@ -579,6 +581,7 @@ const commands = [
   new Command({
     name: 'valorant',
     description: 'Busca perfil de jogador de Valorant',
+    category: "jogos",
     reactions: {
       before: "⏳",
       after: "🔫",

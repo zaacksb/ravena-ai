@@ -1072,6 +1072,7 @@ async function processFileVariable(filePath, bot, chatId) {
 const commands = [
   new Command({
     name: 'pastas',
+    category: "arquivos",
     description: 'Lista as pastas e arquivos criadas no grupo/chat',
     reactions: {
       before: "⏳",
@@ -1083,6 +1084,7 @@ const commands = [
   new Command({
     name: 'p-criar',
     description: 'Cria nova pasta',
+    category: "arquivos",
     reactions: {
       before: "⏳",
       after: "📁"
@@ -1093,6 +1095,7 @@ const commands = [
   new Command({
     name: 'p-enviar',
     description: 'Envia arquivo para a pasta destino',
+    category: "arquivos",
     reactions: {
       before: "⏳",
       after: "📤"
@@ -1103,6 +1106,7 @@ const commands = [
   new Command({
     name: 'p-excluir',
     description: 'Apaga arquivo ou pasta',
+    category: "arquivos",
     reactions: {
       before: "⏳",
       after: "🗑️"
@@ -1113,6 +1117,7 @@ const commands = [
   new Command({
     name: 'p-baixar',
     description: 'Baixa arquivo ou pasta',
+    category: "arquivos",
     reactions: {
       before: "⏳",
       after: "📥"

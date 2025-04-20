@@ -1245,3 +1245,39 @@ Você pode definir os comandos de personagem usando um for:
 ## Speech-to-text
 * Use o modelo whisper turbo
 Mantenha a otimização pelo LLM, mas como uma variável opcional na chamada da função (padrão: true)
+---
+
+# Novo Menu
+
+O menu deve ser organizado da seguinte maneira:
+
+[header]
+
+1. Comandos Personalizados do grupo
+Lista os comandos personalizados deste grupo
+
+2. Comandos Fixos
+Aqui deve-se separar os comandos por Command.category
+Crie um objeto para definir um emoji pelo nome de categoria:
+{
+	"geral": "📃",
+	...
+}
+
+A ordem das chaves deste objeto deve definir também a ordem na qual as categorias são apresentadas.
+
+Os comandos possuem a propriedade "group", utilizada para agrupar os comandos na mesma linha. Eles devem ser agrupados para comandos que possuem o mesmo "group".
+A descrição a ser usada é a do primeiro definido.
+Exemplo:
+!d4, !d6, !d10: Rola um dado de X faces
+
+
+Se o comando possui a propriedade "hidden", ele não deve aparecer no menu.
+O header deve ser lido do arquivo data/cmd_header, arquivo de texto.
+
+3. Comandos de gerenciamento
+
+## Ordenamento
+Crie um vetor onde é possivel colocar em ordem os comandos por nome.
+Este vetor pode conter comandos que não existem e também não precisa conter todos os comandos.
+Os comandos que não estiverem neste vetor, ficam após os que estiverem, na sua ordenação original.

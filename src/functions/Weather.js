@@ -403,6 +403,7 @@ const commands = [
   new Command({
     name: 'clima',
     description: 'Mostra o clima atual e previsão para uma localização',
+    category: "geral",
     reactions: {
       before: "⏳",
       after: "☀️",

@@ -26,13 +26,18 @@ const alltalkOutputFolder = path.join(process.env.ALLTALK_FOLDER, "outputs");
 const whisperPath = path.join(process.env.ALLTALK_FOLDER, "alltalk_environment", "env", "Scripts", "Whisper.exe");
 
 // Definição dos personagens para TTS
-const ttsCharacters = {
-  "ravena": "ravena_sample.wav",
-  "mulher": "female_01.wav",
-  "homem": "male_01.wav",
-  "clint": "Clint_Eastwood CC3 (enhanced).wav",
-  "morgan": "Morgan_Freeman CC3.wav"
-};
+const ttsCharacters = [
+  {"name": "ravena", "emoji": ["🗣","🦇"], "voice": "ravena_sample.wav"},
+  {"name": "mulher", "emoji": "👩", "voice": "female_01.wav"},
+  {"name": "carioca", "voice": "female_02.wav"},
+  {"name": "carioco", "voice": "male_02.wav"},
+  {"name": "sensual", "emoji": "💋", "voice": "female_03.wav"},
+  {"name": "sensuel", "voice": "male_04.wav"},
+  {"name": "homem", "emoji": "👨", "voice": "male_01.wav"},
+  {"name": "clint", "voice": "Clint_Eastwood CC3 (enhanced).wav"},
+  {"name": "morgan", "voice": "Morgan_Freeman CC3.wav"},
+  {"name": "narrador", "emoji": "🎙", "voice": "James_Earl_Jones CC3.wav"}
+];
 
 // Cria diretório temporário para arquivos de áudio
 const tempDir = path.join(os.tmpdir(), 'whatsapp-bot-speech');
@@ -95,7 +100,7 @@ async function saveMediaToTemp(media, extension = 'ogg') {
  * @param {string} character - Personagem a ser usado (opcional)
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
-async function textToSpeech(bot, message, args, group, character = "ravena") {
+async function textToSpeech(bot, message, args, group, char = "ravena") {
   try {
     const chatId = message.group || message.author;
     
@@ -107,8 +112,10 @@ async function textToSpeech(bot, message, args, group, character = "ravena") {
     }
     
     const text = args.join(' ');
-    logger.debug(`Convertendo texto para voz (${character}): ${text}`);
-    
+    const character = ttsCharacters.find(ttsC => ttsC.name === char);
+
+    logger.debug(`Convertendo texto para voz (${JSON.stringify(character)}): ${text}`);
+
     // Nome do arquivo de saída
     const hash = crypto.randomBytes(2).toString('hex');
     const outputFilename = `tts_audio_${hash}`;
@@ -121,15 +128,11 @@ async function textToSpeech(bot, message, args, group, character = "ravena") {
     const params = new URLSearchParams({
       text_input: text,
       text_filtering: "standard",
-      character_voice_gen: ttsCharacters[character],
+      character_voice_gen: character.voice,
       narrator_enabled: "false",
-      narrator_voice_gen: "",
-      text_not_inside: "character",
       language: "pt",
       output_file_name: outputFilename,
-      output_file_timestamp: "false",
-      autoplay: "false",
-      autoplay_volume: "0.8"
+      output_file_timestamp: "false"
     });
     
     // Faz a requisição para a API
@@ -433,44 +436,132 @@ async function processAutoSTT(bot, message, group) {
   }
 }
 
-// Função para criar o comando TTS para um personagem específico
-function createTTSCommandForCharacter(character) {
-  const commandName = character === 'ravena' ? 'tts' : `tts-${character}`;
-  
-  return new Command({
-    name: commandName,
-    description: `Converte texto para voz usando personagem ${character}`,
-    category: 'group',
-    reactions: {
-      before: "⌛️",
-      after: "🔊"
-    },
-    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, character)
-  });
-}
-
 // Define os comandos usando a classe Command
-const commands = [];
-
-// Adiciona comandos TTS para cada personagem
-Object.keys(ttsCharacters).forEach(character => {
-  commands.push(createTTSCommandForCharacter(character));
-});
-
-// Adiciona comando STT
-commands.push(
+const commands = [
   new Command({
     name: 'stt',
     description: 'Converte voz para texto',
-    category: 'group',
+    category: 'ai',
     needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
     reactions: {
+      trigger: "👂",
       before: "⌛️",
       after: "👂"
     },
     method: speechToText
+  }),
+  new Command({
+    name: "tts",
+    description: `Converte texto para voz usando personagem 'ravena'`,
+    category: "ia",
+    reactions: {
+      trigger: ["🗣️","🦇"],
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "ravena")
+  }),
+  new Command({
+    name: "tts-mulher",
+    description: `Converte texto para voz usando personagem 'mulher'`,
+    category: "ia",
+    reactions: {
+      trigger: "👩",
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "mulher")
+  }),
+  new Command({
+    name: "tts-carioca",
+    description: `Converte texto para voz usando personagem 'carioca'`,
+    category: "ia",
+    reactions: {
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "carioca")
+  }),
+
+  new Command({
+    name: "tts-carioco",
+    description: `Converte texto para voz usando personagem 'carioco'`,
+    category: "ia",
+    reactions: {
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "carioco")
+  }),
+
+  new Command({
+    name: "tts-sensual",
+    description: `Converte texto para voz usando personagem 'sensual'`,
+    category: "ia",
+    reactions: {
+      trigger: "💋",
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "sensual")
+  }),
+  new Command({
+    name: "tts-sensuel",
+    description: `Converte texto para voz usando personagem 'sensuel'`,
+    category: "ia",
+    reactions: {
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "sensuel")
+  }),
+
+  new Command({
+    name: "tts-homem",
+    description: `Converte texto para voz usando personagem 'homem'`,
+    category: "ia",
+    reactions: {
+      trigger: "👨",
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "homem")
+  }),
+  new Command({
+    name: "tts-clint",
+    description: `Converte texto para voz usando personagem 'clint'`,
+    category: "ia",
+    reactions: {
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "clint")
+  }),
+
+  new Command({
+    name: "tts-morgan",
+    description: `Converte texto para voz usando personagem 'morgan'`,
+    category: "ia",
+    reactions: {
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "morgan")
+  }),
+
+  new Command({
+    name: "tts-narrador",
+    description: `Converte texto para voz usando personagem 'narrador'`,
+    category: "ia",
+    reactions: {
+      trigger: "🎙️",
+      before: "⌛️",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "narrador")
   })
-);
+];
+
 
 // Exporta função para ser usada em EventHandler
 module.exports.commands = commands;

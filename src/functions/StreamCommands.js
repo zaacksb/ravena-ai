@@ -233,7 +233,7 @@ const commands = [
   new Command({
     name: 'streams',
     description: 'Lista todos os canais configurados para monitoramento',
-    category: 'stream',
+    category: 'streams',
     reactions: {
       before: "⏳",
       after: "📺"
@@ -244,7 +244,7 @@ const commands = [
   new Command({
     name: 'streamstatus',
     description: 'Mostra status dos canais monitorados',
-    category: 'stream',
+    category: 'streams',
     reactions: {
       before: "⏳",
       after: "📊"
