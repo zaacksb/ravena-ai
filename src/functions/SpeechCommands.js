@@ -441,7 +441,7 @@ const commands = [
   new Command({
     name: 'stt',
     description: 'Converte voz para texto',
-    category: 'ai',
+    category: 'utilidades',
     needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
     reactions: {
       trigger: "👂",
@@ -453,7 +453,7 @@ const commands = [
   new Command({
     name: "tts",
     description: `Converte texto para voz usando personagem 'ravena'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       trigger: ["🗣️","🦇"],
       before: "⌛️",
@@ -464,7 +464,7 @@ const commands = [
   new Command({
     name: "tts-mulher",
     description: `Converte texto para voz usando personagem 'mulher'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       trigger: "👩",
       before: "⌛️",
@@ -475,7 +475,7 @@ const commands = [
   new Command({
     name: "tts-carioca",
     description: `Converte texto para voz usando personagem 'carioca'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -486,7 +486,7 @@ const commands = [
   new Command({
     name: "tts-carioco",
     description: `Converte texto para voz usando personagem 'carioco'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -497,7 +497,7 @@ const commands = [
   new Command({
     name: "tts-sensual",
     description: `Converte texto para voz usando personagem 'sensual'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       trigger: "💋",
       before: "⌛️",
@@ -508,7 +508,7 @@ const commands = [
   new Command({
     name: "tts-sensuel",
     description: `Converte texto para voz usando personagem 'sensuel'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -519,7 +519,7 @@ const commands = [
   new Command({
     name: "tts-homem",
     description: `Converte texto para voz usando personagem 'homem'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       trigger: "👨",
       before: "⌛️",
@@ -530,7 +530,7 @@ const commands = [
   new Command({
     name: "tts-clint",
     description: `Converte texto para voz usando personagem 'clint'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -541,7 +541,7 @@ const commands = [
   new Command({
     name: "tts-morgan",
     description: `Converte texto para voz usando personagem 'morgan'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       before: "⌛️",
       after: "🔊"
@@ -552,7 +552,7 @@ const commands = [
   new Command({
     name: "tts-narrador",
     description: `Converte texto para voz usando personagem 'narrador'`,
-    category: "ia",
+    category: "tts",
     reactions: {
       trigger: "🎙️",
       before: "⌛️",

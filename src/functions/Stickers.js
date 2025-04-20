@@ -134,7 +134,7 @@ const commands = [
   new Command({
     name: 'sticker',
     description: 'Converte mídia em sticker',
-    category: "geral",
+    category: "midia",
     group: "ssticker",
     needsMedia: true, // Verificará tanto mídia direta quanto mídia de mensagem citada
     reactions: {
@@ -149,7 +149,7 @@ const commands = [
   new Command({
     name: 's',
     description: 'Alias curto para comando sticker',
-    category: "geral",
+    category: "midia",
     group: "ssticker",
     needsMedia: true,
     reactions: {

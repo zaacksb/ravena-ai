@@ -474,6 +474,7 @@ const commands = [
   new Command({
     name: 'yt',
     description: 'Baixa um vídeo do YouTube',
+    category: "downloaders",
     reactions: {
       before: "⏳",
       after: "✅",
@@ -485,6 +486,7 @@ const commands = [
   new Command({
     name: 'sr',
     description: 'Baixa um áudio do YouTube',
+    category: "downloaders",
     reactions: {
       before: "⏳",
       after: "✅",

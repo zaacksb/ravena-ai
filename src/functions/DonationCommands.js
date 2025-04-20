@@ -146,14 +146,16 @@ async function showTopDonors(bot, message, args, group) {
     const totalAmount = donations.reduce((total, donation) => total + donation.valor, 0);
     
     // Constrói mensagem
-    let donorsMsg = 
-      `🏆 *Principais Doadores* 🏆\n\n` +
-      `Obrigado a todos os nossos apoiadores! Total de doações: R$${totalAmount.toFixed(2)}\n\n`;
+    let donorsMsg = `💖 *Apoie-me com uma doação!* 💖\n\n` +
+      `Suas doações me ajudam a manter e melhorar este bot.\n\n` +
+      `🔗 *Link de Doação:* ${donationLink}\n\n` +
+      `🏆 *Doadores* 🏆\n\n`;
     
     topDonors.forEach((donor, index) => {
       donorsMsg += `${index + 1}. ${donor.nome}: R$${donor.valor.toFixed(2)}\n`;
     });
     
+    donorsMsg += `Obrigado a todos os nossos apoiadores! Total de doações: R$${totalAmount.toFixed(2)}\n\n`;
     donorsMsg += `\nUse !donate ou !doar para nos apoiar também!`;
     
     logger.debug('Lista de principais doadores enviada com sucesso');
@@ -177,17 +179,17 @@ async function showTopDonors(bot, message, args, group) {
 const commands = [
   new Command({
     name: 'doar',
-    description: 'Mostra informações de doação e link (Português)',
-    category: "geral",
-    method: showDonationInfo
-  }),
-  
-  new Command({
-    name: 'doadores',
-    description: 'Mostra principais doadores',
+    description: 'Mostra informações de doação e link',
     category: "geral",
     method: showTopDonors
-  })
+  }),
+  
+  // new Command({
+  //   name: 'doadores',
+  //   description: 'Mostra principais doadores',
+  //   category: "geral",
+  //   method: showTopDonors
+  // })
 ];
 
 // Registra os comandos sendo exportados

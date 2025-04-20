@@ -179,7 +179,7 @@ const commands = [
   new Command({
     name: 'imagine',
     description: 'Gera uma imagem usando Stable Diffusion',
-    category: 'ai',
+    category: 'ia',
     reactions: {
       trigger: "✨",
       before: "🔍",

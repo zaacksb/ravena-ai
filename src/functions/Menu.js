@@ -10,7 +10,64 @@ const Command = require('../models/Command');
 const logger = new Logger('menu-commands');
 const database = Database.getInstance();
 
-//logger.info('Módulo MenuCommands carregado');
+/**
+ * Emojis para as categorias de comandos
+ * A ordem das chaves define a ordem de apresentação das categorias
+ */
+const CATEGORY_EMOJIS = {
+  "geral": "📃",
+  "grupo": "👥",
+  "utilidades": "🛠️",
+  "midia": "📱",
+  "ia": "🤖",
+  "downloaders": "📤",
+  "jogos": "🎮",
+  "cultura": "🍿",
+  "áudio": "🔈",
+  "tts": "🗣",
+  "busca": "🔎",
+  "listas": "📜",
+  "arquivos": "📂",
+  "general": "🖨️",
+  "diversao": "🎮",
+  "info": "ℹ️",
+  "imagens": "🖼️",
+  "resto": "❓",
+};
+
+/**
+ * Ordem personalizada para comandos por nome
+ * Os comandos não listados aparecem depois na ordem original
+ */
+const COMMAND_ORDER = [
+  "menu",
+  "cmd", 
+  "help",
+  "ping",
+  "info",
+  "roletarussa",
+  "roletaranking",
+  "roll",
+  "d10",
+  "lol",
+  "valorant",
+  "wr"
+];
+
+/**
+ * Lê o arquivo de cabeçalho do menu
+ * @returns {Promise<string>} - Conteúdo do cabeçalho
+ */
+async function readMenuHeader() {
+  try {
+    const headerPath = path.join(process.cwd(), 'data', 'cmd_header');
+    const headerContent = await fs.readFile(headerPath, 'utf8');
+    return headerContent.trim();
+  } catch (error) {
+    logger.warn('Erro ao ler cabeçalho do menu:', error);
+    return '*Menu de Comandos do Ravenabot*';
+  }
+}
 
 /**
  * Agrupa comandos por categoria para melhor organização
@@ -18,40 +75,146 @@ const database = Database.getInstance();
  * @returns {Object} - Comandos agrupados por categoria
  */
 function groupCommandsByCategory(commands) {
-  const categories = {
-    group: [],
-    fixed: [],
-    management: [],
-    custom: []
-  };
+  const categories = {};
+  
+  // Inicializa categorias com base no objeto CATEGORY_EMOJIS
+  Object.keys(CATEGORY_EMOJIS).forEach(category => {
+    categories[category] = [];
+  });
   
   // Agrupa comandos por categoria
   for (const cmd of commands) {
-    if (cmd.category === 'group') {
-      categories.group.push(cmd);
-    } else {
-      categories.fixed.push(cmd);
+    // Ignora comandos ocultos
+    if (cmd.hidden) continue;
+    
+    let category = cmd.category?.toLowerCase() ?? "resto";
+    if(category.length < 1){
+      category = "resto";
     }
+    
+    // Cria a categoria se não existir
+    if (!categories[category]) {
+      categories[category] = [];
+    }
+    
+    categories[category].push(cmd);
   }
   
+  console.log(Object.keys(categories));
   return categories;
 }
 
 /**
- * Formata comando para exibição no menu
+ * Agrupa comandos que compartilham a mesma propriedade 'group'
+ * @param {Array} commands - Lista de comandos de uma categoria
+ * @returns {Array} - Lista de grupos de comandos
+ */
+function groupRelatedCommands(commands) {
+  const groupedCommands = [];
+  const groups = {};
+  
+  // Primeiro, separa comandos por grupo
+  for (const cmd of commands) {
+    if (cmd.group) {
+      if (!groups[cmd.group]) {
+        groups[cmd.group] = [];
+      }
+      groups[cmd.group].push(cmd);
+    } else {
+      // Comandos sem grupo são tratados individualmente
+      groupedCommands.push([cmd]);
+    }
+  }
+  
+  // Adiciona os grupos de comandos à lista final
+  for (const groupName in groups) {
+    if (groups[groupName].length > 0) {
+      // Ordena comandos dentro do grupo pelo nome
+      groups[groupName].sort((a, b) => a.name.localeCompare(b.name));
+      groupedCommands.push(groups[groupName]);
+    }
+  }
+  
+  return groupedCommands;
+}
+
+/**
+ * Ordena comandos conforme a ordem definida em COMMAND_ORDER
+ * @param {Array} commands - Lista de comandos ou grupos de comandos
+ * @returns {Array} - Lista ordenada
+ */
+function sortCommands(commands) {
+  return commands.sort((a, b) => {
+    // Obtém o primeiro comando de cada grupo (ou o próprio comando se for individual)
+    const cmdA = Array.isArray(a) ? a[0] : a;
+    const cmdB = Array.isArray(b) ? b[0] : b;
+    
+    const indexA = COMMAND_ORDER.indexOf(cmdA.name);
+    const indexB = COMMAND_ORDER.indexOf(cmdB.name);
+    
+    // Se ambos estão na lista de ordenação, usa a posição na lista
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
+    }
+    // Se apenas um está na lista, este vem primeiro
+    if (indexA !== -1) return -1;
+    if (indexB !== -1) return 1;
+    
+    // Caso contrário, usa ordem alfabética
+    return cmdA.name.localeCompare(cmdB.name);
+  });
+}
+
+/**
+ * Formata um grupo de comandos para exibição no menu
+ * @param {Array} cmdGroup - Grupo de comandos relacionados
+ * @param {string} prefix - Prefixo de comando
+ * @returns {string} - String formatada do grupo de comandos
+ */
+function formatCommandGroup(cmdGroup, prefix) {
+  // Usando o primeiro comando para a descrição
+  const mainCmd = cmdGroup[0];
+  
+  // Formata os nomes de comando com prefixo
+  const cmdNames = cmdGroup.map(cmd => {
+    let cmdText = `${prefix}${cmd.name}`;
+    
+    // Adiciona aliases se disponíveis
+    if (cmd.aliases && Array.isArray(cmd.aliases) && cmd.aliases.length > 0) {
+      cmdText += `, ${prefix}${cmd.aliases.join(`, ${prefix}`)}`;
+    }
+    
+    return cmdText;
+  });
+  
+  // Junta todos os nomes de comando
+  let result = `• *${cmdNames.join(', ')}*`;
+  
+  // Adiciona reação se disponível no comando principal
+  if (mainCmd.reactions && mainCmd.reactions.trigger) {
+    result += ` (${mainCmd.reactions.trigger})`;
+  }
+  
+  // Adiciona descrição do comando principal
+  if (mainCmd.description) {
+    result += `: ${mainCmd.description}`;
+  }
+  
+  return result;
+}
+
+/**
+ * Formata comando individual para exibição no menu
  * @param {Object} cmd - Objeto de comando
  * @param {string} prefix - Prefixo de comando
  * @returns {string} - String de comando formatada
  */
-function formatCommand(cmd, prefix) {
+function formatSingleCommand(cmd, prefix) {
   let result = `• *${prefix}${cmd.name}*`;
   
   // Adiciona aliases se disponíveis
   if (cmd.aliases && Array.isArray(cmd.aliases) && cmd.aliases.length > 0) {
     result += `, *${prefix}${cmd.aliases.join(`*, *${prefix}`)}*`;
-  } else if (cmd.aliasFor) {
-    // Este é um alias
-    result += ` (alias para ${prefix}${cmd.aliasFor})`;
   }
   
   // Adiciona reação se disponível
@@ -88,17 +251,21 @@ async function sendCommandList(bot, message, args, group) {
       (await database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted) : 
       [];
     
+    // Lê o cabeçalho do menu
+    const header = await readMenuHeader();
+    
     // Agrupa comandos fixos por categoria
     const categorizedCommands = groupCommandsByCategory(fixedCommands);
     
-    // Constrói mensagem
-    let menuText = '*Comandos Disponíveis*\n\n';
+    // Define o prefixo do comando
     const prefix = group && group.prefix ? group.prefix : bot.prefix;
     
-    // MELHORIA: Mostra comandos personalizados primeiro
-    // Adiciona seção de comandos personalizados se houver algum
+    // Constrói mensagem
+    let menuText = header + '\n\n';
+    
+    // 1. Comandos Personalizados
     if (customCommands.length > 0) {
-      menuText += '*Comandos Personalizados:*\n';
+      menuText += '📋 *Comandos do Grupo:*\n';
       for (const cmd of customCommands) {
         let cmdText = `• *${prefix}${cmd.startsWith}*`;
         if (cmd.reactions && cmd.reactions.trigger) {
@@ -109,23 +276,43 @@ async function sendCommandList(bot, message, args, group) {
       menuText += '\n';
     }
     
-    // Adiciona seção de comandos de grupo (se houver)
-    if (categorizedCommands.group.length > 0) {
-      menuText += '*Comandos de Grupo:*\n';
-      for (const cmd of categorizedCommands.group) {
-        menuText += `${formatCommand(cmd, prefix)}\n`;
+    // 2. Comandos Fixos por categoria
+    menuText += '📌 *Comandos Fixos:*\n';
+    
+    // Processa cada categoria na ordem definida em CATEGORY_EMOJIS
+    for (const category in CATEGORY_EMOJIS) {
+      const commands = categorizedCommands[category] || [];
+      if (commands.length === 0) continue;
+      
+      // Adiciona cabeçalho da categoria com emoji
+      const emoji = CATEGORY_EMOJIS[category];
+      let nomeCategoria = category.charAt(0).toUpperCase() + category.slice(1);
+      if(nomeCategoria.length < 4){
+        nomeCategoria = nomeCategoria.toUpperCase();
       }
-      menuText += '\n';
+      menuText += `\n${emoji} *${nomeCategoria}:*\n`;
+      
+      // Agrupa comandos relacionados
+      const groupedCommands = groupRelatedCommands(commands);
+      
+      // Ordena conforme COMMAND_ORDER
+      const sortedGroups = sortCommands(groupedCommands);
+      
+      // Formata cada grupo de comandos
+      for (const cmdGroup of sortedGroups) {
+        if (Array.isArray(cmdGroup) && cmdGroup.length > 1) {
+          // Grupo de comandos relacionados
+          menuText += `${formatCommandGroup(cmdGroup, prefix)}\n`;
+        } else {
+          // Comando individual
+          const cmd = Array.isArray(cmdGroup) ? cmdGroup[0] : cmdGroup;
+          menuText += `${formatSingleCommand(cmd, prefix)}\n`;
+        }
+      }
     }
     
-    // Adiciona seção de comandos fixos
-    menuText += '*Comandos Gerais:*\n';
-    for (const cmd of categorizedCommands.fixed) {
-      menuText += `${formatCommand(cmd, prefix)}\n`;
-    }
-    
-    // Adiciona seção de comandos de gerenciamento
-    menuText += '\n*Comandos de Gerenciamento:*\n';
+    // 3. Comandos de gerenciamento
+    menuText += '\n⚙️ *Comandos de Gerenciamento:*\n';
     menuText += `• *${prefix}g-help*: Mostra ajuda de comandos de gerenciamento\n`;
     menuText += `• *${prefix}g-info*: Mostra informações detalhadas do grupo\n`;
     menuText += `• *${prefix}g-setName*: Muda nome do grupo\n`;
@@ -181,8 +368,5 @@ const commands = [
     }
   })
 ];
-
-// Registra os comandos sendo exportados
-//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

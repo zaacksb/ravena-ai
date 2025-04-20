@@ -495,7 +495,7 @@ const commands = [
   new Command({
     name: 'removebg',
     description: 'Remove o fundo de uma imagem',
-    category: "imagens",
+    category: "midia",
     needsMedia: true,
     reactions: {
       before: "⏳",
@@ -508,7 +508,7 @@ const commands = [
   new Command({
     name: 'distort',
     description: 'Aplica efeito de distorção a uma imagem',
-    category: "imagens",
+    category: "midia",
     needsMedia: true,
     reactions: {
       before: "⏳",
@@ -521,7 +521,7 @@ const commands = [
   new Command({
     name: 'stickerbg',
     description: 'Cria um sticker após remover o fundo',
-    category: "geral",
+    category: "midia",
     group: "stickerbg",
     aliases: ['sbg'],
     needsMedia: true,
@@ -540,7 +540,7 @@ const commands = [
     new Command({
       name: effect,
       description: `Aplica efeito ${effect} a uma imagem`,
-      category: "imagens",
+      category: "midia",
       group: "imageEffect",
       needsMedia: true,
       reactions: {
@@ -559,7 +559,7 @@ const commands = [
 const sbgCommand = new Command({
   name: 'sbg',
   description: 'Alias para comando stickerbg',
-  category: "geral",
+  category: "midia",
   group: "stickerbg",
   needsMedia: true,
   reactions: {
