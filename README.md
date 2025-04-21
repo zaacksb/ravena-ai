@@ -58,7 +58,13 @@
 - [x] Interagir automatico em grupo com chance setada
 - [x] Mensagem boas vindas fixa (data/groupJoin.txt)
 - [ ] Ranking mensagens (!faladores)
+- [ ] Comando: !apelido, remover do gerenciamento e processar no EventHandler
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
+- [ ] Comando: !g-manage dentro do grupo sem argumento
+- [ ] !g-manage está fazendo o bot responder dentro do grupo
+- [ ] GroupJoin: Enviar o nome que ficou o grupo e como mudar
+- [ ] Variáveis: Mencionar pessoas {mention-55999999...}
+- [ ] Variáveis: Importar todas da ravena antiga
 - [x] Melhorar comando !cmd pra ficar mais organizado
 - [x] Script para migração de dados da ravena antiga
     - [x] Grupos

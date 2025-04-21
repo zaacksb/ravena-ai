@@ -137,7 +137,7 @@ class CommandHandler {
           }
       }
 
-      // Verifica se é um comando de gerenciamento privado
+      // Verifica se é um comando de gerenciamento no PV do bot
       if (!message.group && this.privateManagement[message.author]) {
         const managedGroupId = this.privateManagement[message.author];
         const managedGroup = await this.database.getGroup(managedGroupId);
@@ -298,7 +298,7 @@ class CommandHandler {
         
         const returnMessage = new ReturnMessage({
           chatId: message.author,
-          content: 'Comandos de gerenciamento só podem ser usados em grupos',
+          content: 'Comandos de gerenciamento só podem ser usados em grupos. Se você deseja administrar seu grupo aqui no PV do bot, me envie:\n!g-manage [nomeDoGrupo]\n\n- Você pode enviar "!g-manage" dentro do grupo caso não souber o nome\n- O nome do grupo pode ser alterado utilizando o comando "!g-setName [novoNome]"',
           reactions: {
             after: this.defaultReactions.after
           }

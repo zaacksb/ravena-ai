@@ -484,14 +484,17 @@ class EventHandler {
           this.logger.error('Erro ao ler groupJoin.txt, usando mensagem padrão:', readError);
         }
         
+        let llm_inviterInfo = "";
+
         // Adiciona informações do convidador se disponíveis
         if (foundInviter && foundInviter.authorName) {
           botInfoMessage += `\n_(Adicionado por: ${foundInviter.authorName})_`;
           llm_inviterInfo = ` '${foundInviter.authorName}'`;
         }
+
+        botInfoMessage += `\n\aO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando "${group.prefix}g-setName [novoNome]".\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV "${group.prefix}g-manage ${group.name}"`;
         
         // Se encontramos o autor do convite, adiciona-o como admin adicional
-        let llm_inviterInfo = "";
         if (foundInviter) {
           // Inicializa additionalAdmins se não existir
           if (!group.additionalAdmins) {
@@ -503,12 +506,7 @@ class EventHandler {
             group.additionalAdmins.push(foundInviter.authorId);
             await this.database.saveGroup(group);   
           }
-
-          if(foundInviter.authorName){
-            botInfoMessage += `\n_(Adicionado por: ${foundInviter.authorName})_`;
-            llm_inviterInfo = ` '${foundInviter.authorName}'`;
-          }
-          
+      
           // Remove o join pendente
           await this.database.removePendingJoin(foundInviter.code);
         }
@@ -724,7 +722,7 @@ class EventHandler {
       return false;
     }
   }
-  
+
 }
 
 module.exports = EventHandler;

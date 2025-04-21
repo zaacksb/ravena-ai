@@ -1461,3 +1461,72 @@ Legendas ´podem seguir 2 padrões, com o nome do arquivo no começo ou no final
 "legenda img-nomeArquivo.jpg" <==> "{image-nomeArquivo.jpg} legenda"
 9. Adaptar e gerar o atual roletarussa.json a partir do antigo roleta.json
 10. Adaptar o lists.json e gerar os lists/[numeroGrupo].json (necessário associar o nome com o numeroGrupo novamente)
+
+
+- img => {image-...}
+- gif => {gif-...}
+- vid => {video-...}
+- document => {document-...}
+- sfx => {voice-...}
+- sticker => {sticker-...}
+- stickerguif => {sticker-...}
+- stickerimag => {sticker-...}
+
+---
+As mensagens de gerência só podem ser utilizadas por:
+* admins do grupo: GroupChat.participants.participant.isAdmin
+* Group.additionalAdmins
+* SuperAdmin
+
+Para pegar o GroupChat, você pode utilizar client.getChatById(group.id) ou message.origin.getChat()
+
+Implemente uma função genérica isAdmin que possa ser utilizada em outros lugares do código, como no WhatsAppBot.js isUserAdminInGroup
+---
+# Nova Função: Ranking de Mensagens
+Cada vez que o bot receber uma mensagem, gravar a qtdMensagens que a pessoa enviou já para o grupo ou PV
+Base de dados
+- data/ranking/[groupId].json
+- data/ranking/[bot-number@c.us].json // caso seja no PV do bot
+O ID pode utilizar o message.origin.from para facilitar a implementação
+
+Formato:
+{
+	"nome": "Nome do Autor", // atualiza sempre que receber mensagem, pois pode mudar
+	"numero": "123456@c.us",
+	"qtdMsgs": 10
+}
+
+Implementar comando !faladores (GeneralCommands.js, category: geral) que mostra o ranking de faladores no grupo que o comando foi enviado.
+
+# !g-apelido -> !apelido
+Como o !g- é apenas para adminstradores, remover o !g-apelido do Management e transformá-lo em um GeneralCommands chamado !apelido
+Seta um apelido pro usuário dentro do grupo que foi enviado.
+Sempre que uma nova mensagem desse usuário for recebida, o bot deve alterar o pushname/name para o apelido da base de dados, caso exista.
+Assim, o usuário sempre será tratado pelo seu apelido dentro do grupo
+Minimo: 2 caracteres
+Máximo: 20 caracteres, apenas truncar, sem necessidade de retornar erro.
+
+
+# Novo comando Management: !g-manage
+O !g-manage já existe para o PV do bot, implementado no processManagementCommand. Iso deve ser mantido.
+Criar o comando novo no Management que não recebe argumentos, mas é o equivalente de enviar !g-manage [nomeDoGrupo] no pv do bot
+
+# Mudança no privateManagement
+Quando o usuário está gerenciando o grupo pelo PV do bot, o bot está enviando as mensagens de respostas dos comadnso dentro do gurpo, mas ele deveria responder o usuário no própvio pv do bot.
+A ideia desta função é não poluir o grupo durante a configuração do mesmo.
+
+
+# CustomVariableProcessor.js
+Novas variáveis a serem processadas:
+
+ - Você girou o dado de 150 e deu: {rndDado-150}!
+ - Você chutou algo entre 20 e 60 e deu: {rndDadoRange-20-60}!
+ - {rndDado-10} + {randomPequeno} + {rndDadoRange-5-13} = {somaRandoms}
+ - Esse comando já foi executado {contador} vezes!
+ - O grupo aqui se chama {nomeCanal} ou {nomeGrupo}!
+ - {randomPequeno} {randomMedio} {randomGrande} {randomMuitoGrande}
+ - {data-hora}:{data-minuto}:{data-segundo} {data-dia}/{data-mes}/{data-ano}
+ - {nomeAutor} é quem mandou a mensagem, {mention} é o nome de quem foi marcado na mensagem respondido em quote
+ - {mention-12345678@c.us} faz com que a pessoa seja mencionada mensagem, esta variável apenas é apagada do retorno quando processada
+
+

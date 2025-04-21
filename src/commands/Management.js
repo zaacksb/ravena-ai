@@ -53,10 +53,6 @@ class Management {
         method: 'setFarewellMessage',
         description: 'Define mensagem de despedida para membros que saem'
       },
-      'ajuda': {
-        method: 'showManagementHelp',
-        description: 'Mostra ajuda de comandos de gerenciamento'
-      },
       'cmdReact': {
         method: 'setReaction',
         description: 'Define reação "depois" para um comando'
