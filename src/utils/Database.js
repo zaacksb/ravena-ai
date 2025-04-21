@@ -162,7 +162,7 @@ class Database {
   saveJSON(filePath, data) {
     try {
       // Cria backup do arquivo existente
-      this.createBackup(filePath);
+      //this.createBackup(filePath);
       
       // Garante que o diretório exista
       const dir = path.dirname(filePath);
@@ -260,6 +260,8 @@ class Database {
     try {
       // Obtém todos os grupos
       const groups = await this.getGroups();
+
+      console.log(`[saveGroup] `, group);
       
       if (!Array.isArray(groups)) {
         this.logger.error('Groups não é um array em saveGroup:', groups);
@@ -271,13 +273,16 @@ class Database {
       // Encontra índice do grupo existente
       const index = groups.findIndex(g => g.id === group.id);
       
+      console.log("index grupo ", index);
       if (index !== -1) {
         // Atualiza grupo existente
         groups[index] = group;
       } else {
         // Adiciona novo grupo
         groups.push(group);
-      }
+      } 
+
+      console.log(`[saveGroup] POS`, groups[index]);
       
       // Atualiza cache
       this.cache.groups = groups;

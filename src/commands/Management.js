@@ -69,6 +69,10 @@ class Management {
         method: 'showGroupInfo',
         description: 'Mostra informações detalhadas do grupo'
       },
+      'manage': {
+        method: 'manageCommand',
+        description: 'Ativa gerenciamento do grupo pelo chat privado'
+      },
       'filtro-palavra': {
         method: 'filterWord',
         description: 'Adiciona/remove palavra do filtro'
@@ -3752,6 +3756,51 @@ class Management {
       chatId: group.id,
       content: `📊 Chance de interações definida para ${chance/100}% (${chance}/10000).`
     });
+  }
+
+  /**
+   * Comando !g-manage sem argumentos para usar no grupo
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async manageCommand(bot, message, args, group, privateManagement) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Você já está em um chat privado comigo. Para gerenciar um grupo, use: !g-manage [nomeDoGrupo]'
+        });
+      }
+      
+      // Configura o gerenciamento do grupo pelo PV
+      privateManagement[message.author] = group.id;
+      this.logger.info(`Usuário ${message.author} ativou gerenciamento do grupo ${group.name} (${group.id}) via comando direto no grupo`);
+      
+      // Envia mensagem para o autor no PV
+      const returnMessagePV = new ReturnMessage({
+        chatId: message.author,
+        content: `🔧 Você agora está gerenciando o grupo: *${group.name}*\n\nVocê pode usar os comandos de administração aqui no privado para configurar o grupo sem poluí-lo com mensagens de configuração.`
+      });
+      
+      // Envia mensagem no grupo
+      const returnMessageGroup = new ReturnMessage({
+        chatId: group.id,
+        content: `✅ ${message.authorName || 'Administrador'} agora está gerenciando o grupo pelo chat privado.`
+      });
+      
+      return [returnMessageGroup, returnMessagePV];
+    } catch (error) {
+      this.logger.error('Erro ao configurar gerenciamento de grupo:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao configurar gerenciamento de grupo. Por favor, tente novamente.'
+      });
+    }
   }
 }
 

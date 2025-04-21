@@ -114,6 +114,13 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     const text = args.join(' ');
     const character = ttsCharacters.find(ttsC => ttsC.name === char);
 
+    if(text.length > 100){
+      await bot.sendReturnMessages((new ReturnMessage({
+        chatId: chatId,
+        content: '🔉 Sintetizando áudio, isso pode levar alguns segundos...'
+      }));
+    }
+
     logger.debug(`Convertendo texto para voz (${JSON.stringify(character)}): ${text}`);
 
     // Nome do arquivo de saída

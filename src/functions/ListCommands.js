@@ -21,8 +21,15 @@ const NUMBER_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6
  * @param {Object} reaction - Reaction data
  * @returns {Promise<boolean>} True if reaction was processed
  */
-async function processListReaction(bot, reaction) {
+async function processListReaction(bot, message, args, group) {
   try {
+    if(!message.originReaction){
+      logger.error(`[processListReaction] Fui chamado sem uma originReaction.`);
+      return false;
+    }
+
+    const reaction = message.originReaction;
+    
     // Check if reaction is a number emoji
     const emojiIndex = NUMBER_EMOJIS.indexOf(reaction.reaction);
     if (emojiIndex === -1) return false;
@@ -969,6 +976,16 @@ const commands = [
       after: "❌"
     },
     method: removeFromList
+  }),
+  new Command({
+    name: "reactionListHelper",
+    description: "Invocado apenas pelo ReactionsHandler",
+    reactions: {
+      trigger: Object.keys(NUMBER_EMOJIS)
+    },
+    usage: "",
+    hidden: true,
+    method: processListReaction
   })
 ];
 

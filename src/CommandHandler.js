@@ -137,20 +137,7 @@ class CommandHandler {
           }
       }
 
-      // Verifica se é um comando de gerenciamento no PV do bot
-      if (!message.group && this.privateManagement[message.author]) {
-        const managedGroupId = this.privateManagement[message.author];
-        const managedGroup = await this.database.getGroup(managedGroupId);
-        
-        if (managedGroup) {
-          // Processa como se a mensagem fosse enviada no grupo gerenciado
-          this.logger.info(`Processando comando de gerenciamento para o grupo ${managedGroupId} de chat privado por ${message.author}`);
-          return this.processCommand(bot, { ...message, group: managedGroupId }, command, args, managedGroup);
-        } else {
-          this.logger.warn(`Falha ao encontrar grupo gerenciado ${managedGroupId} para o usuário ${message.author}`);
-        }
-      }
-      
+    
       // Processa comando normalmente
       this.processCommand(bot, message, command, args, group).catch(error => {
         this.logger.error('Erro em processCommand:', error);
@@ -168,23 +155,132 @@ class CommandHandler {
    * @param {Object} message - A mensagem formatada
    * @param {string} command - O nome do comando
    * @param {Array} args - Argumentos do comando
-   * @param {Group} group - O objeto do grupo (se em grupo)
+   * @param {Object} group - O objeto do grupo (se em grupo)
    */
   async processCommand(bot, message, command, args, group) {
     this.logger.debug(`Processando comando: ${command}, determinação de tipo`);
     
+    // Definir o chatId de resposta - por padrão é o chatId original
+    let replyToChat = message.group || message.author;
+    let isManagingFromPrivate = false;
+    
     // Verifica se é um comando de gerenciamento
     if (command.startsWith('g-')) {
       this.logger.debug(`Identificado como comando de gerenciamento: ${command}`);
+
+      // Verifica se é gerenciamento de grupo via PV
+      if (!message.group) {
+        // Se veio no PV, primeiro vê se não é g-manage
+        if (command === 'g-manage') {
+          if(args.length > 0){
+            // Tem argumento, está tentando definir um grupo no PV
+            const groupName = args[0].toLowerCase();
+            const groups = await this.database.getGroups();
+            const targetGroup = groups.find(g => g.name.toLowerCase() === groupName);
+            
+            if (targetGroup) {
+              const isUserAdminInTarget = await this.adminUtils.isAdmin(message.author, targetGroup, false, bot.client);
+              if(isUserAdminInTarget){          
+                this.privateManagement[message.author] = targetGroup.id;
+                this.logger.info(`Usuário ${message.author} agora está gerenciando o grupo: ${targetGroup.name} (${targetGroup.id})`);
+                
+                const returnMessage = new ReturnMessage({
+                  chatId: message.author,
+                  content: `Você agora está gerenciando o grupo: ${targetGroup.name}`,
+                  reactions: {
+                    after: this.defaultReactions.after
+                  }
+                });
+                await bot.sendReturnMessages(returnMessage);
+                
+                return;
+              } else {
+                const returnMessage = new ReturnMessage({
+                  chatId: message.author,
+                  content: `Você *NÃO É* administrador do grupo '${targetGroup.name}'.`,
+                  reactions: {
+                    after: "🙅‍♂️"
+                  }
+                });
+                await bot.sendReturnMessages(returnMessage);
+              }
+            } else {
+              this.logger.warn(`Grupo não encontrado: ${groupName}`);
+              
+              const returnMessage = new ReturnMessage({
+                chatId: message.author,
+                content: `Grupo não encontrado: ${groupName}`,
+                reactions: {
+                  after: this.defaultReactions.after
+                }
+              });
+              await bot.sendReturnMessages(returnMessage);
+              
+              return;
+            }
+          } else {
+            // No PV e sem argumentos = quer voltar ao normal
+            this.privateManagement[message.author] = undefined;
+            const returnMessage = new ReturnMessage({
+              chatId: message.author,
+              content: `Você agora não está mais gerenciando o grupo pelo pv.`,
+              reactions: {
+                after: this.defaultReactions.after
+              }
+            });
+            await bot.sendReturnMessages(returnMessage);
+            return;
+          }
+        } else {
+          // Não é g-manage, então verifica se o cara já está gerenciando um pelo PV
+
+          if (this.privateManagement[message.author]) {
+            const managedGroupId = this.privateManagement[message.author];
+            const managedGroup = await this.database.getGroup(managedGroupId);
+            
+            if (managedGroup) {
+              // Processa como se a mensagem fosse enviada no grupo gerenciado
+              this.logger.info(`Processando comando de gerenciamento para o grupo ${managedGroupId} de chat privado por ${message.author}`);
+              //return this.processCommand(bot, { ...message, group: managedGroupId }, command, args, managedGroup);
+              group = managedGroup;
+            } else {
+              this.logger.warn(`Falha ao encontrar grupo gerenciado ${managedGroupId} para o usuário ${message.author}`);
+            }
+
+            // Se estamos gerenciando um grupo a partir do PV, vamos responder no PV
+            replyToChat = message.author;
+            isManagingFromPrivate = true;
+            
+            // Registra que estamos respondendo no PV para um comando de gerenciamento de grupo
+            this.logger.info(`Comando ${command} enviado por ${message.author} no PV para gerenciar o grupo ${group.id} - responderemos no PV`);
+          }
+        }
+        // Fim PV
+      }
+
       
       // Verifica se o grupo está pausado e se o comando NÃO é g-pausar
-      if (group && group.paused && command !== 'g-pausar') {
+      // No privado não existe !pausar
+      if (group && group.paused && command !== 'g-pausar' & !isManagingFromPrivate) {
         this.logger.info(`Ignorando comando de gerenciamento em grupo pausado: ${command}`);
         return;
       }
       
-      await this.processManagementCommand(bot, message, command, args, group);
-      return;
+      // Modifica a mensagem para forçar o envio da resposta para o chatId correto
+      const originalMessage = { ...message };
+      if (isManagingFromPrivate) {
+        // Cria um objeto temporário para usar no processamento
+        message.managementResponseChatId = replyToChat;
+      }
+      
+      const result = await this.processManagementCommand(bot, message, command, args, group);
+      
+      // Restaura a mensagem original se necessário
+      if (isManagingFromPrivate) {
+        message = originalMessage;
+      }
+      
+      return result;
     }
     
     // Verifica se o grupo está pausado (para outros tipos de comandos)
@@ -217,7 +313,7 @@ class CommandHandler {
     // Se em um grupo, podemos querer notificar sobre comando desconhecido (opcional)
     if (group && process.env.NOTIFY_UNKNOWN_COMMANDS === 'true') {
       const returnMessage = new ReturnMessage({
-        chatId: group.id,
+        chatId: replyToChat, // Usa o chatId de resposta correto
         content: `Comando desconhecido: ${command}`
       });
       await bot.sendReturnMessages(returnMessage);
@@ -230,11 +326,15 @@ class CommandHandler {
    * @param {Object} message - A mensagem formatada
    * @param {string} command - O nome do comando
    * @param {Array} args - Argumentos do comando
-   * @param {Group} group - O objeto do grupo (se em grupo)
+   * @param {Object} group - O objeto do grupo (se em grupo)
    */
   async processManagementCommand(bot, message, command, args, group) {
     try {
       this.logger.debug(`Processando comando de gerenciamento: ${command}, args: ${args.join(', ')}`);
+      
+      // Determina o chatId correto para a resposta
+      // Se estamos gerenciando via PV, a resposta deve ir para o PV
+      const responseChatId = message.managementResponseChatId || message.group || message.author;
       
       // Reage com o emoji "antes"
       try {
@@ -244,60 +344,13 @@ class CommandHandler {
         this.logger.error('Erro ao aplicar reação "antes":', reactError);
       }
       
-      // Caso especial para gerenciar grupos a partir de chat privado
-      if (command === 'g-manage' && args.length > 0 && !message.group) {
-        const groupName = args[0].toLowerCase();
-        const groups = await this.database.getGroups();
-        const targetGroup = groups.find(g => g.name.toLowerCase() === groupName);
-        
-        if (targetGroup) {
-          const isUserAdminInTarget = await this.adminUtils.isAdmin(message.author, targetGroup, false, bot.client);
-          if(isUserAdminInTarget){          
-            this.privateManagement[message.author] = targetGroup.id;
-            this.logger.info(`Usuário ${message.author} agora está gerenciando o grupo: ${targetGroup.name} (${targetGroup.id})`);
-            
-            const returnMessage = new ReturnMessage({
-              chatId: message.author,
-              content: `Você agora está gerenciando o grupo: ${targetGroup.name}`,
-              reactions: {
-                after: this.defaultReactions.after
-              }
-            });
-            await bot.sendReturnMessages(returnMessage);
-            
-            return;
-          } else {
-            const returnMessage = new ReturnMessage({
-              chatId: message.author,
-              content: `Você *NÃO É* administrador do grupo '${targetGroup.name}'.`,
-              reactions: {
-                after: "🙅‍♂️"
-              }
-            });
-            await bot.sendReturnMessages(returnMessage);
-          }
-        } else {
-          this.logger.warn(`Grupo não encontrado: ${groupName}`);
-          
-          const returnMessage = new ReturnMessage({
-            chatId: message.author,
-            content: `Grupo não encontrado: ${groupName}`,
-            reactions: {
-              after: this.defaultReactions.after
-            }
-          });
-          await bot.sendReturnMessages(returnMessage);
-          
-          return;
-        }
-      }
       
       // Comandos de gerenciamento regulares requerem um grupo
       if (!group) {
         this.logger.warn(`Comando de gerenciamento ${command} tentado em chat privado`);
         
         const returnMessage = new ReturnMessage({
-          chatId: message.author,
+          chatId: responseChatId,
           content: 'Comandos de gerenciamento só podem ser usados em grupos. Se você deseja administrar seu grupo aqui no PV do bot, me envie:\n!g-manage [nomeDoGrupo]\n\n- Você pode enviar "!g-manage" dentro do grupo caso não souber o nome\n- O nome do grupo pode ser alterado utilizando o comando "!g-setName [novoNome]"',
           reactions: {
             after: this.defaultReactions.after
@@ -315,7 +368,7 @@ class CommandHandler {
         this.logger.warn(`Usuário ${message.author} tentou usar comando de gerenciamento sem ser admin: ${command}`);
         
         const returnMessage = new ReturnMessage({
-          chatId: group.id,
+          chatId: responseChatId,
           content: '⛔ Apenas administradores podem usar comandos de gerenciamento.',
           reactions: {
             after: this.defaultReactions.error
@@ -333,13 +386,28 @@ class CommandHandler {
       const methodName = this.management.getCommandMethod(managementCommand);
       if (methodName && typeof this.management[methodName] === 'function') {
         this.logger.debug(`Executando método de gerenciamento: ${methodName}`);
-        const managementResponse = await this.management[methodName](bot, message, args, group);
+        const managementResponse = await this.management[methodName](bot, message, args, group, this.privateManagement);
+        
+        // Se a resposta for ReturnMessage ou array de ReturnMessage, modifica chatId se necessário
+        if (managementResponse) {
+          if (Array.isArray(managementResponse)) {
+            // Modifica o chatId de todas as mensagens para o chatId correto
+            managementResponse.forEach(msg => {
+              if (msg instanceof ReturnMessage && msg.chatId === group.id) {
+                msg.chatId = responseChatId;
+              }
+            });
+          } else if (managementResponse instanceof ReturnMessage && managementResponse.chatId === group.id) {
+            managementResponse.chatId = responseChatId;
+          }
+        }
+        
         await bot.sendReturnMessages(managementResponse);
       } else {
         this.logger.warn(`Comando de gerenciamento desconhecido: ${managementCommand}`);
         
         const returnMessage = new ReturnMessage({
-          chatId: group.id,
+          chatId: responseChatId,
           content: `Comando de gerenciamento desconhecido: ${managementCommand}`,
           reactions: {
             after: this.defaultReactions.after
@@ -358,9 +426,9 @@ class CommandHandler {
     } catch (error) {
       this.logger.error('Erro ao processar comando de gerenciamento:', error);
       
-      const chatId = message.group || message.author;
+      const responseChatId = message.managementResponseChatId || message.group || message.author;
       const returnMessage = new ReturnMessage({
-        chatId: chatId,
+        chatId: responseChatId,
         content: 'Erro ao processar comando de gerenciamento',
         reactions: {
           after: this.defaultReactions.after

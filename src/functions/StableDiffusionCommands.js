@@ -36,20 +36,26 @@ async function generateImage(bot, message, args, group) {
   const chatId = message.group || message.author;
   const returnMessages = [];
   
-  if (args.length === 0) {
+  const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+  let prompt = args.join(' ');
+  if(quotedMsg){  
+    prompt += " "+quotedMsg.body;
+  }
+
+  if (prompt.length < 4) {
     return new ReturnMessage({
       chatId: chatId,
       content: 'Por favor, forneça um prompt para gerar a imagem. Exemplo: !imagine um gato usando chapéu de cowboy'
     });
+
   }
   
-  // Obtém o prompt do usuário
-  const prompt = args.join(' ');
+
   logger.info(`Gerando imagem com prompt: ${prompt}`);
   
   try {
     // Envia mensagem de processamento
-    returnMessages.push(new ReturnMessage({
+    await bot.sendReturnMessages(new ReturnMessage({
       chatId: chatId,
       content: '🖼️ Gerando imagem, isso pode levar alguns segundos...'
     }));
@@ -189,7 +195,7 @@ const commands = [
     category: 'ia',
     reactions: {
       trigger: "✨",
-      before: "🔍",
+      before: "⏳",
       after: "✨"
     },
     method: generateImage

@@ -57,14 +57,12 @@
 - [x] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
 - [x] Interagir automatico em grupo com chance setada
 - [x] Mensagem boas vindas fixa (data/groupJoin.txt)
-- [ ] Ranking mensagens (!faladores)
-- [ ] Comando: !apelido, remover do gerenciamento e processar no EventHandler
-- [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
-- [ ] Comando: !g-manage dentro do grupo sem argumento
-- [ ] !g-manage está fazendo o bot responder dentro do grupo
-- [ ] GroupJoin: Enviar o nome que ficou o grupo e como mudar
-- [ ] Variáveis: Mencionar pessoas {mention-55999999...}
-- [ ] Variáveis: Importar todas da ravena antiga
+- [x] Ranking mensagens (!faladores)
+- [x] Comando: !apelido, remover do gerenciamento e processar no EventHandler
+- [x] Comando: !g-manage dentro do grupo sem argumento
+- [x] GroupJoin: Enviar o nome que ficou o grupo e como mudar
+- [x] Variáveis: Mencionar pessoas {mention-55999999...}
+- [x] Variáveis: Importar todas da ravena antiga
 - [x] Melhorar comando !cmd pra ficar mais organizado
 - [x] Script para migração de dados da ravena antiga
     - [x] Grupos
@@ -72,6 +70,7 @@
     - [x] Listas
     - [x] Outros
     - [x] News
+    - [ ] Midia da twitch
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -84,7 +83,9 @@
 - [x] Busca img não funciona
 - [ ] Não salvando algumas propriedades de grupo (autoStt)
 - [ ] Mention bot apenas no começo
-- [ ] Gerenciar no PV buga coisas normais
+- [ ] Bot tentando notificar sem estar nos grupos
+- [x] Gerenciar no PV buga coisas normais
+- [x] !g-manage está fazendo o bot responder dentro do grupo
 
 ## ✅ TODO-Extras
 - [ ] Interface web para status dos bots
@@ -95,6 +96,7 @@
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Melhor explicação da implementação do bot no README
 - [ ] Interface web para administração
+- [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais

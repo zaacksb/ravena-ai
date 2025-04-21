@@ -1530,3 +1530,7 @@ Novas variáveis a serem processadas:
  - {mention-12345678@c.us} faz com que a pessoa seja mencionada mensagem, esta variável apenas é apagada do retorno quando processada
 
 
+---
+
+comandos twitch enviar apenas se estiver no grupo
+imagine com quote

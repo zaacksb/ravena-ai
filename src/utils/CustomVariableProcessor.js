@@ -69,7 +69,7 @@ class CustomVariableProcessor {
       
       // Processa variáveis específicas de contexto
       if (context) {
-        processedText = this.processContextVariables(processedText, context);
+        processedText = await this.processContextVariables(processedText, context);
       }
       
       // Processa variáveis estáticas personalizadas
@@ -122,8 +122,73 @@ class CustomVariableProcessor {
     const timeStr = now.toLocaleTimeString();
     text = text.replace(/{time}/g, timeStr);
     
+    // NOVAS VARIÁVEIS DE DATA E HORA DETALHADAS
+    // Substitui {data-hora} pela hora atual
+    text = text.replace(/{data-hora}/g, now.getHours().toString().padStart(2, '0'));
+    
+    // Substitui {data-minuto} pelo minuto atual
+    text = text.replace(/{data-minuto}/g, now.getMinutes().toString().padStart(2, '0'));
+    
+    // Substitui {data-segundo} pelo segundo atual
+    text = text.replace(/{data-segundo}/g, now.getSeconds().toString().padStart(2, '0'));
+    
+    // Substitui {data-dia} pelo dia atual
+    text = text.replace(/{data-dia}/g, now.getDate().toString().padStart(2, '0'));
+    
+    // Substitui {data-mes} pelo mês atual
+    text = text.replace(/{data-mes}/g, (now.getMonth() + 1).toString().padStart(2, '0'));
+    
+    // Substitui {data-ano} pelo ano atual
+    text = text.replace(/{data-ano}/g, now.getFullYear());
+    
+    // VARIÁVEIS DE NÚMEROS ALEATÓRIOS
+    // Substitui {randomPequeno} por um número aleatório de 1 a 10
+    text = text.replace(/{randomPequeno}/g, () => Math.floor(Math.random() * 10) + 1);
+    
+    // Substitui {randomMedio} por um número aleatório de 1 a 100
+    text = text.replace(/{randomMedio}/g, () => Math.floor(Math.random() * 100) + 1);
+    
+    // Substitui {randomGrande} por um número aleatório de 1 a 1000
+    text = text.replace(/{randomGrande}/g, () => Math.floor(Math.random() * 1000) + 1);
+    
+    // Substitui {randomMuitoGrande} por um número aleatório de 1 a 10000
+    text = text.replace(/{randomMuitoGrande}/g, () => Math.floor(Math.random() * 10000) + 1);
+    
+    // Processar variáveis {rndDado-X} para valores de dado
+    const dadoMatches = text.matchAll(/{rndDado-(\d+)}/g);
+    for (const match of Array.from(dadoMatches)) {
+      const lados = parseInt(match[1]);
+      if (!isNaN(lados) && lados > 0) {
+        const valor = Math.floor(Math.random() * lados) + 1;
+        text = text.replace(match[0], valor);
+      }
+    }
+    
+    // Processar variáveis {rndDadoRange-X-Y} para valores de dado em um intervalo
+    const rangeMatches = text.matchAll(/{rndDadoRange-(\d+)-(\d+)}/g);
+    for (const match of Array.from(rangeMatches)) {
+      const min = parseInt(match[1]);
+      const max = parseInt(match[2]);
+      if (!isNaN(min) && !isNaN(max) && min <= max) {
+        const valor = Math.floor(Math.random() * (max - min + 1)) + min;
+        text = text.replace(match[0], valor);
+      }
+    }
+    
+    // Variável {somaRandoms} - calcula a soma das variáveis random já processadas
+    const sumMatches = text.match(/{somaRandoms}/g);
+    if (sumMatches) {
+      // Procura por números anteriores no texto que foram gerados por variáveis random
+      const numbersInText = text.split(/\s+/).filter(word => /^\d+$/.test(word)).map(num => parseInt(num));
+      const sum = numbersInText.reduce((acc, curr) => acc + curr, 0);
+      
+      // Substitui {somaRandoms} pela soma
+      text = text.replace(/{somaRandoms}/g, sum);
+    }
+    
     return text;
   }
+
 
   /**
    * Processa variáveis específicas de contexto (mensagem, grupo, etc.)
@@ -131,23 +196,92 @@ class CustomVariableProcessor {
    * @param {Object} context - Dados de contexto
    * @returns {string} - Texto processado
    */
-  processContextVariables(text, context) {
+  async processContextVariables(text, context) {
     // Substitui {pessoa} pelo nome do remetente
     if (context.message && context.message.author) {
-      // Isso precisaria ser implementado para obter o nome real do remetente
-      text = text.replace(/{pessoa}/g, 'Usuário');
+      // Tenta obter o nome real ou o apelido do remetente
+      let authorName = "Usuário";
+      if (context.message.authorName) {
+        authorName = context.message.authorName;
+      } else if (context.message.origin && context.message.origin.getContact) {
+        try {
+          const contact = context.message.origin.getContact();
+          authorName = contact.pushname || contact.name || "Usuário";
+        } catch (error) {
+          this.logger.error('Erro ao obter contato para variável {pessoa}:', error);
+        }
+      }
+      text = text.replace(/{pessoa}/g, authorName);
+      
+      // Nova variável {nomeAutor} - mesmo comportamento que {pessoa}
+      text = text.replace(/{nomeAutor}/g, authorName);
     }
     
     // Substitui {group} pelo nome do grupo
     if (context.group && context.group.name) {
       text = text.replace(/{group}/g, context.group.name);
+      
+      // Novas variáveis {nomeCanal} e {nomeGrupo} - mesmo comportamento que {group}
+      text = text.replace(/{nomeCanal}/g, context.group.name);
+      text = text.replace(/{nomeGrupo}/g, context.group.name);
     }
     
-    // Substitui variáveis de menção
-    if (context.command && context.command.mentions && Array.isArray(context.command.mentions)) {
-      for (let i = 0; i < context.command.mentions.length; i++) {
-        const mention = context.command.mentions[i];
-        text = text.replace(new RegExp(`{mention${i+1}}`, 'g'), mention);
+    // Variável {contador} - número de vezes que o comando foi executado
+    if (context.command && context.command.count !== undefined) {
+      text = text.replace(/{contador}/g, context.command.count);
+    }
+    
+    // Variável {mention} - nome da pessoa mencionada em uma mensagem citada
+    if (context.message && context.message.origin) {
+      try {
+        const quotedMsg = context.message.origin.getQuotedMessage();
+        if (quotedMsg) {
+          const quotedContact = quotedMsg.getContact();
+          if (quotedContact) {
+            const quotedName = quotedContact.pushname || quotedContact.name || "Usuário";
+            text = text.replace(/{mention}/g, quotedName);
+          }
+        }
+      } catch (error) {
+        this.logger.error('Erro ao processar variável {mention}:', error);
+      }
+    }
+    
+    // Processa variáveis de menções específicas {mention-NUMERO@c.us}
+    const mentionMatches = text.matchAll(/{mention-([^}]+)}/g);
+    for (const match of Array.from(mentionMatches)) {
+      const userIdToMention = match[1];
+      
+      // Verifica se o ID é válido
+      if (userIdToMention && userIdToMention.includes('@')) {
+        // Se estamos em um contexto de grupo e temos acesso ao bot
+        if (context.group && context.bot) {
+          try {
+            // Obtém informações do contato
+            const contact = await context.bot.client.getContactById(userIdToMention);
+            const contactName = contact.pushname || contact.name || userIdToMention;
+            
+            // Adiciona à lista de menções para notificação
+            if (context.options && context.options.mentions) {
+              context.options.mentions.push(userIdToMention);
+            } else if (context.options) {
+              context.options.mentions = [userIdToMention];
+            }
+            
+            // Substitui a variável apenas pelo nome (a menção será processada pelo WhatsApp)
+            text = text.replace(match[0], `@${contactName}`);
+          } catch (error) {
+            this.logger.error(`Erro ao processar menção para ${userIdToMention}:`, error);
+            // Mantém a string original em caso de erro
+            text = text.replace(match[0], `@${userIdToMention.split('@')[0]}`);
+          }
+        } else {
+          // Substitui por uma versão básica se não temos acesso ao bot
+          text = text.replace(match[0], `@${userIdToMention.split('@')[0]}`);
+        }
+      } else {
+        // Remove a variável inválida
+        text = text.replace(match[0], '');
       }
     }
     

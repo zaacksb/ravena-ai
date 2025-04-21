@@ -255,11 +255,20 @@ class WhatsAppBot {
       }
     });
 
+    // Ligação
+    this.client.on('incoming_call', async (call) => {
+      this.logger.info(`[Call] Rejeitando chamada: ${JSON.stringify(call)}`)
+      call.reject();
+    });
+
     // Evento de notificação geral
     this.client.on('notification', (notification) => {
       this.eventHandler.onNotification(this, notification);
     });
+
   }
+
+  // Evento de saída do grupo
 
   /**
    * Formata uma mensagem do WhatsApp para nosso formato padrão
@@ -807,7 +816,7 @@ class WhatsAppBot {
     }
   }
 
-  
+
   /**
    * Verifica se um usuário é administrador em um grupo
    * @param {string} userId - ID do usuário a verificar

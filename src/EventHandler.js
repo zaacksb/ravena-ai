@@ -7,8 +7,8 @@ const LLMService = require('./services/LLMService');
 const SpeechCommands = require('./functions/SpeechCommands');
 const SummaryCommands = require('./functions/SummaryCommands');
 const NSFWPredict = require('./utils/NSFWPredict');
-const { processListReaction } = require('./functions/ListCommands');
 const MuNewsCommands = require('./functions/MuNewsCommands');
+const RankingMessages = require('./functions/RankingMessages');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -20,6 +20,7 @@ class EventHandler {
     this.llmService = new LLMService({});
     this.nsfwPredict = NSFWPredict.getInstance();
     this.adminUtils = AdminUtils.getInstance();
+    this.rankingMessages = RankingMessages;
     this.groups = {};
     this.loadGroups();
   }
@@ -141,6 +142,29 @@ class EventHandler {
         // Armazena mensagem para histórico de conversação
         await SummaryCommands.storeMessage(message, group);
         
+        // Verifica apelido do usuário e atualiza o nome se necessário
+        if (group.nicks && Array.isArray(group.nicks)) {
+          const nickData = group.nicks.find(nick => nick.numero === message.author);
+          if (nickData && nickData.apelido) {
+            try {
+              // Obtém o contato e atualiza o nome em message para uso em comandos
+              const contact = await message.origin.getContact();
+              // Salva o nome original para possível uso futuro
+              if (!message.originalName) {
+                message.originalName = contact.name || contact.pushname || 'Desconhecido';
+              }
+              // Atualiza o nome com o apelido
+              contact.name = nickData.apelido;
+              contact.pushname = nickData.apelido;
+              
+              // Atualiza também o nome no objeto message para uso em comandos
+              message.authorName = nickData.apelido;
+            } catch (error) {
+              this.logger.error('Erro ao aplicar apelido:', error);
+            }
+          }
+        }
+        
         // Verifica se o grupo está pausado
         if (group.paused) {        
           // Obtém conteúdo de texto da mensagem (corpo ou legenda)
@@ -149,13 +173,20 @@ class EventHandler {
           // Verifica se é o comando g-pausar antes de ignorar completamente
           const prefix = (group && group.prefix !== undefined) ? group.prefix : bot.prefix;
           const isPauseCommand = textContent && 
-                                textContent.startsWith(prefix) && 
-                                textContent.substring(prefix.length).startsWith('g-pausar');
+                               textContent.startsWith(prefix) && 
+                               textContent.substring(prefix.length).startsWith('g-pausar');
           
           // Só continua o processamento se for o comando g-pausar
           if (!isPauseCommand) {
             return;
           }
+        }
+        
+        // Processa mensagem para ranking
+        try {
+          await this.rankingMessages.processMessage(message);
+        } catch (error) {
+          this.logger.error('Erro ao processar mensagem para ranking:', error);
         }
         
         // Verifica se o usuário está ignorado
@@ -408,6 +439,21 @@ class EventHandler {
       this.logger.error('Erro em processGroupJoin:', error);
     });
   }
+
+    /**
+   * Manipula evento de saída no grupo
+   * @param {WhatsAppBot} bot - A instância do bot
+   * @param {Object} data - Dados do evento
+   *
+   */
+  onGroupLeave(bot, data) {
+    // Processa entrada sem aguardar para evitar bloquear a thread de eventos
+    this.processGroupLeave(bot, data).catch(error => {
+      this.logger.error('Erro em processGroupLeave:', error);
+    });
+  }
+
+  
   
   /**
    * Processa entrada no grupo
@@ -492,7 +538,7 @@ class EventHandler {
           llm_inviterInfo = ` '${foundInviter.authorName}'`;
         }
 
-        botInfoMessage += `\n\aO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando "${group.prefix}g-setName [novoNome]".\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV "${group.prefix}g-manage ${group.name}"`;
+        botInfoMessage += `\n\nO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando:- ${group.prefix}g-setName [novoNome].\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV: - ${group.prefix}g-manage ${group.name}`;
         
         // Se encontramos o autor do convite, adiciona-o como admin adicional
         if (foundInviter) {
@@ -521,7 +567,7 @@ class EventHandler {
             memberCount: chat.participants?.length || 0
           };
           
-          const llmPrompt = `Você é um bot de WhatsApp chamado ravenabot e foi adicionado em um grupo de whatsapp chamado '${groupInfo.name}'${llm_inviterInfo}, este grupo é sobre '${groupInfo.description}' e tem '${groupInfo.memberCount}' participantes. Gere uma mensagem agradecendo a confiança e fazendo de conta que entende do assunto do grupo enviando algo relacionado junto pra se enturmar, seja natural.`;
+          const llmPrompt = `Você é um bot de WhatsApp chamado ravenabot e foi adicionado em um grupo de whatsapp chamado '${groupInfo.name}'${llm_inviterInfo}, este grupo é sobre '${groupInfo.description}' e tem '${groupInfo.memberCount}' participantes. Gere uma mensagem agradecendo a confiança e fazendo de conta que entende do assunto do grupo enviando algo relacionado junto pra se enturmar, seja natural. Não coloque coisas placeholder, pois a mensagem que você retornar, vai ser enviada na íntegra e sem ediçoes.`;
           
           // Obtém conclusão do LLM sem bloquear
           this.llmService.getCompletion({

@@ -39,7 +39,7 @@ const CATEGORY_EMOJIS = {
  * Ordem personalizada para comandos por nome
  * Os comandos não listados aparecem depois na ordem original
  */
-const COMMAND_ORDER = ["cmd","cmd-grupo", "cmd-gerenciamento", "cmd-g","doar","clima","news","apagar","atencao","ignorar","stt","traduzir","lembretes","lembrar","l-cancelar","s","sticker","sbg, stickerbg","removebg","distort","neon","oil","pixelate","sketch","ai","imagine","resumo","interagir","yt","sr","roletarussa","roletaranking","roll","d10","lol","valorant","wr","anime","imdb","volume","getaudio","getvoice","tts","tts-mulher","tts-homem","buscar","buscar-ig","gif","wiki","lastfm","listas","lc","lct","ld","le","ls","lt","lr","pastas","p-enviar","p-criar","p-baixar","p-excluir","!g-ajuda","!g-info","!g-apelido","!g-ignorar","!g-mute","!g-pausar","!g-setName","!g-autoStt","!g-setPrefixo","!g-setBemvindo","!g-setDespedida","!g-setTempoRoleta","!g-addCmd","!g-delCmd","!g-enableCmd","!g-disableCmd","!g-cmdReact","!g-cmdStartReact","!g-addCmdReply","!g-filtro-palavra","!g-filtro-links","!g-filtro-nsfw","!g-filtro-pessoa","!g-interagir","!g-interagir-cd","!g-interagir-chance","!g-customAdmin","!g-twitch-canal","!g-twitch-mudarTitulo","!g-twitch-usarIA","!g-twitch-titulo-on","!g-twitch-titulo-off","!g-twitch-midia-on","!g-twitch-midia-off","!g-kick-canal","!g-kick-mudarTitulo","!g-kick-usarIA","!g-kick-titulo-on","!g-kick-titulo-off","!g-kick-midia-on","!g-kick-midia-off","!g-youtube-canal","!g-youtube-mudarTitulo","!g-youtube-usarIA","!g-youtube-titulo-on","!g-youtube-titulo-off","!g-youtube-midia-on","!g-youtube-midia-off"];
+const COMMAND_ORDER = ["cmd","cmd-grupo", "cmd-gerenciamento", "cmd-g","doar", "faladores", "apelido", "clima","news","apagar","atencao","ignorar","stt","traduzir","lembretes","lembrar","l-cancelar","s","sticker","sbg, stickerbg","removebg","distort","neon","oil","pixelate","sketch","ai","imagine","resumo","interagir","yt","sr","roletarussa","roletaranking","roll","d10","lol","valorant","wr","anime","imdb","volume","getaudio","getvoice","tts","tts-mulher","tts-homem","buscar","buscar-img","gif","wiki","lastfm","listas","lc","lct","ld","le","ls","lt","lr","pastas","p-enviar","p-criar","p-baixar","p-excluir","!g-ajuda","!g-info","!g-apelido","!g-ignorar","!g-mute","!g-pausar","!g-setName","!g-autoStt","!g-setPrefixo","!g-setBemvindo","!g-setDespedida","!g-setTempoRoleta","!g-addCmd","!g-delCmd","!g-enableCmd","!g-disableCmd","!g-cmdReact","!g-cmdStartReact","!g-addCmdReply","!g-filtro-palavra","!g-filtro-links","!g-filtro-nsfw","!g-filtro-pessoa","!g-interagir","!g-interagir-cd","!g-interagir-chance","!g-customAdmin","!g-twitch-canal","!g-twitch-mudarTitulo","!g-twitch-usarIA","!g-twitch-titulo-on","!g-twitch-titulo-off","!g-twitch-midia-on","!g-twitch-midia-off","!g-kick-canal","!g-kick-mudarTitulo","!g-kick-usarIA","!g-kick-titulo-on","!g-kick-titulo-off","!g-kick-midia-on","!g-kick-midia-off","!g-youtube-canal","!g-youtube-mudarTitulo","!g-youtube-usarIA","!g-youtube-titulo-on","!g-youtube-titulo-off","!g-youtube-midia-on","!g-youtube-midia-off"];
 
 /**
  * Lê o arquivo de cabeçalho do menu
@@ -252,7 +252,7 @@ async function sendCommandList(bot, message, args, group) {
     
     // 1. Comandos Personalizados
     if (customCommands.length > 0) {
-      menuText += '📋 *Comandos do Grupo:*\n';
+      menuText += `📋 *Exclusivos do grupo _${group.name}_:*\n`;
       for (const cmd of customCommands) {
         let cmdText = `• *${prefix}${cmd.startsWith}*`;
         if (cmd.reactions && cmd.reactions.trigger) {
@@ -264,7 +264,9 @@ async function sendCommandList(bot, message, args, group) {
     }
     
     // 2. Comandos Fixos por categoria
-    menuText += '📌 *Comandos Fixos:*\n';
+    if(!group){
+      menuText += '📌 *PV da _ravena_:*\n';
+    }
     
     // Processa cada categoria na ordem definida em CATEGORY_EMOJIS
     for (const category in CATEGORY_EMOJIS) {
