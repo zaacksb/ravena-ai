@@ -2,6 +2,7 @@ const CommandHandler = require('./CommandHandler');
 const Database = require('./utils/Database');
 const Group = require('./models/Group');
 const Logger = require('./utils/Logger');
+const AdminUtils = require('./utils/AdminUtils');
 const LLMService = require('./services/LLMService');
 const SpeechCommands = require('./functions/SpeechCommands');
 const SummaryCommands = require('./functions/SummaryCommands');
@@ -18,6 +19,7 @@ class EventHandler {
     this.commandHandler = new CommandHandler();
     this.llmService = new LLMService({});
     this.nsfwPredict = NSFWPredict.getInstance();
+    this.adminUtils = AdminUtils.getInstance();
     this.groups = {};
     this.loadGroups();
   }
@@ -463,6 +465,30 @@ class EventHandler {
 
         // Envia uma mensagem de boas-vindas padrão sobre o bot
         let botInfoMessage = `🦇 Olá, grupo! Eu sou a *ravenabot*, um bot de WhatsApp. Use "${group.prefix}cmd" para ver os comandos disponíveis.`;
+      
+        try {
+          const groupJoinPath = path.join(__dirname, '../data/textos/groupJoin.txt');
+          
+          // Verifica se o arquivo existe
+          const fileExists = await fs.access(groupJoinPath).then(() => true).catch(() => false);
+          
+          if (fileExists) {
+            const fileContent = await fs.readFile(groupJoinPath, 'utf8');
+            if (fileContent && fileContent.trim() !== '') {
+              botInfoMessage = fileContent.trim();
+              // Substitui variável {prefix} se presente
+              botInfoMessage = botInfoMessage.replace(/{prefix}/g, group.prefix || '!');
+            }
+          }
+        } catch (readError) {
+          this.logger.error('Erro ao ler groupJoin.txt, usando mensagem padrão:', readError);
+        }
+        
+        // Adiciona informações do convidador se disponíveis
+        if (foundInviter && foundInviter.authorName) {
+          botInfoMessage += `\n_(Adicionado por: ${foundInviter.authorName})_`;
+          llm_inviterInfo = ` '${foundInviter.authorName}'`;
+        }
         
         // Se encontramos o autor do convite, adiciona-o como admin adicional
         let llm_inviterInfo = "";
@@ -662,6 +688,43 @@ class EventHandler {
   onNotification(bot, notification) {
     // Implementação opcional para tratar outros tipos de notificações
   }
+
+    /**
+   * Exemplo de método que verifica permissões administrativas
+   * @param {WhatsAppBot} bot - A instância do bot
+   * @param {Object} message - A mensagem formatada
+   * @param {string} action - A ação a ser realizada
+   * @param {Group} group - O objeto do grupo
+   * @returns {Promise<boolean>} - True se a ação for permitida
+   */
+  async checkPermission(bot, message, action, group) {
+    try {
+      // Obtém o chat diretamente da mensagem original
+      const chat = await message.origin.getChat();
+      
+      // Usa o AdminUtils para verificar permissões
+      const isAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
+      
+      if (!isAdmin) {
+        this.logger.warn(`Usuário ${message.author} tentou realizar a ação "${action}" sem permissão`);
+        
+        // Notifica o usuário (opcional)
+        const returnMessage = new ReturnMessage({
+          chatId: message.group || message.author,
+          content: `⛔ Você não tem permissão para realizar esta ação: ${action}`
+        });
+        await bot.sendReturnMessages(returnMessage);
+        
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      this.logger.error(`Erro ao verificar permissões para ação "${action}":`, error);
+      return false;
+    }
+  }
+  
 }
 
 module.exports = EventHandler;

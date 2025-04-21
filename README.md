@@ -10,7 +10,7 @@
 - Todos números rodam no mesmo processo e compartilham a base de dados
 
 
-## ✅ TODO-List
+## ✅ TODO-Core
 
 - [x] Estrutura base do bot
 - [x] Sistema de comandos (fixos, personalizados, gerenciamento)
@@ -18,7 +18,6 @@
 - [x] Variáveis personalizadas em respostas
 - [x] Integração com LLM (OpenRouter, LM Studio)
 - [x] Monitoramento de streams (Twitch, Kick, YouTube)
-    - [ ] Nova função: Alterar imagem do grupo borda verde
 - [x] Sistema de convites
 - [x] Detecção de conteúdo NSFW
 - [x] Manipulação de mídia
@@ -53,32 +52,22 @@
 - [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
 - [x] Comando: !lastfm
 - [x] Comando: !news, ViniMunews (antigo JrMunews)
-- [ ] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
-- [ ] Status do bot no status do whats
-- [ ] Interagir automatico em grupo com chance setada
-- [ ] Mensagem boas vindas fixa
-- [ ] Novo Jogo: Geoguesser
-- [ ] Novo Jogo: Stop/Adedonha
-- [ ] Novo Jogo: Anagrama
-- [ ] Interface web para status dos bots
+- [x] Implementar isAdmin/AdditionalAdmin/SuperAdmin
+- [x] Status do bot no status do whats
+- [x] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
+- [x] Interagir automatico em grupo com chance setada
+- [x] Mensagem boas vindas fixa (data/groupJoin.txt)
+- [ ] Ranking mensagens (!faladores)
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [x] Melhorar comando !cmd pra ficar mais organizado
-- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
-    - [ ] Gerador de código de mockup para os tutoriais
-    - [ ] Tutoriais
-- [ ] Script para migração de dados da ravena antiga
-    - [ ] Grupos
-    - [ ] Lembretes
-    - [ ] Listas
-    - [ ] Outros
+- [x] Script para migração de dados da ravena antiga
+    - [x] Grupos
+    - [x] Lembretes
+    - [x] Listas
+    - [x] Outros
     - [x] News
-- [ ] Implementar ADB para digitar code de login automaticamente
-- [ ] Melhor explicação da implementação do bot no README
-- [ ] Interface web para administração
 
-## ✅ TODO-FIX-List
-> Essa lista ainda vai aumentar bastante
-
+## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
 - [X] Fix boas vindas enviando mesmo sem setar
 - [x] Fix emojis e reações que o claude criou estranhos
@@ -87,7 +76,22 @@
 - [x] !gif tá retornando img estática
 - [x] Fix TTS com AllTalk V2
 - [x] Busca img não funciona
-- [ ] Não salvando algumas propriedades de grupo
+- [ ] Não salvando algumas propriedades de grupo (autoStt)
+- [ ] Mention bot apenas no começo
+- [ ] Gerenciar no PV buga coisas normais
+
+## ✅ TODO-Extras
+- [ ] Interface web para status dos bots
+- [ ] Novo Jogo: Geoguesser
+- [ ] Novo Jogo: Stop/Adedonha
+- [ ] Novo Jogo: Anagrama
+- [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off
+- [ ] Implementar ADB para digitar code de login automaticamente
+- [ ] Melhor explicação da implementação do bot no README
+- [ ] Interface web para administração
+- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
+    - [ ] Gerador de código de mockup para os tutoriais
+    - [ ] Tutoriais
 
 ## 📚 Documentação dos Comandos
 

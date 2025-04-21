@@ -3,6 +3,7 @@ const path = require('path');
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
+const AdminUtils = require('../utils/AdminUtils');
 
 /**
  * Manipula comandos super admin (apenas para admins do sistema)
@@ -10,6 +11,7 @@ const ReturnMessage = require('../models/ReturnMessage');
 class SuperAdmin {
   constructor() {
     this.logger = new Logger('superadmin');
+    this.adminUtils = AdminUtils.getInstance();
     this.database = Database.getInstance();
     this.dataPath = path.join(__dirname, '../../data');
     
@@ -22,13 +24,13 @@ class SuperAdmin {
     
     // Mapeamento de comando para método
     this.commandMap = {
-      'joinGrupo': 'joinGroup',
-      'addDonateNumero': 'addDonorNumber',
-      'addDonateValor': 'updateDonationAmount',
-      'mergeDonates': 'mergeDonors',
-      'block': 'blockUser',
-      'leaveGrupo': 'leaveGroup',
-      'foto': 'changeProfilePicture'
+      'joinGrupo': {'method': 'joinGroup'},
+      'addDonateNumero': {'method': 'addDonorNumber'},
+      'addDonateValor': {'method': 'updateDonationAmount'},
+      'mergeDonates': {'method': 'mergeDonors'},
+      'block': {'method': 'blockUser'},
+      'leaveGrupo': {'method': 'leaveGroup'},
+      'foto': {'method': 'changeProfilePicture'}
     };
   }
 
@@ -38,16 +40,16 @@ class SuperAdmin {
    * @returns {string|null} - Nome do método ou null se não encontrado
    */
   getCommandMethod(command) {
-    return this.commandMap[command] || null;
+    return this.commandMap[command].method || null;
   }
 
   /**
-   * Verifica se o usuário é um super admin
-   * @param {string} userId - ID do usuário
-   * @returns {boolean} - True se o usuário for um super admin
+   * Verifica se um usuário é super admin
+   * @param {string} userId - ID do usuário a verificar
+   * @returns {boolean} - True se o usuário for super admin
    */
   isSuperAdmin(userId) {
-    return this.superAdmins.includes(userId);
+    return this.adminUtils.isSuperAdmin(userId);
   }
 
   /**

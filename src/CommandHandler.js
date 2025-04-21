@@ -7,6 +7,7 @@ const Management = require('./commands/Management');
 const SuperAdmin = require('./commands/SuperAdmin');
 const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
 const ReturnMessage = require('./models/ReturnMessage');
+const AdminUtils = require('./utils/AdminUtils');
 
 class CommandHandler {
   constructor() {
@@ -16,6 +17,7 @@ class CommandHandler {
     this.management = new Management();
     this.superAdmin = new SuperAdmin();
     this.variableProcessor = new CustomVariableProcessor();
+    this.adminUtils = AdminUtils.getInstance();
     this.customCommands = {}; // Agrupados por groupId
     this.privateManagement = {}; // Para gerenciar grupos a partir de chats privados
     
@@ -249,19 +251,31 @@ class CommandHandler {
         const targetGroup = groups.find(g => g.name.toLowerCase() === groupName);
         
         if (targetGroup) {
-          this.privateManagement[message.author] = targetGroup.id;
-          this.logger.info(`Usuário ${message.author} agora está gerenciando o grupo: ${targetGroup.name} (${targetGroup.id})`);
-          
-          const returnMessage = new ReturnMessage({
-            chatId: message.author,
-            content: `Você agora está gerenciando o grupo: ${targetGroup.name}`,
-            reactions: {
-              after: this.defaultReactions.after
-            }
-          });
-          await bot.sendReturnMessages(returnMessage);
-          
-          return;
+          const isUserAdminInTarget = await this.adminUtils.isAdmin(message.author, targetGroup, false, bot.client);
+          if(isUserAdminInTarget){          
+            this.privateManagement[message.author] = targetGroup.id;
+            this.logger.info(`Usuário ${message.author} agora está gerenciando o grupo: ${targetGroup.name} (${targetGroup.id})`);
+            
+            const returnMessage = new ReturnMessage({
+              chatId: message.author,
+              content: `Você agora está gerenciando o grupo: ${targetGroup.name}`,
+              reactions: {
+                after: this.defaultReactions.after
+              }
+            });
+            await bot.sendReturnMessages(returnMessage);
+            
+            return;
+          } else {
+            const returnMessage = new ReturnMessage({
+              chatId: message.author,
+              content: `Você *NÃO É* administrador do grupo '${targetGroup.name}'.`,
+              reactions: {
+                after: "🙅‍♂️"
+              }
+            });
+            await bot.sendReturnMessages(returnMessage);
+          }
         } else {
           this.logger.warn(`Grupo não encontrado: ${groupName}`);
           
@@ -287,6 +301,24 @@ class CommandHandler {
           content: 'Comandos de gerenciamento só podem ser usados em grupos',
           reactions: {
             after: this.defaultReactions.after
+          }
+        });
+        await bot.sendReturnMessages(returnMessage);
+        
+        return;
+      }
+
+      const chat = await message.origin.getChat();
+      const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
+      
+      if (!isUserAdmin) {
+        this.logger.warn(`Usuário ${message.author} tentou usar comando de gerenciamento sem ser admin: ${command}`);
+        
+        const returnMessage = new ReturnMessage({
+          chatId: group.id,
+          content: '⛔ Apenas administradores podem usar comandos de gerenciamento.',
+          reactions: {
+            after: this.defaultReactions.error
           }
         });
         await bot.sendReturnMessages(returnMessage);
@@ -746,6 +778,42 @@ class CommandHandler {
       
       this.logger.debug(`Verificando comandos auto-acionados para o texto: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
       
+      // Verifica se interações automáticas estão habilitadas para este grupo
+      if (group.interact && group.interact.enabled) {
+        // Verifica o último tempo de interação para cooldown
+        const now = Date.now();
+        const lastInteraction = group.interact.lastInteraction || 0;
+        const cooldown = (group.interact.cooldown || 30) * 60 * 1000; // Converte minutos para milissegundos
+        
+        if (now - lastInteraction >= cooldown) {
+          // Gera número aleatório entre 1 e 10000
+          const randomValue = Math.floor(Math.random() * 10000) + 1;
+          const interactionChance = group.interact.chance || 100; // Padrão 1% de chance (100/10000)
+          
+          this.logger.debug(`Verificação de interação automática: ${randomValue} <= ${interactionChance}`);
+          
+          if (randomValue <= interactionChance) {
+            // Seleciona um comando aleatório que tenha ignorePrefix definido como true
+            const autoCommands = this.customCommands[group.id].filter(cmd => 
+              cmd.ignorePrefix && cmd.active && !cmd.deleted
+            );
+            
+            if (autoCommands.length > 0) {
+              const randomCommand = autoCommands[Math.floor(Math.random() * autoCommands.length)];
+              this.logger.info(`Acionando comando automaticamente: ${randomCommand.startsWith}`);
+              
+              // Atualiza último tempo de interação
+              group.interact.lastInteraction = now;
+              await this.database.saveGroup(group);
+              
+              // Executa o comando
+              await this.executeCustomCommand(bot, message, randomCommand, [], group);
+              return;
+            }
+          }
+        }
+      }
+
       // Verifica cada comando personalizado
       for (const command of this.customCommands[group.id]) {
         // Processa apenas comandos com startsWith que não precisam de prefixo

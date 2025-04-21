@@ -39,7 +39,7 @@ const CATEGORY_EMOJIS = {
  * Ordem personalizada para comandos por nome
  * Os comandos não listados aparecem depois na ordem original
  */
-const COMMAND_ORDER = ["cmd","doar","clima","news","apagar","atencao","ignorar","stt","traduzir","lembretes","lembrar","l-cancelar","s","sticker","sbg, stickerbg","removebg","distort","neon","oil","pixelate","sketch","ai","imagine","resumo","interagir","yt","sr","roletarussa","roletaranking","roll","d10","lol","valorant","wr","anime","imdb","volume","getaudio","getvoice","tts","tts-mulher","tts-homem","buscar","buscar-ig","gif","wiki","lastfm","listas","lc","lct","ld","le","ls","lt","lr","pastas","p-enviar","p-criar","p-baixar","p-excluir","g-ajuda","g-setName","g-addCmd","g-delCmd","g-setPrefixo","g-setBemvindo","g-setDespedida","g-cmdReact","g-cmdStartReact","g-filtro-palavra","g-filtro-links","g-filtro-nsfw","g-filtro-pessoa","g-info","g-enableCmd","g-disableCmd"];
+const COMMAND_ORDER = ["cmd","cmd-grupo", "cmd-gerenciamento", "cmd-g","doar","clima","news","apagar","atencao","ignorar","stt","traduzir","lembretes","lembrar","l-cancelar","s","sticker","sbg, stickerbg","removebg","distort","neon","oil","pixelate","sketch","ai","imagine","resumo","interagir","yt","sr","roletarussa","roletaranking","roll","d10","lol","valorant","wr","anime","imdb","volume","getaudio","getvoice","tts","tts-mulher","tts-homem","buscar","buscar-ig","gif","wiki","lastfm","listas","lc","lct","ld","le","ls","lt","lr","pastas","p-enviar","p-criar","p-baixar","p-excluir","!g-ajuda","!g-info","!g-apelido","!g-ignorar","!g-mute","!g-pausar","!g-setName","!g-autoStt","!g-setPrefixo","!g-setBemvindo","!g-setDespedida","!g-setTempoRoleta","!g-addCmd","!g-delCmd","!g-enableCmd","!g-disableCmd","!g-cmdReact","!g-cmdStartReact","!g-addCmdReply","!g-filtro-palavra","!g-filtro-links","!g-filtro-nsfw","!g-filtro-pessoa","!g-interagir","!g-interagir-cd","!g-interagir-chance","!g-customAdmin","!g-twitch-canal","!g-twitch-mudarTitulo","!g-twitch-usarIA","!g-twitch-titulo-on","!g-twitch-titulo-off","!g-twitch-midia-on","!g-twitch-midia-off","!g-kick-canal","!g-kick-mudarTitulo","!g-kick-usarIA","!g-kick-titulo-on","!g-kick-titulo-off","!g-kick-midia-on","!g-kick-midia-off","!g-youtube-canal","!g-youtube-mudarTitulo","!g-youtube-usarIA","!g-youtube-titulo-on","!g-youtube-titulo-off","!g-youtube-midia-on","!g-youtube-midia-off"];
 
 /**
  * Lê o arquivo de cabeçalho do menu
@@ -299,23 +299,35 @@ async function sendCommandList(bot, message, args, group) {
     }
     
     // 3. Comandos de gerenciamento
+    // Obtém comandos de gerenciamento dinamicamente
+    const managementCommands = bot.eventHandler.commandHandler.management.getManagementCommands();
+
+    // Define os comandos prioritários (serão exibidos primeiro)
+    const priorityCommands = ['ajuda', 'info', 'setName', 'addCmd', 'delCmd', 'enableCmd', 'disableCmd', 'setPrefixo', 'setBemvindo', 'setDespedida'];
+
+    // Ordena os comandos: primeiro os prioritários, depois os demais em ordem alfabética
+    const sortedCmdNames = Object.keys(managementCommands).sort((a, b) => {
+      const indexA = priorityCommands.indexOf(a);
+      const indexB = priorityCommands.indexOf(b);
+      
+      // Se ambos estão na lista de prioridade, usa a posição na lista
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      // Se apenas um está na lista, este vem primeiro
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // Caso contrário, usa ordem alfabética
+      return a.localeCompare(b);
+    });
+
     menuText += '\n⚙️ *Comandos de Gerenciamento:*\n';
-    menuText += `• *${prefix}g-help*: Mostra ajuda de comandos de gerenciamento\n`;
-    menuText += `• *${prefix}g-info*: Mostra informações detalhadas do grupo\n`;
-    menuText += `• *${prefix}g-setName*: Muda nome do grupo\n`;
-    menuText += `• *${prefix}g-addCmd*: Adiciona um comando personalizado\n`;
-    menuText += `• *${prefix}g-delCmd*: Exclui um comando personalizado\n`;
-    menuText += `• *${prefix}g-enableCmd*: Habilita um comando personalizado\n`;
-    menuText += `• *${prefix}g-disableCmd*: Desabilita um comando personalizado\n`;
-    menuText += `• *${prefix}g-setCustomPrefix*: Muda prefixo de comando\n`;
-    menuText += `• *${prefix}g-setWelcome*: Define mensagem de boas-vindas\n`;
-    menuText += `• *${prefix}g-setFarewell*: Define mensagem de despedida\n`;
-    menuText += `• *${prefix}g-setReact*: Define reação 'depois' do comando\n`;
-    menuText += `• *${prefix}g-setStartReact*: Define reação 'antes' do comando\n`;
-    menuText += `• *${prefix}g-filtro-palavra*: Adiciona/remove palavras do filtro\n`;
-    menuText += `• *${prefix}g-filtro-links*: Ativa/desativa filtro de links\n`;
-    menuText += `• *${prefix}g-filtro-pessoa*: Adiciona/remove pessoas do filtro\n`;
-    menuText += `• *${prefix}g-filtro-nsfw*: Ativa/desativa filtro de conteúdo NSFW\n`;
+    // Adiciona cada comando formatado ao menu
+    for (const cmdName of sortedCmdNames) {
+      const cmdInfo = managementCommands[cmdName];
+      menuText += `• *${prefix}g-${cmdName}*: ${cmdInfo.description}\n`;
+    }
     
     // Retorna a mensagem com o menu
     return new ReturnMessage({
@@ -329,6 +341,169 @@ async function sendCommandList(bot, message, args, group) {
     return new ReturnMessage({
       chatId: chatId,
       content: 'Erro ao recuperar lista de comandos. Por favor, tente novamente.'
+    });
+  }
+}
+
+/**
+ * Envia uma lista de comandos de gerenciamento disponíveis
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com a lista de comandos de gerenciamento
+ */
+async function sendManagementCommandList(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    logger.debug(`Enviando lista de comandos de gerenciamento para ${chatId}`);
+    
+    // Lê o cabeçalho do menu
+    const header = await readMenuHeader();
+    
+    // Define o prefixo do comando
+    const prefix = group && group.prefix ? group.prefix : bot.prefix;
+    
+    // Constrói mensagem
+    let menuText = header + '\n\n';
+    menuText += '⚙️ *Comandos de Gerenciamento:*\n';
+    
+    // Obtém comandos de gerenciamento dinamicamente
+    const managementCommands = bot.eventHandler.commandHandler.management.getManagementCommands();
+    
+    // Define os comandos prioritários (serão exibidos primeiro)
+    const priorityCommands = ['ajuda', 'info', 'setName', 'addCmd', 'delCmd', 'enableCmd', 'disableCmd', 'setPrefixo', 'setBemvindo', 'setDespedida'];
+    
+    // Ordena os comandos: primeiro os prioritários, depois os demais em ordem alfabética
+    const sortedCmdNames = Object.keys(managementCommands).sort((a, b) => {
+      const indexA = priorityCommands.indexOf(a);
+      const indexB = priorityCommands.indexOf(b);
+      
+      // Se ambos estão na lista de prioridade, usa a posição na lista
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      // Se apenas um está na lista, este vem primeiro
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      // Caso contrário, usa ordem alfabética
+      return a.localeCompare(b);
+    });
+    
+    // Adiciona cada comando formatado ao menu
+    for (const cmdName of sortedCmdNames) {
+      const cmdInfo = managementCommands[cmdName];
+      menuText += `• *${prefix}g-${cmdName}*: ${cmdInfo.description}\n`;
+    }
+    
+    // Retorna a mensagem com o menu de gerenciamento
+    return new ReturnMessage({
+      chatId: chatId,
+      content: menuText
+    });
+  } catch (error) {
+    logger.error('Erro ao enviar lista de comandos de gerenciamento:', error);
+    const chatId = message.group || message.author;
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao recuperar lista de comandos de gerenciamento. Por favor, tente novamente.'
+    });
+  }
+}
+
+/**
+ * Envia uma lista de comandos personalizados do grupo
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com a lista de comandos personalizados
+ */
+async function sendGroupCommandList(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    
+    // Verifica se está em um grupo
+    if (!group) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    logger.debug(`Enviando lista de comandos personalizados para o grupo ${group.id}`);
+    
+    // Obtém comandos personalizados para este grupo
+    const customCommands = (await database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted);
+    
+    // Verifica se existem comandos personalizados
+    if (customCommands.length === 0) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: '📋 *Comandos Personalizados*\n\nNenhum comando personalizado foi criado para este grupo ainda.\n\nUse `!g-addCmd` respondendo a uma mensagem para criar comandos personalizados.'
+      });
+    }
+    
+    // Define o prefixo do comando
+    const prefix = group.prefix || bot.prefix;
+    
+    // Constrói mensagem
+    let menuText = '📋 *Comandos Personalizados do Grupo*\n\n';
+    
+    // Ordena comandos por nome
+    const sortedCommands = [...customCommands].sort((a, b) => {
+      return a.startsWith.localeCompare(b.startsWith);
+    });
+    
+    // Adiciona cada comando personalizado
+    for (const cmd of sortedCommands) {
+      let cmdText = `• *${prefix}${cmd.startsWith}*`;
+      
+      // Adiciona reação se disponível
+      if (cmd.react) {
+        cmdText += ` (${cmd.react})`;
+      } else if (cmd.reactions && cmd.reactions.trigger) {
+        cmdText += ` (${cmd.reactions.trigger})`;
+      }
+      
+      // Adiciona contagem de uso, se disponível
+      if (cmd.count) {
+        cmdText += ` [Usado ${cmd.count} vezes]`;
+      }
+      
+      // Adiciona informação sobre respostas
+      if (cmd.responses && cmd.responses.length > 0) {
+        cmdText += ` - ${cmd.responses.length} resposta(s)`;
+        
+        // Verifica se é envio de todas as respostas
+        if (cmd.sendAllResponses) {
+          cmdText += ' (envia todas)';
+        }
+      }
+      
+      menuText += `${cmdText}\n`;
+    }
+    
+    // Adiciona instruções para gerenciamento
+    menuText += '\n*Gerenciamento de Comandos:*\n';
+    menuText += `• Use *${prefix}g-addCmd* respondendo a uma mensagem para criar um novo comando\n`;
+    menuText += `• Use *${prefix}g-addCmdReply* para adicionar mais respostas a um comando\n`;
+    menuText += `• Use *${prefix}g-delCmd* para excluir um comando\n`;
+    
+    // Retorna a mensagem com os comandos personalizados
+    return new ReturnMessage({
+      chatId: chatId,
+      content: menuText
+    });
+  } catch (error) {
+    logger.error('Erro ao enviar lista de comandos personalizados:', error);
+    const chatId = message.group || message.author;
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao recuperar lista de comandos personalizados. Por favor, tente novamente.'
     });
   }
 }
@@ -352,6 +527,35 @@ const commands = [
     description: 'Mostra todos os comandos disponíveis',
     method: async (bot, message, args, group) => {
       return await sendCommandList(bot, message, args, group);
+    }
+  }),
+  new Command({
+    name: 'cmd-gerenciamento',
+    description: 'Mostra comandos de gerenciamento do grupo',
+    category: "geral",
+    group: "cmdGer",
+    method: async (bot, message, args, group) => {
+      return await sendManagementCommandList(bot, message, args, group);
+    }
+  }),
+  
+  new Command({
+    name: 'cmd-g',
+    description: 'Mostra comandos de gerenciamento do grupo',
+    category: "geral",
+    group: "cmdGer",
+    hidden: true, // Não aparece no menu principal, pois é um alias
+    method: async (bot, message, args, group) => {
+      return await sendManagementCommandList(bot, message, args, group);
+    }
+  }),
+  
+  new Command({
+    name: 'cmd-grupo',
+    description: 'Mostra comandos personalizados do grupo',
+    category: "geral",
+    method: async (bot, message, args, group) => {
+      return await sendGroupCommandList(bot, message, args, group);
     }
   })
 ];

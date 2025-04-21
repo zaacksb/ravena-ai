@@ -78,6 +78,7 @@ async function aiCommand(bot, message, args, group) {
 }
 
 
+
 // Criar array de comandos usando a classe Command
 const commands = [
   new Command({

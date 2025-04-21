@@ -292,7 +292,8 @@ class StreamMonitor extends EventEmitter {
     
     // Ensure we have a valid token
     if (!this.twitchToken) {
-      const token = await this._refreshTwitchToken();
+      //const token = await this._refreshTwitchToken();
+      const token = "12345";
       if (!token) return; // Can't proceed without token
     }
     

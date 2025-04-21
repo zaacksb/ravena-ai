@@ -1415,3 +1415,49 @@ Usar a string apenas como fallback.
 # Problema com g-autoStt
 A propriedade para autoStt não está sendo salva na base dados, apenas em tempo de execução.
 Verificar o problema e corrigir.
+
+--
+Migração de dados
+
+Desenvolva um script em nodejs capaz de realizar a migração de dados da versão antiga para a nova.
+
+Fontes:
+- dados.json
+- frases-zap.json
+- roleta.json
+- lists.json
+
+As fontes virão de 4 pastas (idRavena) diferentes e devem ser unificadas em uma importação apenas. Caso existam grupos repetidos no cadastro, considerar apenas o primeiro processado.
+
+O que gerar:
+- data/groups.json
+- data/roletarussa.json
+- data/custom-cmd/######@g.us.json
+- data/media/xxxxxxx.yyy
+- data/lists/######@g.us.json
+
+Analisar as semelhanças dos arquivos groups.json vs dados.json e me perguntar se estão ok antes de prosseguir.
+
+Como proceder:
+
+1. Ler os arquivos dados.json que possui o array "grupos", neste array existem os dados de todos os grupos cadastrados
+2. Manter estes dados na memória, pois será necessário associar o "nome"+"numeroGrupo"
+3. Converter para o groups.json
+4. Copiar arquivos das configurações do grupo: twitch.imgOn etc. para a pasta data/media
+5. Ler o arquivo frases-zap.json e agrupar as frases pela propriedade "canais", que representa quais grupos possuem o comando.
+6. Para cada grupo, descobrir o "numeroGrupo" pelo "nome" (canal) e criar o respectivo data/custom-cmd/[numeroGrupo].json
+7. Copiar os comandos no novo formato para os arquivos de custom-cmd de cada grupo
+8. Todas as respostas em frases-zap que seguem o padrão: img-xxxx, gif-xxxx, vid-xxxx, sfx-xxxx, stickerguif-xxxx, stickerimag-xxxx, nomeArquivoMidia-xxxx são arquivos que devem ser copiados. xxxx é o nome do arquivo, que fica na pasta "C:\ravenas\[idRavena]\media\[tipo]\xxxx"
+A pasta do [tipo] para cada:
+- img => images
+- gif => gifs
+- vid => videos
+- sfx => audios
+- sticker => stickers
+- stickerguif => stickers
+- stickerimag => stickers
+Legendas ´podem seguir 2 padrões, com o nome do arquivo no começo ou no final
+"img-nomeArquivo.jpg legenda" <==> "{image-nomeArquivo.jpg} legenda"
+"legenda img-nomeArquivo.jpg" <==> "{image-nomeArquivo.jpg} legenda"
+9. Adaptar e gerar o atual roletarussa.json a partir do antigo roleta.json
+10. Adaptar o lists.json e gerar os lists/[numeroGrupo].json (necessário associar o nome com o numeroGrupo novamente)

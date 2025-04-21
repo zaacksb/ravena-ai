@@ -10,7 +10,6 @@ const MentionHandler = require('./MentionHandler');
 const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem');
 const LLMService = require('./services/LLMService');
-const { processListReaction } = require('./functions/ListCommands');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 class WhatsAppBot {
@@ -78,9 +77,20 @@ class WhatsAppBot {
 
     // Inicializa cliente
     await this.client.initialize();
+
+    // Carrega lista de contatos bloqueados
     
+      
     this.logger.info(`Bot ${this.id} inicializado`);
     await sleep(5000);
+
+    try {
+      this.blockedContacts = await this.client.getBlockedContacts();
+      this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
+    } catch (error) {
+      this.logger.error('Erro ao carregar contatos bloqueados:', error);
+      this.blockedContacts = [];
+    }
 
     // Envia notificação de inicialização para o grupo de logs
     if (this.grupoLogs && this.isConnected) {
@@ -138,6 +148,18 @@ class WhatsAppBot {
     // Evento de mensagem
     this.client.on('message', async (message) => {
       try {
+        // Verifica se o autor está na lista de bloqueados
+        if (this.blockedContacts && Array.isArray(this.blockedContacts)) {
+          const isBlocked = this.blockedContacts.some(contact => 
+            contact.id._serialized === message.author
+          );
+          
+          if (isBlocked) {
+            this.logger.debug(`Ignorando mensagem de contato bloqueado: ${message.author}`);
+            return; // Ignora processamento adicional
+          }
+        }
+
         // Formata mensagem para o manipulador de eventos
         const formattedMessage = await this.formatMessage(message);
         this.eventHandler.onMessage(this, formattedMessage);
@@ -151,13 +173,20 @@ class WhatsAppBot {
       try {
         // Processa apenas reações de outros usuários, não do próprio bot
         if (reaction.senderId !== this.client.info.wid._serialized) {
-          // Será que é uma reaction de lista?
-          const isListReaction = await processListReaction(this, reaction);
-          
-          // Se não for de lista, processa o normal
-          if (!isListReaction) {
-            await this.reactionHandler.processReaction(this, reaction);
+
+          // Verifica se o autor está na lista de bloqueados
+          if (this.blockedContacts && Array.isArray(this.blockedContacts)) {
+            const isBlocked = this.blockedContacts.some(contact => 
+              contact.id._serialized === reaction.senderId
+            );
+            
+            if (isBlocked) {
+              this.logger.debug(`Ignorando reaction de contato bloqueado: ${message.author}`);
+              return; // Ignora processamento adicional
+            }
           }
+          
+          await this.reactionHandler.processReaction(this, reaction);
         }
       } catch (error) {
         this.logger.error('Erro ao tratar reação de mensagem:', error);
@@ -777,6 +806,36 @@ class WhatsAppBot {
       this.isConnected = false;
     }
   }
+
+  
+  /**
+   * Verifica se um usuário é administrador em um grupo
+   * @param {string} userId - ID do usuário a verificar
+   * @param {string} groupId - ID do grupo
+   * @returns {Promise<boolean>} - True se o usuário for admin
+   */
+  async isUserAdminInGroup(userId, groupId) {
+    try {
+      // Obtém o objeto de grupo do banco de dados
+      const group = await this.database.getGroup(groupId);
+      if (!group) return false;
+      
+      // Obtém o objeto de chat
+      let chat = null;
+      try {
+        chat = await this.client.getChatById(groupId);
+      } catch (chatError) {
+        this.logger.error(`Erro ao obter chat para verificação de admin: ${chatError.message}`);
+      }
+      
+      // Utiliza o AdminUtils para verificar
+      return await this.adminUtils.isAdmin(userId, group, chat, this.client);
+    } catch (error) {
+      this.logger.error(`Erro ao verificar se usuário ${userId} é admin no grupo ${groupId}:`, error);
+      return false;
+    }
+  }
+  
 
 
 }

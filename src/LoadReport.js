@@ -68,12 +68,41 @@ class LoadReport {
           sentPrivate: this.stats.sentPrivate,
           sentGroup: this.stats.sentGroup,
           totalReceived: this.stats.receivedPrivate + this.stats.receivedGroup,
-          totalSent: this.stats.sentPrivate + this.stats.sentGroup
+          totalSent: this.stats.sentPrivate + this.stats.sentGroup,
         }
       };
+      report.messages.messagesPerHour = Math.floor((report.messages.totalReceived + report.messages.totalSent) / (report.duration / 3600));
 
       // Salva relatório no banco de dados
       await this.saveReport(report);
+      
+      try {
+        // Obtém emoji de carga com base em msgs/h
+        const loadLevels = ["⬜", "🟩", "🟨", "🟧", "🟥", "⬛"];
+        let loadEmoji = loadLevels[0];
+        
+        if (report.messages.messagesPerHour > 100) loadEmoji = loadLevels[1];
+        if (report.messages.messagesPerHour > 500) loadEmoji = loadLevels[2]; 
+        if (report.messages.messagesPerHour > 1000) loadEmoji = loadLevels[3];
+        if (report.messages.messagesPerHour > 1500) loadEmoji = loadLevels[4];
+        if (report.messages.messagesPerHour > 2000) loadEmoji = loadLevels[5];
+        
+        // Formata data para status
+        const now = new Date();
+        const dateString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        // Constrói string de status
+        const status = `${loadEmoji} ${dateString} ${timeString} | ${report.messages.messagesPerHour}msg/h | !cmd, !info | ravena.moothz.win`;
+        
+        // Atualiza status do bot
+        if (this.bot.client && this.bot.isConnected) {
+          await this.bot.client.setStatus(status);
+          this.logger.info(`Status do bot atualizado: ${status}`);
+        }
+      } catch (statusError) {
+        this.logger.error('Erro ao atualizar status do bot:', statusError);
+      }
       
       // Envia relatório para o grupo de logs se configurado
       if (this.bot.grupoLogs) {
@@ -108,17 +137,10 @@ class LoadReport {
     const endDate = new Date(report.period.end).toLocaleString();
     const durationMinutes = Math.floor(report.duration / 60);
     
-    return `📊 *Relatório de Carga para ${this.bot.id}*\n\n` +
-           `⏱️ Período: ${startDate} até ${endDate}\n` +
-           `⌛ Duração: ${durationMinutes} minutos\n\n` +
-           `📥 *Mensagens Recebidas:*\n` +
-           `- Privadas: ${report.messages.receivedPrivate}\n` +
-           `- Grupos: ${report.messages.receivedGroup}\n` +
-           `- Total: ${report.messages.totalReceived}\n\n` +
-           `📤 *Mensagens Enviadas:*\n` +
-           `- Privadas: ${report.messages.sentPrivate}\n` +
-           `- Grupos: ${report.messages.sentGroup}\n` +
-           `- Total: ${report.messages.totalSent}`;
+    return `📊 *Relatório de Carga para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
+           `📥 *Mensagens:*\n` +
+           `- Enviadas (P/G): ${report.messages.totalReceived} (${report.messages.receivedPrivate}/${report.messages.receivedGroup})\n\n` +
+           `- Recebidas (P/G): ${report.messages.totalSent} (${report.messages.sentPrivate}/${report.messages.sentGroup})\n\n`;
   }
 
   /**

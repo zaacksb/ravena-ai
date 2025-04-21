@@ -17,69 +17,227 @@ class Management {
     
     // Mapeamento de comando para método
     this.commandMap = {
-      'setName': 'setGroupName',
-      'addCmd': 'addCustomCommand',
-      'addCmdReply': 'addCustomCommandReply',
-      'delCmd': 'deleteCustomCommand',
-      'enableCmd': 'enableCustomCommand',
-      'disableCmd': 'disableCustomCommand',
-      'setPrefixo': 'setCustomPrefix',
-      'setBemvindo': 'setWelcomeMessage',
-      'setDespedida': 'setFarewellMessage',
-      'ajuda': 'showManagementHelp',
-      'cmdReact': 'setReaction',
-      'cmdStartReact': 'setStartReaction',
-      'autoStt': 'toggleAutoStt',
-      'info': 'showGroupInfo',
-      'filtro-palavra': 'filterWord',
-      'filtro-links': 'filterLinks',
-      'filtro-pessoa': 'filterPerson',
-      'filtro-nsfw': 'filterNSFW',
-      'apelido': 'setUserNickname',
-      'ignorar': 'ignoreUser',
-      'mute': 'muteCommand',
-      'customAdmin': 'customAdmin',
-      'pausar': 'pauseGroup',
-      'setTempoRoleta': 'definirTempoRoleta',
-
-      // Twitch commands
-      'twitch-canal': 'toggleTwitchChannel',
-      'twitch-midia-on': 'setTwitchOnlineMedia',
-      'twitch-midia-off': 'setTwitchOfflineMedia',
-      'twitch-mudarTitulo': 'toggleTwitchTitleChange',
-      'twitch-titulo-on': 'setTwitchOnlineTitle',
-      'twitch-titulo-off': 'setTwitchOfflineTitle',
-      'twitch-usarIA': 'toggleTwitchAI',
-
-      // Kick commands
-      'kick-canal': 'toggleKickChannel',
-      'kick-midia-on': 'setKickOnlineMedia',
-      'kick-midia-off': 'setKickOfflineMedia',
-      'kick-mudarTitulo': 'toggleKickTitleChange',
-      'kick-titulo-on': 'setKickOnlineTitle',
-      'kick-titulo-off': 'setKickOfflineTitle',
-      'kick-usarIA': 'toggleKickAI',
-
-      // YouTube commands
-      'youtube-canal': 'toggleYoutubeChannel',
-      'youtube-midia-on': 'setYoutubeOnlineMedia',
-      'youtube-midia-off': 'setYoutubeOfflineMedia',
-      'youtube-mudarTitulo': 'toggleYoutubeTitleChange',
-      'youtube-titulo-on': 'setYoutubeOnlineTitle',
-      'youtube-titulo-off': 'setYoutubeOfflineTitle',
-      'youtube-usarIA': 'toggleYoutubeAI',
+      'setName': {
+        method: 'setGroupName',
+        description: 'Define um nome personalizado para o grupo'
+      },
+      'addCmd': {
+        method: 'addCustomCommand',
+        description: 'Adiciona um comando personalizado (deve ser usado como resposta)'
+      },
+      'addCmdReply': {
+        method: 'addCustomCommandReply',
+        description: 'Adiciona outra resposta a um comando existente'
+      },
+      'delCmd': {
+        method: 'deleteCustomCommand',
+        description: 'Exclui um comando personalizado'
+      },
+      'enableCmd': {
+        method: 'enableCustomCommand',
+        description: 'Habilita um comando desabilitado'
+      },
+      'disableCmd': {
+        method: 'disableCustomCommand',
+        description: 'Desabilita um comando'
+      },
+      'setPrefixo': {
+        method: 'setCustomPrefix',
+        description: 'Altera o prefixo de comando'
+      },
+      'setBemvindo': {
+        method: 'setWelcomeMessage',
+        description: 'Define mensagem de boas-vindas para novos membros'
+      },
+      'setDespedida': {
+        method: 'setFarewellMessage',
+        description: 'Define mensagem de despedida para membros que saem'
+      },
+      'ajuda': {
+        method: 'showManagementHelp',
+        description: 'Mostra ajuda de comandos de gerenciamento'
+      },
+      'cmdReact': {
+        method: 'setReaction',
+        description: 'Define reação "depois" para um comando'
+      },
+      'cmdStartReact': {
+        method: 'setStartReaction',
+        description: 'Define reação "antes" para um comando'
+      },
+      'autoStt': {
+        method: 'toggleAutoStt',
+        description: 'Ativa/desativa conversão automática de voz para texto'
+      },
+      'info': {
+        method: 'showGroupInfo',
+        description: 'Mostra informações detalhadas do grupo'
+      },
+      'filtro-palavra': {
+        method: 'filterWord',
+        description: 'Adiciona/remove palavra do filtro'
+      },
+      'filtro-links': {
+        method: 'filterLinks',
+        description: 'Ativa/desativa filtro de links'
+      },
+      'filtro-pessoa': {
+        method: 'filterPerson',
+        description: 'Adiciona/remove número do filtro'
+      },
+      'filtro-nsfw': {
+        method: 'filterNSFW',
+        description: 'Ativa/desativa filtro de conteúdo NSFW'
+      },
+      'apelido': {
+        method: 'setUserNickname',
+        description: 'Define um apelido para o usuário no grupo'
+      },
+      'ignorar': {
+        method: 'ignoreUser',
+        description: 'Ignora mensagens de um usuário específico'
+      },
+      'mute': {
+        method: 'muteCommand',
+        description: 'Silencia mensagens que começam com determinado texto'
+      },
+      'customAdmin': {
+        method: 'customAdmin',
+        description: 'Gerencia administradores adicionais do grupo'
+      },
+      'pausar': {
+        method: 'pauseGroup',
+        description: 'Pausa/retoma a atividade do bot no grupo'
+      },
+      'setTempoRoleta': {
+        method: 'definirTempoRoleta',
+        description: 'Define tempo de timeout da roleta russa'
+      },
+      'interagir': {
+        method: 'toggleInteraction',
+        description: 'Ativa/desativa interações automáticas do bot'
+      },
+      'interagir-cd': {
+        method: 'setInteractionCooldown',
+        description: 'Define o tempo de espera entre interações automáticas'
+      },
+      'interagir-chance': {
+        method: 'setInteractionChance',
+        description: 'Define a chance de ocorrer interações automáticas'
+      },
+      'twitch-canal': {
+        method: 'toggleTwitchChannel',
+        description: 'Adiciona/remove canal da Twitch para monitoramento'
+      },
+      'twitch-midia-on': {
+        method: 'setTwitchOnlineMedia',
+        description: 'Define mídia para notificação quando canal ficar online'
+      },
+      'twitch-midia-off': {
+        method: 'setTwitchOfflineMedia',
+        description: 'Define mídia para notificação quando canal ficar offline'
+      },
+      'twitch-mudarTitulo': {
+        method: 'toggleTwitchTitleChange',
+        description: 'Ativa/desativa mudança de título do grupo para eventos da Twitch'
+      },
+      'twitch-titulo-on': {
+        method: 'setTwitchOnlineTitle',
+        description: 'Define título do grupo para quando canal ficar online'
+      },
+      'twitch-titulo-off': {
+        method: 'setTwitchOfflineTitle',
+        description: 'Define título do grupo para quando canal ficar offline'
+      },
+      'twitch-usarIA': {
+        method: 'toggleTwitchAI',
+        description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
+      },
+      'kick-canal': {
+        method: 'toggleKickChannel',
+        description: 'Adiciona/remove canal do Kick para monitoramento'
+      },
+      'kick-midia-on': {
+        method: 'setKickOnlineMedia',
+        description: 'Define mídia para notificação quando canal ficar online'
+      },
+      'kick-midia-off': {
+        method: 'setKickOfflineMedia',
+        description: 'Define mídia para notificação quando canal ficar offline'
+      },
+      'kick-mudarTitulo': {
+        method: 'toggleKickTitleChange',
+        description: 'Ativa/desativa mudança de título do grupo para eventos do Kick'
+      },
+      'kick-titulo-on': {
+        method: 'setKickOnlineTitle',
+        description: 'Define título do grupo para quando canal ficar online'
+      },
+      'kick-titulo-off': {
+        method: 'setKickOfflineTitle',
+        description: 'Define título do grupo para quando canal ficar offline'
+      },
+      'kick-usarIA': {
+        method: 'toggleKickAI',
+        description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
+      },
+      'youtube-canal': {
+        method: 'toggleYoutubeChannel',
+        description: 'Adiciona/remove canal do YouTube para monitoramento'
+      },
+      'youtube-midia-on': {
+        method: 'setYoutubeOnlineMedia',
+        description: 'Define mídia para notificação de novos vídeos'
+      },
+      'youtube-midia-off': {
+        method: 'setYoutubeOfflineMedia',
+        description: 'Define mídia para notificação quando canal ficar offline'
+      },
+      'youtube-mudarTitulo': {
+        method: 'toggleYoutubeTitleChange',
+        description: 'Ativa/desativa mudança de título do grupo para eventos do YouTube'
+      },
+      'youtube-titulo-on': {
+        method: 'setYoutubeOnlineTitle',
+        description: 'Define título do grupo para quando canal postar novo vídeo'
+      },
+      'youtube-titulo-off': {
+        method: 'setYoutubeOfflineTitle',
+        description: 'Define título do grupo para quando canal ficar offline'
+      },
+      'youtube-usarIA': {
+        method: 'toggleYoutubeAI',
+        description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
+      }
     };
   }
 
   /**
-   * Obtém o nome do método para um comando de gerenciamento
-   * @param {string} command - Nome do comando
-   * @returns {string|null} - Nome do método ou null se não encontrado
+   * Obtém a lista de comandos de gerenciamento e suas descrições
+   * @returns {Object} - Objeto com comandos e descrições
    */
   getCommandMethod(command) {
-    return this.commandMap[command] || null;
+    return this.commandMap[command]?.method || null;
   }
 
+  /**
+   * Obtém a lista de comandos de gerenciamento e suas descrições
+   * @returns {Object} - Objeto com comandos e descrições
+   */
+  getManagementCommands() {
+    const commands = {};
+    
+    // Constrói objeto de comandos a partir do commandMap
+    for (const [cmdName, cmdData] of Object.entries(this.commandMap)) {
+      commands[cmdName] = {
+        description: cmdData.description || 'Sem descrição disponível',
+        method: cmdData.method
+      };
+    }
+    
+    return commands;
+  }
+  
   /**
    * Substituto para hasMedia
    * @param {Message} message - Objeto msg do wwebjs
@@ -3447,6 +3605,157 @@ class Management {
         content: 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.'
       });
     }
+  }
+
+  /**
+   * Alterna interações automáticas para um grupo
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async toggleInteraction(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Inicializa objeto de interação se não existir
+    if (!group.interact) {
+      group.interact = {
+        enabled: false,
+        chance: 100, // Padrão: 1%
+        cooldown: 30, // Padrão: 30 minutos
+        lastInteraction: 0
+      };
+    }
+    
+    // Alterna estado de habilitado
+    group.interact.enabled = !group.interact.enabled;
+    
+    // Salva mudanças
+    await this.database.saveGroup(group);
+    
+    // Constrói mensagem de resposta
+    let response = group.interact.enabled
+      ? 'Interações automáticas **ativadas** para este grupo.\n\n'
+      : 'Interações automáticas **desativadas** para este grupo.\n\n';
+    
+    if (group.interact.enabled) {
+      response += `📊 Chance atual: ${group.interact.chance/100}% (${group.interact.chance}/10000)\n`;
+      response += `⏱️ Cooldown atual: ${group.interact.cooldown} minutos\n\n`;
+      response += 'Use `!g-interagir-chance` e `!g-interagir-cd` para ajustar estes valores.';
+    }
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: response
+    });
+  }
+
+  /**
+   * Define o cooldown para interações automáticas
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setInteractionCooldown(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Inicializa objeto de interação se não existir
+    if (!group.interact) {
+      group.interact = {
+        enabled: false,
+        chance: 100, // Padrão: 1%
+        cooldown: 30, // Padrão: 30 minutos
+        lastInteraction: 0
+      };
+    }
+    
+    // Verifica se valor de cooldown foi fornecido
+    if (args.length === 0 || isNaN(parseInt(args[0]))) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `⏱️ Cooldown atual: ${group.interact.cooldown} minutos\n\nUse !g-interagir-cd [minutos] para alterar. Valores entre 5 minutos e 30 dias (43200 minutos).`
+      });
+    }
+    
+    // Analisa e valida o cooldown
+    let cooldown = parseInt(args[0]);
+    if (cooldown < 5) cooldown = 5; // Mínimo 5 minutos
+    if (cooldown > 43200) cooldown = 43200; // Máximo 30 dias
+    
+    // Atualiza cooldown
+    group.interact.cooldown = cooldown;
+    
+    // Salva mudanças
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `⏱️ Cooldown de interações definido para ${cooldown} minutos.`
+    });
+  }
+
+  /**
+   * Define a chance para interações automáticas
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setInteractionChance(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Inicializa objeto de interação se não existir
+    if (!group.interact) {
+      group.interact = {
+        enabled: false,
+        chance: 100, // Padrão: 1%
+        cooldown: 30, // Padrão: 30 minutos
+        lastInteraction: 0
+      };
+    }
+    
+    // Verifica se valor de chance foi fornecido
+    if (args.length === 0 || isNaN(parseInt(args[0]))) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `📊 Chance atual: ${group.interact.chance/100}% (${group.interact.chance}/10000)\n\nUse !g-interagir-chance [1-1000] para alterar. Valores entre 0.01% e 10%.`
+      });
+    }
+    
+    // Analisa e valida a chance
+    let chance = parseInt(args[0]);
+    if (chance < 1) chance = 1; // Mínimo 0.01%
+    if (chance > 1000) chance = 1000; // Máximo 10%
+    
+    // Atualiza chance
+    group.interact.chance = chance;
+    
+    // Salva mudanças
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `📊 Chance de interações definida para ${chance/100}% (${chance}/10000).`
+    });
   }
 }
 
