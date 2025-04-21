@@ -134,6 +134,9 @@ class EventHandler {
         if (isFollowUpHandled) return;
       }
       
+      // Obtém conteúdo de texto da mensagem (corpo ou legenda)
+      const textContent = message.type === 'text' ? message.content : message.caption;
+
       // Se mensagem de grupo, obtém ou cria o grupo
       let group = null;
       if (message.group) {
@@ -165,10 +168,9 @@ class EventHandler {
           }
         }
         
+
         // Verifica se o grupo está pausado
         if (group.paused) {        
-          // Obtém conteúdo de texto da mensagem (corpo ou legenda)
-          const textContent = message.type === 'text' ? message.content : message.caption;
           
           // Verifica se é o comando g-pausar antes de ignorar completamente
           const prefix = (group && group.prefix !== undefined) ? group.prefix : bot.prefix;
@@ -219,9 +221,7 @@ class EventHandler {
           return; // Mensagem foi filtrada
         }
       }
-      
-      // Obtém conteúdo de texto da mensagem (corpo ou legenda)
-      const textContent = message.type === 'text' ? message.content : message.caption;
+        
       
       // Se não houver conteúdo de texto, não pode ser um comando ou menção
       if (!textContent) {
@@ -492,6 +492,7 @@ class EventHandler {
       if (isBotJoining) {
         // Caso 1: Bot entrou no grupo
         this.logger.info(`Bot entrou no grupo ${data.group.name} (${data.group.id})`);
+        group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
         
         // Busca pendingJoins para ver se esse grupo corresponde a um convite pendente
         const pendingJoins = await this.database.getPendingJoins();

@@ -1531,6 +1531,11 @@ Novas variáveis a serem processadas:
 
 
 ---
+No WhatsAppAbot.processStreamEvent o bot precisa verificar
+- Se o grupo não está pausado 
+- se ainda faz parte do grupo antes de tentar enviar as mensagens, pois ele pode ter sido removido.
 
-comandos twitch enviar apenas se estiver no grupo
-imagine com quote
+Caso o bot não faça mais parte do grupo, definir o mesmo como pausado.
+---
+
+Modificação Grande - Alteração do WhatsAppBot.js para ser mais genérico

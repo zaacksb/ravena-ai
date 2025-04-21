@@ -103,19 +103,24 @@ async function saveMediaToTemp(media, extension = 'ogg') {
 async function textToSpeech(bot, message, args, group, char = "ravena") {
   try {
     const chatId = message.group || message.author;
-    
-    if (args.length === 0) {
+      
+    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+    let text = args.join(' ');
+
+    if(quotedMsg){  
+      text += " "+quotedMsg.body;
+    }
+
+    if (text.length < 1) {
       return new ReturnMessage({
         chatId: chatId,
         content: 'Por favor, forneça texto para converter em voz.'
       });
     }
     
-    const text = args.join(' ');
     const character = ttsCharacters.find(ttsC => ttsC.name === char);
-
-    if(text.length > 100){
-      await bot.sendReturnMessages((new ReturnMessage({
+    if(text.length > 150){
+      await bot.sendReturnMessages(new ReturnMessage({
         chatId: chatId,
         content: '🔉 Sintetizando áudio, isso pode levar alguns segundos...'
       }));

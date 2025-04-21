@@ -31,8 +31,23 @@ class Group {
     
     // Mensagens de boas-vindas e despedida
     this.greetings = data.greetings || {};
-    
     this.farewells = data.farewells || {};
+
+    // Interacoes Auto
+    this.interact = data.interact || {
+      enabled: true,
+      lastInteraction: 0,
+      cooldown: 30,
+      chance: 100,
+    };
+
+    // Outras config
+    this.autoStt = data.autoStt || false;
+    this.ignoredNumbers = data.ignoredNumbers || [];
+    this.ignoredUsers = data.ignoredUsers || [];
+    this.mutedStrings = data.mutedStrings || [];
+    this.nicks = data.nicks || [];
+    
     
     // Metadados
     this.createdAt = data.createdAt || Date.now();
@@ -52,13 +67,19 @@ class Group {
       prefix: this.prefix,
       inviteCode: this.inviteCode,
       paused: this.paused,
-      filters: this.filters,
       additionalAdmins: this.additionalAdmins,
+      filters: this.filters,
       twitch: this.twitch,
       kick: this.kick,
       youtube: this.youtube,
       greetings: this.greetings,
       farewells: this.farewells,
+      interact: this.interact,
+      autoStt: this.autoStt,
+      ignoredNumbers: this.ignoredNumbers,
+      ignoredUsers: this.ignoredUsers, 
+      mutedStrings: this.mutedStrings,
+      nicks: this.nicks,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };
@@ -104,6 +125,21 @@ class Group {
         ...data.farewells
       };
     }
+    
+    // Atualiza interações automáticas
+    if (data.interact) {
+      this.interact = {
+        ...this.interact,
+        ...data.interact
+      };
+    }
+    
+    // Atualiza outras configurações
+    if (typeof data.autoStt === 'boolean') this.autoStt = data.autoStt;
+    if (data.ignoredNumbers) this.ignoredNumbers = data.ignoredNumbers;
+    if (data.ignoredUsers) this.ignoredUsers = data.ignoredUsers;
+    if (data.mutedStrings) this.mutedStrings = data.mutedStrings;
+    if (data.nicks) this.nicks = data.nicks;
     
     // Atualiza carimbos de data/hora
     this.updatedAt = Date.now();

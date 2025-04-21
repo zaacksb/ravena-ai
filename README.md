@@ -81,7 +81,7 @@
 - [x] !gif tá retornando img estática
 - [x] Fix TTS com AllTalk V2
 - [x] Busca img não funciona
-- [ ] Não salvando algumas propriedades de grupo (autoStt)
+- [x] Não salvando algumas propriedades de grupo
 - [ ] Mention bot apenas no começo
 - [ ] Bot tentando notificar sem estar nos grupos
 - [x] Gerenciar no PV buga coisas normais

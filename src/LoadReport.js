@@ -139,8 +139,8 @@ class LoadReport {
     
     return `📊 *Relatório de Carga para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
            `📥 *Mensagens:*\n` +
-           `- Enviadas (P/G): ${report.messages.totalReceived} (${report.messages.receivedPrivate}/${report.messages.receivedGroup})\n\n` +
-           `- Recebidas (P/G): ${report.messages.totalSent} (${report.messages.sentPrivate}/${report.messages.sentGroup})\n\n`;
+           `- Recebidas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)\n\n`+
+           `- Enviadas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)`;
   }
 
   /**

@@ -578,38 +578,79 @@ class WhatsAppBot {
   }
 
   /**
-   * Processes a stream event notification for a group
-   * @param {Object} group - Group data
-   * @param {Object} channelConfig - Channel configuration
-   * @param {Object} eventData - Event data
-   * @param {string} eventType - Event type ('online' or 'offline')
+   * Processa notificação de evento de stream para um grupo
+   * @param {Object} group - Dados do grupo
+   * @param {Object} channelConfig - Configuração do canal
+   * @param {Object} eventData - Dados do evento
+   * @param {string} eventType - Tipo de evento ('online' ou 'offline')
    */
   async processStreamEvent(group, channelConfig, eventData, eventType) {
     try {
-      // Get the appropriate config (onConfig for online events, offConfig for offline)
+      // Verifica se o grupo está pausado
+      if (group.paused) {
+        this.logger.info(`Ignorando notificação de stream para grupo pausado: ${group.id}`);
+        return;
+      }
+
+      // Verifica se o bot ainda faz parte do grupo
+      let isMember = true;
+      try {
+        const chat = await this.bot.client.getChatById(group.id);
+        if (!chat || !chat.isGroup) {
+          this.logger.info(`Chat ${group.id} não é um grupo ou não foi encontrado`);
+          isMember = false;
+        }
+      } catch (error) {
+        this.logger.warn(`Erro ao acessar grupo ${group.id}: ${error.message}`);
+        isMember = false;
+      }
+
+      // Se não for mais membro, pausa o grupo e salva no banco de dados
+      if (!isMember) {
+        this.logger.info(`Bot não é mais membro do grupo ${group.id}, definindo como pausado`);
+        group.paused = true;
+        await this.bot.database.saveGroup(group);
+        return;
+      }
+
+      // Obtém a configuração apropriada (onConfig para eventos online, offConfig para offline)
       const config = eventType === 'online' ? channelConfig.onConfig : channelConfig.offConfig;
       
-      // Skip if no configuration
+      // Pula se não houver configuração
       if (!config || !config.media || config.media.length === 0) {
         return;
       }
       
-      // Process title change if enabled
+      // Armazena as ReturnMessages para enviar
+      const returnMessages = [];
+      
+      // Processa alteração de título se habilitada
       if (channelConfig.changeTitleOnEvent) {
         await this.changeGroupTitle(group, channelConfig, eventData, eventType);
       }
       
-      // Process media notifications
+      // Processa notificações de mídia
       for (const mediaItem of config.media) {
-        await this.sendEventNotification(group.id, mediaItem, eventData, channelConfig);
+        const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig);
+        if (returnMessage) {
+          returnMessages.push(returnMessage);
+        }
       }
       
-      // Generate AI message if enabled
+      // Gera mensagem de IA se habilitada
       if (channelConfig.useAI && eventType === 'online') {
-        await this.sendAINotification(group.id, eventData, channelConfig);
+        const aiMessage = await this.createAINotification(group.id, eventData, channelConfig);
+        if (aiMessage) {
+          returnMessages.push(aiMessage);
+        }
+      }
+      
+      // Envia todas as mensagens
+      if (returnMessages.length > 0) {
+        await this.bot.sendReturnMessages(returnMessages);
       }
     } catch (error) {
-      this.logger.error(`Error processing stream event for ${group.id}:`, error);
+      this.logger.error(`Erro ao processar evento de stream para ${group.id}:`, error);
     }
   }
 

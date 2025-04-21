@@ -162,7 +162,7 @@ class Database {
   saveJSON(filePath, data) {
     try {
       // Cria backup do arquivo existente
-      //this.createBackup(filePath);
+      this.createBackup(filePath);
       
       // Garante que o diretório exista
       const dir = path.dirname(filePath);
@@ -170,8 +170,11 @@ class Database {
         fs.mkdirSync(dir, { recursive: true });
       }
       
+      // Clona os dados para evitar modificações por referência
+      const dataToSave = JSON.parse(JSON.stringify(data));
+      
       // Escreve novos dados
-      fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+      fs.writeFileSync(filePath, JSON.stringify(dataToSave, null, 2), 'utf8');
       return true;
     } catch (error) {
       this.logger.error(`Erro ao salvar JSON em ${filePath}:`, error);
@@ -251,7 +254,7 @@ class Database {
     return groups.find(group => group.id === groupId) || null;
   }
 
-/**
+  /**
    * Salva um grupo
    * @param {Object} group - O objeto do grupo a ser salvo
    * @returns {boolean} - Status de sucesso
@@ -260,8 +263,6 @@ class Database {
     try {
       // Obtém todos os grupos
       const groups = await this.getGroups();
-
-      console.log(`[saveGroup] `, group);
       
       if (!Array.isArray(groups)) {
         this.logger.error('Groups não é um array em saveGroup:', groups);
@@ -273,23 +274,28 @@ class Database {
       // Encontra índice do grupo existente
       const index = groups.findIndex(g => g.id === group.id);
       
-      console.log("index grupo ", index);
       if (index !== -1) {
         // Atualiza grupo existente
-        groups[index] = group;
+        groups[index] = { ...group };
+        this.logger.debug(`[saveGroup] Grupo atualizado no índice ${index}`);
       } else {
         // Adiciona novo grupo
-        groups.push(group);
-      } 
-
-      console.log(`[saveGroup] POS`, groups[index]);
+        groups.push({ ...group });
+        this.logger.debug(`[saveGroup] Novo grupo adicionado ao array`);
+      }
       
-      // Atualiza cache
-      this.cache.groups = groups;
+      // Atualiza cache com uma cópia profunda para evitar referências
+      this.cache.groups = JSON.parse(JSON.stringify(groups));
       
       // Salva no arquivo
       const groupsPath = path.join(this.databasePath, 'groups.json');
-      return this.saveJSON(groupsPath, groups);
+      const result = this.saveJSON(groupsPath, groups);
+      
+      // Log para debug
+      this.logger.debug(`[saveGroup] Resultado do saveJSON: ${result}`);
+      this.logger.debug(`[saveGroup] Grupos após salvar: ${JSON.stringify(groups.length)}`);
+      
+      return result;
     } catch (error) {
       this.logger.error('Erro ao salvar grupo:', error);
       return false;
