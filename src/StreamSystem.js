@@ -14,11 +14,16 @@ class StreamSystem {
    * @param {WhatsAppBot} bot - Instância do bot
    */
   constructor(bot) {
+    // Controle de depuração para notificações
+    const debugNotificacoes = false;
+    
+    this.debugNotificacoes = debugNotificacoes;
     this.bot = bot;
     this.logger = new Logger(`stream-system-${bot.id}`);
     this.llmService = new LLMService({});
     this.streamMonitor = null;
     this.dataPath = path.join(__dirname, '../data');
+    this.mediaPath = path.join(this.dataPath, 'media');
   }
 
   /**
@@ -44,6 +49,12 @@ class StreamSystem {
       this.bot.streamMonitor = this.streamMonitor;
       
       this.logger.info('Sistema de monitoramento de streams inicializado com sucesso');
+      
+      // Envia mensagem de depuração se habilitado
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        this.bot.sendMessage(this.bot.grupoLogs, `🔍 Sistema de monitoramento de streams inicializado (debug ativado)`);
+      }
+      
       return true;
     } catch (error) {
       this.logger.error('Erro ao inicializar sistema de monitoramento de streams:', error);
@@ -59,6 +70,15 @@ class StreamSystem {
     this.streamMonitor.on('streamOnline', async (data) => {
       try {
         this.logger.info(`Evento de stream online: ${data.platform}/${data.channelName}`);
+        
+        // Envia mensagem de depuração para o grupo de logs se configurado
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `🟢 [DEBUG] Stream ONLINE: ${data.platform}/${data.channelName}\nTítulo: ${data.title || 'N/A'}\nJogo: ${data.game || 'N/A'}`
+          );
+        }
+        
         await this.handleStreamOnline(data);
       } catch (error) {
         this.logger.error('Erro ao processar evento de stream online:', error);
@@ -69,6 +89,15 @@ class StreamSystem {
     this.streamMonitor.on('streamOffline', async (data) => {
       try {
         this.logger.info(`Evento de stream offline: ${data.platform}/${data.channelName}`);
+        
+        // Envia mensagem de depuração para o grupo de logs se configurado
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `🔴 [DEBUG] Stream OFFLINE: ${data.platform}/${data.channelName}`
+          );
+        }
+        
         await this.handleStreamOffline(data);
       } catch (error) {
         this.logger.error('Erro ao processar evento de stream offline:', error);
@@ -79,6 +108,15 @@ class StreamSystem {
     this.streamMonitor.on('newVideo', async (data) => {
       try {
         this.logger.info(`Evento de novo vídeo: ${data.platform}/${data.channelName}`);
+        
+        // Envia mensagem de depuração para o grupo de logs se configurado
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `📺 [DEBUG] Novo vídeo: ${data.platform}/${data.channelName}\nTítulo: ${data.title || 'N/A'}\nURL: ${data.url || 'N/A'}`
+          );
+        }
+        
         await this.handleNewVideo(data);
       } catch (error) {
         this.logger.error('Erro ao processar evento de novo vídeo:', error);
@@ -87,7 +125,7 @@ class StreamSystem {
   }
 
   /**
-   * Carrega canais para monitorar
+   * Carrega canais para monitorar a partir dos grupos cadastrados
    */
   async loadChannelsToMonitor() {
     try {
@@ -134,6 +172,14 @@ class StreamSystem {
       }
       
       this.logger.info(`Carregados para monitoramento: ${subscribedChannels.twitch.length} canais Twitch, ${subscribedChannels.kick.length} canais Kick e ${subscribedChannels.youtube.length} canais YouTube`);
+      
+      // Envia mensagem de depuração se habilitado
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `📊 [DEBUG] Canais monitorados:\n- Twitch: ${subscribedChannels.twitch.length}\n- Kick: ${subscribedChannels.kick.length}\n- YouTube: ${subscribedChannels.youtube.length}`
+        );
+      }
     } catch (error) {
       this.logger.error('Erro ao carregar canais para monitorar:', error);
     }
@@ -238,6 +284,44 @@ class StreamSystem {
       // Verifica se o grupo está pausado
       if (group.paused) {
         this.logger.info(`Ignorando notificação de stream para grupo pausado: ${group.id}`);
+        
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `🔇 [DEBUG] Ignorando notificação para grupo pausado: ${group.id} (${group.name || 'sem nome'})`
+          );
+        }
+        
+        return;
+      }
+
+      // Verifica se o bot ainda faz parte do grupo (usando o método da plataforma específica)
+      let isMember = true;
+      try {
+        // Esta verificação deve ser adaptada conforme a plataforma (WhatsApp, Telegram, etc.)
+        const chat = await this.bot.client.getChatById(group.id);
+        if (!chat || !chat.isGroup) {
+          this.logger.info(`Chat ${group.id} não é um grupo ou não foi encontrado`);
+          isMember = false;
+        }
+      } catch (error) {
+        this.logger.warn(`Erro ao acessar grupo ${group.id}: ${error.message}`);
+        isMember = false;
+      }
+
+      // Se não for mais membro, pausa o grupo e salva no banco de dados
+      if (!isMember) {
+        this.logger.info(`Bot não é mais membro do grupo ${group.id}, definindo como pausado`);
+        
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `👋 [DEBUG] Bot não é mais membro do grupo ${group.id} (${group.name || 'sem nome'}), configurando como pausado`
+          );
+        }
+        
+        group.paused = true;
+        await this.bot.database.saveGroup(group);
         return;
       }
 
@@ -246,15 +330,27 @@ class StreamSystem {
       
       // Pula se não houver configuração
       if (!config || !config.media || config.media.length === 0) {
+        this.logger.info(`Sem configuração de mídia para evento ${eventType} no grupo ${group.id}`);
+        
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `⚠️ [DEBUG] Sem configuração de mídia para evento ${eventType} no grupo ${group.id} (${group.name || 'sem nome'})`
+          );
+        }
+        
         return;
       }
       
-      // Armazena as ReturnMessages para enviar
+      // Armazena as ReturnMessages para enviar para o grupo
       const returnMessages = [];
+      
+      // Armazena as ReturnMessages para enviar para o grupo de logs (cópias das mensagens originais)
+      const logReturnMessages = [];
       
       // Processa alteração de título se habilitada
       if (channelConfig.changeTitleOnEvent) {
-        await this.changeGroupTitle(group, channelConfig, eventData, eventType);
+        await this.changeGroupTitleForStream(group, channelConfig, eventData, eventType);
       }
       
       // Processa notificações de mídia
@@ -262,6 +358,31 @@ class StreamSystem {
         const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig);
         if (returnMessage) {
           returnMessages.push(returnMessage);
+          
+          // Cria uma cópia da mensagem para o grupo de logs se depuração estiver habilitada
+          if (this.debugNotificacoes && this.bot.grupoLogs) {
+            // Cria uma cópia profunda da mensagem
+            const logMessage = new ReturnMessage({
+              chatId: this.bot.grupoLogs,
+              content: returnMessage.content,
+              options: {...returnMessage.options},
+              delay: returnMessage.delay,
+              reactions: returnMessage.reactions ? {...returnMessage.reactions} : null,
+              metadata: returnMessage.metadata ? {...returnMessage.metadata} : {}
+            });
+            
+            // Adiciona prefixo à legenda, se existir
+            if (logMessage.options && logMessage.options.caption) {
+              logMessage.options.caption = `[DEBUG-CÓPIA] Grupo: ${group.name || group.id}\n${logMessage.options.caption}`;
+            }
+            
+            // Se for mensagem de texto, adiciona prefixo
+            if (typeof logMessage.content === 'string') {
+              logMessage.content = `[DEBUG-CÓPIA] Grupo: ${group.name || group.id}\n\n${logMessage.content}`;
+            }
+            
+            logReturnMessages.push(logMessage);
+          }
         }
       }
       
@@ -270,15 +391,55 @@ class StreamSystem {
         const aiMessage = await this.createAINotification(group.id, eventData, channelConfig);
         if (aiMessage) {
           returnMessages.push(aiMessage);
+          
+          // Cria uma cópia da mensagem IA para o grupo de logs
+          if (this.debugNotificacoes && this.bot.grupoLogs) {
+            const logAiMessage = new ReturnMessage({
+              chatId: this.bot.grupoLogs,
+              content: `[DEBUG-CÓPIA-IA] Grupo: ${group.name || group.id}\n\n${aiMessage.content}`,
+              delay: aiMessage.delay,
+              reactions: aiMessage.reactions ? {...aiMessage.reactions} : null
+            });
+            
+            logReturnMessages.push(logAiMessage);
+          }
         }
       }
       
-      // Envia todas as mensagens
+      // Envia as mensagens originais para o grupo
       if (returnMessages.length > 0) {
         await this.bot.sendReturnMessages(returnMessages);
+        
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `✅ [DEBUG] Enviadas ${returnMessages.length} mensagens para o grupo ${group.id} (${group.name || 'sem nome'}) sobre ${eventData.platform}/${eventData.channelName}`
+          );
+        }
+      } else {
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `❌ [DEBUG] Nenhuma mensagem enviada para o grupo ${group.id} (${group.name || 'sem nome'}) sobre ${eventData.platform}/${eventData.channelName}`
+          );
+        }
+      }
+      
+      // Envia as cópias das mensagens para o grupo de logs
+      if (logReturnMessages.length > 0) {
+        // Adiciona um pequeno atraso para garantir que as mensagens cheguem em ordem após o log
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await this.bot.sendReturnMessages(logReturnMessages);
       }
     } catch (error) {
       this.logger.error(`Erro ao processar evento de stream para ${group.id}:`, error);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        await this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `🔥 [DEBUG] Erro ao processar evento para grupo ${group.id}: ${error.message}`
+        );
+      }
     }
   }
 
@@ -289,9 +450,9 @@ class StreamSystem {
    * @param {Object} eventData - Dados do evento
    * @param {string} eventType - Tipo de evento ('online' ou 'offline')
    */
-  async changeGroupTitle(group, channelConfig, eventData, eventType) {
+  async changeGroupTitleForStream(group, channelConfig, eventData, eventType) {
     try {
-      // Obtém o chat do grupo atual
+      // Obtém o chat do grupo atual (esta parte é específica da plataforma)
       const chat = await this.bot.client.getChatById(group.id);
       if (!chat || !chat.isGroup) return;
       
@@ -335,12 +496,26 @@ class StreamSystem {
         }
       }
       
-      // Define o novo título
+      // Define o novo título (específico da plataforma)
       await chat.setSubject(newTitle);
       
       this.logger.info(`Alterado título do grupo ${group.id} para: ${newTitle}`);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        await this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `🔄 [DEBUG] Título alterado para grupo ${group.id} (${group.name || 'sem nome'}):\nAntigo: ${chat.name}\nNovo: ${newTitle}`
+        );
+      }
     } catch (error) {
       this.logger.error(`Erro ao alterar título do grupo ${group.id}:`, error);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        await this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `⚠️ [DEBUG] Erro ao alterar título do grupo ${group.id}: ${error.message}`
+        );
+      }
     }
   }
 
@@ -378,7 +553,7 @@ class StreamSystem {
       } else if (mediaItem.type === 'image' || mediaItem.type === 'video' || 
                 mediaItem.type === 'audio' || mediaItem.type === 'sticker') {
         // Carrega arquivo de mídia
-        const mediaPath = path.join(this.dataPath, 'media', mediaItem.content);
+        const mediaPath = path.join(this.mediaPath, mediaItem.content);
         
         try {
           const media = await this.bot.createMedia(mediaPath);
@@ -409,6 +584,13 @@ class StreamSystem {
         } catch (error) {
           this.logger.error(`Erro ao enviar notificação de mídia (${mediaPath}):`, error);
           
+          if (this.debugNotificacoes && this.bot.grupoLogs) {
+            await this.bot.sendMessage(
+              this.bot.grupoLogs, 
+              `⚠️ [DEBUG] Erro ao processar mídia ${mediaPath} para grupo ${groupId}: ${error.message}`
+            );
+          }
+          
           // Fallback para mensagem de texto
           return new ReturnMessage({
             chatId: groupId,
@@ -420,6 +602,14 @@ class StreamSystem {
       return null;
     } catch (error) {
       this.logger.error(`Erro ao criar notificação de evento para ${groupId}:`, error);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        await this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `⚠️ [DEBUG] Erro ao criar notificação para grupo ${groupId}: ${error.message}`
+        );
+      }
+      
       return null;
     }
   }
@@ -442,6 +632,13 @@ class StreamSystem {
         prompt = `O canal ${eventData.channelName} acabou de lançar um novo vídeo chamado "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a assistir o vídeo.`;
       }
       
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        await this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `🤖 [DEBUG] Gerando mensagem IA para grupo ${groupId}, prompt: "${prompt}"`
+        );
+      }
+      
       // Obtém resposta da IA
       const aiResponse = await this.llmService.getCompletion({
         prompt: prompt,
@@ -462,7 +659,79 @@ class StreamSystem {
       return null;
     } catch (error) {
       this.logger.error(`Erro ao criar notificação de IA para ${groupId}:`, error);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        await this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `⚠️ [DEBUG] Erro ao criar notificação IA para grupo ${groupId}: ${error.message}`
+        );
+      }
+      
       return null;
+    }
+  }
+
+  /**
+   * Adiciona canal para monitoramento
+   * @param {string} channel - Nome do canal
+   * @param {string} platform - Nome da plataforma ('twitch', 'kick', 'youtube')
+   * @returns {boolean} - Se a operação foi bem-sucedida
+   */
+  subscribe(channel, platform) {
+    try {
+      if (!channel || !platform) return false;
+      
+      if (!this.streamMonitor) {
+        this.logger.error('StreamMonitor não inicializado');
+        return false;
+      }
+      
+      this.streamMonitor.subscribe(channel, platform);
+      this.logger.info(`Canal adicionado para monitoramento: ${platform}/${channel}`);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `➕ [DEBUG] Canal adicionado para monitoramento: ${platform}/${channel}`
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      this.logger.error(`Erro ao adicionar canal para monitoramento: ${platform}/${channel}`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove canal do monitoramento
+   * @param {string} channel - Nome do canal
+   * @param {string} platform - Nome da plataforma ('twitch', 'kick', 'youtube')
+   * @returns {boolean} - Se a operação foi bem-sucedida
+   */
+  unsubscribe(channel, platform) {
+    try {
+      if (!channel || !platform) return false;
+      
+      if (!this.streamMonitor) {
+        this.logger.error('StreamMonitor não inicializado');
+        return false;
+      }
+      
+      this.streamMonitor.unsubscribe(channel, platform);
+      this.logger.info(`Canal removido do monitoramento: ${platform}/${channel}`);
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `➖ [DEBUG] Canal removido do monitoramento: ${platform}/${channel}`
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      this.logger.error(`Erro ao remover canal do monitoramento: ${platform}/${channel}`, error);
+      return false;
     }
   }
 
@@ -473,6 +742,13 @@ class StreamSystem {
     if (this.streamMonitor) {
       this.streamMonitor.stopMonitoring();
       this.streamMonitor = null;
+      
+      if (this.debugNotificacoes && this.bot.grupoLogs) {
+        this.bot.sendMessage(
+          this.bot.grupoLogs, 
+          `🛑 [DEBUG] Sistema de monitoramento de streams destruído`
+        );
+      }
     }
   }
 }

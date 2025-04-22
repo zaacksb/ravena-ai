@@ -12,8 +12,8 @@ class MentionHandler {
     
     // Emoji de reação padrão para menções
     this.reactions = {
-      before: "👀",
-      after: "✅",
+      before: "⏳",
+      after: "🤖",
       error: "❌" 
     };
   }
@@ -32,13 +32,13 @@ class MentionHandler {
       // Obtém o número de telefone do bot para verificar menções
       const botNumber = bot.client.info.wid._serialized.split('@')[0];
       
-      // Verifica se a mensagem contém uma menção ao bot
-      const mentionRegex = new RegExp(`@${botNumber}\\b`, 'i');
-      if (!mentionRegex.test(text)) {
+      // Verifica se a mensagem COMEÇA com uma menção ao bot
+      const mentionRegexStart = new RegExp(`^\\s*@${botNumber}\\b`, 'i');
+      if (!mentionRegexStart.test(text)) {
         return false;
       }
 
-      this.logger.info(`Menção ao bot detectada de ${message.author} em ${message.group || 'chat privado'}`);
+      this.logger.info(`Menção ao bot detectada no início da mensagem de ${message.author} em ${message.group || 'chat privado'}`);
       
       // Reage com o emoji "antes"
       try {
@@ -48,7 +48,7 @@ class MentionHandler {
       }
       
       // Remove a menção do prompt
-      const prompt = text.replace(mentionRegex, '').trim();
+      const prompt = text.replace(mentionRegexStart, '').trim();
       
       if (!prompt) {
         // Apenas uma menção sem texto, envia uma resposta padrão

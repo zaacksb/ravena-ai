@@ -47,11 +47,13 @@
 - [x] Comando: !apagar, pra apagar msgs do bot
 - [x] Comando: !g-pausar, suspende atividade do bot no grupo
 - [x] Comando: !traduzir + reações de bandeira
+- [x] Comando: !lastfm
+- [x] Comando: !news, ViniMunews (antigo JrMunews)
+- [ ] Comando: !live, pega info da streams do grupo
+- [ ] Comando: !streamers, mostra todas as lives monitoradas pelo bot (online)
 - [X] Implementar classes ReturnMessage e Command
 - [x] Migrar as funções para utlizar as classes Command e ReturnMessage
 - [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
-- [x] Comando: !lastfm
-- [x] Comando: !news, ViniMunews (antigo JrMunews)
 - [x] Implementar isAdmin/AdditionalAdmin/SuperAdmin
 - [x] Status do bot no status do whats
 - [x] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
@@ -82,16 +84,20 @@
 - [x] Fix TTS com AllTalk V2
 - [x] Busca img não funciona
 - [x] Não salvando algumas propriedades de grupo
-- [ ] Mention bot apenas no começo
-- [ ] Bot tentando notificar sem estar nos grupos
 - [x] Gerenciar no PV buga coisas normais
 - [x] !g-manage está fazendo o bot responder dentro do grupo
+- [x] Mention bot apenas no começo
+- [ ] Bot tentando notificar sem estar nos grupos
+- [ ] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
 
 ## ✅ TODO-Extras
+- [ ] Gerar README.md atualizado
 - [ ] Interface web para status dos bots
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
+- [ ] Novo Comando: busca no youtube
+- [ ] Downloader de SocialMedias (Insta, TikTok)
 - [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Melhor explicação da implementação do bot no README

@@ -282,7 +282,7 @@ async function storeMessage(message, group) {
       
       // Salva mensagens atualizadas
       await fs.writeFile(conversationFile, JSON.stringify(messages, null, 2), 'utf8');
-      logger.debug(`Mensagem armazenada no arquivo de conversa para ${group.id}`);
+      //logger.debug(`Mensagem armazenada no arquivo de conversa para ${group.id}`);
     }
   } catch (error) {
     logger.error('Erro ao armazenar mensagem:', error);

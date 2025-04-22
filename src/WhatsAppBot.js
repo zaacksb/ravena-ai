@@ -10,7 +10,8 @@ const MentionHandler = require('./MentionHandler');
 const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem');
 const LLMService = require('./services/LLMService');
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const AdminUtils = require('./utils/AdminUtils');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class WhatsAppBot {
   /**
@@ -52,10 +53,12 @@ class WhatsAppBot {
     // Inicializa manipulador de reações
     this.reactionHandler = new ReactionsHandler();
 
-    // Inicializa StreamSystem
+    // Inicializa StreamSystem (será definido em initialize())
     this.streamSystem = null;
+    this.streamMonitor = null;
     
     this.llmService = new LLMService({});
+    this.adminUtils = AdminUtils.getInstance();
 
     this.sessionDir = path.join(__dirname, '..', '.wwebjs_auth', this.id);
   }
@@ -77,9 +80,6 @@ class WhatsAppBot {
 
     // Inicializa cliente
     await this.client.initialize();
-
-    // Carrega lista de contatos bloqueados
-    
       
     this.logger.info(`Bot ${this.id} inicializado`);
     await sleep(5000);
@@ -121,10 +121,10 @@ class WhatsAppBot {
       this.logger.info('Cliente está pronto');
       this.eventHandler.onConnected(this);
 
+      // Inicializa o sistema de streaming agora que estamos conectados
       this.streamSystem = new StreamSystem(this);
       await this.streamSystem.initialize();
       this.streamMonitor = this.streamSystem.streamMonitor;
-
     });
 
     // Evento de autenticado
@@ -173,7 +173,6 @@ class WhatsAppBot {
       try {
         // Processa apenas reações de outros usuários, não do próprio bot
         if (reaction.senderId !== this.client.info.wid._serialized) {
-
           // Verifica se o autor está na lista de bloqueados
           if (this.blockedContacts && Array.isArray(this.blockedContacts)) {
             const isBlocked = this.blockedContacts.some(contact => 
@@ -181,7 +180,7 @@ class WhatsAppBot {
             );
             
             if (isBlocked) {
-              this.logger.debug(`Ignorando reaction de contato bloqueado: ${message.author}`);
+              this.logger.debug(`Ignorando reaction de contato bloqueado: ${reaction.senderId}`);
               return; // Ignora processamento adicional
             }
           }
@@ -265,10 +264,7 @@ class WhatsAppBot {
     this.client.on('notification', (notification) => {
       this.eventHandler.onNotification(this, notification);
     });
-
   }
-
-  // Evento de saída do grupo
 
   /**
    * Formata uma mensagem do WhatsApp para nosso formato padrão
@@ -302,6 +298,7 @@ class WhatsAppBot {
       return {
         group: isGroup ? chat.id._serialized : null,
         author: sender.id._serialized,
+        authorName: sender.pushname || sender.name || 'Desconhecido',
         type,
         content,
         caption,
@@ -432,433 +429,6 @@ class WhatsAppBot {
   }
 
   /**
-   * Loads channels from all groups to the StreamMonitor
-   */
-  async loadChannelsToMonitor() {
-    try {
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      let subscribedChannels = {
-        twitch: [],
-        kick: [],
-        youtube: []
-      };
-      
-      // Process each group
-      for (const group of groups) {
-        // Add Twitch channels
-        if (group.twitch && Array.isArray(group.twitch)) {
-          for (const channel of group.twitch) {
-            if (!subscribedChannels.twitch.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'twitch');
-              subscribedChannels.twitch.push(channel.channel);
-            }
-          }
-        }
-        
-        // Add Kick channels
-        if (group.kick && Array.isArray(group.kick)) {
-          for (const channel of group.kick) {
-            if (!subscribedChannels.kick.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'kick');
-              subscribedChannels.kick.push(channel.channel);
-            }
-          }
-        }
-        
-        // Add YouTube channels
-        if (group.youtube && Array.isArray(group.youtube)) {
-          for (const channel of group.youtube) {
-            if (!subscribedChannels.youtube.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'youtube');
-              subscribedChannels.youtube.push(channel.channel);
-            }
-          }
-        }
-      }
-      
-      this.logger.info(`Loaded ${subscribedChannels.twitch.length} Twitch, ${subscribedChannels.kick.length} Kick, and ${subscribedChannels.youtube.length} YouTube channels to monitor`);
-    } catch (error) {
-      this.logger.error('Error loading channels to monitor:', error);
-    }
-  }
-
-  /**
-   * Handles a stream going online
-   * @param {Object} data - Event data
-   */
-  async handleStreamOnline(data) {
-    try {
-      this.logger.info(`Stream online event: ${data.platform}/${data.channelName}`);
-      
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      // Find groups that monitor this channel
-      for (const groupData of groups) {
-        // Skip if group doesn't monitor this platform
-        if (!groupData[data.platform]) continue;
-        
-        // Find the channel configuration in this group
-        const channelConfig = groupData[data.platform].find(
-          c => c.channel.toLowerCase() === data.channelName.toLowerCase()
-        );
-        
-        if (!channelConfig) continue;
-        
-        // Process notification for this group
-        await this.processStreamEvent(groupData, channelConfig, data, 'online');
-      }
-    } catch (error) {
-      this.logger.error('Error handling stream online event:', error);
-    }
-  }
-
-  /**
-   * Handles a stream going offline
-   * @param {Object} data - Event data
-   */
-  async handleStreamOffline(data) {
-    try {
-      this.logger.info(`Stream offline event: ${data.platform}/${data.channelName}`);
-      
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      // Find groups that monitor this channel
-      for (const groupData of groups) {
-        // Skip if group doesn't monitor this platform
-        if (!groupData[data.platform]) continue;
-        
-        // Find the channel configuration in this group
-        const channelConfig = groupData[data.platform].find(
-          c => c.channel.toLowerCase() === data.channelName.toLowerCase()
-        );
-        
-        if (!channelConfig) continue;
-        
-        // Process notification for this group
-        await this.processStreamEvent(groupData, channelConfig, data, 'offline');
-      }
-    } catch (error) {
-      this.logger.error('Error handling stream offline event:', error);
-    }
-  }
-
-  /**
-   * Handles a new YouTube video
-   * @param {Object} data - Event data
-   */
-  async handleNewVideo(data) {
-    try {
-      this.logger.info(`New video event: ${data.channelName}, title: ${data.title}`);
-      
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      // Find groups that monitor this channel
-      for (const groupData of groups) {
-        // Skip if group doesn't monitor YouTube
-        if (!groupData.youtube) continue;
-        
-        // Find the channel configuration in this group
-        const channelConfig = groupData.youtube.find(
-          c => c.channel.toLowerCase() === data.channelName.toLowerCase()
-        );
-        
-        if (!channelConfig) continue;
-        
-        // Process notification for this group (as "online" event for consistency)
-        await this.processStreamEvent(groupData, channelConfig, data, 'online');
-      }
-    } catch (error) {
-      this.logger.error('Error handling new video event:', error);
-    }
-  }
-
-  /**
-   * Processa notificação de evento de stream para um grupo
-   * @param {Object} group - Dados do grupo
-   * @param {Object} channelConfig - Configuração do canal
-   * @param {Object} eventData - Dados do evento
-   * @param {string} eventType - Tipo de evento ('online' ou 'offline')
-   */
-  async processStreamEvent(group, channelConfig, eventData, eventType) {
-    try {
-      // Verifica se o grupo está pausado
-      if (group.paused) {
-        this.logger.info(`Ignorando notificação de stream para grupo pausado: ${group.id}`);
-        return;
-      }
-
-      // Verifica se o bot ainda faz parte do grupo
-      let isMember = true;
-      try {
-        const chat = await this.bot.client.getChatById(group.id);
-        if (!chat || !chat.isGroup) {
-          this.logger.info(`Chat ${group.id} não é um grupo ou não foi encontrado`);
-          isMember = false;
-        }
-      } catch (error) {
-        this.logger.warn(`Erro ao acessar grupo ${group.id}: ${error.message}`);
-        isMember = false;
-      }
-
-      // Se não for mais membro, pausa o grupo e salva no banco de dados
-      if (!isMember) {
-        this.logger.info(`Bot não é mais membro do grupo ${group.id}, definindo como pausado`);
-        group.paused = true;
-        await this.bot.database.saveGroup(group);
-        return;
-      }
-
-      // Obtém a configuração apropriada (onConfig para eventos online, offConfig para offline)
-      const config = eventType === 'online' ? channelConfig.onConfig : channelConfig.offConfig;
-      
-      // Pula se não houver configuração
-      if (!config || !config.media || config.media.length === 0) {
-        return;
-      }
-      
-      // Armazena as ReturnMessages para enviar
-      const returnMessages = [];
-      
-      // Processa alteração de título se habilitada
-      if (channelConfig.changeTitleOnEvent) {
-        await this.changeGroupTitle(group, channelConfig, eventData, eventType);
-      }
-      
-      // Processa notificações de mídia
-      for (const mediaItem of config.media) {
-        const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig);
-        if (returnMessage) {
-          returnMessages.push(returnMessage);
-        }
-      }
-      
-      // Gera mensagem de IA se habilitada
-      if (channelConfig.useAI && eventType === 'online') {
-        const aiMessage = await this.createAINotification(group.id, eventData, channelConfig);
-        if (aiMessage) {
-          returnMessages.push(aiMessage);
-        }
-      }
-      
-      // Envia todas as mensagens
-      if (returnMessages.length > 0) {
-        await this.bot.sendReturnMessages(returnMessages);
-      }
-    } catch (error) {
-      this.logger.error(`Erro ao processar evento de stream para ${group.id}:`, error);
-    }
-  }
-
-  /**
-   * Changes the group title based on stream event
-   * @param {Object} group - Group data
-   * @param {Object} channelConfig - Channel configuration
-   * @param {Object} eventData - Event data
-   * @param {string} eventType - Event type ('online' or 'offline')
-   */
-  async changeGroupTitle(group, channelConfig, eventData, eventType) {
-    try {
-      // Get the current group chat
-      const chat = await this.client.getChatById(group.id);
-      if (!chat || !chat.isGroup) return;
-      
-      let newTitle;
-      
-      // If custom title is defined, use it
-      if (eventType === 'online' && channelConfig.onlineTitle) {
-        newTitle = channelConfig.onlineTitle;
-      } else if (eventType === 'offline' && channelConfig.offlineTitle) {
-        newTitle = channelConfig.offlineTitle;
-      } else {
-        // Otherwise, modify the existing title
-        newTitle = chat.name;
-        
-        // Replace "OFF" with "ON" or vice versa
-        if (eventType === 'online') {
-          newTitle = newTitle.replace(/\bOFF\b/g, 'ON');
-        } else {
-          newTitle = newTitle.replace(/\bON\b/g, 'OFF');
-        }
-        
-        // Replace emojis
-        const emojiMap = {
-          '🔴': '🟢',
-          '🟢': '🔴',
-          '❤️': '💚',
-          '💚': '❤️',
-          '🌹': '🍏',
-          '🍏': '🌹',
-          '🟥': '🟩',
-          '🟩': '🟥'
-        };
-        
-        // If it's an offline event, swap the keys and values
-        const finalEmojiMap = eventType === 'online' ? emojiMap : 
-          Object.fromEntries(Object.entries(emojiMap).map(([k, v]) => [v, k]));
-        
-        // Replace emojis
-        for (const [from, to] of Object.entries(finalEmojiMap)) {
-          newTitle = newTitle.replace(new RegExp(from, 'g'), to);
-        }
-      }
-      
-      // Set the new title
-      await chat.setSubject(newTitle);
-      
-      this.logger.info(`Changed group ${group.id} title to: ${newTitle}`);
-    } catch (error) {
-      this.logger.error(`Error changing group title for ${group.id}:`, error);
-    }
-  }
-
-  /**
-   * Sends event notification to a group
-   * @param {string} groupId - Group ID
-   * @param {Object} mediaItem - Media configuration
-   * @param {Object} eventData - Event data
-   * @param {Object} channelConfig - Channel configuration
-   */
-  async sendEventNotification(groupId, mediaItem, eventData, channelConfig) {
-    try {
-      // Handle different media types
-      if (mediaItem.type === 'text') {
-        // Process variables in the text
-        let content = mediaItem.content;
-        
-        // Replace platform-specific variables
-        if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-          content = content.replace(/{nomeCanal}/g, eventData.channelName)
-                          .replace(/{titulo}/g, eventData.title || '')
-                          .replace(/{jogo}/g, eventData.game || 'Unknown');
-        } else if (eventData.platform === 'youtube') {
-          content = content.replace(/{author}/g, eventData.author || eventData.channelName)
-                          .replace(/{title}/g, eventData.title || '')
-                          .replace(/{link}/g, eventData.url || '');
-        }
-        
-        // Send the message
-        await this.sendMessage(groupId, content);
-      } else if (mediaItem.type === 'image' || mediaItem.type === 'video' || 
-                mediaItem.type === 'audio' || mediaItem.type === 'sticker') {
-        // Load media file
-        const mediaPath = path.join(this.dataPath, 'media', mediaItem.content);
-        
-        try {
-          const media = await this.createMedia(mediaPath);
-          
-          // Process caption variables
-          let caption = mediaItem.caption || '';
-          
-          // Replace platform-specific variables (same as text)
-          if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-            caption = caption.replace(/{nomeCanal}/g, eventData.channelName)
-                            .replace(/{titulo}/g, eventData.title || '')
-                            .replace(/{jogo}/g, eventData.game || 'Unknown');
-          } else if (eventData.platform === 'youtube') {
-            caption = caption.replace(/{author}/g, eventData.author || eventData.channelName)
-                            .replace(/{title}/g, eventData.title || '')
-                            .replace(/{link}/g, eventData.url || '');
-          }
-          
-          // Send the media
-          await this.sendMessage(groupId, media, {
-            caption: caption || undefined,
-            sendMediaAsSticker: mediaItem.type === 'sticker'
-          });
-        } catch (error) {
-          this.logger.error(`Error sending media notification (${mediaPath}):`, error);
-          
-          // Fallback to text message
-          await this.sendMessage(groupId, `Erro ao enviar notificação de mídia para evento de ${eventData.platform}/${eventData.channelName}`);
-        }
-      }
-    } catch (error) {
-      this.logger.error(`Error sending event notification to ${groupId}:`, error);
-    }
-  }
-
-  /**
-   * Sends AI generated notification
-   * @param {string} groupId - Group ID
-   * @param {Object} eventData - Event data
-   * @param {Object} channelConfig - Channel configuration
-   */
-  async sendAINotification(groupId, eventData, channelConfig) {
-    try {
-      // Generate prompt based on event type
-      let prompt = '';
-      
-      if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-        prompt = `O canal ${eventData.channelName} ficou online e está jogando ${eventData.game || 'um jogo'} com o título "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a participar da stream.`;
-      } else if (eventData.platform === 'youtube') {
-        prompt = `O canal ${eventData.channelName} acabou de lançar um novo vídeo chamado "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a assistir o vídeo.`;
-      }
-      
-      // Get AI response
-      const aiResponse = await this.llmService.getCompletion({
-        prompt: prompt,
-        provider: 'openrouter',
-        temperature: 0.7,
-        maxTokens: 200
-      });
-      
-      // Send the AI-generated message
-      if (aiResponse) {
-        await this.sendMessage(groupId, aiResponse);
-      }
-    } catch (error) {
-      this.logger.error(`Error sending AI notification to ${groupId}:`, error);
-    }
-  }
-
-  /**
-   * Destrói o cliente WhatsApp
-   */
-  async destroy() {
-    this.logger.info(`Destruindo instância de bot ${this.id}`);
-    
-    // Limpa loadReport
-    if (this.loadReport) {
-      this.loadReport.destroy();
-    }
-    
-    // Limpa sistema de convites
-    if (this.inviteSystem) {
-      this.inviteSystem.destroy();
-    }
-
-    // Limpa StreamMonitor
-    if (this.streamMonitor) {
-      this.streamMonitor.stopMonitoring();
-      this.streamMonitor = null;
-    }
-    
-    // Envia notificação de desligamento para o grupo de logs
-    if (this.grupoLogs && this.isConnected) {
-      try {
-        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString()}`;
-        await this.sendMessage(this.grupoLogs, shutdownMessage);
-      } catch (error) {
-        this.logger.error('Erro ao enviar notificação de desligamento:', error);
-      }
-    }
-
-    await sleep(5000);
-    
-    if (this.client) {
-      await this.client.destroy();
-      this.client = null;
-      this.isConnected = false;
-    }
-  }
-
-
-  /**
    * Verifica se um usuário é administrador em um grupo
    * @param {string} userId - ID do usuário a verificar
    * @param {string} groupId - ID do grupo
@@ -885,9 +455,48 @@ class WhatsAppBot {
       return false;
     }
   }
-  
 
+  /**
+   * Destrói o cliente WhatsApp
+   */
+  async destroy() {
+    this.logger.info(`Destruindo instância de bot ${this.id}`);
+    
+    // Limpa loadReport
+    if (this.loadReport) {
+      this.loadReport.destroy();
+    }
+    
+    // Limpa sistema de convites
+    if (this.inviteSystem) {
+      this.inviteSystem.destroy();
+    }
 
+    // Limpa StreamSystem
+    if (this.streamSystem) {
+      this.streamSystem.destroy();
+      this.streamSystem = null;
+      this.streamMonitor = null;
+    }
+    
+    // Envia notificação de desligamento para o grupo de logs
+    if (this.grupoLogs && this.isConnected) {
+      try {
+        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString()}`;
+        await this.sendMessage(this.grupoLogs, shutdownMessage);
+      } catch (error) {
+        this.logger.error('Erro ao enviar notificação de desligamento:', error);
+      }
+    }
+
+    await sleep(5000);
+    
+    if (this.client) {
+      await this.client.destroy();
+      this.client = null;
+      this.isConnected = false;
+    }
+  }
 }
 
 module.exports = WhatsAppBot;

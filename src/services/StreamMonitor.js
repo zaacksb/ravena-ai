@@ -374,6 +374,7 @@ class StreamMonitor extends EventEmitter {
               platform: 'twitch',
               channelName: channelName,
               title: liveStream.title,
+              game: liveStream.game_name,
               thumbnail: liveStream.thumbnail_url
                 .replace('{width}', '640')
                 .replace('{height}', '360'),
@@ -444,6 +445,7 @@ class StreamMonitor extends EventEmitter {
             platform: 'kick',
             channelName: channel.name,
             title: channelData.livestream.session_title,
+            game: channelData.livestream.categories[0].name,
             thumbnail: channelData.livestream.thumbnail?.url || 
                       channelData.user?.profile_pic || '',
             viewerCount: channelData.livestream.viewer_count,

@@ -1539,3 +1539,23 @@ Caso o bot não faça mais parte do grupo, definir o mesmo como pausado.
 ---
 
 Modificação Grande - Alteração do WhatsAppBot.js para ser mais genérico
+A ideia é que esse arquivo possa ser substituido por outro, como O WhatsaAppBotBailey ou talvez um TelegramBot, DiscordBot, etc.
+Esse é o wrapper da plataforma que vai receber/enviar mensagens, etc.
+
+Estas funções são genéricas e não deveriam estar neste arquivo:
+- loadChannelsToMonitor
+- handleStreamOnline
+- handleStreamOffline
+- handleNewVideo
+- processStreamEvent
+- sendEventNotification
+- sendAINotification
+- changeGroupTitle: Nome da função changeGroupTitleForStream
+
+Analise quais destas funções já estão corretamente implementadas no StreamSystem.js para que o WhatsAppBot.js possa ser reorganizado apenas com o que é relevante para ele.
+
+Adicione uma variável no começo do streamSystem chamada:
+const debugNotificacoes;
+
+Se true, sempre que existir um evento novo, envie a mensagem também para o canal bot.grupoLogs
+Envie também as midias e mensagens caso configurado no grupo/canal/plataforma
