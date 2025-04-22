@@ -122,6 +122,31 @@ class StreamSystem {
         this.logger.error('Erro ao processar evento de novo vídeo:', error);
       }
     });
+
+    // Evento de canal não encontrado
+    this.streamMonitor.on('channelNotFound', async (data) => {
+      try {
+        this.logger.info(`Evento de canal não encontrado: ${data.platform}/${data.channelName}`);
+        
+        // Envia mensagem de depuração para o grupo de logs se configurado
+        if (this.debugNotificacoes && this.bot.grupoLogs) {
+          await this.bot.sendMessage(
+            this.bot.grupoLogs, 
+            `❌ [DEBUG] Canal não encontrado: ${data.platform}/${data.channelName}`
+          );
+        }
+        
+        // Envia mensagem para o grupo
+        if (data.groupId) {
+          await this.bot.sendMessage(
+            data.groupId,
+            `❌ *Canal não encontrado*\n\nO canal do ${data.platform} com o nome *${data.channelName}* não foi encontrado e foi removido do monitoramento. Verifique se o nome está correto e configure-o novamente se necessário.`
+          );
+        }
+      } catch (error) {
+        this.logger.error('Erro ao processar evento de canal não encontrado:', error);
+      }
+    });
   }
 
   /**
@@ -444,7 +469,7 @@ class StreamSystem {
   }
 
   /**
-   * Altera o título do grupo com base em evento de stream
+   * Altera o título e a foto do grupo com base em evento de stream
    * @param {Object} group - Dados do grupo
    * @param {Object} channelConfig - Configuração do canal
    * @param {Object} eventData - Dados do evento
@@ -456,64 +481,119 @@ class StreamSystem {
       const chat = await this.bot.client.getChatById(group.id);
       if (!chat || !chat.isGroup) return;
       
-      let newTitle;
-      
-      // Se título personalizado estiver definido, use-o
-      if (eventType === 'online' && channelConfig.onlineTitle) {
-        newTitle = channelConfig.onlineTitle;
-      } else if (eventType === 'offline' && channelConfig.offlineTitle) {
-        newTitle = channelConfig.offlineTitle;
-      } else {
-        // Caso contrário, modifica o título existente
-        newTitle = chat.name;
+      // Mudança de título se configurado
+      if (channelConfig.changeTitleOnEvent) {
+        let newTitle;
         
-        // Substitui "OFF" por "ON" ou vice-versa
-        if (eventType === 'online') {
-          newTitle = newTitle.replace(/\bOFF\b/g, 'ON');
+        // Se título personalizado estiver definido, use-o
+        if (eventType === 'online' && channelConfig.onlineTitle) {
+          newTitle = channelConfig.onlineTitle;
+        } else if (eventType === 'offline' && channelConfig.offlineTitle) {
+          newTitle = channelConfig.offlineTitle;
         } else {
-          newTitle = newTitle.replace(/\bON\b/g, 'OFF');
+          // Caso contrário, modifica o título existente
+          newTitle = chat.name;
+          
+          // Substitui "OFF" por "ON" ou vice-versa
+          if (eventType === 'online') {
+            newTitle = newTitle.replace(/\bOFF\b/g, 'ON');
+          } else {
+            newTitle = newTitle.replace(/\bON\b/g, 'OFF');
+          }
+          
+          // Substitui emojis
+          const emojiMap = {
+            '🔴': '🟢',
+            '🟢': '🔴',
+            '❤️': '💚',
+            '💚': '❤️',
+            '🌹': '🍏',
+            '🍏': '🌹',
+            '🟥': '🟩',
+            '🟩': '🟥'
+          };
+          
+          // Se for um evento offline, troca as chaves e valores
+          const finalEmojiMap = eventType === 'online' ? emojiMap : 
+            Object.fromEntries(Object.entries(emojiMap).map(([k, v]) => [v, k]));
+          
+          // Substitui emojis
+          for (const [from, to] of Object.entries(finalEmojiMap)) {
+            newTitle = newTitle.replace(new RegExp(from, 'g'), to);
+          }
         }
         
-        // Substitui emojis
-        const emojiMap = {
-          '🔴': '🟢',
-          '🟢': '🔴',
-          '❤️': '💚',
-          '💚': '❤️',
-          '🌹': '🍏',
-          '🍏': '🌹',
-          '🟥': '🟩',
-          '🟩': '🟥'
-        };
-        
-        // Se for um evento offline, troca as chaves e valores
-        const finalEmojiMap = eventType === 'online' ? emojiMap : 
-          Object.fromEntries(Object.entries(emojiMap).map(([k, v]) => [v, k]));
-        
-        // Substitui emojis
-        for (const [from, to] of Object.entries(finalEmojiMap)) {
-          newTitle = newTitle.replace(new RegExp(from, 'g'), to);
+        // Define o novo título
+        try {
+          await chat.setSubject(newTitle);
+          this.logger.info(`Alterado título do grupo ${group.id} para: ${newTitle}`);
+          
+          if (this.debugNotificacoes && this.bot.grupoLogs) {
+            await this.bot.sendMessage(
+              this.bot.grupoLogs, 
+              `🔄 [DEBUG] Título alterado para grupo ${group.id} (${group.name || 'sem nome'}):\nAntigo: ${chat.name}\nNovo: ${newTitle}`
+            );
+          }
+        } catch (titleError) {
+          this.logger.error(`Erro ao alterar título do grupo ${group.id}:`, titleError);
         }
       }
       
-      // Define o novo título (específico da plataforma)
-      await chat.setSubject(newTitle);
-      
-      this.logger.info(`Alterado título do grupo ${group.id} para: ${newTitle}`);
-      
-      if (this.debugNotificacoes && this.bot.grupoLogs) {
-        await this.bot.sendMessage(
-          this.bot.grupoLogs, 
-          `🔄 [DEBUG] Título alterado para grupo ${group.id} (${group.name || 'sem nome'}):\nAntigo: ${chat.name}\nNovo: ${newTitle}`
-        );
+      // Mudança de foto do grupo se configurada
+      if (eventType === 'online' && channelConfig.groupPhotoOnline) {
+        try {
+          const photoData = channelConfig.groupPhotoOnline;
+          if (photoData && photoData.data && photoData.mimetype) {
+            // Cria o objeto de mídia
+            const { MessageMedia } = require('whatsapp-web.js');
+            const media = new MessageMedia(photoData.mimetype, photoData.data);
+            
+            // Define a nova foto
+            await chat.setPicture(media);
+            
+            this.logger.info(`Alterada foto do grupo ${group.id} para foto online`);
+            
+            if (this.debugNotificacoes && this.bot.grupoLogs) {
+              await this.bot.sendMessage(
+                this.bot.grupoLogs, 
+                `🖼️ [DEBUG] Foto alterada (online) para grupo ${group.id} (${group.name || 'sem nome'})`
+              );
+            }
+          }
+        } catch (photoError) {
+          this.logger.error(`Erro ao alterar foto do grupo ${group.id} (online):`, photoError);
+        }
+      } else if (eventType === 'offline' && channelConfig.groupPhotoOffline) {
+        try {
+          const photoData = channelConfig.groupPhotoOffline;
+          if (photoData && photoData.data && photoData.mimetype) {
+            // Cria o objeto de mídia
+            const { MessageMedia } = require('whatsapp-web.js');
+            const media = new MessageMedia(photoData.mimetype, photoData.data);
+            
+            // Define a nova foto
+            await chat.setPicture(media);
+            
+            this.logger.info(`Alterada foto do grupo ${group.id} para foto offline`);
+            
+            if (this.debugNotificacoes && this.bot.grupoLogs) {
+              await this.bot.sendMessage(
+                this.bot.grupoLogs, 
+                `🖼️ [DEBUG] Foto alterada (offline) para grupo ${group.id} (${group.name || 'sem nome'})`
+              );
+            }
+          }
+        } catch (photoError) {
+          this.logger.error(`Erro ao alterar foto do grupo ${group.id} (offline):`, photoError);
+        }
       }
     } catch (error) {
-      this.logger.error(`Erro ao alterar título do grupo ${group.id}:`, error);
+      this.logger.error(`Erro ao alterar título/foto do grupo ${group.id}:`, error);
       
       if (this.debugNotificacoes && this.bot.grupoLogs) {
         await this.bot.sendMessage(
           this.bot.grupoLogs, 
-          `⚠️ [DEBUG] Erro ao alterar título do grupo ${group.id}: ${error.message}`
+          `⚠️ [DEBUG] Erro ao alterar título/foto do grupo ${group.id}: ${error.message}`
         );
       }
     }

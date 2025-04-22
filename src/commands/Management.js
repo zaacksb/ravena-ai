@@ -129,25 +129,25 @@ class Management {
         method: 'toggleTwitchChannel',
         description: 'Adiciona/remove canal da Twitch para monitoramento'
       },
-      'twitch-midia-on': {
-        method: 'setTwitchOnlineMedia',
-        description: 'Define mídia para notificação quando canal ficar online'
-      },
-      'twitch-midia-off': {
-        method: 'setTwitchOfflineMedia',
-        description: 'Define mídia para notificação quando canal ficar offline'
-      },
       'twitch-mudarTitulo': {
         method: 'toggleTwitchTitleChange',
         description: 'Ativa/desativa mudança de título do grupo para eventos da Twitch'
       },
-      'twitch-titulo-on': {
-        method: 'setTwitchOnlineTitle',
-        description: 'Define título do grupo para quando canal ficar online'
+      'twitch-titulo': {
+        method: 'setTwitchTitle',
+        description: 'Define título do grupo para eventos de canal da Twitch'
       },
-      'twitch-titulo-off': {
-        method: 'setTwitchOfflineTitle',
-        description: 'Define título do grupo para quando canal ficar offline'
+      'twitch-fotoGrupo': {
+        method: 'setTwitchGroupPhoto',
+        description: 'Define foto do grupo para eventos de canal da Twitch'
+      },
+      'twitch-midia': {
+        method: 'setTwitchMedia',
+        description: 'Define mídia para notificação de canal da Twitch'
+      },
+      'twitch-midia-del': {
+        method: 'deleteTwitchMedia',
+        description: 'Remove mídia específica da notificação de canal da Twitch'
       },
       'twitch-usarIA': {
         method: 'toggleTwitchAI',
@@ -157,25 +157,25 @@ class Management {
         method: 'toggleKickChannel',
         description: 'Adiciona/remove canal do Kick para monitoramento'
       },
-      'kick-midia-on': {
-        method: 'setKickOnlineMedia',
-        description: 'Define mídia para notificação quando canal ficar online'
-      },
-      'kick-midia-off': {
-        method: 'setKickOfflineMedia',
-        description: 'Define mídia para notificação quando canal ficar offline'
-      },
       'kick-mudarTitulo': {
         method: 'toggleKickTitleChange',
         description: 'Ativa/desativa mudança de título do grupo para eventos do Kick'
       },
-      'kick-titulo-on': {
-        method: 'setKickOnlineTitle',
-        description: 'Define título do grupo para quando canal ficar online'
+      'kick-titulo': {
+        method: 'setKickTitle',
+        description: 'Define título do grupo para eventos de canal do Kick'
       },
-      'kick-titulo-off': {
-        method: 'setKickOfflineTitle',
-        description: 'Define título do grupo para quando canal ficar offline'
+      'kick-fotoGrupo': {
+        method: 'setKickGroupPhoto',
+        description: 'Define foto do grupo para eventos de canal do Kick'
+      },
+      'kick-midia': {
+        method: 'setKickMedia',
+        description: 'Define mídia para notificação de canal do Kick'
+      },
+      'kick-midia-del': {
+        method: 'deleteKickMedia',
+        description: 'Remove mídia específica da notificação de canal do Kick'
       },
       'kick-usarIA': {
         method: 'toggleKickAI',
@@ -185,29 +185,33 @@ class Management {
         method: 'toggleYoutubeChannel',
         description: 'Adiciona/remove canal do YouTube para monitoramento'
       },
-      'youtube-midia-on': {
-        method: 'setYoutubeOnlineMedia',
-        description: 'Define mídia para notificação de novos vídeos'
-      },
-      'youtube-midia-off': {
-        method: 'setYoutubeOfflineMedia',
-        description: 'Define mídia para notificação quando canal ficar offline'
-      },
       'youtube-mudarTitulo': {
         method: 'toggleYoutubeTitleChange',
         description: 'Ativa/desativa mudança de título do grupo para eventos do YouTube'
       },
-      'youtube-titulo-on': {
-        method: 'setYoutubeOnlineTitle',
-        description: 'Define título do grupo para quando canal postar novo vídeo'
+      'youtube-titulo': {
+        method: 'setYoutubeTitle',
+        description: 'Define título do grupo para eventos de canal do YouTube'
       },
-      'youtube-titulo-off': {
-        method: 'setYoutubeOfflineTitle',
-        description: 'Define título do grupo para quando canal ficar offline'
+      'youtube-fotoGrupo': {
+        method: 'setYoutubeGroupPhoto',
+        description: 'Define foto do grupo para eventos de canal do YouTube'
+      },
+      'youtube-midia': {
+        method: 'setYoutubeMedia',
+        description: 'Define mídia para notificação de canal do YouTube'
+      },
+      'youtube-midia-del': {
+        method: 'deleteYoutubeMedia',
+        description: 'Remove mídia específica da notificação de canal do YouTube'
       },
       'youtube-usarIA': {
         method: 'toggleYoutubeAI',
         description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
+      },
+      'variaveis': {
+        method: 'listVariables',
+        description: 'Lista todas as variáveis disponíveis para comandos personalizados'
       }
     };
   }
@@ -3802,6 +3806,642 @@ class Management {
       });
     }
   }
+
+  /**
+   * Manipulador unificado para comandos de mídia de stream
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @param {string} platform - Plataforma (twitch, kick, youtube)
+   * @param {string} mode - Modo (on, off)
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setStreamMedia(bot, message, args, group, platform, mode = 'on') {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    this.logger.debug(`[setStreamMedia] Recebido pedido para: ${args.join("|")}, modo ${mode}`);
+
+    // Determina o modo (online/offline) a partir dos argumentos
+    if (args.length > 0) {
+      const modeArg = args[0].toLowerCase();
+      if (modeArg === 'on' || modeArg === 'online') {
+        mode = 'on';
+        args = args.slice(1); // Remove o primeiro argumento
+      } else if (modeArg === 'off' || modeArg === 'offline') {
+        mode = 'off';
+        args = args.slice(1); // Remove o primeiro argumento
+      }
+    }
+    
+    // Encaminha para o método adequado com base na plataforma e modo
+    if (platform === 'twitch') {
+      if (mode === 'on') {
+        return this.setTwitchOnlineMedia(bot, message, args, group);
+      } else {
+        return this.setTwitchOfflineMedia(bot, message, args, group);
+      }
+    } else if (platform === 'kick') {
+      if (mode === 'on') {
+        return this.setKickOnlineMedia(bot, message, args, group);
+      } else {
+        return this.setKickOfflineMedia(bot, message, args, group);
+      }
+    } else if (platform === 'youtube') {
+      if (mode === 'on') {
+        return this.setYoutubeOnlineMedia(bot, message, args, group);
+      } else {
+        return this.setYoutubeOfflineMedia(bot, message, args, group);
+      }
+    }
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Plataforma não suportada: ${platform}`
+    });
+  }
+
+  /**
+   * Remove um tipo específico de mídia da configuração de stream
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @param {string} platform - Plataforma (twitch, kick, youtube)
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async deleteStreamMedia(bot, message, args, group, platform) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Verifica se todos os argumentos necessários foram fornecidos
+    if (args.length < 2) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Argumentos insuficientes. Uso: !g-${platform}-midia-del [on/off] [tipo]
+        
+  Onde:
+  - [on/off]: Especifica se é para notificação online ou offline
+  - [tipo]: Tipo de mídia (text, image, audio, video, sticker)`
+      });
+    }
+    
+    // Determina o modo (online/offline)
+    const mode = args[0].toLowerCase();
+    if (mode !== 'on' && mode !== 'off') {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Modo inválido: ${mode}. Use "on" ou "off".`
+      });
+    }
+    
+    // Determina o tipo de mídia
+    const mediaType = args[1].toLowerCase();
+    if (!['text', 'image', 'audio', 'video', 'sticker'].includes(mediaType)) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Tipo de mídia inválido: ${mediaType}. Tipos válidos: text, image, audio, video, sticker`
+      });
+    }
+    
+    // Valida e obtém o nome do canal
+    const channelName = await this.validateChannelName(bot, message, args.slice(2), group, platform);
+    
+    // Se validateChannelName retornou um ReturnMessage, retorna-o
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Encontra a configuração do canal
+    const channelConfig = this.findChannelConfig(group, platform, channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal não configurado: ${channelName}. Use !g-${platform}-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Seleciona a configuração correta com base no modo
+    const configKey = mode === 'on' ? 'onConfig' : 'offConfig';
+    
+    // Verifica se a configuração e o array de mídia existem
+    if (!channelConfig[configKey] || !channelConfig[configKey].media) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Nenhuma mídia configurada para ${mode} no canal ${channelName}.`
+      });
+    }
+    
+    // Filtra para remover o tipo de mídia especificado
+    const originalLength = channelConfig[configKey].media.length;
+    channelConfig[configKey].media = channelConfig[configKey].media.filter(item => item.type !== mediaType);
+    
+    // Verifica se algo foi removido
+    if (channelConfig[configKey].media.length === originalLength) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Nenhuma mídia do tipo "${mediaType}" encontrada para ${mode} no canal ${channelName}.`
+      });
+    }
+    
+    // Salva a configuração atualizada
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Mídia do tipo "${mediaType}" removida com sucesso da configuração ${mode} para o canal ${channelName}.`
+    });
+  }
+
+  /**
+   * Define a foto do grupo para quando uma stream ficar online/offline
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @param {string} platform - Plataforma (twitch, kick, youtube)
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setStreamGroupPhoto(bot, message, args, group, platform) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Verifica se o bot é administrador do grupo
+    const isAdmin = await this.isBotAdmin(bot, group.id);
+    if (!isAdmin) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '⚠️ O bot não é administrador do grupo. Para alterar a foto do grupo, o bot precisa ser um administrador.'
+      });
+    }
+    
+    // Determina o modo (online/offline) a partir dos argumentos
+    let mode = 'on';
+    if (args.length > 0) {
+      const modeArg = args[0].toLowerCase();
+      if (modeArg === 'on' || modeArg === 'online') {
+        mode = 'on';
+        args = args.slice(1); // Remove o primeiro argumento
+      } else if (modeArg === 'off' || modeArg === 'offline') {
+        mode = 'off';
+        args = args.slice(1); // Remove o primeiro argumento
+      }
+    }
+    
+    // Valida e obtém o nome do canal
+    const channelName = await this.validateChannelName(bot, message, args, group, platform);
+    
+    // Se validateChannelName retornou um ReturnMessage, retorna-o
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Encontra a configuração do canal
+    const channelConfig = this.findChannelConfig(group, platform, channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal não configurado: ${channelName}. Use !g-${platform}-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Verifica se há uma mensagem citada com mídia ou se a mensagem atual tem mídia
+    let mediaData = null;
+    
+    // 1. Tenta obter da mensagem citada
+    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+    if (quotedMsg && quotedMsg.hasMedia) {
+      try {
+        const media = await quotedMsg.downloadMedia();
+        if (media.mimetype.startsWith('image/')) {
+          mediaData = {
+            data: media.data,
+            mimetype: media.mimetype
+          };
+        }
+      } catch (error) {
+        this.logger.error('Erro ao baixar mídia da mensagem citada:', error);
+      }
+    }
+    
+    // 2. Se não encontrou na mensagem citada, verifica a mensagem atual
+    if (!mediaData && message.type === 'image' && message.content && message.content.data) {
+      mediaData = {
+        data: message.content.data,
+        mimetype: message.content.mimetype
+      };
+    }
+    
+    // Se não há argumentos e não há mídia, remove a configuração de foto
+    if (args.length === 0 && !mediaData) {
+      if (mode === 'on') {
+        delete channelConfig.groupPhotoOnline;
+      } else {
+        delete channelConfig.groupPhotoOffline;
+      }
+      
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de foto do grupo para eventos ${mode} do canal ${channelName} removida.`
+      });
+    }
+    
+    // Se não há mídia, instrui o usuário
+    if (!mediaData) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Para definir a foto do grupo para eventos ${mode} do canal ${channelName}, envie uma imagem com o comando na legenda ou use o comando como resposta a uma imagem.`
+      });
+    }
+    
+    // Salva a configuração de foto
+    if (mode === 'on') {
+      channelConfig.groupPhotoOnline = mediaData;
+    } else {
+      channelConfig.groupPhotoOffline = mediaData;
+    }
+    
+    // Ativa mudança de título se não estiver ativa
+    if (!channelConfig.changeTitleOnEvent) {
+      channelConfig.changeTitleOnEvent = true;
+    }
+    
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Foto do grupo para eventos ${mode === 'on' ? 'online' : 'offline'} do canal ${channelName} configurada com sucesso.
+      
+  A mudança de título para eventos também foi automaticamente ativada.`
+    });
+  }
+
+  /**
+   * Manipulador unificado para comandos de título de stream
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @param {string} platform - Plataforma (twitch, kick, youtube)
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setStreamTitle(bot, message, args, group, platform) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Determina o modo (online/offline) a partir dos argumentos
+    let mode = 'on';
+    let titleArgs = [...args];
+    
+    if (args.length > 0) {
+      const modeArg = args[0].toLowerCase();
+      if (modeArg === 'on' || modeArg === 'online') {
+        mode = 'on';
+        titleArgs = args.slice(1); // Remove o primeiro argumento
+      } else if (modeArg === 'off' || modeArg === 'offline') {
+        mode = 'off';
+        titleArgs = args.slice(1); // Remove o primeiro argumento
+      }
+    }
+    
+    // Separa o primeiro argumento como possível nome de canal e o resto como título
+    let channelArg = null;
+    let customTitle = null;
+    
+    if (titleArgs.length > 0) {
+      // Verifica se o primeiro argumento é um canal configurado
+      const firstArg = titleArgs[0].toLowerCase();
+      const channels = this.getChannelConfig(group, platform);
+      const isChannelArg = channels.some(c => c.channel.toLowerCase() === firstArg);
+      
+      if (isChannelArg) {
+        channelArg = firstArg;
+        customTitle = titleArgs.slice(1).join(' ');
+      } else if (channels.length === 1) {
+        // Se há apenas um canal configurado, usa ele
+        channelArg = channels[0].channel;
+        customTitle = titleArgs.join(' ');
+      } else if (channels.length === 0) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Nenhum canal de ${platform} configurado. Use !g-${platform}-canal <nome do canal> para configurar.`
+        });
+      } else {
+        // Múltiplos canais, nenhum especificado
+        const channelsList = channels.map(c => c.channel).join(', ');
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Múltiplos canais de ${platform} configurados. Especifique o canal:\n` +
+            `!g-${platform}-titulo ${mode} <canal> <título>\n\n` +
+            `Canais configurados: ${channelsList}`
+        });
+      }
+    } else if (args.length === 0 || (args.length === 1 && (args[0] === 'on' || args[0] === 'off'))) {
+      // Sem argumentos além do modo, verifica se há apenas um canal
+      const channels = this.getChannelConfig(group, platform);
+      
+      if (channels.length === 1) {
+        channelArg = channels[0].channel;
+        customTitle = null; // Removerá o título personalizado
+      } else if (channels.length === 0) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Nenhum canal de ${platform} configurado. Use !g-${platform}-canal <nome do canal> para configurar.`
+        });
+      } else {
+        // Múltiplos canais, nenhum especificado
+        const channelsList = channels.map(c => c.channel).join(', ');
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Múltiplos canais de ${platform} configurados. Especifique o canal:\n` +
+            `!g-${platform}-titulo ${mode} <canal>\n\n` +
+            `Canais configurados: ${channelsList}`
+        });
+      }
+    }
+    
+    // Encontra a configuração do canal
+    const channelConfig = this.findChannelConfig(group, platform, channelArg);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal de ${platform} não configurado: ${channelArg}. Use !g-${platform}-canal ${channelArg} para configurar.`
+      });
+    }
+    
+    // Verifica se o bot é administrador para alterar título
+    const isAdmin = await this.isBotAdmin(bot, group.id);
+    if (!isAdmin) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: '⚠️ O bot não é administrador do grupo. Para alterar o título do grupo, o bot precisa ser um administrador.'
+      });
+    }
+    
+    // Atualiza ou remove título personalizado com base no modo
+    if (mode === 'on') {
+      if (customTitle === null || customTitle === '') {
+        delete channelConfig.onlineTitle;
+        await this.database.saveGroup(group);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Título personalizado para eventos "online" do canal ${channelArg} removido.\n` +
+            `O bot irá substituir automaticamente "OFF" por "ON" no título do grupo quando o canal ficar online.`
+        });
+      } else {
+        channelConfig.onlineTitle = customTitle;
+      }
+    } else {
+      if (customTitle === null || customTitle === '') {
+        delete channelConfig.offlineTitle;
+        await this.database.saveGroup(group);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Título personalizado para eventos "offline" do canal ${channelArg} removido.\n` +
+            `O bot irá substituir automaticamente "ON" por "OFF" no título do grupo quando o canal ficar offline.`
+        });
+      } else {
+        channelConfig.offlineTitle = customTitle;
+      }
+    }
+    
+    // Ativa mudança de título se não estiver ativa
+    if (!channelConfig.changeTitleOnEvent) {
+      channelConfig.changeTitleOnEvent = true;
+    }
+    
+    await this.database.saveGroup(group);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Título personalizado para eventos "${mode}" do canal ${channelArg} definido: "${customTitle}"\n` +
+        `Alteração de título para eventos foi ativada.`
+    });
+  }
+
+  /**
+   * Lista todas as variáveis disponíveis para uso em comandos personalizados
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async listVariables(bot, message, args, group) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Obtém variáveis personalizadas do banco de dados
+      const customVariables = await this.database.getCustomVariables();
+      
+      // Lista de variáveis de sistema
+      const systemVariables = [
+        { name: "{day}", description: "Nome do dia atual (ex: Segunda-feira)" },
+        { name: "{date}", description: "Data atual" },
+        { name: "{time}", description: "Hora atual" },
+        { name: "{data-hora}", description: "Hora atual (apenas o número)" },
+        { name: "{data-minuto}", description: "Minuto atual (apenas o número)" },
+        { name: "{data-segundo}", description: "Segundo atual (apenas o número)" },
+        { name: "{data-dia}", description: "Dia atual (apenas o número)" },
+        { name: "{data-mes}", description: "Mês atual (apenas o número)" },
+        { name: "{data-ano}", description: "Ano atual (apenas o número)" }
+      ];
+      
+      // Lista de variáveis de números aleatórios
+      const randomVariables = [
+        { name: "{randomPequeno}", description: "Número aleatório de 1 a 10" },
+        { name: "{randomMedio}", description: "Número aleatório de 1 a 100" },
+        { name: "{randomGrande}", description: "Número aleatório de 1 a 1000" },
+        { name: "{randomMuitoGrande}", description: "Número aleatório de 1 a 10000" },
+        { name: "{rndDado-X}", description: "Simula dado de X lados (substitua X pelo número)" },
+        { name: "{rndDadoRange-X-Y}", description: "Número aleatório entre X e Y (substitua X e Y)" },
+        { name: "{somaRandoms}", description: "Soma dos números aleatórios anteriores na mensagem" }
+      ];
+      
+      // Lista de variáveis de contexto
+      const contextVariables = [
+        { name: "{pessoa}", description: "Nome do autor da mensagem" },
+        { name: "{nomeAutor}", description: "Nome do autor da mensagem (mesmo que {pessoa})" },
+        { name: "{group}", description: "Nome do grupo" },
+        { name: "{nomeCanal}", description: "Nome do grupo (mesmo que {group})" },
+        { name: "{nomeGrupo}", description: "Nome do grupo (mesmo que {group})" },
+        { name: "{contador}", description: "Número de vezes que o comando foi executado" },
+        { name: "{mention}", description: "Nome da pessoa mencionada em mensagem citada" },
+        { name: "{mention-número@c.us}", description: "Menciona usuário específico" }
+      ];
+      
+      // Lista de variáveis de API
+      const apiVariables = [
+        { name: "{API#GET#TEXT#url}", description: "Faz uma requisição GET e retorna o texto" },
+        { name: "{API#GET#JSON#url\ntemplate}", description: "Faz uma requisição GET e formata o JSON" },
+        { name: "{API#POST#TEXT#url?param=valor}", description: "Faz uma requisição POST com parâmetros" }
+      ];
+      
+      // Lista de variáveis de arquivo
+      const fileVariables = [
+        { name: "{file-nomeArquivo}", description: "Envia arquivo da pasta 'data/media/'" },
+        { name: "{file-pasta/}", description: "Envia até 5 arquivos da pasta 'data/media/pasta/'" }
+      ];
+      
+      // Lista de variáveis de comando
+      const commandVariables = [
+        { name: "{cmd-!comando arg1 arg2}", description: "Executa outro comando (criando um alias)" }
+      ];
+      
+      // Constrói a mensagem de resposta
+      let response = `*📝 Variáveis Disponíveis para Comandos Personalizados*\n\n`;
+      
+      // Adiciona variáveis de sistema
+      response += `⏱️ *Variáveis de Sistema*:\n`;
+      for (const variable of systemVariables) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+      
+      // Adiciona variáveis de números aleatórios
+      response += `🎲 *Variáveis de Números Aleatórios*:\n`;
+      for (const variable of randomVariables) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+      
+      // Adiciona variáveis de contexto
+      response += `👤 *Variáveis de Contexto*:\n`;
+      for (const variable of contextVariables) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+      
+      // Adiciona variáveis de API
+      response += `🌐 *Variáveis de API*:\n`;
+      for (const variable of apiVariables) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+      
+      // Adiciona variáveis de arquivo
+      response += `📁 *Variáveis de Arquivo*:\n`;
+      for (const variable of fileVariables) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+      
+      // Adiciona variáveis de comando
+      response += `⚙️ *Variáveis de Comando*:\n`;
+      for (const variable of commandVariables) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+      
+      // Adiciona variáveis personalizadas
+      if (customVariables && Object.keys(customVariables).length > 0) {
+        response += `🔍 *Variáveis Personalizadas*:\n`;
+        for (const [key, value] of Object.entries(customVariables)) {
+          const valueType = Array.isArray(value) ? 
+            `Array com ${value.length} items` : 
+            typeof value === 'string' ? 'Texto' : typeof value;
+          
+          response += `• {${key}} - ${valueType}\n`;
+        }
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: response
+      });
+    } catch (error) {
+      this.logger.error('Erro ao listar variáveis:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao listar variáveis disponíveis. Por favor, tente novamente.'
+      });
+    }
+  }
+
+  /**
+   * Métodos auxiliares para encaminhar comandos unificados para cada plataforma específica
+   */
+
+  // Métodos para mídia
+  async setTwitchMedia(bot, message, args, group) {
+    return this.setStreamMedia(bot, message, args, group, 'twitch');
+  }
+
+  async setKickMedia(bot, message, args, group) {
+    return this.setStreamMedia(bot, message, args, group, 'kick');
+  }
+
+  async setYoutubeMedia(bot, message, args, group) {
+    return this.setStreamMedia(bot, message, args, group, 'youtube');
+  }
+
+  // Métodos para excluir mídia
+  async deleteTwitchMedia(bot, message, args, group) {
+    return this.deleteStreamMedia(bot, message, args, group, 'twitch');
+  }
+
+  async deleteKickMedia(bot, message, args, group) {
+    return this.deleteStreamMedia(bot, message, args, group, 'kick');
+  }
+
+  async deleteYoutubeMedia(bot, message, args, group) {
+    return this.deleteStreamMedia(bot, message, args, group, 'youtube');
+  }
+
+  // Métodos para título
+  async setTwitchTitle(bot, message, args, group) {
+    return this.setStreamTitle(bot, message, args, group, 'twitch');
+  }
+
+  async setKickTitle(bot, message, args, group) {
+    return this.setStreamTitle(bot, message, args, group, 'kick');
+  }
+
+  async setYoutubeTitle(bot, message, args, group) {
+    return this.setStreamTitle(bot, message, args, group, 'youtube');
+  }
+
+  // Métodos para foto do grupo
+  async setTwitchGroupPhoto(bot, message, args, group) {
+    return this.setStreamGroupPhoto(bot, message, args, group, 'twitch');
+  }
+
+  async setKickGroupPhoto(bot, message, args, group) {
+    return this.setStreamGroupPhoto(bot, message, args, group, 'kick');
+  }
+
+  async setYoutubeGroupPhoto(bot, message, args, group) {
+    return this.setStreamGroupPhoto(bot, message, args, group, 'youtube');
+  }
+
+
 }
 
 module.exports = Management;

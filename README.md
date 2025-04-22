@@ -29,7 +29,7 @@
 - [X] Organizar/traduzir docs das funções
 - [X] Mensagem IA pra join/leave de grupo
 - [X] Comandos genéricos: Variáveis dinâmicas
-    - [ ] Implementar comando !g- pra mostrar todas
+    - [x] Implementar comando !g- pra mostrar todas
 - [X] Comandos genéricos: processCustomStaticVariables implementar seleção random
 - [X] Dados de quem enviou convite na mensagem quando add ravena
 - [X] Additonal Admins: Bot considera outras pessoas como admin (a que add no grupo ou outra manual)
@@ -49,8 +49,8 @@
 - [x] Comando: !traduzir + reações de bandeira
 - [x] Comando: !lastfm
 - [x] Comando: !news, ViniMunews (antigo JrMunews)
-- [ ] Comando: !live, pega info da streams do grupo
-- [ ] Comando: !streamers, mostra todas as lives monitoradas pelo bot (online)
+- [x] Comando: !live, pega info da streams do grupo
+- [x] Comando: !streamers, mostra todas as lives monitoradas pelo bot (online)
 - [X] Implementar classes ReturnMessage e Command
 - [x] Migrar as funções para utlizar as classes Command e ReturnMessage
 - [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
@@ -72,7 +72,7 @@
     - [x] Listas
     - [x] Outros
     - [x] News
-    - [ ] Midia da twitch
+    - [x] Midia da twitch
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -87,8 +87,9 @@
 - [x] Gerenciar no PV buga coisas normais
 - [x] !g-manage está fazendo o bot responder dentro do grupo
 - [x] Mention bot apenas no começo
+- [x] Streams midia está substituindo e não adicionando
+- [x] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
 - [ ] Bot tentando notificar sem estar nos grupos
-- [ ] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
 
 ## ✅ TODO-Extras
 - [ ] Gerar README.md atualizado
@@ -96,6 +97,7 @@
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
+- [ ] Novo Jogo: Pesca
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 - [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off

@@ -80,7 +80,7 @@ class ReactionsHandler {
       triggers.forEach(emoji => {
         if (emoji && typeof emoji === 'string') {
           this.reactionCommands[emoji] = cmd.name;
-          this.logger.debug(`Mapeado emoji '${emoji}' para comando ${cmd.name}`);
+          //this.logger.debug(`Mapeado emoji '${emoji}' para comando ${cmd.name}`);
         }
       });
     } catch (error) {

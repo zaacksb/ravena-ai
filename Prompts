@@ -1559,3 +1559,73 @@ const debugNotificacoes;
 
 Se true, sempre que existir um evento novo, envie a mensagem também para o canal bot.grupoLogs
 Envie também as midias e mensagens caso configurado no grupo/canal/plataforma
+----
+Modificações no sistema de streams
+Isto irá gerar artefatos grandes, então me envie apenas a parte do código que for alterada, separando cada função modificada ou criada em um artefato
+Na primeira linha do arfato, coloque um comentário especificando o arquivo onde ele deve ser inserido ou alterado.
+
+# Gerenciamento de midia para notificação de streams
+g-xxxx-midia-on/off
+Atualmente, o código está apagando as mídias existente do array, mas ele deveria adicionar.
+É possível ter 1 mídia de cada tipo: text, image, sticker, audio, video
+Altere o comando para
+g-xxxx-midia [on/off]
+Onde on ou off é um argumento, Se não existiri argumento, considerar on
+Aproveite as funções existentes (setTwitchOnlineMedia, setTwitchOfflineMedia, etc.), apenas crie um novo handler que encaminha/retorna a correta
+
+
+## g-xxxx-titulo
+Mesma mudança do anterior, usar o on/off como argumento
+g-xxxx-titulo [on/off] [tituloNovo]
+Se enviado sem um titulo ou argumentos, apagar a propriedade
+
+## Novo comando: Apagar midia
+- g-xxxx-midia-del [on/off] [tipo]
+Remove midia do tipo informado no comando. Necessário todos os argumentos
+
+## Novo comando: Foto do grupo por evento stream
+- g-xxxx-fotoGrupo [on/off]
+Se enviado sem argumento, remove a foto.
+
+Pode vir na legenda de uma foto ou como resposta (quote) de uma mensagem tipo foto
+Define a foto que o bot irá alterar como imagem do grupo quando a stream ficar on ou off
+O bot deverá tentar trocar a foto apenas se essa propriedade estiver definida.
+
+## Novo Comando para o StreamCommands:
+!streamers: Lista, separado por plataforma, todos os streamers online no momento, mostrando algo como
+
+Streamers que usam a *ravenabot*:
+
+💜 *Twitch*:
+	- *nomeStreamer*: Jogo _(qtdViewers)_
+	- *nomeStreamer*: Jogo _(qtdViewers)_
+
+💚 *Kick*:
+	- *nomeStreamer*: Jogo _(qtdViewers)_
+	- *nomeStreamer*: Jogo _(qtdViewers)_
+
+## Novos Comandos para o StreamCommands:
+!live [nomeDoCanal] (twitch)
+!live-kick [nomeDoCanal]
+
+Busca informações da Live especificada no comando
+Se for enviada sem argumentos, gera 1 mensagem para cada live configurada no grupo
+A mensagem deve ser composta de uma Ffto com o Thumbnail da API e a descrição da stream na legenda: Titulo da live, Jogo atual, viewers, hora que começou e atual tempo de stream
+Caso necessário, criar e importar função para obter estes dados via nome do canal na services/StreamMonitor.js ou StreamSystem.js (o que achar mais adequado)
+
+## Novo Comando para Management
+!g-variaveis
+Lista todas as variáveis possíveis de usar no bot (na criação de comandos), separado pelas fixas definidas no CustomCommands e as que ficam no custom-variables.json
+
+
+## Nova funcionalidade StreamSystem para Youtube
+Quando vier um status 404 na busca do canal (nome errado, por exemplo), remover esta canal do monitoramento do grupo e enviar mensgem no grupo avisando "o canal do youtube com o nome XXX não foi encontrado e foi removido do monitoramento, verifique o nome correto"
+----
+Managament completo está assim.
+
+O comandos de adicionar midia estão sendo reconhecidos, mas quando uma midia nova é adicionada, as outras esão sendo apagadas do vetor twitch.onConfig.media  (também vale para as outras plataformas).
+A pessoa pode enviar 1 conteúdo de cada tipo, então existem 2 casos em que uma midia seria apagado do vetor "media"
+* no comando midia-del: está funcionando ok
+* No comando midia quando enviar algo que já existe (enviar um audio para um que já tem audio sobreescreveria o antigo)
+
+Aproveitando que a função será alterada, quando adicionar uma midia, coloque na mensagem de retorno o tipo de midia que foi adicionada e sugira o comando correto para remove-lá ao final da mensagem

@@ -223,10 +223,10 @@ class StreamMonitor extends EventEmitter {
       // Check if we have a saved token that's still valid
       try {
         // Check if token file exists
-        await fs.access(tokenFilePath);
+        await fs.accessSync(tokenFilePath);
         
         // Read token file
-        const tokenData = JSON.parse(await fs.readFile(tokenFilePath, 'utf8'));
+        const tokenData = JSON.parse(await fs.readFileSync(tokenFilePath, 'utf8'));
         
         // If token is less than 15 days old, reuse it
         const now = Date.now();
@@ -239,6 +239,7 @@ class StreamMonitor extends EventEmitter {
           return this.twitchToken;
         }
       } catch (err) {
+        console.log(err);
         // File doesn't exist or can't be read/parsed - we'll get a new token
         this.logger.debug('No valid token file found, requesting new Twitch token');
       }
@@ -615,7 +616,51 @@ class StreamMonitor extends EventEmitter {
           }
         }
       } catch (error) {
-        console.error(`Error polling YouTube channel ${channel.name}:`, error.message);
+        // Verifica se é um erro 404 (canal não encontrado)
+        if (error.response && error.response.status === 404) {
+          this.logger.warn(`Canal do YouTube não encontrado: ${channel.name}. Removendo do monitoramento.`);
+          
+          // Remove o canal do monitoramento
+          this.unsubscribe(channel.name, 'youtube');
+          
+          // Tenta enviar uma mensagem para todos os grupos que monitoram este canal
+          try {
+            // Obtém todos os grupos
+            const Database = require('../utils/Database');
+            const database = Database.getInstance();
+            const groups = await database.getGroups();
+            
+            // Filtra grupos que monitoram este canal
+            for (const group of groups) {
+              if (Array.isArray(group.youtube)) {
+                const channelConfig = group.youtube.find(c => 
+                  c.channel.toLowerCase() === channel.name.toLowerCase()
+                );
+                
+                if (channelConfig) {
+                  // Remove o canal da configuração deste grupo
+                  group.youtube = group.youtube.filter(c => 
+                    c.channel.toLowerCase() !== channel.name.toLowerCase()
+                  );
+                  
+                  // Salva o grupo
+                  await database.saveGroup(group);
+                  
+                  // Envia uma mensagem de notificação
+                  this.emit('channelNotFound', {
+                    platform: 'youtube',
+                    channelName: channel.name,
+                    groupId: group.id
+                  });
+                }
+              }
+            }
+          } catch (notificationError) {
+            this.logger.error(`Erro ao notificar grupos sobre canal não encontrado: ${channel.name}`, notificationError);
+          }
+        } else {
+          console.error(`Erro ao monitorar canal do YouTube ${channel.name}:`, error.message);
+        }
       }
     }
     

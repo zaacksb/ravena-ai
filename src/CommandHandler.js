@@ -42,7 +42,7 @@ class CommandHandler {
       this.logger.debug(`Carregados ${this.fixedCommands.getAllCommands().length} comandos fixos`);
       
       // Imprime comandos fixos carregados
-      this.logger.debug('Comandos fixos:', this.fixedCommands.getAllCommands().map(cmd => cmd.name));
+      this.logger.debug('Comandos fixos:', this.fixedCommands.getAllCommands().map(cmd => cmd.name).join(", "));
       
       // Carrega comandos personalizados para todos os grupos
       const groups = await this.database.getGroups();
@@ -51,7 +51,7 @@ class CommandHandler {
           await this.loadCustomCommandsForGroup(group.id);
         }
 
-        this.logger.debug(`Carregados comandos personalizados para ${groups.length} grupos`);
+        //this.logger.debug(`Carregados comandos personalizados para ${groups.length} grupos`);
         
         // Imprime comandos personalizados por grupo
         // for (const groupId in this.customCommands) {
@@ -76,7 +76,7 @@ class CommandHandler {
       if (customCommands && Array.isArray(customCommands)) {
         this.customCommands[groupId] = customCommands.filter(cmd => cmd.active && !cmd.deleted);
         if(this.customCommands[groupId].length > 0){
-          this.logger.info(`Carregados ${this.customCommands[groupId].length} comandos personalizados para o grupo ${groupId}`);
+          //this.logger.info(`Carregados ${this.customCommands[groupId].length} comandos personalizados para o grupo ${groupId}`);
         }
       } else {
         this.customCommands[groupId] = [];
