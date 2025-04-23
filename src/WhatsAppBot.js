@@ -337,11 +337,17 @@ class WhatsAppBot {
       if (typeof content === 'string') {
         return await this.client.sendMessage(chatId, content, options);
       } else if (content instanceof MessageMedia) {
-        return await this.client.sendMessage(chatId, content, {
+        const fullOpts = {
           caption: options.caption,
           sendMediaAsSticker: options.asSticker || false,
           ...options
-        });
+        };
+
+        try{
+          return await this.client.sendMessage(chatId, content, fullOpts);
+        } catch(err){
+          this.logger.error(`Erro ao enviar mensagem pra ${chatId}:`, err, content, fullOpts);
+        }
       }
     } catch (error) {
       this.logger.error(`Erro ao enviar mensagem para ${chatId}:`, error);
@@ -386,6 +392,7 @@ class WhatsAppBot {
           message.content, 
           message.options
         );
+
 
         // Apply reactions if specified
         if (message.reactions && result) {

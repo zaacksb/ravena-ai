@@ -30,7 +30,8 @@ class SuperAdmin {
       'mergeDonates': {'method': 'mergeDonors'},
       'block': {'method': 'blockUser'},
       'leaveGrupo': {'method': 'leaveGroup'},
-      'foto': {'method': 'changeProfilePicture'}
+      'foto': {'method': 'changeProfilePicture'},
+      'simular': {'method': 'simulateStreamEvent'}
     };
   }
 
@@ -497,6 +498,129 @@ class SuperAdmin {
       }
     } catch (error) {
       this.logger.error('Erro no comando changeProfilePicture:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+
+  /**
+   * Simula um evento de stream online/offline
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async simulateStreamEvent(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length < 3) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça a plataforma, o nome do canal e o estado. Exemplo: !sa-simular twitch canal_teste on [vidYoutube]'
+        });
+      }
+      
+      // Extrai argumentos
+      const platform = args[0].toLowerCase();
+      const channelName = args[1].toLowerCase();
+      const state = args[2].toLowerCase();
+      
+      // Verifica se a plataforma é válida
+      if (!['twitch', 'kick', 'youtube'].includes(platform)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Plataforma inválida: ${platform}. Use 'twitch', 'kick' ou 'youtube'.`
+        });
+      }
+      
+      // Verifica se o estado é válido
+      if (!['on', 'off'].includes(state)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Estado inválido: ${state}. Use 'on' ou 'off'.`
+        });
+      }
+      
+      // Verifica se o StreamMonitor está disponível
+      if (!bot.streamMonitor) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '❌ StreamMonitor não está inicializado no bot.'
+        });
+      }
+      
+      // Preparar dados do evento
+      const now = new Date();
+      const eventData = {
+        platform,
+        channelName,
+        title: state === 'on' ? `${channelName} fazendo stream simulada em ${platform}` : null,
+        game: state === 'on' ? 'Jogo Simulado Fantástico' : null,
+        startedAt: now.toISOString(),
+        viewerCount: Math.floor(Math.random() * 1000) + 1
+      };
+      
+      // Adicionar dados específicos para cada plataforma
+      if (platform === 'twitch') {
+        eventData.title = `${channelName} jogando ao vivo em uma simulação épica!`;
+        eventData.game = 'Super Simulator 2025';
+      } else if (platform === 'kick') {
+        eventData.title = `LIVE de ${channelName} na maior simulação de todos os tempos!`;
+        eventData.game = 'Kick Streaming Simulator';
+      } else if (platform === 'youtube') {
+        eventData.title = `Não acredite nos seus olhos! ${channelName} ao vivo agora!`;
+        eventData.url = `https://youtube.com/watch?v=simulado${Math.floor(Math.random() * 10000)}`;
+        eventData.videoId = args[3] ?? `simulado${Math.floor(Math.random() * 10000)}`;
+      }
+      
+      // Adicionar thumbnail simulada
+      const mediaPath = path.join(__dirname, '../../data/simulado-live.jpg');
+      try {
+        if (platform === 'youtube') {
+          eventData.thumbnail = `https://i.ytimg.com/vi/${eventData.videoId}/maxresdefault.jpg`;
+        } else {
+          const stats = await fs.stat(mediaPath);
+          if (stats.isFile()) {
+            eventData.thumbnail = `data:image/jpeg;base64,simulado`;
+          }
+        }
+      } catch (error) {
+        this.logger.warn(`Arquivo simulado-live.jpg não encontrado: ${error.message}`);
+        eventData.thumbnail = null;
+      }
+      
+      // Emitir evento
+      this.logger.info(`Emitindo evento simulado: ${platform}/${channelName} ${state === 'on' ? 'online' : 'offline'}`);
+      
+      if (state === 'on') {
+        bot.streamMonitor.emit('streamOnline', eventData);
+      } else {
+        bot.streamMonitor.emit('streamOffline', eventData);
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✅ Evento ${state === 'on' ? 'online' : 'offline'} simulado com sucesso para ${platform}/${channelName}\n\n` +
+          `Título: ${eventData.title || 'N/A'}\n` +
+          `Jogo: ${eventData.game || 'N/A'}\n` +
+          `Thumbnail: ${eventData.thumbnail ? '[Configurado]' : '[Não disponível]'}\n\n` +
+          `O evento foi despachado para todos os grupos que monitoram este canal.`
+      });
+    } catch (error) {
+      this.logger.error('Erro no comando simulateStreamEvent:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,

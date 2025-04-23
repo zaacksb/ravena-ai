@@ -1621,11 +1621,18 @@ Lista todas as variáveis possíveis de usar no bot (na criação de comandos), 
 ## Nova funcionalidade StreamSystem para Youtube
 Quando vier um status 404 na busca do canal (nome errado, por exemplo), remover esta canal do monitoramento do grupo e enviar mensgem no grupo avisando "o canal do youtube com o nome XXX não foi encontrado e foi removido do monitoramento, verifique o nome correto"
 ----
-Managament completo está assim.
 
+# Fix Management plataforma-midia
 O comandos de adicionar midia estão sendo reconhecidos, mas quando uma midia nova é adicionada, as outras esão sendo apagadas do vetor twitch.onConfig.media  (também vale para as outras plataformas).
 A pessoa pode enviar 1 conteúdo de cada tipo, então existem 2 casos em que uma midia seria apagado do vetor "media"
 * no comando midia-del: está funcionando ok
 * No comando midia quando enviar algo que já existe (enviar um audio para um que já tem audio sobreescreveria o antigo)
 
 Aproveitando que a função será alterada, quando adicionar uma midia, coloque na mensagem de retorno o tipo de midia que foi adicionada e sugira o comando correto para remove-lá ao final da mensagem
+
+
+# Novo comando SuperAdmin
+!simular [twitch/kick/youtube] [canal] [on/off]
+
+Dispara um evento de live on ou off para uma das plataformas.
+Usar nomes placeholders para o titulo, nome do jogo, data, etc.

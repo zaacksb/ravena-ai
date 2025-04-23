@@ -363,8 +363,6 @@ class StreamSystem {
             `⚠️ [DEBUG] Sem configuração de mídia para evento ${eventType} no grupo ${group.id} (${group.name || 'sem nome'})`
           );
         }
-        
-        return;
       }
       
       // Armazena as ReturnMessages para enviar para o grupo
@@ -431,6 +429,10 @@ class StreamSystem {
         }
       }
       
+      for(let r  of returnMessages){
+        //r.delay = 300;
+      }
+
       // Envia as mensagens originais para o grupo
       if (returnMessages.length > 0) {
         await this.bot.sendReturnMessages(returnMessages);
@@ -454,7 +456,7 @@ class StreamSystem {
       if (logReturnMessages.length > 0) {
         // Adiciona um pequeno atraso para garantir que as mensagens cheguem em ordem após o log
         await new Promise(resolve => setTimeout(resolve, 500));
-        await this.bot.sendReturnMessages(logReturnMessages);
+        this.bot.sendReturnMessages(logReturnMessages);
       }
     } catch (error) {
       this.logger.error(`Erro ao processar evento de stream para ${group.id}:`, error);
@@ -468,6 +470,44 @@ class StreamSystem {
     }
   }
 
+  /*
+    * Altera os emojis de cor vede pra vermelha
+  */
+  substituirEmojis(str) {
+    const emojiMap = {
+      '🔴': '🟢',
+      '🟢': '🔴',
+      '❤️': '💚',
+      '💚': '❤️',
+      '🌹': '🍏',
+      '🍏': '🌹',
+      '🟥': '🟩',
+      '🟩': '🟥'
+    };
+
+    let resultado = '';
+    const caracteres = Array.from(str);
+    
+    for (let i = 0; i < caracteres.length; i++) {
+      let emoji = caracteres[i];
+      
+      // Lidar com emojis que têm modificador de variação
+      if (i + 1 < caracteres.length && caracteres[i+1] === '️') {
+        emoji = emoji + caracteres[i+1];
+        i++; // Pular o modificador
+      }
+      
+      // Substituir se estiver no mapa
+      if (emojiMap[emoji]) {
+        resultado += emojiMap[emoji];
+      } else {
+        resultado += emoji;
+      }
+    }
+    
+    return resultado;
+  }
+
   /**
    * Altera o título e a foto do grupo com base em evento de stream
    * @param {Object} group - Dados do grupo
@@ -477,6 +517,9 @@ class StreamSystem {
    */
   async changeGroupTitleForStream(group, channelConfig, eventData, eventType) {
     try {
+
+      console.log(channelConfig, eventData, eventType);
+
       // Obtém o chat do grupo atual (esta parte é específica da plataforma)
       const chat = await this.bot.client.getChatById(group.id);
       if (!chat || !chat.isGroup) return;
@@ -502,25 +545,7 @@ class StreamSystem {
           }
           
           // Substitui emojis
-          const emojiMap = {
-            '🔴': '🟢',
-            '🟢': '🔴',
-            '❤️': '💚',
-            '💚': '❤️',
-            '🌹': '🍏',
-            '🍏': '🌹',
-            '🟥': '🟩',
-            '🟩': '🟥'
-          };
-          
-          // Se for um evento offline, troca as chaves e valores
-          const finalEmojiMap = eventType === 'online' ? emojiMap : 
-            Object.fromEntries(Object.entries(emojiMap).map(([k, v]) => [v, k]));
-          
-          // Substitui emojis
-          for (const [from, to] of Object.entries(finalEmojiMap)) {
-            newTitle = newTitle.replace(new RegExp(from, 'g'), to);
-          }
+          newTitle = this.substituirEmojis(newTitle);
         }
         
         // Define o novo título

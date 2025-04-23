@@ -1646,7 +1646,7 @@ class Management {
     return new ReturnMessage({
       chatId: group.id,
       content: `Múltiplos canais de ${platform} configurados. Especifique o canal:\n` +
-        `!g-${platform}-midia-on <canal>\n\n` +
+        `!g-${platform}-midia on <canal>\n\n` +
         `Canais configurados: ${channelsList}`
     });
   }
@@ -1746,7 +1746,7 @@ class Management {
         return new ReturnMessage({
           chatId: group.id,
           content: `Canal da Twitch adicionado: ${channelName}\n\n` +
-            `Configuração padrão de notificação "online" definida. Use !g-twitch-midia-on ${channelName} para personalizar.`
+            `Configuração padrão de notificação "online" definida. Use !g-twitch-midia on ${channelName} para personalizar.`
         });
       } else {
         return new ReturnMessage({
@@ -2045,8 +2045,8 @@ class Management {
         chatId: group.id,
         content: `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
           `Você pode definir títulos personalizados com:\n` +
-          `!g-twitch-titulo-on ${channelName} [título]\n` +
-          `!g-twitch-titulo-off ${channelName} [título]`
+          `!g-twitch-titulo on ${channelName} [título]\n` +
+          `!g-twitch-titulo off ${channelName} [título]`
       });
     } else {
       return new ReturnMessage({
@@ -2075,7 +2075,7 @@ class Management {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo-on nomeDoCanal Título Personalizado'
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo on nomeDoCanal Título Personalizado'
       });
     }
     
@@ -2101,7 +2101,7 @@ class Management {
       return new ReturnMessage({
         chatId: group.id,
         content: `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
-          `!g-twitch-titulo-on <canal> <título>\n\n` +
+          `!g-twitch-titulo on <canal> <título>\n\n` +
           `Canais configurados: ${channelsList}`
       });
     }
@@ -2171,7 +2171,7 @@ class Management {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo-off nomeDoCanal Título Personalizado'
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-twitch-titulo off nomeDoCanal Título Personalizado'
       });
     }
     
@@ -2197,7 +2197,7 @@ class Management {
       return new ReturnMessage({
         chatId: group.id,
         content: `Múltiplos canais da Twitch configurados. Especifique o canal:\n` +
-          `!g-twitch-titulo-off <canal> <título>\n\n` +
+          `!g-twitch-titulo off <canal> <título>\n\n` +
           `Canais configurados: ${channelsList}`
       });
     }
@@ -2373,7 +2373,7 @@ class Management {
         return new ReturnMessage({
           chatId: group.id,
           content: `Canal do Kick adicionado: ${channelName}\n\n` +
-            `Configuração padrão de notificação "online" definida. Use !g-kick-midia-on ${channelName} para personalizar.`
+            `Configuração padrão de notificação "online" definida. Use !g-kick-midia on ${channelName} para personalizar.`
         });
       } else {
         return new ReturnMessage({
@@ -2657,8 +2657,8 @@ class Management {
         chatId: group.id,
         content: `Alteração de título para eventos do canal ${channelName} ${status}.\n\n` +
           `Você pode definir títulos personalizados com:\n` +
-          `!g-kick-titulo-on ${channelName} [título]\n` +
-          `!g-kick-titulo-off ${channelName} [título]`
+          `!g-kick-titulo on ${channelName} [título]\n` +
+          `!g-kick-titulo off ${channelName} [título]`
       });
     } else {
       return new ReturnMessage({
@@ -2688,7 +2688,7 @@ class Management {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo-on nomeDoCanal Título Personalizado'
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo on nomeDoCanal Título Personalizado'
       });
     }
     
@@ -2714,7 +2714,7 @@ class Management {
       return new ReturnMessage({
         chatId: group.id,
         content: `Múltiplos canais do Kick configurados. Especifique o canal:\n` +
-          `!g-kick-titulo-on <canal> <título>\n\n` +
+          `!g-kick-titulo on <canal> <título>\n\n` +
           `Canais configurados: ${channelsList}`
       });
     }
@@ -2785,7 +2785,7 @@ class Management {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo-off nomeDoCanal Título Personalizado'
+        content: 'Por favor, forneça o nome do canal ou título personalizado. Exemplo: !g-kick-titulo off nomeDoCanal Título Personalizado'
       });
     }
     
@@ -2811,7 +2811,7 @@ class Management {
       return new ReturnMessage({
         chatId: group.id,
         content: `Múltiplos canais do Kick configurados. Especifique o canal:\n` +
-          `!g-kick-titulo-off <canal> <título>\n\n` +
+          `!g-kick-titulo off <canal> <título>\n\n` +
           `Canais configurados: ${channelsList}`
       });
     }
@@ -2987,7 +2987,7 @@ class Management {
         return new ReturnMessage({
           chatId: group.id,
           content: `Canal do YouTube adicionado: ${channelName}\n\n` +
-            `Configuração padrão de notificação de vídeo definida. Use !g-youtube-midia-on ${channelName} para personalizar.`
+            `Configuração padrão de notificação de vídeo definida. Use !g-youtube-midia on ${channelName} para personalizar.`
         });
       } else {
         return new ReturnMessage({
@@ -3808,14 +3808,14 @@ class Management {
   }
 
   /**
-   * Manipulador unificado para comandos de mídia de stream
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @param {string} platform - Plataforma (twitch, kick, youtube)
-   * @param {string} mode - Modo (on, off)
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   * Sets the "online" or "offline" media notification for a platform channel
+   * @param {WhatsAppBot} bot - The bot instance
+   * @param {Object} message - The message object
+   * @param {Array} args - Command arguments
+   * @param {Object} group - The group object
+   * @param {string} platform - The platform name (twitch, kick, youtube)
+   * @param {string} mode - The mode (on or off)
+   * @returns {Promise<ReturnMessage>} Return message
    */
   async setStreamMedia(bot, message, args, group, platform, mode = 'on') {
     if (!group) {
@@ -3839,33 +3839,135 @@ class Management {
       }
     }
     
-    // Encaminha para o método adequado com base na plataforma e modo
-    if (platform === 'twitch') {
-      if (mode === 'on') {
-        return this.setTwitchOnlineMedia(bot, message, args, group);
-      } else {
-        return this.setTwitchOfflineMedia(bot, message, args, group);
-      }
-    } else if (platform === 'kick') {
-      if (mode === 'on') {
-        return this.setKickOnlineMedia(bot, message, args, group);
-      } else {
-        return this.setKickOfflineMedia(bot, message, args, group);
-      }
-    } else if (platform === 'youtube') {
-      if (mode === 'on') {
-        return this.setYoutubeOnlineMedia(bot, message, args, group);
-      } else {
-        return this.setYoutubeOfflineMedia(bot, message, args, group);
-      }
+    // Validate and get channel name
+    const channelName = await this.validateChannelName(bot, message, args, group, platform);
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
     }
     
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Plataforma não suportada: ${platform}`
-    });
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, platform, channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do ${platform} não configurado: ${channelName}. Use !g-${platform}-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Verify if this is a reply to a message
+    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+    
+    const configKey = mode === 'on' ? 'onConfig' : 'offConfig';
+    
+    if (!quotedMsg && args.length <= 1) {
+      // Reset to default if no quoted message and no additional args
+      if (mode === 'on') {
+        channelConfig[configKey] = this.createDefaultNotificationConfig(platform, channelName);
+      } else {
+        channelConfig[configKey] = { media: [] };
+      }
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "${mode === 'on' ? 'online' : 'offline'}" para o canal ${channelName} redefinida para o padrão.`
+      });
+    }
+    
+    if (!quotedMsg) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Este comando deve ser usado como resposta a uma mensagem ou mídia para definir a notificação.'
+      });
+    }
+    
+    // Handle media message
+    try {
+      // Create media configuration
+      const mediaConfig = {
+        type: "text",
+        content: quotedMsg.body || ""
+      };
+      
+      // For media messages, add the media type
+      let mediaType = "text";
+      if (quotedMsg.hasMedia) {
+        const media = await quotedMsg.downloadMedia();
+        mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
+        
+        if (quotedMsg.type.toLowerCase() === "sticker") {
+          mediaType = "sticker";
+        }
+        if (quotedMsg.type.toLowerCase() === "voice") {
+          mediaType = "voice";
+        }
+        
+        // Save media file
+        let fileExt = media.mimetype.split('/')[1];
+        if (fileExt.includes(";")) {
+          fileExt = fileExt.split(";")[0];
+        }
+        
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const mediaDir = path.join(this.dataPath, 'media');
+        await fs.mkdir(mediaDir, { recursive: true });
+        
+        const filePath = path.join(mediaDir, fileName);
+        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+        
+        mediaConfig.type = mediaType;
+        mediaConfig.content = fileName;
+        mediaConfig.caption = quotedMsg.caption || "";
+      }
+      
+      // Initialize the config if it doesn't exist
+      if (!channelConfig[configKey]) {
+        channelConfig[configKey] = { media: [] };
+      }
+      
+      // Make sure media array exists
+      if (!channelConfig[configKey].media) {
+        channelConfig[configKey].media = [];
+      }
+      
+      // FIX: Check if we already have a media of this type
+      const existingMediaIndex = channelConfig[configKey].media.findIndex(m => m.type === mediaConfig.type);
+      
+      if (existingMediaIndex !== -1) {
+        // Replace just this media type entry
+        channelConfig[configKey].media[existingMediaIndex] = mediaConfig;
+      } else {
+        // Add the new media entry
+        channelConfig[configKey].media.push(mediaConfig);
+      }
+      
+      await this.database.saveGroup(group);
+      
+      const mediaTypeDesc = {
+        "text": "texto",
+        "image": "imagem",
+        "audio": "áudio",
+        "video": "vídeo",
+        "voice": "audio de voz",
+        "sticker": "sticker"
+      };
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Configuração de notificação "${mode === 'on' ? 'online' : 'offline'}" para o canal ${channelName} atualizada com sucesso.\n\nAdicionado conteúdo do tipo: ${mediaTypeDesc[mediaType] || mediaType}\n\nPara remover este tipo de conteúdo, use:\n!g-${platform}-midia-del ${mode} ${mediaType} ${channelName}`
+      });
+    } catch (error) {
+      this.logger.error(`Erro ao configurar notificação "${mode}" para o canal ${channelName}:`, error);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Erro ao configurar notificação: ${error.message}`
+      });
+    }
   }
-
   /**
    * Remove um tipo específico de mídia da configuração de stream
    * @param {WhatsAppBot} bot - Instância do bot
