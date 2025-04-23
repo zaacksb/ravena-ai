@@ -11,7 +11,8 @@ const WhatsAppBot = require('./src/WhatsAppBot');
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
 const NSFWPredict = require('./src/utils/NSFWPredict');
-
+const fs = require('fs').promises;
+const path = require('path');
 
 // Create logger for test script
 const logger = new Logger('test');
@@ -25,7 +26,6 @@ class MockClient extends EventEmitter {
         _serialized: '1234567890@c.us' 
       } 
     };
-
   }
 
   async initialize() {
@@ -45,6 +45,7 @@ class MockClient extends EventEmitter {
 
   async sendMessage(chatId, content, options = {}) {
     logger.info(`Sending message to ${chatId}: ${typeof content === 'string' ? content : '[Media]'}`);
+    logger.debug('Message options:', options);
     return { id: { _serialized: 'mock-msg-id' } };
   }
 
@@ -127,12 +128,138 @@ class BotSimulator {
       delete: async () => {
         this.logger.info(`Deleted message`);
       },
+      getQuotedMessage: async () => null,
       quotedMsg: null
     };
     
     // Emit message event
     this.bot.client.emit('message', message);
     return message;
+  }
+
+  // Simulate an image message
+  async simulateImageMessage(fromId, groupId, text = '', quotedMsg = null) {
+    this.logger.info(`Simulating image message from ${fromId} in group ${groupId || 'private'}`);
+    
+    try {
+      // Read image file
+      const imagePath = path.join(__dirname, 'data', 'example-image.jpg');
+      console.log(imagePath);
+      const imageBuffer = await fs.readFile(imagePath);
+      const base64Image = imageBuffer.toString('base64');
+      
+      // Create mock message object
+      const message = {
+        id: { _serialized: `mock-msg-${Date.now()}` },
+        body: text,
+        from: fromId,
+        to: groupId || this.bot.client.info.wid._serialized,
+        hasMedia: true,
+        type: 'image',
+        
+        // Mock methods
+        getChat: async () => ({
+          id: { _serialized: groupId || fromId },
+          name: groupId ? 'Test Group' : 'Test User',
+          isGroup: !!groupId
+        }),
+        getContact: async () => ({
+          id: { _serialized: fromId },
+          pushname: 'Test User'
+        }),
+        downloadMedia: async () => ({
+          data: base64Image,
+          mimetype: 'image/jpeg',
+          filename: 'example-image.jpg'
+        }),
+        react: async (emoji) => {
+          this.logger.info(`Reacted with ${emoji} to message`);
+        },
+        delete: async () => {
+          this.logger.info(`Deleted message`);
+        },
+        getQuotedMessage: async () => quotedMsg,
+        quotedMsg: quotedMsg,
+        // Add a content property for easy access to media data
+        content: {
+          data: base64Image,
+          mimetype: 'image/jpeg',
+          filename: 'example-image.jpg'
+        }
+      };
+      
+      // Add origin for compatibility with some commands
+      message.origin = message;
+      
+      // Emit message event
+      this.bot.client.emit('message', message);
+      return message;
+    } catch (error) {
+      this.logger.error('Error simulating image message:', error);
+      throw error;
+    }
+  }
+
+  // Simulate a video message
+  async simulateVideoMessage(fromId, groupId, text = '', quotedMsg = null) {
+    this.logger.info(`Simulating video message from ${fromId} in group ${groupId || 'private'}`);
+    
+    try {
+      // Read video file
+      const videoPath = path.join(__dirname, 'data', 'example-video.mp4');
+      const videoBuffer = await fs.readFile(videoPath);
+      const base64Video = videoBuffer.toString('base64');
+      
+      // Create mock message object
+      const message = {
+        id: { _serialized: `mock-msg-${Date.now()}` },
+        body: text,
+        from: fromId,
+        to: groupId || this.bot.client.info.wid._serialized,
+        hasMedia: true,
+        type: 'video',
+        
+        // Mock methods
+        getChat: async () => ({
+          id: { _serialized: groupId || fromId },
+          name: groupId ? 'Test Group' : 'Test User',
+          isGroup: !!groupId
+        }),
+        getContact: async () => ({
+          id: { _serialized: fromId },
+          pushname: 'Test User'
+        }),
+        downloadMedia: async () => ({
+          data: base64Video,
+          mimetype: 'video/mp4',
+          filename: 'example-video.mp4'
+        }),
+        react: async (emoji) => {
+          this.logger.info(`Reacted with ${emoji} to message`);
+        },
+        delete: async () => {
+          this.logger.info(`Deleted message`);
+        },
+        getQuotedMessage: async () => quotedMsg,
+        quotedMsg: quotedMsg,
+        // Add a content property for easy access to media data
+        content: {
+          data: base64Video,
+          mimetype: 'video/mp4',
+          filename: 'example-video.mp4'
+        }
+      };
+      
+      // Add origin for compatibility with some commands
+      message.origin = message;
+      
+      // Emit message event
+      this.bot.client.emit('message', message);
+      return message;
+    } catch (error) {
+      this.logger.error('Error simulating video message:', error);
+      throw error;
+    }
   }
 
   // Simulate a group join event
@@ -232,35 +359,34 @@ async function runTests() {
     // First, we need to ensure the database has the test group
     logger.info('Setting up test environment...');
     
-    // Test 1: Simulate user joining group (should create the group)
-    //logger.info('TEST 1: Simulating bot joining group');
-    //await simulator.simulateGroupJoin(testGroup, '1234567890@c.us');
-
-    // Test 2: Simulate user joining group (should create the group)
-    //logger.info('TEST 2: Simulating user joining group');
-    //await simulator.simulateGroupJoin(testGroup, '555555555@c.us');
-
-    
-    // // Wait for group creation to complete
-    // await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // // Test 2: Send help command in private chat
-    // logger.info('TEST 2: Sending help command in private chat');
-    // await simulator.simulateTextMessage(testUser, null, '!help');
+    // Test: Simulating sticker commands with images
+    logger.info('TEST: Sending image with sq command');
+    // First image message
+    const imageMessage = await simulator.simulateImageMessage(testUser, testGroup, '!sq Teste 1');
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // // Test 3: Send ping command in group
-    // logger.info('TEST 3: Sending ping command in group');
-    // await simulator.simulateTextMessage(testUser, testGroup, '!ping');
-
-    // Test 5: Send ping command in group
-    await simulator.simulateTextMessage(testUser, testGroup, '!cmd');
-    await simulator.simulateTextMessage(testUser, testGroup, '!g-variaveis');
+    // // Test another sticker command
+    // logger.info('TEST: Sending image with sqc command');
+    // await simulator.simulateImageMessage(testUser, testGroup, '!sqc Teste 2');
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // // Test with quoted message
+    // logger.info('TEST: Sending message that quotes an image for sqb command');
+    // await simulator.simulateTextMessage(testUser, testGroup, '!sqb Teste 3', imageMessage);
+    
+    // // Wait for message processing
+    // await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // // Test video processing
+    // logger.info('TEST: Sending video with sq command');
+    // await simulator.simulateVideoMessage(testUser, testGroup, '!sq Video teste');
+    
+    // // Wait for message processing
+    // await new Promise(resolve => setTimeout(resolve, 2000));
     
     logger.info('All tests completed successfully');
   } catch (error) {

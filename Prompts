@@ -1636,3 +1636,19 @@ Aproveitando que a função será alterada, quando adicionar uma midia, coloque 
 
 Dispara um evento de live on ou off para uma das plataformas.
 Usar nomes placeholders para o titulo, nome do jogo, data, etc.
+
+----
+
+# Novos comandos de Stickers
+Estes comandos podem utilizar os métodos existentes pra criar stickers, mas antes de chegar neles, manipular a midia recebida nos formatos especificados, como um middleware
+
+Command -> Middleware de Manipulaçõa -> Comando de Sticker original
+
+Usar o ffmpeg pra videos e o sharp para imagem (caso não sej apossivel o FFMPEG, voce pode escolher um ou outro).
+As duas estão disponíveis para uso no código:
+//const ffmpeg = require('fluent-ffmpeg');
+//const sharp = require('sharp');
+
+- !sq/stickerq: Faz o sticker ficar quadrado, centralizando o corte (descarta o top e bottom)
+- !sqc/stickerqc: Faz o sticker ficar quadrado, descaratando o bottom
+- !sqb/stickerqb: Faz o sticker ficar quadrado, descaratando o top

@@ -90,6 +90,8 @@
 - [x] Streams midia está substituindo e não adicionando
 - [x] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
 - [ ] Bot tentando notificar sem estar nos grupos
+- [ ] Algumas reações do AFTER não vão (ex.: !s)
+- [ ] Stickers quadrados videos não envia (client.sendMessage)
 
 ## ✅ TODO-Extras
 - [ ] Gerar README.md atualizado

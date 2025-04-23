@@ -40,7 +40,7 @@ const ttsCharacters = [
 ];
 
 // Cria diretório temporário para arquivos de áudio
-const tempDir = path.join(os.tmpdir(), 'whatsapp-bot-speech');
+const tempDir = path.join(__dirname, '../../temp', 'whatsapp-bot-speech');
 fs.mkdir(tempDir, { recursive: true })
   .then(() => {
     logger.info(`Diretório temporário criado: ${tempDir}`);

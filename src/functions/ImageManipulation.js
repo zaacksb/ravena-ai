@@ -18,7 +18,8 @@ const convertPromise = util.promisify(imagemagick.convert);
 const identifyPromise = util.promisify(imagemagick.identify);
 
 // Diretório temporário para processamento
-const tempDir = path.join(os.tmpdir(), 'whatsapp-bot-images');
+const tempDir = path.join(__dirname, '../../temp', 'whatsapp-bot-images');
+
 
 // Garante que o diretório temporário exista
 fs.mkdir(tempDir, { recursive: true })
