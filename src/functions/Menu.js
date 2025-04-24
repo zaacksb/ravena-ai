@@ -234,9 +234,7 @@ async function sendCommandList(bot, message, args, group) {
     const fixedCommands = bot.eventHandler.commandHandler.fixedCommands.getAllCommands();
     
     // Obtém comandos personalizados para este grupo
-    const customCommands = group ? 
-      (await database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted) : 
-      [];
+    const customCommands = group ? (await database.getCustomCommands(group.id)).filter(cmd => cmd.active && !cmd.deleted) :  [];
     
     // Lê o cabeçalho do menu
     const header = await readMenuHeader();

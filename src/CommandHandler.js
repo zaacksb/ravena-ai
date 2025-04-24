@@ -88,6 +88,14 @@ class CommandHandler {
     }
   }
 
+  delayedReaction(msg, emoji, delay){
+    setTimeout((m,e) => {
+      m.react(e).catch(reactError => {
+        this.logger.error('Erro ao aplicar reação "antes":', reactError);
+      });
+    }, delay, msg, emoji);
+  }
+              
   /**
    * Manipula uma mensagem de comando
    * @param {WhatsAppBot} bot - A instância do bot
@@ -475,13 +483,22 @@ class CommandHandler {
           return; // Ignora o comando silenciosamente
         }
       }
+
+      // Comando exclusivo para alguns grupos, como APIs pagas
+      if(command.exclusive){
+        if(!command.exclusive.includes(group.name)){
+          this.logger.debug(`Comando ${command.name} não está habilitado para este grupo ('${group.name}').`);
+          return;
+        }
+      }
       
       // Reage com emoji "antes" (específico do comando ou padrão)
-      const beforeEmoji = command.reactions?.before || this.defaultReactions.before;
-      try {
-        await message.origin.react(beforeEmoji);
-      } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError);
+      if(command.reactions?.before){
+        try {
+          await message.origin.react(command.reactions?.before);
+        } catch (reactError) {
+          this.logger.error('Erro ao aplicar reação "antes":', reactError);
+        }
       }
       
       // Executa método do comando
@@ -505,19 +522,14 @@ class CommandHandler {
             
             // Envia as ReturnMessages
             await bot.sendReturnMessages(result);
-            this.logger.debug(`Comando ${command.name} executado com sucesso (ReturnMessage)`);
-            return;
           }
         }
         
-        this.logger.debug(`Comando ${command.name} executado com sucesso`);
+        this.logger.debug(`Comando ${command.name} executado com sucesso, enviando after reaction`);
         
         // Reage com emoji "depois" (específico do comando ou padrão)
-        const afterEmoji = command.reactions?.after || this.defaultReactions.after;
-        try {
-          await message.origin.react(afterEmoji);
-        } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "depois":', reactError);
+        if(command.reactions?.after){
+          this.delayedReaction(message.origin, command.reactions.after, 1000);
         }
       } else {
         this.logger.error(`Método de comando inválido para ${command.name}`);
@@ -605,13 +617,12 @@ class CommandHandler {
       }
       
       // Reage com emoji antes (do comando ou padrão)
-      const beforeEmoji = command.reactions?.before || null;
-      try {
-        if (beforeEmoji && command.react !== false) {
-          await message.origin.react(beforeEmoji);
+      if(command.reactions?.before){
+        try {
+          await message.origin.react(command.reactions?.before);
+        } catch (reactError) {
+          this.logger.error('Erro ao aplicar reação "antes":', reactError);
         }
-      } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError);
       }
       
       // Atualiza estatísticas de uso do comando

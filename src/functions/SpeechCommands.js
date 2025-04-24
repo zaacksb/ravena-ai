@@ -195,6 +195,13 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     });
   }
 }
+
+function multilineItalic(string){
+  const lines = inputString.split('\n');
+  const processedLines = lines.map(line => `_${line.trim()}_`);
+  return processedLines.join('\n');
+}
+
 /**
  * Converte voz para texto usando o executável Whisper diretamente
  * @param {WhatsAppBot} bot - Instância do bot
@@ -294,7 +301,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     // Cria a ReturnMessage com a transcrição
     const returnMessage = new ReturnMessage({
       chatId: chatId,
-      content: `_${transcribedText?.trim()}_`,
+      content: multilineItalic(transcribedText?.trim()),
       options: {
         quotedMessageId: message.origin.id._serialized
       }

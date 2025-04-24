@@ -397,10 +397,11 @@ class WhatsAppBot {
         // Apply reactions if specified
         if (message.reactions && result) {
           try {
-            // React with 'before' emoji if specified
-            if (message.reactions.before) {
-              await result.react(message.reactions.before);
-            }
+            // if (message.reactions.after) {
+            //   setTimeout((rsl,rct) =>{
+            //     rsl.react(rct);
+            //   }, 1000, result, message.reactions.after); // removido pq faz reagir na imagem enviada...
+            // }
 
             // Store message ID for potential future reactions
             if (message.metadata) {

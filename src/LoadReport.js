@@ -133,11 +133,11 @@ class LoadReport {
    * @returns {string} - Mensagem formatada
    */
   formatReportMessage(report) {
-    const startDate = new Date(report.period.start).toLocaleString();
-    const endDate = new Date(report.period.end).toLocaleString();
+    const startDate = new Date(report.period.start).toLocaleString("pt-BR");
+    const endDate = new Date(report.period.end).toLocaleString("pt-BR");
     const durationMinutes = Math.floor(report.duration / 60);
     
-    return `📊 *Relatório de Carga para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
+    return `📊 *LoadReport para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
            `📥 *Mensagens:*\n` +
            `- Recebidas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)\n`+
            `- Enviadas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)`;

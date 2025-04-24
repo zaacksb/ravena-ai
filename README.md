@@ -51,6 +51,7 @@
 - [x] Comando: !news, ViniMunews (antigo JrMunews)
 - [x] Comando: !live, pega info da streams do grupo
 - [x] Comando: !streamers, mostra todas as lives monitoradas pelo bot (online)
+- [ ] Comando: !placa (apenas alguns grupos, serviço pago)
 - [X] Implementar classes ReturnMessage e Command
 - [x] Migrar as funções para utlizar as classes Command e ReturnMessage
 - [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
@@ -66,6 +67,7 @@
 - [x] Variáveis: Mencionar pessoas {mention-55999999...}
 - [x] Variáveis: Importar todas da ravena antiga
 - [x] Melhorar comando !cmd pra ficar mais organizado
+- [ ] COOLDOWN DOS COMANDOS
 - [x] Script para migração de dados da ravena antiga
     - [x] Grupos
     - [x] Lembretes
@@ -90,7 +92,7 @@
 - [x] Streams midia está substituindo e não adicionando
 - [x] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
 - [ ] Bot tentando notificar sem estar nos grupos
-- [ ] Algumas reações do AFTER não vão (ex.: !s)
+- [x] Algumas reações do AFTER não vão (ex.: !s)
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 
 ## ✅ TODO-Extras

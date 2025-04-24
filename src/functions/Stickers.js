@@ -216,6 +216,9 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
         // Preserva o fundo, corta o topo
         left = Math.max(0, (metadata.width - size) / 2);
         top = Math.max(0, metadata.height - size);
+      } else if (cropType === 'stretch') {
+        // Para o modo de esticamento, redimensionamos diretamente para 400x400
+        return await image.resize(400, 400, { fit: 'fill' }).toBuffer();
       }
       
       // Aplicar o corte e redimensionar para 400x400
@@ -246,7 +249,6 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
       // Estratégia: primeiro determinar a área de corte e depois redimensionar para 400x400
       if (cropType === 'center') {
         // Cortar para quadrado no centro e depois redimensionar
-        filterCommand = '\"crop=min(iw\,ih):min(iw\,ih):(iw-min(iw\,ih))/2:(ih-min(iw\,ih))/2,scale=400:400\"';
         filterCommand = [
             {
               filter: 'crop',
@@ -314,6 +316,19 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
             outputs: 'scaled'
           }
         ];
+      } else if (cropType === 'stretch') {
+        // Esticar o vídeo para 400x400 sem cortar
+        filterCommand = [
+          {
+            filter: 'scale',
+            options: {
+              w: 400,
+              h: 400,
+              force_original_aspect_ratio: 0 // Força o esticamento
+            },
+            outputs: 'scaled'
+          }
+        ];
       }
       
       // Usar arquivo intermediário em vez de pipe para evitar problemas de formato
@@ -370,7 +385,7 @@ async function makeSquareMedia(mediaBuffer, mimeType, cropType = 'center') {
  * Função middleware para processar mídia antes de enviá-la para o comando de sticker
  * @param {Buffer|Object} mediaBuffer - Buffer ou objeto com a mídia
  * @param {string} mimeType - Tipo MIME da mídia
- * @param {string} cropType - Tipo de corte: 'center', 'top', ou 'bottom'
+ * @param {string} cropType - Tipo de corte: 'center', 'top', 'bottom' ou 'stretch'
  * @returns {Promise<Buffer>} - Buffer da mídia processada
  */
 async function processMediaToSquare(mediaBuffer, mimeType, cropType) {
@@ -389,7 +404,7 @@ async function processMediaToSquare(mediaBuffer, mimeType, cropType) {
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
  * @param {Object} group - Dados do grupo
- * @param {string} cropType - Tipo de corte: 'center', 'top', ou 'bottom'
+ * @param {string} cropType - Tipo de corte: 'center', 'top', 'bottom' ou 'stretch'
  * @returns {Promise<ReturnMessage>} - ReturnMessage com o sticker
  */
 async function squareStickerCommand(bot, message, args, group, cropType) {
@@ -542,7 +557,6 @@ const commands = [
     group: "sstickerqua",
     needsMedia: true,
     reactions: {
-      trigger: "🖼",
       before: "⏳",
       after: "🖼",
       error: "❌"
@@ -558,7 +572,6 @@ const commands = [
     group: "sstickerqua",
     needsMedia: true,
     reactions: {
-      trigger: "🖼",
       before: "⏳",
       after: "🖼",
       error: "❌"
@@ -574,7 +587,6 @@ const commands = [
     group: "sstickerqua",
     needsMedia: true,
     reactions: {
-      trigger: "🖼",
       before: "⏳",
       after: "🖼",
       error: "❌"
@@ -590,7 +602,6 @@ const commands = [
     group: "sstickerqua",
     needsMedia: true,
     reactions: {
-      trigger: "🖼",
       before: "⏳",
       after: "🖼",
       error: "❌"
@@ -607,7 +618,6 @@ const commands = [
     group: "sstickerqua",
     needsMedia: true,
     reactions: {
-      trigger: "🖼",
       before: "⏳",
       after: "🖼",
       error: "❌"
@@ -623,13 +633,43 @@ const commands = [
     group: "sstickerqua",
     needsMedia: true,
     reactions: {
-      trigger: "🖼",
       before: "⏳",
       after: "🖼",
       error: "❌"
     },
     method: async (bot, message, args, group) => {
       return await squareStickerCommand(bot, message, args, group, 'bottom');
+    }
+  }),
+  // Comando para sticker esticado (sqe)
+  new Command({
+    name: 'sqe',
+    description: 'Sticker quadrado esticado, sem cortar a imagem',
+    category: "midia",
+    group: "sstickerqua",
+    needsMedia: true,
+    reactions: {
+      before: "⏳",
+      after: "🖼",
+      error: "❌"
+    },
+    method: async (bot, message, args, group) => {
+      return await squareStickerCommand(bot, message, args, group, 'stretch');
+    }
+  }),
+  new Command({
+    name: 'stickerqe',
+    description: 'Sticker quadrado esticado, sem cortar a imagem',
+    category: "midia",
+    group: "sstickerqua",
+    needsMedia: true,
+    reactions: {
+      before: "⏳",
+      after: "🖼",
+      error: "❌"
+    },
+    method: async (bot, message, args, group) => {
+      return await squareStickerCommand(bot, message, args, group, 'stretch');
     }
   })
 ];
