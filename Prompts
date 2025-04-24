@@ -1652,3 +1652,36 @@ As duas estão disponíveis para uso no código:
 - !sq/stickerq: Faz o sticker ficar quadrado, centralizando o corte (descarta o top e bottom)
 - !sqc/stickerqc: Faz o sticker ficar quadrado, descaratando o bottom
 - !sqb/stickerqb: Faz o sticker ficar quadrado, descaratando o top
+
+
+---
+
+# Novos comandos
+Para manter o padrão do projeto, enviei o Giphy e o Anime como exemplos.
+Faça os requests das APIs abaixo usado axios no mesmo padrão.
+Placas de carros brasileiras
+
+## Comum para os comandos
+Crie um validador de placas brasileiras:
+LLL####
+LLL#l## -> onde l é uma letra de A até J (0 = A, 1 = B, ..)
+O argumento pode vir em vários formatos, normalize ele para ficar sem espaços e tudo minusculo.
+Ex.:
+abc 1234 -> abc1234
+a bc1234 -> abc1234
+abc-1234 -> abc1234
+
+Alguns casos a pessoa pode colocar a letra 'o' no lugar dos numeros, considere '0'.
+
+
+
+## !sipt, !instasipt
+Usa como exemplo o arquivo sipt.js para criar as chamadas do comando
+!sipt [placa]
+O sipt deve fazer parte do PlacasCommands.js e o configs.js não deve mais existir. As configurações devem ser colcoadas todas no .env
+
+
+## !placa [placa]
+Use como exemplo o arquivo placas.js enviado, que já tem uma função que chama corretamente a API.
+A chave da API deve ser buscada no .env.
+Use o mesmo validador de placas antes de fazer a chamada da API.

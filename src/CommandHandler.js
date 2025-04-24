@@ -589,26 +589,7 @@ class CommandHandler {
   async executeCustomCommand(bot, message, command, args, group) {
     try {
       this.logger.info(`Executando comando personalizado: ${command.startsWith}`);
-      
-      // Verifica se o comando está em cooldown
-      if (command.cooldown && command.lastUsed) {
-        const now = Date.now();
-        const timeSinceLastUse = now - command.lastUsed;
-        if (timeSinceLastUse < command.cooldown * 1000) {
-          const secondsLeft = Math.ceil((command.cooldown * 1000 - timeSinceLastUse) / 1000);
-          this.logger.debug(`Comando ${command.startsWith} está em cooldown por mais ${secondsLeft} segundos`);
           
-          const returnMessage = new ReturnMessage({
-            chatId: message.group,
-            content: `Comando está em cooldown. Tente novamente em ${secondsLeft} segundos.`
-          });
-          await bot.sendReturnMessages(returnMessage);
-          return;
-        }
-      }
-      
-      // Verificar período de tempo e expiração como no código original...
-      
       // Obtém as respostas
       const responses = command.responses || [];
       if (responses.length === 0) {

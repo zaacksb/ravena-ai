@@ -249,6 +249,7 @@ async function sendCommandList(bot, message, args, group) {
     let menuText = header + '\n\n';
     
     // 1. Comandos Personalizados
+    /*
     if (customCommands.length > 0) {
       menuText += `📋 *Exclusivos do grupo _${group.name}_:*\n`;
       for (const cmd of customCommands) {
@@ -260,6 +261,7 @@ async function sendCommandList(bot, message, args, group) {
       }
       menuText += '\n';
     }
+    */
     
     // 2. Comandos Fixos por categoria
     if(!group){

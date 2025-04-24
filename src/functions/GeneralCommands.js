@@ -24,12 +24,31 @@ async function pingCommand(bot, message, args, group) {
   });
 }
 
+async function grupaoCommand(bot, message, args, group){
+  const grupao = await client.getChatById(process.env.GRUPO_INTERACAO);
+
+  try{
+    await grupao.addParticipants([message.author]);
+  } catch(e){
+    logger.error(`[grupaoCommand] Não consegui add '${message.author}' no grupão (${bot.grupoInteracao})`);
+  }
+
+  return new ReturnMessage({
+    chatId: chatId,
+    content: `Ok! Tentei de adicionar no grupão da ravena. Se não tiver sido adicionado, entre pelo link: ${process.env.LINK_GRUPO_INTERACAO}`
+  });
+
+}
+
 async function diferencasCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   return new ReturnMessage({
     chatId: chatId,
-    content: `Bem vindo à nova *ravena*! Aqui vai as principais diferenças pra antiga:
+    content: `Bem vindo à nova *ravena*!
+Se tiver dúvidas, entre no *!grupao*
+
+Aqui vai as principais diferenças pra antiga:
 
 *No dia a dia:*
 - Os comandos de gerencia foram trocados por !g-xxx, envie !cmd-g para conhecê-los!
@@ -288,12 +307,21 @@ const commands = [
   }), 
 
 
-
   new Command({
     name: 'diferenças',
     description: 'Exibe as diferenças para a ravena antiga',
     category: "geral",
     method: diferencasCommand
+  }),
+  
+  new Command({
+    name: 'grupao',
+    description: 'Grupo de interação',
+    category: "geral",
+    reactions: {
+      before: "👨‍👨‍👧‍👦"
+    },
+    method: grupaoCommand
   })
 ];
 
