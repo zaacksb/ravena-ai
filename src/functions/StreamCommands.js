@@ -363,7 +363,7 @@ async function showLiveInfo(bot, message, args, group) {
       // Gera uma mensagem para cada canal configurado
       const returnMessages = [];
       for (const channelName of twitchChannels) {
-        const streamInfo = await getStreamInformation(bot, 'twitch', channelName);
+        const streamInfo = await getStreamInformation(bot, chatId, 'twitch', channelName);
         returnMessages.push(streamInfo);
       }
       
@@ -372,7 +372,7 @@ async function showLiveInfo(bot, message, args, group) {
     
     // Se foi fornecido um nome de canal, busca informações apenas dele
     const channelName = args[0].toLowerCase();
-    return await getStreamInformation(bot, 'twitch', channelName);
+    return await getStreamInformation(bot, chatId, 'twitch', channelName);
   } catch (error) {
     logger.error('Erro ao exibir informações de stream Twitch:', error);
     
@@ -417,7 +417,7 @@ async function showLiveKick(bot, message, args, group) {
       // Gera uma mensagem para cada canal configurado
       const returnMessages = [];
       for (const channelName of kickChannels) {
-        const streamInfo = await getStreamInformation(bot, 'kick', channelName);
+        const streamInfo = await getStreamInformation(bot, chatId, 'kick', channelName);
         returnMessages.push(streamInfo);
       }
       
@@ -426,7 +426,7 @@ async function showLiveKick(bot, message, args, group) {
     
     // Se foi fornecido um nome de canal, busca informações apenas dele
     const channelName = args[0].toLowerCase();
-    return await getStreamInformation(bot, 'kick', channelName);
+    return await getStreamInformation(bot, chatId, 'kick', channelName);
   } catch (error) {
     logger.error('Erro ao exibir informações de stream Kick:', error);
     
@@ -444,7 +444,7 @@ async function showLiveKick(bot, message, args, group) {
  * @param {string} channelName - Nome do canal
  * @returns {Promise<ReturnMessage>} - ReturnMessage com informações da stream
  */
-async function getStreamInformation(bot, platform, channelName) {
+async function getStreamInformation(bot, chatId, platform, channelName) {
   try {
     const streamStatus = bot.streamMonitor.getStreamStatus();
     const channelKey = `${platform}:${channelName.toLowerCase()}`;
@@ -453,7 +453,7 @@ async function getStreamInformation(bot, platform, channelName) {
     // Verifica se o canal está sendo monitorado
     if (!status) {
       return new ReturnMessage({
-        chatId: bot.client.info.wid._serialized, // Valor temporário, será substituído
+        chatId: chatId, // Valor temporário, será substituído
         content: `O canal ${channelName} (${platform}) não está sendo monitorado.`
       });
     }
@@ -495,7 +495,7 @@ async function getStreamInformation(bot, platform, channelName) {
           
           // Retorna uma mensagem com mídia
           return new ReturnMessage({
-            chatId: bot.client.info.wid._serialized, // Valor temporário, será substituído
+            chatId: chatId, // Valor temporário, será substituído
             content: media,
             options: {
               caption: content
@@ -505,14 +505,14 @@ async function getStreamInformation(bot, platform, channelName) {
           logger.error(`Erro ao obter thumbnail para ${channelName}:`, mediaError);
           // Fallback para mensagem de texto
           return new ReturnMessage({
-            chatId: bot.client.info.wid._serialized, // Valor temporário, será substituído
+            chatId: chatId, // Valor temporário, será substituído
             content: content
           });
         }
       } else {
         // Sem thumbnail, envia apenas a mensagem de texto
         return new ReturnMessage({
-          chatId: bot.client.info.wid._serialized, // Valor temporário, será substituído
+          chatId: chatId, // Valor temporário, será substituído
           content: content
         });
       }
@@ -525,7 +525,7 @@ async function getStreamInformation(bot, platform, channelName) {
       }
       
       return new ReturnMessage({
-        chatId: bot.client.info.wid._serialized, // Valor temporário, será substituído
+        chatId: chatId, // Valor temporário, será substituído
         content: `📴 O canal ${channelName} (${platform}) está offline no momento.${lastVideoInfo}`
       });
     }
@@ -533,7 +533,7 @@ async function getStreamInformation(bot, platform, channelName) {
     logger.error(`Erro ao obter informações para ${platform}/${channelName}:`, error);
     
     return new ReturnMessage({
-      chatId: bot.client.info.wid._serialized, // Valor temporário, será substituído
+      chatId: bchatId, // Valor temporário, será substituído
       content: `Erro ao obter informações para ${channelName} (${platform}). Por favor, tente novamente.`
     });
   }
