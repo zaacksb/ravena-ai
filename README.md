@@ -314,10 +314,14 @@ Para adicionar um novo comando fixo, crie um arquivo `.js` na pasta `src/functio
 
 ```javascript
 const Logger = require('../utils/Logger');
+const Command = require('../models/Command');
+const ReturnMessage = require('../models/ReturnMessage');
+
 const logger = new Logger('meus-comandos');
 
+
 const commands = [
-  {
+  new Command({
     name: 'exemplo',
     description: 'Um comando de exemplo',
     reactions: {
@@ -332,9 +336,12 @@ const commands = [
       const nome = args.length > 0 ? args[0] : "mundo";
       
       // Envia a resposta
-      await bot.sendMessage(chatId, `Olá, ${nome}!`);
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `Olá, ${nome}!`
+      });
     }
-  },
+  }),
   
   // Adicione mais comandos aqui
 ];
