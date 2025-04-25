@@ -94,7 +94,7 @@
 - [ ] Bot tentando notificar sem estar nos grupos
 - [x] Algumas reações do AFTER não vão (ex.: !s)
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
-- [ ] !live tá enviando pra ele mesmo as msgs
+- [x] !live tá enviando pra ele mesmo as msgs
 
 ## ✅ TODO-Extras
 - [ ] Gerar README.md atualizado

@@ -666,6 +666,294 @@ class StreamMonitor extends EventEmitter {
     
     this._saveDatabase();
   }
+
+  /**
+   * Busca o status de streams no Twitch sem necessidade de monitoramento prévio
+   * @param {string|Array<string>} channels - Nome do canal ou array de nomes
+   * @returns {Promise<Object|Array<Object>>} - Status da stream ou array de status
+   */
+  async getTwitchLiveStatus(channels) {
+    try {
+      // Normaliza para array
+      const channelArray = Array.isArray(channels) ? channels : [channels];
+      
+      // Se não houver canais, retorna array vazio
+      if (channelArray.length === 0) {
+        return Array.isArray(channels) ? [] : null;
+      }
+      
+      // Obtém um token válido
+      if (!this.twitchToken) {
+        const token = await this._refreshTwitchToken();
+        if (!token) {
+          throw new Error('Não foi possível obter token do Twitch');
+        }
+      }
+      
+      // Divide os canais em lotes de 100 (limite da API do Twitch)
+      const results = [];
+      const batches = [];
+      for (let i = 0; i < channelArray.length; i += 100) {
+        batches.push(channelArray.slice(i, i + 100));
+      }
+      
+      for (const batch of batches) {
+        try {
+          // Primeiro obtém os IDs dos usuários a partir dos nomes de login
+          const userResponse = await axios.get(
+            `https://api.twitch.tv/helix/users`,
+            {
+              headers: {
+                'Client-ID': this.twitchClientId,
+                'Authorization': `Bearer ${this.twitchToken}`
+              },
+              params: {
+                login: batch.map(c => c.toLowerCase())
+              }
+            }
+          );
+          
+          // Se não encontrar usuários, continua para o próximo lote
+          if (!userResponse.data.data || userResponse.data.data.length === 0) {
+            continue;
+          }
+          
+          const userIds = userResponse.data.data.map(user => user.id);
+          
+          // Obtém o status das streams para esses usuários
+          const streamResponse = await axios.get(
+            `https://api.twitch.tv/helix/streams`,
+            {
+              headers: {
+                'Client-ID': this.twitchClientId,
+                'Authorization': `Bearer ${this.twitchToken}`
+              },
+              params: {
+                user_id: userIds
+              }
+            }
+          );
+          
+          // Processa os resultados
+          const liveStreams = streamResponse.data.data || [];
+          const liveStreamUserIds = liveStreams.map(stream => stream.user_id);
+          
+          // Cria objetos de status para cada canal
+          for (const user of userResponse.data.data) {
+            const channelName = user.login;
+            const isLiveNow = liveStreamUserIds.includes(user.id);
+            const liveStream = liveStreams.find(stream => stream.user_id === user.id);
+            
+            // Cria o objeto de status
+            const status = {
+              platform: 'twitch',
+              channelName: channelName,
+              displayName: user.display_name,
+              isLive: isLiveNow,
+              lastChecked: new Date().toISOString()
+            };
+            
+            // Adiciona detalhes da stream se estiver online
+            if (isLiveNow && liveStream) {
+              status.title = liveStream.title;
+              status.game = liveStream.game_name;
+              status.thumbnail = liveStream.thumbnail_url
+                .replace('{width}', '640')
+                .replace('{height}', '360');
+              status.viewerCount = liveStream.viewer_count;
+              status.startedAt = liveStream.started_at;
+            }
+            
+            results.push(status);
+          }
+        } catch (error) {
+          // Se não autorizado, tenta atualizar o token
+          if (error.response && error.response.status === 401) {
+            await this._refreshTwitchToken();
+            // Não repete a tentativa aqui para evitar loops infinitos
+          }
+          
+          this.logger.error(`Erro ao obter status do Twitch para ${batch.join(', ')}:`, error.message);
+        }
+      }
+      
+      // Retorna na mesma forma que a entrada (único objeto ou array)
+      return Array.isArray(channels) ? results : (results[0] || null);
+    } catch (error) {
+      this.logger.error('Erro ao obter status do Twitch:', error.message);
+      return Array.isArray(channels) ? [] : null;
+    }
+  }
+
+  /**
+   * Busca o status de streams no Kick sem necessidade de monitoramento prévio
+   * @param {string|Array<string>} channels - Nome do canal ou array de nomes
+   * @returns {Promise<Object|Array<Object>>} - Status da stream ou array de status
+   */
+  async getKickLiveStatus(channels) {
+    try {
+      // Normaliza para array
+      const channelArray = Array.isArray(channels) ? channels : [channels];
+      
+      // Se não houver canais, retorna array vazio
+      if (channelArray.length === 0) {
+        return Array.isArray(channels) ? [] : null;
+      }
+      
+      // Busca o status de cada canal
+      const results = [];
+      
+      for (const channelName of channelArray) {
+        try {
+          // Kick não tem API oficial, então raspamos a página do canal
+          const response = await axios.get(`https://kick.com/api/v1/channels/${channelName}`);
+          const channelData = response.data;
+          const isLiveNow = channelData.livestream !== null;
+          
+          // Cria o objeto de status
+          const status = {
+            platform: 'kick',
+            channelName: channelName,
+            displayName: channelData.user?.username || channelName,
+            isLive: isLiveNow,
+            lastChecked: new Date().toISOString()
+          };
+          
+          // Adiciona detalhes da stream se estiver online
+          if (isLiveNow && channelData.livestream) {
+            status.title = channelData.livestream.session_title;
+            status.game = channelData.livestream.categories.length > 0 
+                        ? channelData.livestream.categories[0].name 
+                        : 'Desconhecido';
+            status.thumbnail = channelData.livestream.thumbnail?.url || 
+                              channelData.user?.profile_pic || '';
+            status.viewerCount = channelData.livestream.viewer_count;
+            status.startedAt = channelData.livestream.created_at;
+          }
+          
+          results.push(status);
+        } catch (error) {
+          this.logger.error(`Erro ao obter status do Kick para ${channelName}:`, error.message);
+          
+          // Adiciona canal como não encontrado ou offline
+          results.push({
+            platform: 'kick',
+            channelName: channelName,
+            isLive: false,
+            error: error.message,
+            lastChecked: new Date().toISOString()
+          });
+        }
+      }
+      
+      // Retorna na mesma forma que a entrada (único objeto ou array)
+      return Array.isArray(channels) ? results : (results[0] || null);
+    } catch (error) {
+      this.logger.error('Erro ao obter status do Kick:', error.message);
+      return Array.isArray(channels) ? [] : null;
+    }
+  }
+
+  /**
+   * Busca estatísticas de streams populares em múltiplas plataformas
+   * @param {Object} options - Opções de busca
+   * @param {number} options.limit - Número máximo de resultados por plataforma
+   * @param {boolean} options.includeTwitch - Se deve incluir streams do Twitch
+   * @param {boolean} options.includeKick - Se deve incluir streams do Kick
+   * @returns {Promise<Object>} - Estatísticas de streams
+   */
+  async getTopStreams(options = {}) {
+    const defaults = {
+      limit: 5,
+      includeTwitch: true,
+      includeKick: true
+    };
+    
+    const config = { ...defaults, ...options };
+    const results = {
+      twitch: [],
+      kick: []
+    };
+    
+    try {
+      // Busca streams populares do Twitch
+      if (config.includeTwitch) {
+        try {
+          // Garante que temos um token válido
+          if (!this.twitchToken) {
+            const token = await this._refreshTwitchToken();
+            if (!token) {
+              throw new Error('Não foi possível obter token do Twitch');
+            }
+          }
+          
+          // Busca os streams mais populares
+          const response = await axios.get(
+            `https://api.twitch.tv/helix/streams`,
+            {
+              headers: {
+                'Client-ID': this.twitchClientId,
+                'Authorization': `Bearer ${this.twitchToken}`
+              },
+              params: {
+                first: config.limit
+              }
+            }
+          );
+          
+          if (response.data && response.data.data) {
+            results.twitch = response.data.data.map(stream => ({
+              platform: 'twitch',
+              channelName: stream.user_name,
+              title: stream.title,
+              game: stream.game_name,
+              viewerCount: stream.viewer_count,
+              startedAt: stream.started_at,
+              thumbnail: stream.thumbnail_url
+                .replace('{width}', '640')
+                .replace('{height}', '360')
+            }));
+          }
+        } catch (error) {
+          this.logger.error('Erro ao obter streams populares do Twitch:', error.message);
+        }
+      }
+      
+      // Busca streams populares do Kick
+      if (config.includeKick) {
+        try {
+          // Kick não tem API oficial, mas podemos tentar acessar a página inicial
+          const response = await axios.get('https://kick.com/api/v1/featured-livestreams', {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+          });
+          
+          if (response.data && response.data.data) {
+            results.kick = response.data.data
+              .slice(0, config.limit)
+              .map(stream => ({
+                platform: 'kick',
+                channelName: stream.slug,
+                displayName: stream.user?.username || stream.slug,
+                title: stream.session_title,
+                game: stream.categories.length > 0 ? stream.categories[0].name : 'Desconhecido',
+                viewerCount: stream.viewer_count,
+                startedAt: stream.created_at,
+                thumbnail: stream.thumbnail?.url || stream.user?.profile_pic || ''
+              }));
+          }
+        } catch (error) {
+          this.logger.error('Erro ao obter streams populares do Kick:', error.message);
+        }
+      }
+      
+      return results;
+    } catch (error) {
+      this.logger.error('Erro ao obter streams populares:', error.message);
+      return results;
+    }
+  }
 }
 
 module.exports = StreamMonitor;

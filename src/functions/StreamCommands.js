@@ -356,7 +356,7 @@ async function showLiveInfo(bot, message, args, group) {
       if (twitchChannels.length === 0) {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Nenhum canal Twitch configurado neste grupo. Use !g-twitch-canal [nomeCanal] para configurar.'
+          content: 'Nenhum canal Twitch configurado neste grupo. Use !g-twitch-canal [nomeCanal] para configurar, ou !live [nomeCanal] para verificar um canal específico.'
         });
       }
       
@@ -374,7 +374,7 @@ async function showLiveInfo(bot, message, args, group) {
     const channelName = args[0].toLowerCase();
     return await getStreamInformation(bot, chatId, 'twitch', channelName);
   } catch (error) {
-    logger.error('Erro ao exibir informações de stream Twitch:', error);
+    console.error('Erro ao exibir informações de stream Twitch:', error);
     
     return new ReturnMessage({
       chatId: message.group || message.author,
@@ -410,7 +410,7 @@ async function showLiveKick(bot, message, args, group) {
       if (kickChannels.length === 0) {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Nenhum canal Kick configurado neste grupo. Use !g-kick-canal [nomeCanal] para configurar.'
+          content: 'Nenhum canal Kick configurado neste grupo. Use !g-kick-canal [nomeCanal] para configurar, ou !live-kick [nomeCanal] para verificar um canal específico.'
         });
       }
       
@@ -428,7 +428,7 @@ async function showLiveKick(bot, message, args, group) {
     const channelName = args[0].toLowerCase();
     return await getStreamInformation(bot, chatId, 'kick', channelName);
   } catch (error) {
-    logger.error('Erro ao exibir informações de stream Kick:', error);
+    console.error('Erro ao exibir informações de stream Kick:', error);
     
     return new ReturnMessage({
       chatId: message.group || message.author,
@@ -440,21 +440,40 @@ async function showLiveKick(bot, message, args, group) {
 /**
  * Função auxiliar para obter informações detalhadas de uma stream
  * @param {WhatsAppBot} bot - Instância do bot
+ * @param {string} chatId - ID do chat
  * @param {string} platform - Plataforma (twitch, kick, youtube)
  * @param {string} channelName - Nome do canal
  * @returns {Promise<ReturnMessage>} - ReturnMessage com informações da stream
  */
 async function getStreamInformation(bot, chatId, platform, channelName) {
   try {
-    const streamStatus = bot.streamMonitor.getStreamStatus();
-    const channelKey = `${platform}:${channelName.toLowerCase()}`;
-    const status = streamStatus[channelKey];
+    let status = null;
     
-    // Verifica se o canal está sendo monitorado
+    // Usa as novas funções para buscar status sem depender do monitoramento
+    if (platform === 'twitch') {
+      status = await bot.streamMonitor.getTwitchLiveStatus(channelName);
+    } else if (platform === 'kick') {
+      status = await bot.streamMonitor.getKickLiveStatus(channelName);
+    } else if (platform === 'youtube') {
+      // Para YouTube mantemos o comportamento original por enquanto
+      const streamStatus = bot.streamMonitor.getStreamStatus();
+      const channelKey = `${platform}:${channelName.toLowerCase()}`;
+      status = streamStatus[channelKey];
+      
+      // Se não estiver monitorando, retorna mensagem informativa
+      if (!status) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `Para obter informações de canais do YouTube, adicione-o primeiro com o comando !g-youtube-canal ${channelName}`
+        });
+      }
+    }
+    
+    // Se não conseguiu obter o status (para qualquer plataforma)
     if (!status) {
       return new ReturnMessage({
-        chatId: chatId, // Valor temporário, será substituído
-        content: `O canal ${channelName} (${platform}) não está sendo monitorado.`
+        chatId: chatId,
+        content: `Não foi possível obter informações sobre o canal ${channelName} (${platform}). Verifique se o nome está correto.`
       });
     }
     
@@ -474,7 +493,7 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
       }
       
       // Prepara a mensagem textual
-      const content = `🔴 *LIVE: ${channelName}* (${platform})\n\n` +
+      const content = `🔴 *LIVE: ${status.displayName || channelName}* (${platform})\n\n` +
                      `📝 *Título:* ${status.title || 'Sem título'}\n` +
                      `🎮 *Jogo:* ${status.game || status.category || 'Não informado'}\n` +
                      `👁️ *Viewers:* ${status.viewerCount || 'Não informado'}\n` +
@@ -495,24 +514,24 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
           
           // Retorna uma mensagem com mídia
           return new ReturnMessage({
-            chatId: chatId, // Valor temporário, será substituído
+            chatId: chatId,
             content: media,
             options: {
               caption: content
             }
           });
         } catch (mediaError) {
-          logger.error(`Erro ao obter thumbnail para ${channelName}:`, mediaError);
+          console.error(`Erro ao obter thumbnail para ${channelName}:`, mediaError);
           // Fallback para mensagem de texto
           return new ReturnMessage({
-            chatId: chatId, // Valor temporário, será substituído
+            chatId: chatId,
             content: content
           });
         }
       } else {
         // Sem thumbnail, envia apenas a mensagem de texto
         return new ReturnMessage({
-          chatId: chatId, // Valor temporário, será substituído
+          chatId: chatId,
           content: content
         });
       }
@@ -525,20 +544,108 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
       }
       
       return new ReturnMessage({
-        chatId: chatId, // Valor temporário, será substituído
-        content: `📴 O canal ${channelName} (${platform}) está offline no momento.${lastVideoInfo}`
+        chatId: chatId,
+        content: `📴 O canal ${status.displayName || channelName} (${platform}) está offline no momento.${lastVideoInfo}`
       });
     }
   } catch (error) {
-    logger.error(`Erro ao obter informações para ${platform}/${channelName}:`, error);
+    console.error(`Erro ao obter informações para ${platform}/${channelName}:`, error);
     
     return new ReturnMessage({
-      chatId: bchatId, // Valor temporário, será substituído
+      chatId: chatId,
       content: `Erro ao obter informações para ${channelName} (${platform}). Por favor, tente novamente.`
     });
   }
 }
 
+/**
+ * Exibe streams populares do Twitch e Kick
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com streams populares
+ */
+async function showPopularStreams(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    
+    // Verifica se o StreamMonitor está inicializado
+    if (!bot.streamMonitor) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'O sistema de monitoramento de streams não está inicializado.'
+      });
+    }
+    
+    // Configura as opções de busca
+    const options = {
+      limit: 5,  // Número padrão de streams por plataforma
+      includeTwitch: true,
+      includeKick: true
+    };
+    
+    // Processa argumentos para personalizar a busca
+    if (args.length > 0) {
+      if (args.includes('twitch')) {
+        options.includeKick = false;
+      } else if (args.includes('kick')) {
+        options.includeTwitch = false;
+      }
+      
+      // Verifica se há um número para limitar os resultados
+      const limitArg = args.find(arg => !isNaN(parseInt(arg)));
+      if (limitArg) {
+        const limit = parseInt(limitArg);
+        if (limit > 0 && limit <= 10) {
+          options.limit = limit;
+        }
+      }
+    }
+    
+    // Busca as streams populares
+    const topStreams = await bot.streamMonitor.getTopStreams(options);
+    
+    let response = `🔥 *Streams Populares Agora* 🔥\n\n`;
+    
+    // Adiciona streams populares da Twitch
+    if (options.includeTwitch && topStreams.twitch.length > 0) {
+      response += `💜 *TWITCH TOP ${topStreams.twitch.length}*\n`;
+      for (const stream of topStreams.twitch) {
+        response += `• *${stream.channelName}*: ${stream.game} (${stream.viewerCount.toLocaleString()} viewers)\n`;
+        response += `  ${stream.title.substring(0, 50)}${stream.title.length > 50 ? '...' : ''}\n\n`;
+      }
+    } else if (options.includeTwitch) {
+      response += `💜 *TWITCH*: Não foi possível obter streams populares\n\n`;
+    }
+    
+    // Adiciona streams populares do Kick
+    if (options.includeKick && topStreams.kick.length > 0) {
+      response += `💚 *KICK TOP ${topStreams.kick.length}*\n`;
+      for (const stream of topStreams.kick) {
+        response += `• *${stream.displayName || stream.channelName}*: ${stream.game} (${stream.viewerCount.toLocaleString()} viewers)\n`;
+        response += `  ${stream.title.substring(0, 50)}${stream.title.length > 50 ? '...' : ''}\n\n`;
+      }
+    } else if (options.includeKick) {
+      response += `💚 *KICK*: Não foi possível obter streams populares\n\n`;
+    }
+    
+    // Adiciona uma nota de uso
+    response += `\n📝 *Uso*: !populares [twitch|kick] [1-10]`;
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: response
+    });
+  } catch (error) {
+    console.error('Erro ao exibir streams populares:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao obter streams populares. Por favor, tente novamente.'
+    });
+  }
+}
 
 
 // Lista de comandos utilizando a classe Command
@@ -596,6 +703,18 @@ const commands = [
       after: "💚"
     },
     method: showLiveKick
+  }),
+
+  new Command({
+    name: 'topstreams',
+    aliases: ['popular', 'top-streams', 'top'],
+    description: 'Mostra as streams mais populares no momento',
+    category: 'streams',
+    reactions: {
+      before: "⏳",
+      after: "🔥"
+    },
+    method: showPopularStreams
   })
 ];
 

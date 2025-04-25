@@ -1747,3 +1747,19 @@ Envie apenas as funções nececessárias e o que adicionar no commandMap.
 !g-cmd-setDias seg sex sab
 
 Se enviar sem argumentos, remove a definição (false), permitindo em qualquer hora/dia
+
+----
+
+# StreamMonitor: nova função
+Crie uma funções similares a _pollTwitchChannels e _pollKickChannels, mas que só buscam os canais especificados no arugmento
+Este canal não precisa estar sendo monitorado previamente.
+A função deve apenas buscar na API e ao invés de chaemar um emit.streamOnline, retornar o objeto que seria do evento (um array caso seja mais de 1 stream, um para cada stream)
+
+getTwitchLiveStatus(channels) e getKickLiveStatus(channels)
+
+Channles pode ser string ou array de string
+Se for string, busca só de uma e retorna só 1 objeto de status
+Se for array, busca de todas e retornar um array de objetos de status
+
+# StreamCommands.js
+Edite a função getStreamInformation para utilizar o getTwitchLiveStatus removendo o retorno "`O canal ${channelName} (${platform}) não está sendo monitorado.`", afinal, agora a busca não depende dos canais monitorados.
