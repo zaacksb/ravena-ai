@@ -1,4 +1,4 @@
-# ravena-ai
+# RavenaBot AI
 
 ![Ravenabot AI - img by chatgpt](ravenabanner.png)
 
@@ -9,6 +9,32 @@
 - Por padrão, agora precisam do prefixo para serem acionados. É possível mudar usando !g-setCustomPrefix. A ravena antiga não tinha prefixo
 - Todos números rodam no mesmo processo e compartilham a base de dados
 
+## 🔮 Visão Geral
+
+RavenaBot é um bot avançado para WhatsApp usado em grupos. Oferece:
+
+- **Sistema modular de comandos** - comandos fixos, personalizáveis, e de gerenciamento
+- **Multiplas instâncias** - múltiplos números de WhatsApp podem ser executados no mesmo processo e compartilham a base de dados
+- **Integração com streaming** - monitoramento de Twitch, Kick e YouTube com notificações customizáveis
+- **Interação com LLM** - suporte a ChatGPT, Claude e outros modelos de linguagem
+- **Detecção de NSFW** - filtragem de conteúdo impróprio
+- **Sistema de convites** - gerenciamento avançado de convites de grupo
+- **Personalização profunda** - comandos, filtros, reações e muito mais
+
+Os usuários podem usar os comandos existentes ou criar seus próprios comandos personalizados para estender as funcionalidades do WhatsApp.
+
+## 🚀 Recursos Principais
+
+- **Comandos Fixos**: Comandos pré-definidos com funcionalidades prontas
+- **Comandos Personalizáveis**: Crie comandos específicos para seu grupo
+- **Monitoramento de Streams**: Receba notificações quando streamers ficarem online/offline
+- **Integração com LLM**: Responda menções usando modelos de linguagem
+- **Sistema de Filtros**: Filtre mensagens por palavras, links ou conteúdo NSFW
+- **Manipulação de Mídia**: Stickers, conversões de arquivos e mais
+- **Gerenciamento de Grupos**: Ferramentas para administradores
+- **Sistema de Convites**: Controle quem pode adicionar o bot a grupos
+- **Interações Automáticas**: O bot pode interagir aleatoriamente com mensagens
+- **Notificações Personalizáveis**: Customize mensagens de boas-vindas e despedida
 
 ## ✅ TODO-Core
 
@@ -114,38 +140,6 @@
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
 
-## 📚 Documentação dos Comandos
-
-Esta seção contém documentação detalhada de cada categoria de comandos disponíveis atualmente no bot, explicando sua implementação, uso e requisitos.
-
-- [Menu de Comandos](docs/Menu.md) - Exibição de comandos disponíveis
-- [Comandos Básicos](docs/PlaceholderCommands.md) - Conjunto de comandos essenciais e utilitários
-- [Stickers](docs/Stickers.md) - Criação de stickers a partir de imagens
-- [Roleta Russa](docs/RoletaRussaCommands.md) - Mini-jogo de azar com sistema de timeout
-- [Previsão do Tempo](docs/Weather.md) - Comandos para obter informações meteorológicas
-- [Download de YouTube](docs/YoutubeDownloader.md) - Ferramentas para baixar vídeos e áudios do YouTube
-- [Resumos de Conversas](docs/SummaryCommands.md) - Geração de resumos das conversas do grupo
-- [Gerenciamento de Arquivos](docs/FileManager.md) - Sistema para armazenamento e organização de arquivos
-- [Conversão de Arquivos](docs/FileConversions.md) - Comandos para converter entre diferentes formatos de mídia
-- [Comandos de Grupo](docs/GroupCommands.md) - Recursos específicos para gerenciamento de grupos
-- [Manipulação de Imagens](docs/ImageManipulation.md) - Ferramentas para modificar e transformar imagens
-- [Listas](docs/ListCommands.md) - Sistema para criar e gerenciar listas de membros
-- [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web
-- [Comandos de Voz](docs/SpeechCommands.md) - Conversão entre texto e fala
-- [Comandos RiotGames](docs/RiotGames.md) - Dados da API da Riot Games
-- [Monitoramento de Streams](docs/StreamCommands.md) - Comandos para gerenciar monitoramento de lives
-- [Sistema de Convites](docs/InviteSystem.md) - Gerenciamento de convites para grupos e administradores adicionais
-- [Comandos de Doação](docs/DonationCommands.md) - Comandos para visualizar informações de doação e doadores
-- [Lembretes](docs/LembretesCommands.md) - Sistema de lembretes agendados com suporte a mídia
-- [Stable Diffusion](docs/StableDiffusionCommands.md) - Geração de imagens com IA
-- [Giphy](docs/GiphyCommands.md) - Busca e envio de GIFs
-- [Anime](docs/AnimeCommands.md) - Informações sobre animes do MyAnimeList
-- [IMDB](docs/ImdbCommands.md) - Informações sobre filmes e séries
-- [Wikipedia](docs/WikipediaCommands.md) - Consulta de artigos da Wikipedia
-- [Dados para RPG](docs/DiceCommands.md) - Sistema de rolagem de dados
-
-Para saber mais sobre os comandos de gerenciamento de grupo, consulte a [documentação de Comandos de Gerenciamento](docs/Management.md).
-
 ## 🔧 Instalação
 
 ### Pré-requisitos
@@ -244,47 +238,9 @@ FFMPEG_PATH=C:/path/to/ffmpeg/bin/ffmpeg.exe
 CHROME_PATH=             # Caminho personalizado para o Chrome (opcional)
 ```
 
-## 🔄 Fluxo de Funcionamento
-
-```mermaid
-graph TD
-    A[Mensagem recebida] --> B{É um comando?}
-    B -->|Sim| C{Tipo de comando}
-    B -->|Não| D{Conteúdo filtrado?}
-    
-    C -->|Fixo| E[Executar comando fixo]
-    C -->|Personalizado| F[Executar comando personalizado]
-    C -->|Gerenciamento| G[Executar comando de gerenciamento]
-    
-    D -->|Sim| H[Filtrar/Deletar mensagem]
-    D -->|Não| I{É uma menção ao bot?}
-    
-    I -->|Sim| J[Processar com LLM]
-    I -->|Não| K{Auto-trigger ou voz?}
-    
-    K -->|Auto-trigger| L[Executar comando sem prefixo]
-    K -->|Voz| M[Converter áudio para texto]
-    K -->|Nenhum| N[Ignorar mensagem]
-    
-    E --> O[Retornar resultado]
-    F --> O
-    G --> O
-    J --> O
-    L --> O
-    M --> O
-    
-    style A fill:#d0e0ff,stroke:#333
-    style B fill:#ffe0b2,stroke:#333
-    style C fill:#ffe0b2,stroke:#333
-    style D fill:#ffe0b2,stroke:#333
-    style I fill:#ffe0b2,stroke:#333
-    style K fill:#ffe0b2,stroke:#333
-    style O fill:#d5f5e3,stroke:#333
-```
-
 ## 📋 Tipos de Comandos
 
-O bot suporta três tipos de comandos:
+O bot implementa três tipos de comandos:
 
 ### 1. Comandos Fixos
 
@@ -403,6 +359,11 @@ O bot pode monitorar canais do Twitch, Kick e YouTube e notificar os grupos quan
 
 Comandos similares existem para Kick (`!g-kick-...`) e YouTube (`!g-youtube-...`).
 
+## 📚 Documentação dos Comandos
+
+Esta seção contém documentação detalhada de cada categoria de comandos disponíveis atualmente no bot, explicando sua implementação, uso e requisitos.
+
+[Conteúdo a ser adicionado posteriormente]
 
 ## 📝 Licença
 

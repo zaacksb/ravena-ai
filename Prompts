@@ -1763,3 +1763,12 @@ Se for array, busca de todas e retornar um array de objetos de status
 
 # StreamCommands.js
 Edite a função getStreamInformation para utilizar o getTwitchLiveStatus removendo o retorno "`O canal ${channelName} (${platform}) não está sendo monitorado.`", afinal, agora a busca não depende dos canais monitorados.
+
+----
+
+Atualize o README.md com todos os novos detalhes do projeto.
+Ignore as	Todolists
+
+A parte "Documentação dos Comandos" por enquanto fica vazia, em um próximo prompt irei enviar os arquivos das functions para você analisar e fazer apenas esta seção. Sobre isso, me encaminho após o readm.me um prompt que eu possa te enviar e quais arquivos são relevantes aqui para que você possa fazer isso sem estoutrar o limite de arquivos importados.
+
+----
