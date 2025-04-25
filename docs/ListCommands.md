@@ -1,179 +1,166 @@
-# Sistema de Listas
+# Comandos de Listas
 
-O módulo `ListCommands.js` implementa um sistema completo para criação e gerenciamento de listas de membros dentro de grupos, com suporte a reações e múltiplas funcionalidades de administração.
+Este módulo implementa funcionalidades para criar e gerenciar listas dentro dos grupos, permitindo que os membros participem ou saiam facilmente através de comandos ou reações.
 
-## Implementação
+## Comandos
 
-Este módulo permite que usuários criem listas temáticas dentro de grupos (como times para jogos, participantes de eventos, etc.), onde os membros podem entrar ou sair facilmente através de comandos ou reações a mensagens.
+### !listas / !ll
 
-O sistema armazena as listas em arquivos JSON separados para cada grupo, mantendo os dados persistentes entre reinicializações do bot.
+Mostra as listas disponíveis no grupo.
 
-## Comandos Disponíveis
+**Descrição:** Exibe todas as listas criadas no grupo atual, com seus membros e informações.
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!listas` | Mostra as listas disponíveis no grupo | - |
-| `!ll` | Alias para comando `!listas` | - |
-| `!lc` | Cria uma nova lista | nome_da_lista [nome_lista2 ...] |
-| `!lct` | Cria uma nova lista com título | nome_da_lista Título da Lista |
-| `!ld` | Deleta uma lista | nome_da_lista [nome_lista2 ...] |
-| `!le` | Entra em uma lista | nome_da_lista |
-| `!ls` | Sai de uma lista | nome_da_lista |
-| `!lt` | Define título de uma lista | nome_da_lista Novo Título |
-| `!lr` | Remove um usuário de uma lista (admin only) | nome_da_lista número_telefone |
+**Uso:** `!listas` ou `!ll`
 
-## Exemplos de Uso
+**Detalhes:**
+- Mostra todas as listas com seus membros
+- Exibe números de reação para entrar ou sair facilmente
+- Mostra título personalizado de cada lista quando configurado
+- Funciona apenas em grupos
 
-### Comando !lc (Criar lista)
+### !lc
 
-**Entrada:**
-```
-!lc gamers
-```
+Cria uma nova lista simples.
 
-**Saída:**
-```
-Lista criada: gamers
-```
+**Descrição:** Cria uma ou mais listas com nomes simples.
 
-Seguido pela exibição de todas as listas disponíveis.
+**Uso:** `!lc [nome_lista1] [nome_lista2] ...`
 
-### Comando !lct (Criar lista com título)
+**Exemplos:**
+- `!lc jogadores` - Cria uma lista chamada "jogadores"
+- `!lc online ausentes` - Cria duas listas: "online" e "ausentes"
 
-**Entrada:**
-```
-!lct evento Participantes do Workshop de Sábado
-```
+**Detalhes:**
+- Pode criar múltiplas listas de uma vez
+- Os nomes das listas não devem conter espaços
+- Não sobrescreve listas existentes
+- Funciona apenas em grupos
 
-**Saída:**
-```
-Lista criada: evento (Participantes do Workshop de Sábado)
-```
+### !lct
 
-### Comando !listas ou !ll
+Cria uma nova lista com título personalizado.
 
-**Entrada:**
-```
-!listas
-```
+**Descrição:** Cria uma lista com um nome curto e um título mais descritivo.
 
-**Saída:**
-```
-Listas disponíveis
+**Uso:** `!lct [nome_lista] [título descritivo]`
 
-1️⃣ gamers (2 membros)
-Membros: João, Maria
+**Exemplos:**
+- `!lct jogadores Jogadores da Raid de Sexta`
+- `!lct evento Participantes do Evento de Aniversário`
 
-2️⃣ Participantes do Workshop de Sábado (0 membros)
+**Detalhes:**
+- O nome da lista é usado nos comandos
+- O título aparece na exibição da lista
+- O título pode conter espaços e ser mais descritivo
+- Funciona apenas em grupos
 
-Reaja com o emoji do número para entrar/sair de uma lista.
-Comandos: !le <lista> (entrar), !ls <lista> (sair)
-```
+### !ld
 
-### Comando !le (Entrar em lista)
+Deleta uma ou mais listas.
 
-**Entrada:**
-```
-!le evento
-```
+**Descrição:** Remove listas existentes do grupo.
 
-**Saída:**
-```
-Carlos entrou na lista "Participantes do Workshop de Sábado".
-```
+**Uso:** `!ld [nome_lista1] [nome_lista2] ...`
 
-### Comando !ls (Sair de lista)
+**Exemplos:**
+- `!ld jogadores` - Remove a lista "jogadores"
+- `!ld online ausentes` - Remove as listas "online" e "ausentes"
 
-**Entrada:**
-```
-!ls gamers
-```
+**Detalhes:**
+- Pode excluir múltiplas listas de uma vez
+- Pede confirmação antes de excluir
+- Funciona apenas em grupos
 
-**Saída:**
-```
-João saiu da lista "gamers".
-```
+### !le
 
-### Comando !lt (Definir título)
+Entra em uma lista.
 
-**Entrada:**
-```
-!lt gamers Jogadores de CS:GO
-```
+**Descrição:** Adiciona o usuário a uma lista existente.
 
-**Saída:**
-```
-Título da lista "gamers" atualizado para "Jogadores de CS:GO".
-```
+**Uso:** `!le [nome_lista]`
 
-### Comando !ld (Deletar lista)
+**Exemplos:**
+- `!le jogadores` - Adiciona o usuário à lista "jogadores"
 
-**Entrada:**
-```
-!ld evento
-```
+**Detalhes:**
+- Adiciona o usuário que enviou o comando
+- Usa o nome de exibição ou apelido do usuário
+- Alternativa ao uso de reações numéricas
+- Funciona apenas em grupos
 
-**Saída:**
-```
-Lista excluída: evento
-```
+### !ls
 
-### Comando !lr (Remover usuário - apenas para admins)
+Sai de uma lista.
 
-**Entrada:**
-```
-!lr gamers 5521987654321
-```
+**Descrição:** Remove o usuário de uma lista existente.
 
-**Saída:**
-```
-Maria foi removido da lista "Jogadores de CS:GO" por um administrador.
-```
+**Uso:** `!ls [nome_lista]`
 
-## Interação por Reações
+**Exemplos:**
+- `!ls jogadores` - Remove o usuário da lista "jogadores"
 
-Além dos comandos, o sistema permite entrar ou sair de listas através de reações com emojis de números (1️⃣, 2️⃣, 3️⃣, etc.) na mensagem da lista.
+**Detalhes:**
+- Remove o usuário que enviou o comando
+- Alternativa ao uso de reações numéricas
+- Funciona apenas em grupos
 
-Quando um usuário reage a um número correspondente a uma lista, o bot:
-1. Verifica se o usuário já está na lista
-2. Se estiver, remove o usuário da lista
-3. Se não estiver, adiciona o usuário à lista
-4. Envia uma mensagem confirmando a ação
+### !lt
 
-## Estrutura de Dados
+Define o título de uma lista existente.
 
-Cada lista armazena:
-- Nome (identificador único)
-- Título (nome de exibição, opcional)
-- Timestamp de criação
-- ID do criador
-- Lista de membros (com IDs, nomes e timestamps)
+**Descrição:** Altera o título descritivo de uma lista existente.
 
-As informações são armazenadas em arquivos JSON separados para cada grupo na pasta `data/lists/`.
+**Uso:** `!lt [nome_lista] [novo_título]`
 
-## Integração com Sistema de Apelidos
+**Exemplos:**
+- `!lt jogadores Jogadores do Torneio de Sábado`
 
-O módulo se integra com o sistema de apelidos dos grupos, exibindo apelidos em vez de nomes reais quando disponíveis. Isso é útil para grupos onde os usuários preferem usar nomes personalizados em vez de seus nomes do WhatsApp.
+**Detalhes:**
+- Mantém o nome curto da lista, apenas altera o título
+- Útil para atualizar descrições de listas
+- Funciona apenas em grupos
 
-## Funções Internas
+### !lr
 
-- `processListReaction`: Processa reações de emoji para entrar/sair de listas
-- `getGroupLists`: Obtém listas para um grupo específico
-- `saveGroupLists`: Salva listas de um grupo no armazenamento
-- `getUserDisplayName`: Obtém nome de exibição do usuário (com suporte a apelidos)
-- `showLists`: Exibe todas as listas disponíveis
-- `createList`: Cria uma nova lista
-- `createListWithTitle`: Cria uma nova lista com título personalizado
-- `deleteList`: Exclui uma lista
-- `joinList`: Adiciona usuário a uma lista
-- `leaveList`: Remove usuário de uma lista
-- `setListTitle`: Define o título de uma lista
-- `removeFromList`: Remove um usuário de uma lista (função administrativa)
+Remove um usuário de uma lista (apenas administradores).
 
-## Notas
+**Descrição:** Permite que administradores removam outros usuários de listas.
 
-- As listas são específicas para cada grupo
-- Usuários podem participar de múltiplas listas ao mesmo tempo
-- O sistema de reações facilita a entrada/saída de listas sem necessidade de digitar comandos
-- Apenas administradores podem remover outros usuários das listas
-- O número máximo de listas que podem aparecer com emojis de número é 10 (1️⃣ até 🔟)
+**Uso:** `!lr [nome_lista] [número ou nome do usuário]`
+
+**Exemplos:**
+- `!lr jogadores 5521987654321`
+- `!lr jogadores João`
+
+**Detalhes:**
+- Apenas administradores do grupo podem usar
+- Útil para manutenção de listas
+- Pode usar número de telefone ou parte do nome
+- Funciona apenas em grupos
+
+## Entrada/Saída via Reações
+
+Além dos comandos, os usuários podem entrar ou sair das listas usando reações numéricas:
+
+1. Quando a lista de listas é exibida com `!listas`, cada lista tem um número associado
+2. Reagir com o emoji desse número (por exemplo: 1️⃣, 2️⃣, 3️⃣) alterna a participação na lista
+3. Se o usuário já está na lista, ele sai; se não está, ele entra
+
+Este método é mais prático e intuitivo que usar os comandos `!le` e `!ls`.
+
+## Código-fonte
+
+Este módulo está implementado no arquivo `src/functions/ListCommands.js` e utiliza:
+- Sistema de persistência baseado em JSON
+- Manipulação de reações para facilitar participação
+- Integração com sistema de apelidos do grupo
+
+## Limitações
+
+- Funciona apenas em grupos
+- Nomes de listas não podem conter espaços
+- Alguns comandos são limitados a administradores
+
+---
+
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

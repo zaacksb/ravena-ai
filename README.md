@@ -240,7 +240,7 @@ CHROME_PATH=             # Caminho personalizado para o Chrome (opcional)
 
 ## 📋 Tipos de Comandos
 
-O bot implementa três tipos de comandos:
+O bot implementa quatro tipos de comandos:
 
 ### 1. Comandos Fixos
 
@@ -291,6 +291,22 @@ Começam com `!g-` e são usados para configurar o bot e o grupo:
 - `!g-filtro-links`: Ativa/desativa filtro de links
 - `!g-filtro-nsfw`: Ativa/desativa filtro de conteúdo NSFW
 - `!g-pausar`: Pausa/retoma todas as atividades do bot no grupo
+
+### 4. Comandos de SuperAdmin
+
+Começam com `!sa-` e são comandos com privilégios especiais que só podem ser executados pelo número principal administrador do bot ou por números definidos como SuperAdmin:
+
+- `!sa-join <grupo>`: Faz o bot entrar em um grupo via link de convite
+- `!sa-block <número>`: Bloqueia um número em todos os grupos
+- `!sa-unblock <número>`: Desbloqueia um número previamente bloqueado
+- `!sa-status`: Mostra informações de status sobre o bot
+- `!sa-broadcast <mensagem>`: Envia uma mensagem para todos os grupos
+- `!sa-restart`: Reinicia o bot
+- `!sa-update`: Atualiza o código do bot a partir do repositório
+- `!sa-eval <código>`: Executa código JavaScript (perigoso, apenas para debugging)
+
+Estes comandos são de uso restrito e servem para funções administrativas globais, afetando o bot como um todo, ao contrário dos comandos de gerenciamento que atuam apenas no contexto de um grupo específico.
+
 
 ## 🧩 Criando Novos Comandos
 
@@ -363,7 +379,34 @@ Comandos similares existem para Kick (`!g-kick-...`) e YouTube (`!g-youtube-...`
 
 Esta seção contém documentação detalhada de cada categoria de comandos disponíveis atualmente no bot, explicando sua implementação, uso e requisitos.
 
-[Conteúdo a ser adicionado posteriormente]
+- [Comandos de Anime](docs/AnimeCommands.md) - Busca informações sobre animes no MyAnimeList
+- [Comandos de Dados (Dice)](docs/DiceCommands.md) - Sistema de dados para RPG e jogos
+- [Comandos de Clima](docs/WeatherCommands.md) - Previsão do tempo e condições meteorológicas
+- [Comandos de Conversão de Arquivos](docs/FileConversions.md) - Ferramentas para manipulação de áudio e mídia
+- [Comandos de Fala e Voz](docs/SpeechCommands.md) - Conversão de texto para voz (TTS) e voz para texto (STT)
+- [Comandos de Gestão de Arquivos](docs/FileCommands.md) - Sistema de armazenamento e compartilhamento de arquivos
+- [Comandos de Grupo](docs/GroupCommands.md) - Gerenciamento e interação com grupos do WhatsApp
+- [Comandos de IA](docs/IACommands.md) - Inteligência artificial, geração de texto e imagens
+- [Comandos de Listas](docs/ListCommands.md) - Criação e gerenciamento de listas de participantes
+- [Comandos de Monitoramento de Streams](docs/StreamCommands.md) - Monitoramento de Twitch, Kick e YouTube
+- [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web e imagens
+- [Comandos de Stickers](docs/Stickers.md) - Criação e manipulação de stickers para WhatsApp
+- [Comandos de Tradução](docs/TranslationCommands.md) - Tradução de texto entre diversos idiomas
+- [Comandos do Wikipedia](docs/WikipediaCommands.md) - Busca de informações na enciclopédia online
+- [Comandos do YouTube](docs/YoutubeDownloader.md) - Download de vídeos e áudios do YouTube
+- [Comandos de Arquivos](docs/FileManager.md) - Gerenciamento e compartilhamento de arquivos entre usuários
+- [Comandos Gerais](docs/GeneralCommands.md) - Comandos básicos e de utilidade geral
+- [Comandos de GIFs](docs/GiphyCommands.md) - Busca e envio de GIFs animados
+- [Comandos de Filmes e Séries](docs/ImdbCommands.md) - Busca de informações de filmes e séries
+- [Comandos do Last.FM](docs/LastFMCommands.md) - Estatísticas e informações musicais do Last.FM
+- [Comandos de Lembretes](docs/LembreteCommands.md) - Sistema de lembretes programados
+- [Comandos de Ranking](docs/RankingMessages.md) - Estatísticas de participação no grupo
+- [Comandos de Jogos Riot](docs/RiotGames.md) - Informações sobre jogadores de LoL, Wild Rift e Valorant
+- [Comandos de Roleta Russa](docs/RoletaRussaCommands.md) - Jogo de roleta russa com timeout
+- [Comandos de Clima](docs/Weather.md) - Informações meteorológicas e previsões do tempo
+- [Comandos do YouTube](docs/YoutubeDownloader.md) - Download de vídeos e áudios do YouTube
+
+Para informações detalhadas sobre a configuração de comandos de gerenciamento (que começam com !g-), consulte a [Documentação de Gerenciamento](docs/Management.md).
 
 ## 📝 Licença
 

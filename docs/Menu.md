@@ -1,118 +1,102 @@
-# Menu de Comandos
+# Comandos de Menu
 
-O módulo `Menu.js` implementa comandos para exibir uma lista organizada de todos os comandos disponíveis no bot, incluindo comandos fixos, personalizados e de gerenciamento.
+Este módulo implementa funcionalidades para exibir listas de comandos disponíveis, comandos personalizados e comandos de gerenciamento.
 
-## Implementação
+## Comandos
 
-Este módulo foi projetado para fornecer uma maneira fácil para os usuários descobrirem os comandos disponíveis no bot. Ele:
+### !cmd / !menu
 
-- Coleta todos os comandos fixos do sistema
-- Obtém comandos personalizados específicos para o grupo atual
-- Organiza comandos por categorias para melhor visualização
-- Exibe informações detalhadas incluindo descrições e reações
+Mostra todos os comandos disponíveis.
 
-## Comandos Disponíveis
+**Descrição:** Exibe uma lista organizada de todos os comandos disponíveis, agrupados por categoria.
 
-| Comando | Descrição | Aliases |
-|---------|-----------|---------|
-| `!cmd` | Mostra todos os comandos disponíveis | - |
-| `!menu` | Alias para o comando `!cmd` | - |
+**Uso:** `!cmd` ou `!menu`
 
-## Exemplos de Uso
+**Detalhes:**
+- Lista comandos fixos organizados por categoria (Geral, Grupo, Utilidades, Mídia, IA, etc.)
+- Inclui descrição curta de cada comando
+- Exibe reações associadas (emoji de gatilho) quando aplicável
+- Agrupa comandos relacionados para melhor organização
+- Inclui também a lista de comandos de gerenciamento
 
-### Comando !cmd ou !menu
+### !cmd-grupo
 
-**Entrada:**
-```
-!cmd
-```
-ou
-```
-!menu
-```
+Mostra comandos personalizados do grupo.
 
-**Saída:**
-```
-Comandos Disponíveis
+**Descrição:** Lista todos os comandos personalizados criados especificamente para o grupo atual.
 
-Comandos Personalizados:
-• !meme
-• !regras
-• !boas-vindas
+**Uso:** `!cmd-grupo`
 
-Comandos de Grupo:
-• !atencao: Menciona todos os membros do grupo silenciosamente
-• !galera: Menciona todos os membros do grupo silenciosamente
-• !ignorar: Alterna ser ignorado pelas menções de grupo
+**Detalhes:**
+- Exibe apenas comandos personalizados do grupo atual
+- Mostra reações associadas quando configuradas
+- Inclui contagem de uso de cada comando
+- Indica número de respostas para comandos com múltiplas respostas
+- Adiciona informações sobre como gerenciar comandos personalizados
 
-Comandos Gerais:
-• !ping: Verifica se o bot está online
-• !ai: Pergunte algo à IA
-• !echo: Repete o texto fornecido
-• !roll: Joga um dado (padrão: 6 lados)
-• !yt: Baixa um vídeo do YouTube
-• !sr: Baixa um áudio do YouTube
-• !clima: Mostra o clima atual e previsão para uma localização
-• !weather: Show weather forecast for a location (English version)
-...
+### !cmd-gerenciamento / !cmd-g
 
-Comandos de Gerenciamento:
-• !g-help: Mostra ajuda de comandos de gerenciamento
-• !g-info: Mostra informações detalhadas do grupo
-• !g-setName: Muda nome do grupo
-• !g-addCmd: Adiciona um comando personalizado
-• !g-delCmd: Exclui um comando personalizado
-• !g-enableCmd: Habilita um comando personalizado
-• !g-disableCmd: Desabilita um comando personalizado
-• !g-setCustomPrefix: Muda prefixo de comando
-• !g-setWelcome: Define mensagem de boas-vindas
-• !g-setFarewell: Define mensagem de despedida
-• !g-setReact: Define reação 'depois' do comando
-• !g-setStartReact: Define reação 'antes' do comando
-• !g-filtro-palavra: Adiciona/remove palavras do filtro
-• !g-filtro-links: Ativa/desativa filtro de links
-• !g-filtro-pessoa: Adiciona/remove pessoas do filtro
-• !g-filtro-nsfw: Ativa/desativa filtro de conteúdo NSFW
-```
+Mostra comandos de gerenciamento do grupo.
 
-O resultado exato do comando varia dependendo dos comandos disponíveis no bot e dos comandos personalizados criados no grupo.
+**Descrição:** Lista todos os comandos de gerenciamento disponíveis para administradores.
 
-## Funcionamento Interno
+**Uso:** `!cmd-gerenciamento` ou `!cmd-g`
 
-O módulo usa as seguintes funções principais:
+**Detalhes:**
+- Exibe comandos específicos para gerenciamento de grupos
+- Lista comandos que começam com o prefixo !g-
+- Inclui descrição detalhada de cada comando
+- Organiza comandos em ordem lógica de utilidade
 
-### `groupCommandsByCategory`
+## Organização dos Comandos
 
-Agrupa os comandos por categoria para melhor organização visual. As categorias incluem:
-- **group**: Comandos relacionados a funcionalidades de grupo
-- **fixed**: Comandos do sistema
-- **management**: Comandos de gerenciamento
-- **custom**: Comandos personalizados criados pelos usuários
+O sistema de menu organiza os comandos das seguintes formas:
 
-### `formatCommand`
+### Categorias
 
-Formata cada comando para exibição, incluindo:
-- Nome do comando
-- Aliases (comandos alternativos)
-- Reações de emoji associadas
-- Descrição
+Os comandos fixos são organizados nas seguintes categorias:
+- 📃 **Geral** - Comandos básicos e de utilidade geral
+- 👥 **Grupo** - Comandos para interação e gestão de grupos
+- 🛠️ **Utilidades** - Ferramentas e recursos diversos
+- 📱 **Mídia** - Comandos para manipulação de arquivos e mídia
+- 🤖 **IA** - Comandos que utilizam inteligência artificial
+- 📤 **Downloaders** - Comandos para download de conteúdo
+- 🎮 **Jogos** - Comandos relacionados a jogos e diversão
+- 🍿 **Cultura** - Comandos para buscar informações culturais
+- 🔈 **Áudio** - Comandos para manipulação de áudio
+- 🗣 **TTS** - Comandos de conversão de texto para voz
+- 🔎 **Busca** - Comandos de pesquisa e busca online
+- 📜 **Listas** - Comandos para criar e gerenciar listas
+- 📂 **Arquivos** - Sistema de armazenamento de arquivos
 
-### `sendCommandList`
+### Agrupamento
 
-A função principal que:
-1. Obtém todos os comandos fixos do sistema
-2. Obtém comandos personalizados para o grupo atual
-3. Agrupa os comandos por categoria
-4. Formata a mensagem de saída
-5. Envia a lista de comandos para o chat
+Comandos relacionados são agrupados para facilitar a visualização:
+- Comandos com funções similares são exibidos juntos
+- Aliases são mostrados na mesma linha (ex: !ai, !ia, !gpt)
+- Variações são agrupadas (ex: diferentes vozes de TTS)
 
-## Personalização do Prefixo
+### Ordenação
 
-O módulo respeita o prefixo de comando personalizado de cada grupo. Por exemplo, se um grupo mudou seu prefixo para `#`, o menu exibirá comandos com este prefixo (ex: `#ping` em vez de `!ping`).
+Os comandos seguem uma ordem específica para facilitar o uso:
+- Comandos mais comuns aparecem primeiro
+- Comandos da mesma categoria são agrupados
+- Organização hierárquica para comandos relacionados
 
-## Notas Adicionais
+## Código-fonte
 
-- O menu exibe primeiro os comandos personalizados, priorizando funcionalidades específicas do grupo
-- Os comandos de gerenciamento são sempre exibidos por último, já que são usados com menos frequência
-- O módulo atualiza automaticamente o menu quando novos comandos são adicionados ou quando comandos personalizados são criados
-- Comandos ocultos (`hidden: true`) não são exibidos no menu
+Este módulo está implementado no arquivo `src/functions/Menu.js` e utiliza:
+- Sistema de categorização baseado em metadados dos comandos
+- Emojis para representação visual das categorias
+- Algoritmos de ordenação personalizados
+- Integração com sistema de comandos personalizados
+
+## Personalização
+
+O menu pode ser personalizado através dos seguintes arquivos:
+- `data/textos/cmd_header.txt` - Altera o cabeçalho do menu de comandos
+- Arquivos de configuração para alterar emojis e organização
+
+---
+
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

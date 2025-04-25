@@ -1771,4 +1771,14 @@ Ignore as	Todolists
 
 A parte "Documentação dos Comandos" por enquanto fica vazia, em um próximo prompt irei enviar os arquivos das functions para você analisar e fazer apenas esta seção. Sobre isso, me encaminho após o readm.me um prompt que eu possa te enviar e quais arquivos são relevantes aqui para que você possa fazer isso sem estoutrar o limite de arquivos importados.
 
+--
+
+Atualize 2 partes do README.md
+- Tipos de Comandos: São 4 tipos, o outro que falta (numero 4) são os comandos de SuperAmin, que inclui o arquivo agora para você analisar
+
+- Documentação dos Comandos: Para arquivo da pasta functions, gerar um artefato de arquivo MD com a documentação do mesmo, seguindo o mesmo padrão do README.md.
+Linkar estes arquivos nesta sessão do readme, com um breve descrição, exemplo:
+
+- [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web
+
 ----

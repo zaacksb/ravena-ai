@@ -1,103 +1,90 @@
-# Conversão de Arquivos
+# Comandos de Conversão de Arquivos
 
-O módulo `FileConversions.js` implementa funcionalidades para converter arquivos de mídia entre diferentes formatos, com foco em arquivos de áudio e vídeo.
+Este módulo implementa funcionalidades para conversão e manipulação de arquivos de mídia, especialmente áudio.
 
-## Implementação
+## Comandos
 
-Este módulo utiliza programas externos e bibliotecas para processar e converter arquivos:
+### !getaudio
 
-- **ffmpeg**: para conversão entre formatos de áudio e vídeo
-- **fluent-ffmpeg**: wrapper Node.js para ffmpeg
-- **sharp**: para processamento de imagens (quando necessário)
+Converte mídia para arquivo de áudio MP3.
 
-## Requisitos Externos
+**Descrição:** Extrai e converte o áudio de qualquer mídia para o formato MP3.
 
-Para o funcionamento completo deste módulo, é necessário instalar:
+**Uso:** Responda a uma mensagem com mídia usando `!getaudio`
 
-- **FFmpeg**: [Download FFmpeg](https://ffmpeg.org/download.html)
-  - No Windows: Defina o caminho no arquivo `.env` como `FFMPEG_PATH=C:/path/to/ffmpeg.exe`
-  - No Linux/macOS: Instale via gerenciador de pacotes ou defina o caminho no `.env`
+**Detalhes:**
+- Suporta extração de áudio de vídeos, áudios e mensagens de voz
+- Converte para o formato MP3 de alta qualidade
+- Envia o resultado como arquivo de áudio (não como mensagem de voz)
+- Mantém a qualidade original do áudio
 
-O caminho para o executável do FFmpeg deve ser configurado no arquivo `.env`:
+### !getvoice
 
-```env
-FFMPEG_PATH=C:/path/to/ffmpeg.exe
+Converte mídia para mensagem de voz.
+
+**Descrição:** Extrai e converte o áudio de qualquer mídia para formato de mensagem de voz.
+
+**Uso:** Responda a uma mensagem com mídia usando `!getvoice`
+
+**Detalhes:**
+- Suporta extração de áudio de vídeos, áudios e arquivos de áudio
+- Converte para o formato OGG (Opus) utilizado nas mensagens de voz do WhatsApp
+- Envia o resultado como mensagem de voz (reproduzível no player nativo do WhatsApp)
+- Útil para compartilhar áudios de forma mais conveniente
+
+### !volume
+
+Ajusta o volume de arquivos de mídia.
+
+**Descrição:** Altera o volume de áudios e vídeos.
+
+**Uso:** `!volume [nível]` (respondendo a uma mídia)
+
+**Exemplos:**
+- `!volume 200` - Dobra o volume do áudio/vídeo
+- `!volume 50` - Reduz o volume pela metade
+- `!volume 1000` - Aumenta o volume ao máximo suportado
+
+**Detalhes:**
+- Suporta níveis de volume de 0 a 1000 (100 = volume original)
+- Funciona com áudios, vídeos e mensagens de voz
+- Preserva o formato original (MP3, OGG, MP4, etc.)
+- Mantém a qualidade do áudio durante o processamento
+
+## Processamento de Mídia
+
+O módulo implementa as seguintes funcionalidades para processamento de mídia:
+
+- **Extração de áudio:** Separa o áudio de arquivos de vídeo
+- **Conversão de formatos:** Transforma entre formatos comuns de áudio
+- **Normalização de volume:** Ajusta níveis de volume para melhor experiência
+- **Otimização para WhatsApp:** Garante compatibilidade com os formatos suportados
+- **Gestão de arquivos temporários:** Limpa automaticamente arquivos após o processamento
+
+## Código-fonte
+
+Este módulo está implementado no arquivo `src/functions/FileConversions.js` e utiliza:
+- FFmpeg para processamento de áudio e vídeo
+- Sistema de arquivos temporários para processamento
+- MessageMedia para envio de mídias processadas
+
+## Requisitos Técnicos
+
+O módulo requer o FFmpeg instalado no sistema e configurado no arquivo `.env`:
+
+```
+FFMPEG_PATH=/caminho/para/ffmpeg
 ```
 
-## Comandos Disponíveis
+Se não configurado, o sistema tentará usar o FFmpeg disponível no PATH do sistema.
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!getaudio` | Converte mídia para arquivo de áudio MP3 | - |
-| `!getvoice` | Converte mídia para mensagem de voz (formato OGG) | - |
-| `!volume` | Ajusta o volume da mídia de áudio | Nível de volume (0-1000) |
+## Limitações
 
-## Exemplos de Uso
+- O tamanho máximo de arquivo é limitado pela API do WhatsApp
+- O processamento pode levar alguns segundos dependendo do tamanho do arquivo
+- A qualidade final depende da qualidade do arquivo original
+- Arquivos muito grandes podem falhar no envio após o processamento
 
-### Comando !getaudio
+---
 
-Este comando deve ser usado como resposta a uma mensagem de áudio ou vídeo.
-
-**Entrada:**
-```
-!getaudio
-```
-(respondendo a uma mensagem de vídeo ou áudio)
-
-**Saída:**
-Um arquivo de áudio MP3 extraído da mídia original.
-
-### Comando !getvoice
-
-Este comando deve ser usado como resposta a uma mensagem de áudio ou vídeo.
-
-**Entrada:**
-```
-!getvoice
-```
-(respondendo a uma mensagem de áudio ou vídeo)
-
-**Saída:**
-Uma mensagem de voz (formato OGG) que pode ser reproduzida diretamente no WhatsApp.
-
-### Comando !volume
-
-Este comando ajusta o volume de um arquivo de áudio ou vídeo.
-
-**Entrada:**
-```
-!volume 200
-```
-(respondendo a uma mensagem de áudio, onde 200 representa 200% do volume original)
-
-**Saída:**
-A mesma mídia com o volume ajustado conforme especificado.
-
-## Funcionamento Interno
-
-O módulo utiliza um fluxo de trabalho que consiste em:
-
-1. Extrair a mídia da mensagem (diretamente ou da mensagem citada)
-2. Salvar a mídia em um arquivo temporário
-3. Processar o arquivo com FFmpeg de acordo com o comando solicitado
-4. Enviar o resultado de volta para o chat
-5. Limpar os arquivos temporários
-
-O processamento de arquivos é realizado de forma assíncrona para evitar bloqueio da thread principal.
-
-## Funções Auxiliares
-
-- `getMediaFromMessage`: Obtém mídia da mensagem direta ou citada
-- `saveMediaToTemp`: Salva mídia em arquivo temporário
-- `convertToMp3`: Converte áudio para formato MP3
-- `convertToOgg`: Converte áudio para formato OGG (para mensagens de voz)
-- `adjustVolume`: Ajusta o volume do áudio
-- `createMediaFromFile`: Cria objeto MessageMedia a partir de arquivo
-- `cleanupTempFiles`: Remove arquivos temporários após o processamento
-
-## Notas
-
-- Os arquivos temporários são armazenados no diretório temporário do sistema
-- Arquivos temporários são automaticamente limpos após o processamento
-- O módulo suporta extração de áudio de vídeos
-- O ajuste de volume aceita valores de 0 a 1000, onde 100 é o volume original
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

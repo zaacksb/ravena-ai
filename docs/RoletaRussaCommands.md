@@ -1,164 +1,81 @@
-# Roleta Russa
+# Comandos de Roleta Russa
 
-O módulo `RoletaRussaCommands.js` implementa um mini-jogo de roleta russa para grupos, onde os usuários podem testar sua sorte com o risco de receber um "timeout" temporário.
+Este módulo implementa um jogo de roleta russa no WhatsApp, onde os participantes podem testar sua sorte e são temporariamente silenciados se "perderem".
 
-## Implementação
+## Comandos
 
-Este módulo simula uma roleta russa virtual, onde:
+### !roletarussa
 
-- Os jogadores têm 1 em 6 chances de "morrer" (como um revólver com 6 câmaras e apenas 1 bala)
-- Quando um jogador "morre", recebe um timeout por um período configurável
-- Durante o timeout, o jogador não pode jogar novamente
-- O sistema mantém estatísticas de tentativas e mortes para cada jogador
-- Há rankings de jogadores com mais sorte e mais mortes
+Joga roleta russa, com risco de ser silenciado.
 
-Os dados são persistidos em um arquivo JSON para manter estatísticas e status de timeout mesmo após reinicialização do bot.
+**Descrição:** Simula o jogo de roleta russa, com 1/6 de chance de "morrer" e ser temporariamente silenciado no grupo.
 
-## Comandos Disponíveis
+**Uso:** `!roletarussa`
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!roletarussa` | Joga roleta russa, com risco de ser silenciado | - |
-| `!roletaranking` | Mostra ranking da roleta russa | - |
-| `!g-setTempoRoleta` | Define tempo de timeout da roleta russa (admin) | <segundos> |
+**Detalhes:**
+- Cada vez que o comando é usado, há 1/6 de chance (como um revólver de 6 câmaras) de "morrer"
+- Se o usuário "morrer", fica silenciado (não pode usar o bot) por um período configurável (padrão: 5 minutos)
+- O bot mostra o total de tentativas seguidas sem "morte" do usuário
+- Mantém recorde de máximo de tentativas consecutivas sem "morrer" para cada jogador
+- Um jogador não pode jogar duas vezes consecutivas (deve esperar outro jogador tentar)
 
-## Exemplos de Uso
+### !roletaranking
 
-### Comando !roletarussa
+Mostra ranking da roleta russa.
 
-**Entrada:**
+**Descrição:** Exibe os rankings de sorte (máximo de tentativas) e de mortes na roleta russa.
+
+**Uso:** `!roletaranking`
+
+**Detalhes:**
+- Mostra dois rankings diferentes:
+  1. **Ranking de Sorte**: Jogadores com mais tentativas consecutivas sem "morrer"
+  2. **Ranking de Mortes**: Jogadores com maior número total de "mortes"
+- Exibe até 10 jogadores em cada ranking
+- Destaca os primeiros colocados com emojis especiais
+- Mostra a sequência atual de cada jogador (se estiver ativo)
+- Disponível apenas em grupos
+
+## Mecânica do Jogo
+
+O jogo segue estas regras:
+
+1. Quando um jogador usa `!roletarussa`, o sistema gera um número aleatório entre 0 e 5
+2. Se o número for 0 (1/6 de chance), o jogador "morre" e é temporariamente silenciado
+3. Se não, a contagem de tentativas do jogador aumenta e ele pode continuar jogando
+4. Um jogador não pode jogar duas vezes consecutivas (precisa esperar outro jogador)
+5. Quando um jogador "morre":
+   - Sua contagem atual de tentativas é resetada para 0
+   - O recorde pessoal é atualizado se a sequência atual for maior
+   - O jogador fica em "timeout" pelo tempo configurado no grupo
+   - O total de mortes do jogador é incrementado
+
+## Sistema de Timeout
+
+O sistema de timeout implementa:
+
+- Verificação automática a cada 30 segundos para liberar jogadores
+- Persistência do status entre reinicializações do bot
+- Identificação do jogador por número de telefone
+- Monitoramento de tempo restante para cada jogador em timeout
+
+## Código-fonte
+
+Este módulo está implementado no arquivo `src/functions/RoletaRussaCommands.js` e utiliza:
+- Sistema de persistência baseado em JSON para manter rankings e status
+- Timer para gerenciar os tempos de timeout dos jogadores
+- Integração com sistema de apelidos do grupo
+
+## Configuração
+
+O tempo de timeout pode ser configurado para cada grupo usando o comando de gerenciamento:
+
 ```
-!roletarussa
-```
-
-**Saída (sucesso):**
-```
-💨🔫 click - Tá safe! ```3```
-```
-(o número 3 indica quantas tentativas consecutivas bem-sucedidas o jogador tem)
-
-**Saída (falha):**
-```
-💥🔫 BANG - F no chat! Morreu em 5.
-Neste grupo, você já morreu 3 vezes.
-```
-
-Quando um jogador falha (morre), ele fica em timeout por um período configurado (padrão é 5 minutos). Se tentar jogar durante o timeout:
-
-**Saída (em timeout):**
-```
-☠️ João já está morto na roleta russa. Ressuscita em 4m32s.
-```
-
-### Comando !roletaranking
-
-**Entrada:**
-```
-!roletaranking
-```
-
-**Saída:**
-```
-🏆 Rankings Roleta Russa 🔫
-
-🍀 Sorte - Máx. Tentativas sem morrer
-	🥇 1°: 12 (5 atual) - Maria
-	🥈 2°: 8 - Carlos
-	🥉 3°: 6 - João
-	🐅 4°: 5 - Ana
-	🐆 5°: 3 - Pedro
-
-🪦 Número de Mortes
-	🥇 1°: 15 - Pedro
-	🥈 2°: 12 - João
-	🥉 3°: 10 - Maria
-	🐅 4°: 8 - Ana
-	🐆 5°: 5 - Carlos
+!g-setTempoRoleta [segundos]
 ```
 
-O ranking mostra:
-1. Jogadores com mais tentativas consecutivas sem morrer (recorde)
-2. Jogadores com mais mortes no total
+O valor padrão é de 300 segundos (5 minutos).
 
-### Comando !g-setTempoRoleta
+---
 
-Este comando só pode ser usado por administradores e define o tempo de "morte" (timeout) em segundos.
-
-**Entrada:**
-```
-!g-setTempoRoleta 600
-```
-
-**Saída:**
-```
-⏱️ Tempo de "morte" na roleta russa definido para 10 minuto(s).
-```
-
-## Regras do Jogo
-
-1. Cada jogador tem 1/6 de chance de "morrer" quando joga
-2. Quando um jogador morre, fica em timeout pelo tempo configurado
-3. Um jogador não pode jogar duas vezes consecutivas (deve esperar outro jogador jogar)
-4. O bot rastreia quantas tentativas consecutivas cada jogador consegue sem morrer
-5. Ao morrer, o contador de tentativas consecutivas é reiniciado
-6. O sistema mantém um recorde do maior número de tentativas sem morrer
-
-## Funcionamento Interno
-
-### Armazenamento de Dados
-
-O módulo armazena dados em um arquivo JSON com a seguinte estrutura:
-
-```json
-{
-  "grupos": {
-    "123456789@g.us": {
-      "tempoTimeout": 300,
-      "jogadores": {
-        "5521987654321@c.us": {
-          "tentativasAtuais": 0,
-          "tentativasMaximo": 12,
-          "mortes": 5,
-          "timeoutAte": 0
-        }
-      },
-      "ultimoJogador": "5521987654321@c.us"
-    }
-  },
-  "configuracoes": {
-    "tempoDefault": 300
-  }
-}
-```
-
-### Verificação Periódica de Timeout
-
-O módulo executa uma verificação a cada 30 segundos para verificar se algum jogador já completou seu período de timeout, atualizando seu status automaticamente.
-
-### Limitações
-
-- Tempo máximo de timeout: 1 hora (3600 segundos)
-- Tempo mínimo de timeout: 10 segundos
-- Um jogador não pode jogar duas vezes consecutivas
-
-## Emojis de Ranking
-
-O sistema usa emojis para representar posições no ranking:
-
-1. 🥇 (1º lugar)
-2. 🥈 (2º lugar)
-3. 🥉 (3º lugar)
-4. 🐅 (4º lugar)
-5. 🐆 (5º lugar)
-6. 🦌 (6º lugar)
-7. 🐐 (7º lugar)
-8. 🐏 (8º lugar)
-9. 🐓 (9º lugar)
-10. 🐇 (10º lugar)
-
-## Notas
-
-- O tempo de "morte" é específico para cada grupo
-- As estatísticas são mantidas por grupo e por usuário
-- O sistema permite um elemento de competição amigável no grupo
-- O módulo usa timeouts baseados em tempo UNIX para maior precisão
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

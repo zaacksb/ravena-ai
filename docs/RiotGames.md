@@ -1,142 +1,94 @@
-# Comandos de Jogos Riot
+# Comandos de Riot Games
 
-O módulo `RiotGames.js` implementa comandos para acessar estatísticas de jogadores dos produtos da Riot Games, incluindo League of Legends, Wild Rift e Valorant, utilizando a API oficial da Riot Games.
+Este módulo implementa funcionalidades para consultar informações de jogadores em jogos da Riot Games, incluindo League of Legends, Wild Rift e Valorant.
 
-## Implementação
+## Comandos
 
-Este módulo obtém dados dos jogadores diretamente dos endpoints da API da Riot Games para fornecer:
-- Informações atuais de ranque e pontos de liga (LP)
-- Registros de vitórias/derrotas e taxas de vitória
-- Preferências de campeões/agentes e níveis de maestria
-- Estatísticas de desempenho apropriadas para cada jogo
+### !lol
 
-Os dados são formatados em mensagens claras, aprimoradas com emojis, que apresentam as informações mais relevantes de forma legível.
+Busca perfil de jogador de League of Legends.
 
-## Requisitos Externos
+**Descrição:** Exibe informações detalhadas sobre um jogador de League of Legends, incluindo ranking, estatísticas e principais campeões.
 
-Para utilizar este módulo, é necessária uma chave de API da Riot Games, que deve ser configurada no arquivo `.env`:
+**Uso:** `!lol [nome do invocador]`
 
-```env
-RIOT_API_KEY=sua_chave_api_aqui
+**Exemplos:**
+- `!lol Faker` - Busca o perfil do jogador "Faker"
+- `!lol Hide on Bush` - Busca o perfil do jogador "Hide on Bush"
+
+**Detalhes:**
+- Mostra o nível da conta
+- Exibe rankings em filas solo/duo e flex
+- Apresenta taxa de vitórias em cada fila
+- Lista os 5 campeões mais jogados com nível de maestria
+- Usa emojis para representar os diferentes níveis/ligas
+
+### !wr
+
+Busca perfil de jogador de Wild Rift.
+
+**Descrição:** Exibe informações sobre um jogador de League of Legends: Wild Rift (versão mobile).
+
+**Uso:** `!wr [nome do jogador]#[tagline]`
+
+**Exemplos:**
+- `!wr Player123#BR1` - Busca o perfil do jogador "Player123" com tagline "BR1"
+- `!wr ProGamer#NA1` - Busca o perfil do jogador "ProGamer" com tagline "NA1"
+
+**Detalhes:**
+- Requer Riot ID completo (nome#tagline)
+- Mostra ranking atual no jogo
+- Exibe estatísticas de partidas (vitórias/derrotas)
+- Lista principais campeões jogados
+
+### !valorant
+
+Busca perfil de jogador de Valorant.
+
+**Descrição:** Exibe informações sobre um jogador de Valorant, incluindo rank e agentes mais jogados.
+
+**Uso:** `!valorant [nome do jogador]#[tagline]`
+
+**Exemplos:**
+- `!valorant Player123#BR1` - Busca o perfil do jogador "Player123" com tagline "BR1"
+- `!valorant ScreaM#EU` - Busca o perfil do jogador "ScreaM" com tagline "EU"
+
+**Detalhes:**
+- Requer Riot ID completo (nome#tagline)
+- Exibe rank competitivo atual
+- Mostra pontuação de RR (Rank Rating)
+- Lista principais agentes jogados com estatísticas
+- Apresenta taxa de vitórias e estatísticas de KDA
+
+## Sistema de Riot ID
+
+Os jogos da Riot Games utilizam um sistema de identificação chamado Riot ID, composto por:
+- **Nome do jogador**: Parte principal do ID, pode conter letras, números e alguns caracteres especiais
+- **Tagline**: Código curto que segue o nome, separado por "#" (exemplo: BR1, NA1, EU)
+
+Para Wild Rift e Valorant, é necessário fornecer o Riot ID completo no formato `Nome#Tagline`. Para League of Legends, apenas o nome do invocador é necessário.
+
+## Código-fonte
+
+Este módulo está implementado no arquivo `src/functions/RiotGamesCommands.js` e utiliza:
+- API da Riot Games para obter dados dos jogadores
+- Sistema de formatação com emojis para representação visual
+- Mapas de conversão de códigos para nomes legíveis
+
+## Configuração
+
+O módulo requer uma chave de API da Riot Games configurada no arquivo `.env`:
+
+```
+RIOT_API_KEY=sua_chave_aqui
 ```
 
-Você pode obter uma chave de API registrando-se como desenvolvedor no [Portal de Desenvolvedores da Riot](https://developer.riotgames.com/).
+A chave pode ser obtida no [Portal de Desenvolvedores da Riot Games](https://developer.riotgames.com/).
 
-## Comandos Disponíveis
+## Observações
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!lol` | Mostra estatísticas de invocador do League of Legends | `<nome_do_invocador>` |
-| `!wr` | Mostra estatísticas de jogador do Wild Rift | `<nome_jogador#tagline>` |
-| `!valorant` | Mostra estatísticas de jogador do Valorant | `<nome_jogador#tagline>` |
+Atualmente, devido a limitações da API pública da Riot Games, algumas funcionalidades para Wild Rift e Valorant utilizam dados simulados. Em uma implementação completa, esses dados viriam diretamente das APIs oficiais.
 
-## Exemplos de Uso
+---
 
-### Busca de Invocador no League of Legends
-
-**Entrada:**
-```
-!lol Faker
-```
-
-**Saída:**
-```
-🎮 League of Legends - Faker
-
-📊 Nível: 98
-
-💪 Ranque Solo/Duo:
-🏆 CHALLENGER I (1247 LP)
-🏅 451V 312D (59% taxa de vitória)
-
-👥 Ranque Flex:
-🥇 GOLD II (45 LP)
-🏅 15V 5D (75% taxa de vitória)
-
-🏆 Principais Campeões:
-1. LeBlanc (Nível 7, 542.331 pts)
-2. Azir (Nível 7, 345.124 pts)
-3. Ahri (Nível 7, 312.887 pts)
-4. Zed (Nível 7, 256.998 pts)
-5. Syndra (Nível 7, 211.345 pts)
-```
-
-### Busca de Jogador no Wild Rift
-
-**Entrada:**
-```
-!wr ProPlayer#NA1
-```
-
-**Saída:**
-```
-📱 Wild Rift - ProPlayer#NA1
-
-🏆 Ranqueada:
-💎 DIAMOND II (75 LP)
-🏅 86V 54D (61% taxa de vitória)
-
-🏆 Principais Campeões:
-1. Yasuo (Nível 7, 62.453 pts)
-2. Akali (Nível 6, 45.231 pts)
-3. Ezreal (Nível 7, 42.876 pts)
-4. Lee Sin (Nível 6, 39.654 pts)
-5. Miss Fortune (Nível 5, 25.789 pts)
-```
-
-### Busca de Jogador no Valorant
-
-**Entrada:**
-```
-!valorant TacticalAim#NA1
-```
-
-**Saída:**
-```
-🔫 Valorant - TacticalAim#NA1
-
-🏆 Ranque Competitivo:
-🏆 IMMORTAL II (75 RR)
-🏅 56V 34D (62% taxa de vitória)
-
-👤 Principais Agentes:
-1. Jett - 42 partidas, 68% TX, 1.85 KDA
-2. Reyna - 35 partidas, 72% TX, 2.12 KDA
-3. Chamber - 28 partidas, 64% TX, 1.78 KDA
-4. Sage - 22 partidas, 59% TX, 1.56 KDA
-5. Omen - 18 partidas, 55% TX, 1.62 KDA
-```
-
-## Notas Técnicas
-
-### Autenticação
-
-Todas as requisições da API incluem a chave da API da Riot no cabeçalho:
-
-```javascript
-{ headers: { 'X-Riot-Token': RIOT_API_KEY } }
-```
-
-### Limitação de Taxa
-
-A Riot Games impõe limites rigorosos de taxa nas requisições da API. Este módulo inclui tratamento básico de erros, mas para uso de alto volume, pode ser necessário implementar um tratamento mais robusto de limitação de taxa e caching.
-
-### Gerenciamento de Região
-
-A implementação atual assume a região NA por simplicidade. Para uma implementação mais abrangente, parâmetros de região poderiam ser adicionados a cada comando para suportar jogadores de diferentes regiões.
-
-### Fluxo de Recuperação de Dados
-
-Para cada jogo, a recuperação de dados segue este padrão geral:
-
-1. Obter informações básicas do jogador por nome/ID
-2. Usar o PUUID (ID Universal Único do Jogador) retornado para buscar estatísticas detalhadas
-3. Organizar e formatar os dados para exibição
-
-### Uso de Emojis
-
-O módulo utiliza emojis para tornar a saída mais visualmente atraente e mais fácil de ler:
-
-- Níveis de ranque (Ferro até Desafiante) têm emojis de medalhas correspondentes
-- Estatísticas de vitória/derrota incluem emojis de troféu
-- Elementos específicos de cada jogo usam emojis temáticos apropriados
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

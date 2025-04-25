@@ -1,136 +1,122 @@
-# Monitoramento de Streams
+# Comandos de Monitoramento de Streams
 
-O módulo `StreamCommands.js` implementa comandos para interagir com o sistema de monitoramento de streams (Twitch, Kick e YouTube) do bot, permitindo listar e verificar o status dos canais monitorados.
+Este módulo implementa funcionalidades para monitorar e exibir informações sobre canais de streaming do Twitch, Kick e YouTube.
 
-## Implementação
+## Comandos
 
-Este módulo trabalha em conjunto com o `StreamSystem.js` e o `StreamMonitor.js` para fornecer uma interface amigável para os usuários consultarem informações sobre canais monitorados. O sistema principal de configuração de canais é gerenciado através de comandos administrativos (`!g-twitch-canal`, `!g-kick-canal`, etc.).
+### !streams
 
-## Comandos Disponíveis
+Lista todos os canais configurados para monitoramento no grupo.
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!streams` | Lista todos os canais configurados para monitoramento | - |
-| `!streamstatus` | Mostra status dos canais monitorados (online/offline) | - |
+**Descrição:** Exibe todos os canais de streaming configurados no grupo atual, junto com suas configurações.
 
-## Exemplos de Uso
+**Uso:** `!streams`
 
-### Comando !streams
+**Detalhes:**
+- Lista canais do Twitch, Kick e YouTube configurados
+- Mostra configurações como notificações online/offline, alteração de título e uso de IA
+- Agrupa canais por plataforma
+- Exibe contagem de itens de mídia configurados para cada canal
 
-**Entrada:**
-```
-!streams
-```
+### !streamstatus
 
-**Saída:**
-```
-Canais Monitorados neste Grupo
+Mostra o status atual dos canais monitorados.
 
-Twitch:
-• streamer1
-  - Notificação online: 1 item(s)
-  - Notificação offline: 0 item(s)
-  - Alterar título: ✅
-  - Usar IA: ✅
+**Descrição:** Exibe o status (online/offline) dos canais de streaming configurados no grupo.
 
-• streamer2
-  - Notificação online: 1 item(s)
-  - Notificação offline: 1 item(s)
-  - Alterar título: ❌
-  - Usar IA: ✅
+**Uso:** `!streamstatus`
 
-Kick:
-• kickstreamer
-  - Notificação online: 1 item(s)
-  - Notificação offline: 0 item(s)
-  - Alterar título: ✅
-  - Usar IA: ❌
+**Detalhes:**
+- Mostra se cada canal está online ou offline
+- Para canais online, exibe título, categoria/jogo, número de espectadores e hora de início
+- Para canais do YouTube, mostra informações sobre o último vídeo publicado
+- Agrupa canais por plataforma
 
-YouTube:
-• channel1
-  - Notificação de vídeo: 1 item(s)
-  - Alterar título: ✅
-  - Usar IA: ✅
-```
+### !streamers
 
-### Comando !streamstatus
+Lista todos os streamers atualmente online.
 
-**Entrada:**
-```
-!streamstatus
-```
+**Descrição:** Exibe todos os streamers monitorados pelo bot que estão atualmente online.
 
-**Saída:**
-```
-Status dos Canais Monitorados
+**Uso:** `!streamers`
 
-Twitch:
-• streamer1: 🟢 ONLINE
-  - Título: Jogando Minecraft com viewers!
-  - Viewers: 1245
-  - Online desde: 16/04/2025, 14:30:00
+**Detalhes:**
+- Lista todos os streamers online em todas as instâncias do bot
+- Agrupa por plataforma (Twitch, Kick, YouTube)
+- Mostra nome do canal, categoria/jogo e número de espectadores
+- Útil para descobrir streamers ativos na comunidade
 
-• streamer2: 🔴 OFFLINE
+### !live
 
-Kick:
-• kickstreamer: 🟢 ONLINE
-  - Título: Bate-papo com inscritos
-  - Viewers: 532
-  - Online desde: 16/04/2025, 15:45:00
+Mostra informações detalhadas sobre uma stream da Twitch.
 
-YouTube:
-• channel1: 📹 Último vídeo
-  - Título: Como criar um bot de WhatsApp
-  - Publicado: 15/04/2025, 10:00:00
-  - Link: https://youtube.com/watch?v=xyz123
-```
+**Descrição:** Exibe informações detalhadas sobre um canal específico da Twitch ou todos os canais configurados.
 
-## Funcionamento do Monitoramento
+**Uso:** 
+- `!live [nome do canal]`
+- `!live` (mostra informações de todos os canais configurados)
 
-O sistema geral de monitoramento funciona da seguinte forma:
+**Detalhes:**
+- Exibe título da stream, categoria/jogo, espectadores e duração
+- Mostra thumbnail da stream quando disponível
+- Inclui link direto para a stream
+- Quando usado sem argumentos, exibe informações de todos os canais Twitch configurados no grupo
 
-1. Administradores configuram canais a serem monitorados com comandos como `!g-twitch-canal`
-2. O `StreamMonitor` verifica periodicamente o status desses canais
-3. Quando um canal muda de estado (online/offline) ou publica um novo vídeo, eventos são gerados
-4. Esses eventos acionam notificações automáticas nos grupos
+### !live-kick
 
-Os comandos deste módulo simplesmente consultam o estado atual do monitoramento e exibem informações relevantes, sem modificar a configuração.
+Mostra informações detalhadas sobre uma stream do Kick.
 
-## Plataformas Suportadas
+**Descrição:** Similar ao comando !live, mas para canais do Kick.
 
-O sistema atualmente suporta três plataformas:
+**Uso:** 
+- `!live-kick [nome do canal]`
+- `!live-kick` (mostra informações de todos os canais configurados)
 
-1. **Twitch**: Monitoramento de streams ao vivo
-2. **Kick**: Monitoramento de streams ao vivo
-3. **YouTube**: Monitoramento de streams ao vivo e novos vídeos
+**Detalhes:**
+- Funcionalidade similar ao comando !live, mas específico para o Kick
+- Exibe informações detalhadas sobre streams do Kick
 
-## Formatação de Estado
+### !topstreams
 
-O sistema usa emojis para representar diferentes estados:
+Mostra as streams mais populares no momento.
 
-- 🟢 **ONLINE**: Stream ao vivo no momento
-- 🔴 **OFFLINE**: Canal offline
-- 📹 **Último vídeo**: Informações sobre o vídeo mais recente (para YouTube)
-- ❓ **Status desconhecido**: Quando não foi possível determinar o estado
+**Descrição:** Exibe as streams mais populares do Twitch e Kick.
 
-## Integração com Sistema de Notificações
+**Uso:** 
+- `!topstreams`
+- `!topstreams [twitch|kick] [número]`
 
-Embora os comandos apenas mostrem o status atual, eles se conectam ao mesmo sistema que gera notificações automáticas quando:
+**Exemplos:**
+- `!topstreams` - Mostra top 5 de cada plataforma
+- `!topstreams twitch` - Mostra apenas streams do Twitch
+- `!topstreams kick 10` - Mostra top 10 streams do Kick
 
-- Um canal fica online
-- Um canal fica offline
-- Um canal do YouTube publica um novo vídeo
+**Detalhes:**
+- Exibe as streams mais populares por espectadores
+- Permite filtrar por plataforma
+- Permite definir número de resultados (1-10)
+- Mostra título, categoria/jogo e contagem de espectadores
+- Tem aliases: !popular, !top-streams, !top
 
-## Limitações
+## Configuração de Canais
 
-- O status exibido representa um snapshot do momento da verificação
-- A precisão das informações depende da última verificação realizada pelo `StreamMonitor`
-- Alguns canais podem mostrar status desconhecido se a API da plataforma apresentar problemas
-- Canais de YouTube são verificados principalmente para novos vídeos, embora também suportem detecção de streams ao vivo
+Para configurar canais de monitoramento, use os comandos de gerenciamento:
 
-## Notas Adicionais
+- `!g-twitch-canal [nome do canal]` - Ativa/desativa monitoramento de canal Twitch
+- `!g-kick-canal [nome do canal]` - Ativa/desativa monitoramento de canal Kick
+- `!g-youtube-canal [nome do canal]` - Ativa/desativa monitoramento de canal YouTube
 
-- Para configurar canais a serem monitorados, use os comandos administrativos
-- O intervalo de verificação padrão é de 1 minuto por plataforma
-- As chaves de API necessárias para monitoramento da Twitch devem ser configuradas no arquivo `.env`
-- A mudança de título automática só funciona se o bot for administrador do grupo
+## Código-fonte
+
+Este módulo está implementado no arquivo `src/functions/StreamCommands.js` e trabalha em conjunto com o sistema StreamMonitor para gerenciamento e monitoramento contínuo de canais.
+
+## Características Adicionais
+
+- **Notificações automáticas** quando streamers ficam online/offline
+- **Alteração de título do grupo** quando streamers ficam online/offline
+- **Mensagens customizadas** usando mídia personalizada para eventos
+- **Integração com IA** para gerar mensagens personalizadas sobre streams
+
+---
+
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

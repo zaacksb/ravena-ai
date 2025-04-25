@@ -139,12 +139,14 @@ async function showTopDonors(bot, message, args, group) {
     // Ordena doações por valor (maior primeiro)
     donations.sort((a, b) => b.valor - a.valor);
     
-    // Limita aos 10 principais doadores
-    const topDonors = donations.slice(0, 10);
+    // Limita aos 1000 principais doadores
+    const topDonors = donations.slice(0, 1000);
     
     // Calcula total de doações
     const totalAmount = donations.reduce((total, donation) => total + donation.valor, 0);
     
+    const donationLink = process.env.DONATION_LINK || 'https://tipa.ai/seunome';
+
     // Constrói mensagem
     let donorsMsg = `💖 *Apoie-me com uma doação!* 💖\n\n` +
       `Suas doações me ajudam a manter e melhorar este bot.\n\n` +

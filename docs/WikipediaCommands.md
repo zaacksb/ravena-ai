@@ -1,81 +1,65 @@
-# Comandos Wikipedia
+# Comandos de Wikipedia
 
-O módulo `WikipediaCommands.js` implementa funcionalidades para buscar e exibir informações da Wikipédia em português (pt-br). Este módulo permite que os usuários obtenham resumos de artigos, incluindo imagens quando disponíveis, diretamente no WhatsApp.
+Este módulo implementa funcionalidades para buscar e apresentar informações da Wikipedia.
 
-## Implementação
+## Comandos
 
-Este módulo utiliza a API REST da Wikipédia para buscar informações sobre um determinado tópico. O processo é realizado em duas etapas: primeiro é feita uma busca para encontrar o artigo mais relevante, e depois o sumário desse artigo é obtido junto com informações adicionais como imagens e descrições.
+### !wiki
 
-## Requisitos
+Busca informações na Wikipedia em português.
 
-Este módulo não necessita de chaves de API ou configurações adicionais, pois a API da Wikipédia é de acesso público.
+**Descrição:** Pesquisa e apresenta artigos da Wikipedia sobre o termo especificado, incluindo imagens quando disponíveis.
 
-## Comandos Disponíveis
+**Uso:** `!wiki [termo de busca]`
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!wiki` | Busca e exibe informações da Wikipédia | <termo de busca> |
+**Exemplos:**
+- `!wiki Brasil`
+- `!wiki Albert Einstein`
+- `!wiki Sistema Solar`
+- `!wiki Inteligência Artificial`
 
-## Exemplos de Uso
+**Detalhes:**
+- Busca artigos na Wikipedia em português
+- Exibe título, descrição e resumo do artigo
+- Quando disponível, inclui imagem do artigo
+- Fornece link para o artigo completo
+- Formata o conteúdo para melhor leitura no WhatsApp
 
-### Comando !wiki
+## Funcionamento
 
-**Entrada:**
-```
-!wiki Brasil
-```
+O comando segue o seguinte fluxo de operação:
 
-**Processo:**
-1. O bot enviará uma mensagem indicando que está buscando as informações
-2. O termo "Brasil" é usado para buscar artigos relevantes na Wikipédia
-3. O artigo mais relevante é selecionado
-4. O resumo e outras informações são obtidos
-5. Se disponível, a imagem principal do artigo é baixada
-6. O bot envia a imagem com o resumo como legenda, ou apenas o texto se não houver imagem
+1. Busca o termo na API de pesquisa da Wikipedia
+2. Identifica o artigo mais relevante relacionado ao termo
+3. Obtém o sumário do artigo encontrado
+4. Extrai título, descrição, resumo e imagem (se disponível)
+5. Formata as informações para exibição no WhatsApp
+6. Envia o resultado com a imagem destacada quando disponível
 
-**Saída:**
-```
-📚 *Brasil*
+## Informações Apresentadas
 
-*República Federativa do Brasil*
+O comando fornece:
 
-O Brasil, oficialmente República Federativa do Brasil, é o maior país da América do Sul e da América Latina, sendo o quinto maior do mundo em área territorial e o sexto em população. É o único país na América onde se fala majoritariamente a língua portuguesa e o maior país lusófono do planeta, além de ser uma das nações mais multiculturais e etnicamente diversas, em decorrência da forte imigração oriunda de variados cantos do mundo.
+- **Título**: Nome do artigo na Wikipedia
+- **Descrição**: Breve descrição do tema (quando disponível)
+- **Resumo**: Versão condensada do conteúdo do artigo
+- **Link**: URL para acessar o artigo completo na Wikipedia
+- **Imagem**: Fotografia, ilustração ou diagrama relacionado ao tema (quando disponível)
 
-🔗 *Leia mais:* https://pt.wikipedia.org/wiki/Brasil
-```
+## Código-fonte
 
-## Formato das Informações
+Este módulo está implementado no arquivo `src/functions/WikipediaCommands.js` e utiliza:
+- API REST da Wikipedia para busca de artigos
+- API de busca da Wikipedia para encontrar artigos relacionados
+- Axios para requisições HTTP
+- MessageMedia para envio de imagens junto com o texto
 
-O comando `!wiki` exibe os seguintes dados (quando disponíveis):
+## Limitações
 
-- **Título:** Nome do artigo na Wikipédia
-- **Descrição curta:** Uma breve descrição do tópico (quando disponível)
-- **Resumo:** Um extrato do conteúdo do artigo, limitado a 1000 caracteres para manter a legibilidade
-- **Link:** URL direta para o artigo completo na Wikipédia
-- **Imagem:** A imagem principal do artigo (quando disponível)
+- As buscas são realizadas apenas na Wikipedia em português
+- O resumo é limitado a 1000 caracteres para melhor visualização no WhatsApp
+- Artigos sem informações suficientes podem retornar resultados incompletos
 
-Quando o resumo é muito longo, ele é truncado e são adicionadas reticências (...) ao final para indicar que há mais conteúdo disponível no link fornecido.
+---
 
-## Reações com Emojis
-
-| Comando | Antes | Depois |
-|---------|-------|--------|
-| `!wiki` | 📚 | 🔍 |
-
-## Tratamento de Erros
-
-O módulo fornece mensagens de erro específicas para diferentes problemas:
-
-- Nenhum termo fornecido: "Por favor, forneça um termo para buscar na Wikipedia."
-- Termo não encontrado: "Não foi possível encontrar informações sobre [termo] na Wikipedia."
-- Artigo sem sumário: "Não foi possível encontrar uma página completa sobre [termo] na Wikipedia."
-- Excesso de requisições: "Muitas solicitações à Wikipedia. Por favor, tente novamente mais tarde."
-- Erro geral: "Erro ao buscar informações da Wikipedia. Por favor, tente novamente."
-
-## Notas Adicionais
-
-- Este módulo utiliza a Wikipédia em português (pt.wikipedia.org) como fonte de informação.
-- O sistema tenta obter imagens em alta resolução quando disponíveis.
-- Devido a limitações do WhatsApp, apenas uma imagem pode ser enviada por vez (a principal do artigo).
-- O resumo é limitado a 1000 caracteres para manter a legibilidade nas mensagens do WhatsApp.
-- O comando inclui um link direto para o artigo completo, permitindo que os usuários acessem informações adicionais.
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

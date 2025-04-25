@@ -1,162 +1,96 @@
-# Download de YouTube
+# Comandos para YouTube
 
-O módulo `YoutubeDownloader.js` implementa funcionalidades para baixar vídeos e áudios do YouTube diretamente para o WhatsApp, permitindo que os usuários acessem conteúdo offline.
+Este módulo implementa funcionalidades para download de vídeos e áudios do YouTube.
 
-## Implementação
+## Comandos
 
-Este módulo utiliza ferramentas externas para baixar e processar vídeos do YouTube:
+### !yt
 
-- **youtube-dl-exec**: Ferramenta de linha de comando para baixar vídeos do YouTube
-- **ffmpeg**: Para processamento e conversão de áudio e vídeo
-- **youtube-search-api**: Para buscar vídeos por termo de pesquisa
+Baixa vídeos do YouTube.
 
-O módulo também implementa um sistema de cache para evitar baixar novamente vídeos já processados anteriormente.
+**Descrição:** Permite baixar vídeos do YouTube a partir de links ou termos de busca.
 
-## Requisitos Externos
+**Uso:** 
+- `!yt [link do vídeo]`
+- `!yt [termo de busca]`
 
-Para o funcionamento completo deste módulo, é necessário:
+**Exemplos:**
+- `!yt https://youtu.be/dQw4w9WgXcQ`
+- `!yt https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+- `!yt despacito` - Busca e baixa o primeiro resultado para "despacito"
 
-1. **FFmpeg**: [Download FFmpeg](https://ffmpeg.org/download.html)
-   - Configure o caminho no arquivo `.env`: `FFMPEG_PATH=C:/path/to/ffmpeg.exe`
+**Detalhes:**
+- Suporta links completos, links curtos (youtu.be) e links de shorts
+- Quando um termo de busca é fornecido, busca automaticamente o primeiro resultado
+- Baixa o vídeo em formato MP4 otimizado para WhatsApp
+- Limite: vídeos com até 10 minutos de duração
 
-2. **youtube-dl** ou **yt-dlp**: [Download yt-dlp](https://github.com/yt-dlp/yt-dlp/releases)
-   - Recomenda-se o uso do **yt-dlp** que é mais atualizado
+### !sr
 
-3. **Pasta para downloads**:
-   - Configure no arquivo `.env`: `YOUTUBE_DL_FOLDER=/path/to/folder`
+Baixa áudio/música do YouTube.
 
-## Comandos Disponíveis
+**Descrição:** Permite baixar apenas o áudio de vídeos do YouTube em formato MP3.
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!yt` | Baixa um vídeo do YouTube | \<link ou termo de busca\> |
-| `!sr` | Baixa um áudio do YouTube | \<link ou termo de busca\> |
+**Uso:** 
+- `!sr [link do vídeo]`
+- `!sr [termo de busca]`
 
-## Exemplos de Uso
+**Exemplos:**
+- `!sr https://youtu.be/dQw4w9WgXcQ`
+- `!sr despacito` - Busca e baixa o áudio do primeiro resultado para "despacito"
 
-### Comando !yt
+**Detalhes:**
+- Extrai apenas o áudio do vídeo em formato MP3
+- Qualidade otimizada para músicas
+- Quando um termo de busca é fornecido, busca automaticamente o primeiro resultado
+- Limite: vídeos com até 10 minutos de duração
 
-Este comando pode ser usado de duas formas:
+## Recursos Adicionais
 
-1. **Com link direto do YouTube**:
+### Download via Reações
 
-**Entrada:**
-```
-!yt https://www.youtube.com/watch?v=dQw4w9WgXcQ
-```
+Além dos comandos, o bot também suporta download de vídeos através de reações:
 
-**Saída:**
-```
-⏬ Baixando vídeo...
-```
-Seguido pelo vídeo baixado em formato MP4.
+**Descrição:** Reagir com ⏬ a uma mensagem contendo link do YouTube para baixar o vídeo.
 
-2. **Com termo de busca**:
+**Uso:** Reaja com ⏬ a qualquer mensagem que contenha um link do YouTube
 
-**Entrada:**
-```
-!yt como fazer um bolo de chocolate
-```
-
-**Saída:**
-```
-🔍 Buscando: "como fazer um bolo de chocolate" no YouTube...
-⏬ Baixando vídeo...
-```
-Seguido pelo primeiro vídeo encontrado na busca, em formato MP4.
-
-### Comando !sr
-
-Similar ao comando `!yt`, mas baixa apenas o áudio em formato MP3.
-
-**Entrada:**
-```
-!sr despacito
-```
-
-**Saída:**
-```
-🔍 Buscando: "despacito" no YouTube...
-⏬ Baixando áudio...
-```
-Seguido pelo áudio do vídeo encontrado, em formato MP3.
-
-## Reações com Emojis
-
-O módulo também suporta download de vídeos através de reações com emoji. Quando um usuário reage a uma mensagem contendo um link do YouTube com o emoji ⏬, o bot automaticamente baixa o vídeo.
+**Detalhes:**
+- Funcionalidade rápida sem necessidade de digitar comandos
+- Processa automaticamente o primeiro link do YouTube encontrado na mensagem
+- Baixa o vídeo em formato MP4
 
 ## Sistema de Cache
 
-O módulo implementa um sistema de cache para evitar baixar novamente vídeos já processados:
+O módulo implementa um sistema inteligente de cache para otimizar downloads:
 
-```javascript
-videoCacheManager.getVideoInfoWithCache(urlSafe, {dumpSingleJson: true})
-  .then(videoInfo => {
-    // Processamento com informações do vídeo
-    videoCacheManager.downloadVideoWithCache(urlSafe, 
-      { 
-        o: destinoVideo,
-        f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<55M]+ba) / (bv*+ba/b)",
-        // Outras opções...
-      }
-    )
-  })
+- Armazena vídeos e áudios já baixados para evitar downloads repetidos
+- Reutiliza conteúdo quando o mesmo vídeo é solicitado novamente
+- Reduz consumo de banda e tempo de espera para vídeos populares
+
+## Código-fonte
+
+Este módulo está implementado no arquivo `src/functions/YoutubeDownloader.js` e utiliza:
+- youtube-dl-exec para download de vídeos
+- youtube-search-api para busca de vídeos
+- Sistema próprio de cache para otimização de downloads
+
+## Configuração
+
+O módulo requer as seguintes configurações no arquivo `.env`:
+
+```
+YOUTUBE_DL_FOLDER=/caminho/para/pasta/de/download
+FFMPEG_PATH=/caminho/para/ffmpeg/ffmpeg.exe
 ```
 
-## Limitações
+## Observações
 
-- Vídeos muito longos (mais de 10 minutos) são rejeitados para evitar problemas
-- O tamanho máximo dos vídeos é limitado a 55MB para compatibilidade com o WhatsApp
-- A qualidade do vídeo é ajustada para equilibrar tamanho e qualidade
-- O download pode levar alguns segundos ou minutos, dependendo do tamanho do vídeo
-- Alguns vídeos com restrições de idade ou regionalidade podem não ser baixados
+- O download de vídeos respeita os limites de tamanho do WhatsApp
+- Vídeos são automaticamente convertidos para formatos compatíveis
+- Atualmente há um limite de 10 minutos por vídeo/áudio
+- O sistema utiliza o youtube-dl-exec que se adapta automaticamente às mudanças da API do YouTube
 
-## Funções Internas
+---
 
-O módulo inclui várias funções internas:
-
-- `extractYoutubeVideoId`: Extrai o ID do vídeo a partir de uma URL do YouTube
-- `searchYoutubeVideo`: Busca um vídeo no YouTube por termo de pesquisa
-- `processYoutubeReaction`: Processa reações para download de vídeos
-- `baixarVideoYoutube`: Baixa um vídeo do YouTube
-- `baixarMusicaYoutube`: Baixa apenas o áudio de um vídeo do YouTube
-
-## Formatos de URL Suportados
-
-O sistema pode extrair o ID do vídeo de diversos formatos de URL do YouTube:
-
-- youtube.com/watch?v=ID
-- youtu.be/ID
-- youtube.com/embed/ID
-- youtube.com/v/ID
-- youtube.com/shorts/ID
-
-## Tratamento de Erros
-
-O módulo inclui tratamento de erros para várias situações:
-
-- Vídeo não encontrado
-- Vídeo muito longo
-- Problemas no download
-- Falhas no processamento de áudio/vídeo
-
-## Configuração de Qualidade
-
-O módulo usa códigos específicos para selecionar a qualidade do vídeo:
-
-```javascript
-f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<55M]+ba) / (bv*+ba/b)"
-```
-
-Este código solicita:
-1. Vídeo com codec h264 (para melhor compatibilidade)
-2. Tamanho máximo de 55MB
-3. Melhor qualidade de áudio disponível
-4. Fallback para outra combinação se a primeira não estiver disponível
-
-## Notas Adicionais
-
-- Os arquivos temporários são armazenados no diretório configurado em `YOUTUBE_DL_FOLDER`
-- O módulo utiliza cookies para acessar conteúdo restrito quando disponível
-- A legenda do vídeo/áudio enviado inclui informações sobre o autor e título original
-- O sistema gera hashes aleatórios para evitar conflitos de nome de arquivo
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

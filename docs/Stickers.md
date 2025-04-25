@@ -1,112 +1,94 @@
-# Stickers
+# Comandos de Stickers
 
-O módulo `Stickers.js` implementa funcionalidades para criação e gerenciamento de stickers (figurinhas) a partir de imagens e vídeos para o WhatsApp.
+Este módulo implementa funcionalidades para criar, editar e converter stickers a partir de imagens, vídeos e GIFs.
 
-## Implementação
+## Comandos
 
-Este módulo aproveita as funcionalidades nativas da biblioteca `whatsapp-web.js` para converter imagens e vídeos em stickers, adicionando camadas de lógica para melhorar a experiência do usuário e possibilitar a extração de stickers existentes.
+### !sticker / !s
 
-## Comandos Disponíveis
+Converte imagens, vídeos ou GIFs em stickers.
 
-| Comando | Descrição | Aliases |
-|---------|-----------|---------|
-| `!sticker` | Converte mídia em sticker | `!s` |
+**Descrição:** Transforma mídias em stickers do WhatsApp, preservando as proporções originais.
 
-## Exemplos de Uso
+**Uso:** 
+- Envie o comando junto com uma mídia
+- Ou responda a uma mensagem com mídia usando o comando
 
-### Comando !sticker ou !s
+**Exemplos:**
+- Envie uma imagem com o comando `!sticker`
+- Responda a um vídeo com `!s`
+- `!sticker Nome do Pack` - Define o nome do pack de stickers
 
-O comando pode ser usado de três formas:
+**Detalhes:**
+- Funciona com imagens, vídeos e GIFs
+- Preserva a proporção original
+- Permite definir o nome do pacote de stickers
+- Possui um alias curto `!s` para facilitar o uso
 
-1. **Com mídia direta** - Enviando uma imagem ou vídeo com a legenda contendo o comando
+### !sq / !stickerq
 
-**Entrada:**
-```
-!sticker Nome do Sticker
-```
-(enviando junto com uma imagem ou vídeo)
+Cria stickers quadrados cortando o centro da imagem.
 
-**Saída:**
-A imagem ou vídeo convertido em um sticker, com o nome especificado.
+**Descrição:** Cria stickers com formato perfeitamente quadrado, cortando a imagem pelo centro.
 
-2. **Como resposta a uma mensagem com mídia** - Respondendo a uma mensagem que contenha imagem ou vídeo
+**Uso:** Igual ao comando !sticker
 
-**Entrada:**
-```
-!sticker Nome do Sticker
-```
-(respondendo a uma mensagem com imagem ou vídeo)
+**Detalhes:**
+- Recorta a imagem em formato quadrado a partir do centro
+- Ideal para imagens que precisam de um formato quadrado perfeito
 
-**Saída:**
-A imagem ou vídeo da mensagem citada convertido em um sticker, com o nome especificado.
+### !sqc / !stickerqc
 
-3. **Como resposta a um sticker existente** - Para extrair a mídia original de um sticker
+Cria stickers quadrados cortando a parte superior (cima) da imagem.
 
-**Entrada:**
-```
-!sticker
-```
-(respondendo a um sticker)
+**Descrição:** Cria stickers quadrados mantendo a parte superior da imagem.
 
-**Saída:**
-A mídia original do sticker (imagem ou vídeo) é enviada.
+**Uso:** Igual ao comando !sticker
 
-Se nenhum nome for especificado para o sticker, o bot usará o nome do grupo atual como nome do sticker.
+**Detalhes:**
+- Mantém a parte superior da imagem, recortando-a em formato quadrado
+- Útil para fotos de pessoas ou objetos onde a parte superior é mais importante
 
-## Reações com Emojis
+### !sqb / !stickerqb
 
-O comando utiliza reações com emojis para indicar diferentes estados:
+Cria stickers quadrados cortando a parte inferior (baixo) da imagem.
 
-- **Antes**: 🖼 - Indica que o comando está sendo processado
-- **Depois**: ✅ - Indica que o comando foi executado com sucesso
-- **Erro**: ❌ - Indica que ocorreu um erro durante o processamento
+**Descrição:** Cria stickers quadrados mantendo a parte inferior da imagem.
 
-## Verificações e Validações
+**Uso:** Igual ao comando !sticker
 
-O módulo realiza várias verificações para garantir que o comando seja usado corretamente:
+**Detalhes:**
+- Mantém a parte inferior da imagem, recortando-a em formato quadrado
+- Útil quando a parte mais importante da imagem está na parte de baixo
 
-1. **Verificação de mídia** - Garante que o comando seja usado com uma imagem ou vídeo
-2. **Tipo de mídia suportado** - Verifica se o tipo de mídia pode ser convertido em sticker (imagem, vídeo ou GIF)
-3. **Extração de sticker** - Detecta quando o comando é usado para extrair a mídia original de um sticker
+### !sqe / !stickerqe
 
-## Tratamento de Erros
+Cria stickers quadrados esticando a imagem.
 
-O módulo implementa tratamento de erros robusto, com mensagens específicas para diferentes situações:
+**Descrição:** Cria stickers quadrados esticando a imagem para preencher um quadrado perfeito.
 
-- Tipo de mídia não suportado
-- Erro ao baixar mídia
-- Erro ao processar sticker
+**Uso:** Igual ao comando !sticker
 
-## Integração com WhatsApp-Web.js
+**Detalhes:**
+- Em vez de cortar, estica a imagem para o formato quadrado
+- Pode distorcer a imagem, mas não perde nenhuma parte dela
 
-O módulo aproveita a API do WhatsApp-Web.js para criar stickers, utilizando o método `sendMessage` com opções especiais:
+## Recursos Adicionais
 
-```javascript
-await bot.sendMessage(chatId, media, { 
-  sendMediaAsSticker: true,
-  stickerAuthor: "ravena",
-  stickerName: stickerName,
-  quotedMessageId: message.origin.id._serialized
-});
-```
+Os comandos de sticker também oferecem:
 
-## Funcionalidade de Extração de Sticker
+- Conversão de imagens e vídeos em stickers
+- Conversão de stickers de volta para a mídia original
+- Processamento de mídia para garantir compatibilidade com WhatsApp
+- Várias opções de formato (original, quadrado centralizado, topo, base, esticado)
 
-Uma característica especial deste módulo é a capacidade de extrair a mídia original de um sticker. Quando um usuário responde a uma mensagem de sticker com o comando `!sticker` ou `!s`, o bot baixa o sticker e envia de volta a mídia original (imagem ou vídeo) que foi usada para criar o sticker.
+## Código-fonte
 
-Isso é útil para quando o usuário deseja obter a imagem original de um sticker recebido.
-Para vídeos, infelizmente não funciona. Um dia ainda irei descobrir o motivo.
+Este sistema é implementado no arquivo `src/functions/Stickers.js` e utiliza as seguintes tecnologias:
+- Sharp para processamento de imagens
+- FFmpeg para processamento de vídeos
+- MessageMedia para envio das mídias processadas
 
-## Reações Automáticas
+---
 
-Além do comando direto, o sistema também suporta criação de stickers através de reações com emoji. Quando um usuário reage a uma mensagem com mídia usando o emoji 🖼, o bot automaticamente converte essa mídia em um sticker.
-
-Essa funcionalidade é implementada no módulo `ReactionsHandler.js` e se integra com o sistema de stickers.
-
-## Notas Adicionais
-
-- Stickers de vídeo têm um limite máximo de duração (aproximadamente 10 segundos)
-- O WhatsApp comprime os stickers durante o processo de criação, então a qualidade pode ser reduzida
-- Stickers são sempre enviados com fundo transparente (para imagens que suportam transparência)
-- Metadados como nome e autor do sticker são preservados e podem ser visualizados nas informações do sticker
-- O módulo pode ser facilmente expandido para suportar novas funcionalidades de stickers
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

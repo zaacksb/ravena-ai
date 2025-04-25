@@ -1,102 +1,136 @@
 # Comandos de Grupo
 
-O módulo `GroupCommands.js` implementa funcionalidades úteis para gestão e interação em grupos do WhatsApp. Este módulo facilita a comunicação em massa e a moderação de conteúdo dentro dos grupos.
+Este módulo implementa funcionalidades para gerenciamento e interação em grupos do WhatsApp.
 
-## Implementação
+## Comandos
 
-Este módulo inclui comandos para mencionar todos os membros de um grupo de forma eficiente, permitir que usuários optem por não receber menções em massa, e recursos para moderação como apagar mensagens.
+### !atencao
 
-## Requisitos
+Menciona todos os membros do grupo.
 
-Não há requisitos especiais para este módulo, pois ele utiliza apenas as funcionalidades nativas do cliente WhatsApp Web.
+**Descrição:** Envia uma mensagem mencionando todos os participantes do grupo para chamar atenção.
 
-## Comandos Disponíveis
+**Uso:** 
+- `!atencao`
+- `!atencao [mensagem]`
 
-| Comando | Descrição | Observações |
-|---------|-----------|-------------|
-| `!atencao` | Menciona todos os membros do grupo | Os membros receberão uma notificação silenciosa |
-| `!galera` | Alias para o comando `!atencao` | Funcionalidade idêntica ao comando atencao |
-| `!ignorar` | Alterna o status de ser ignorado pelas menções em massa | Usuários ignorados não aparecerão nas menções |
-| `!apagar` | Apaga uma mensagem do bot | Deve ser usado como resposta a uma mensagem |
+**Exemplos:**
+- `!atencao` - Menciona todos com mensagem padrão
+- `!atencao Reunião em 5 minutos!` - Menciona todos com a mensagem personalizada
 
-## Exemplos de Uso
+**Detalhes:**
+- Menciona todos os participantes do grupo que não estão na lista de ignorados
+- Permite adicionar uma mensagem personalizada
+- Tem cooldown de 5 minutos para evitar spam
+- Pode ser acionado pela reação 📢
 
-### Comando !atencao (ou !galera)
+### !ignorar
 
-**Entrada:**
-```
-!atencao Reunião em 5 minutos, pessoal!
-```
+Alterna ser ignorado pelas menções de grupo.
 
-**Processo:**
-1. O bot obtém a lista de todos os participantes do grupo
-2. Filtra participantes que optaram por ser ignorados
-3. Cria uma mensagem que menciona todos os demais participantes
-4. Envia a mensagem com o texto fornecido
+**Descrição:** Permite que um usuário entre ou saia da lista de ignorados para as menções de grupo.
 
-**Saída:**
-```
-🚨 Reunião em 5 minutos, pessoal!
-```
-A mensagem acima incluirá menções (@) a todos os membros não ignorados do grupo.
+**Uso:** `!ignorar`
 
-### Comando !ignorar
+**Detalhes:**
+- Alterna entre ser mencionado ou não pelo comando !atencao
+- Configuração individual por usuário
+- Status é salvo no banco de dados do grupo
+- Não afeta outras funcionalidades do bot
 
-**Entrada:**
-```
-!ignorar
-```
+### !apagar
 
-**Processo:**
-1. O bot verifica se o usuário está na lista de ignorados do grupo
-2. Alterna seu status (adiciona à lista se não estiver, remove se estiver)
-3. Salva a configuração atualizada
+Apaga a mensagem do bot quando usado em resposta a ela.
 
-**Saída (ao ativar ignorar):**
-```
-Você agora será ignorado nas menções de grupo.
-```
+**Descrição:** Permite apagar mensagens enviadas pelo bot.
 
-**Saída (ao desativar ignorar):**
-```
-Você agora será incluído nas menções de grupo.
-```
+**Uso:** Responda a uma mensagem do bot com `!apagar`
 
-### Comando !apagar
+**Detalhes:**
+- Apaga a mensagem do bot à qual o comando responde
+- Se o bot for administrador do grupo, pode apagar mensagens de outros usuários também (se solicitado por um administrador)
+- Apenas apaga mensagens do bot por padrão
+- Pode ser acionado pela reação 🗑️
+- O bot tenta apagar também a mensagem do comando
+- Confirmação é dada através de reação ✅
 
-**Uso:**
-Responda a uma mensagem do bot com o comando `!apagar`
+## Gerenciamento Básico de Grupos
 
-**Processo:**
-1. O bot verifica se a mensagem respondida é uma mensagem enviada por ele
-2. Se for do bot: apaga a mensagem citada e apaga o comando `!apagar`
-3. Se não for do bot: verifica se o bot é administrador no grupo
-   - Se for admin: tenta apagar a mensagem de outro usuário
-   - Se não for admin: informa que não pode apagar mensagens de outros
+### !apelido
 
-**Comportamento Especial:**
-- Reage com ✅ quando consegue apagar a mensagem
-- Reage com ❌ quando falha ao apagar
-- Tanto o comando quanto a mensagem original são apagados em caso de sucesso
-- Em chats privados, as verificações de permissão são ignoradas
+Define um apelido para o usuário no grupo.
 
-## Reações com Emojis
+**Descrição:** Permite que um usuário defina seu próprio apelido para uso no grupo.
 
-| Comando | Antes | Depois | Erro |
-|---------|-------|--------|------|
-| `!atencao` | 📢 | ✅ | ❌ |
-| `!galera` | 📢 | ✅ | ❌ |
-| `!ignorar` | 🔇 | ✅ | ❌ |
-| `!apagar` | 🗑️ | ✅ | ❌ |
+**Uso:** `!apelido [apelido]`
 
-## Considerações sobre Privacidade
+**Exemplos:**
+- `!apelido Mestre do RPG`
+- `!apelido Jogador #1`
 
-- Usuários podem optar por não receber menções usando o comando `!ignorar`
-- A lista de usuários ignorados é armazenada no nível do grupo
-- Apenas o próprio usuário pode alterar seu status de ignorado
+**Detalhes:**
+- O apelido é salvo no banco de dados do grupo
+- Limite de 20 caracteres por apelido
+- Os apelidos são usados em comandos de dados, rankings, etc.
+- Sem argumento, mostra o apelido atual
 
-## Considerações sobre Permissões
+### !faladores
 
-- O comando `!apagar` pode apagar mensagens de qualquer usuário se o bot for administrador do grupo
-- Caso contrário, só pode apagar suas próprias mensagens
-- O bot tenta apagar também a mensagem de comando para manter o chat limpo
+Mostra o ranking de quem mais fala no grupo.
+
+**Descrição:** Exibe estatísticas sobre os participantes mais ativos no grupo.
+
+**Uso:** `!faladores`
+
+**Detalhes:**
+- Exibe os 10 membros que mais enviaram mensagens
+- Mostra número de mensagens por participante
+- Destaca os três primeiros com medalhas (🥇, 🥈, 🥉)
+- Apresenta estatísticas gerais do grupo
+- Atualizado automaticamente com cada mensagem
+
+## Comandos Globais do Bot
+
+### !grupao
+
+Adiciona o usuário ao grupo oficial de interação da Ravena.
+
+**Descrição:** Adiciona o usuário ao grupo principal de suporte e interação do bot.
+
+**Uso:** `!grupao`
+
+**Detalhes:**
+- Tenta adicionar o usuário ao grupo principal configurado do bot
+- Fornece link alternativo caso não consiga adicionar diretamente
+- Reação 👨‍👨‍👧‍👦 para indicar adição ao grupo
+
+### !diferenças
+
+Exibe as diferenças para a versão anterior da Ravena.
+
+**Descrição:** Mostra um resumo das principais mudanças em relação à versão antiga do bot.
+
+**Uso:** `!diferenças`
+
+**Detalhes:**
+- Lista principais diferenças de comandos e funcionalidades
+- Explica novos recursos disponíveis
+- Orienta sobre mudanças no prefixo de comandos
+- Fornece informações sobre o projeto open-source
+
+## Código-fonte
+
+Este módulo está implementado nos arquivos:
+- `src/functions/GroupCommands.js` - Comandos de grupo
+- `src/functions/GeneralCommands.js` - Comandos gerais e de bot
+- `src/functions/RankingMessages.js` - Sistema de ranking de mensagens
+
+## Limitações
+
+- Alguns comandos requerem que o bot ou o usuário sejam administradores
+- Certos recursos dependem de permissões específicas no WhatsApp
+- A contagem de mensagens para o ranking é mantida apenas desde a última reinicialização do bot ou da habilitação do recurso
+
+---
+
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*

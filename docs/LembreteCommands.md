@@ -1,126 +1,103 @@
 # Comandos de Lembretes
 
-O módulo `LembretesCommands.js` implementa funcionalidades para criar, listar e gerenciar lembretes agendados. Permite que os usuários configurem o bot para enviar uma mensagem específica em uma data/hora futura, incluindo possibilidade de reenviar mídias como imagens, áudios, vídeos e documentos.
-
-## Implementação
-
-Este módulo utiliza a biblioteca `chrono-node` para interpretar datas escritas em linguagem natural em português brasileiro, permitindo uma interface amigável para criar lembretes. Os lembretes são armazenados em um arquivo JSON, e as mídias relacionadas são salvas em um diretório específico.
-
-O sistema possui um gerenciador inteligente de temporizadores, que lida com lembretes programados para datas muito distantes, reavalidando-os periodicamente para garantir que sejam entregues corretamente mesmo após reinicializações do bot.
-
-## Requisitos
-
-Para utilizar este módulo, você precisa:
-
-1. Instalar a biblioteca chrono-node:
-   ```
-   npm install chrono-node
-   ```
-
-2. Garantir acesso de escrita nas pastas de dados para armazenar os lembretes e mídias relacionadas.
+O módulo `LembretesCommands.js` implementa funcionalidades para criar, gerenciar e visualizar lembretes programados com conteúdo de texto e mídia.
 
 ## Comandos Disponíveis
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!lembrar` | Cria um lembrete para uma data específica | <data/hora> |
-| `!lembretes` | Lista os lembretes ativos | - |
-| `!cancelar` | Cancela um lembrete por ID | <id> |
+| Comando | Descrição | Uso |
+|---------|-----------|-----|
+| `!lembrar` | Configura um lembrete para uma data específica | Use respondendo a uma mensagem com `!lembrar amanhã às 10:00` |
+| `!lembretes` | Lista os lembretes ativos | `!lembretes` |
+| `!l-cancelar` | Cancela um lembrete por ID | `!l-cancelar <id>` |
 
-## Exemplos de Uso
+## Detalhes dos comandos
 
-### Comando !lembrar
+### !lembrar
 
-Este comando deve ser utilizado como resposta a uma mensagem que você deseja lembrar posteriormente.
+Este comando permite configurar um lembrete para ser enviado em uma data e hora específicas. O lembrete pode incluir texto e/ou mídia da mensagem citada.
 
-**Entrada:**
-```
-!lembrar amanhã às 10:00
-```
+#### Funcionalidades:
+- Programa lembretes com data e hora específicas
+- Permite incluir texto da mensagem citada
+- Permite incluir mídia da mensagem citada (imagens, vídeos, áudios, etc.)
+- Utiliza processamento de linguagem natural para interpretar datas em formato livre
 
-**Uso em contexto:**
-1. Encontre ou envie a mensagem que deseja ser lembrado
-2. Responda a essa mensagem com o comando `!lembrar` seguido da data/hora
-3. O bot confirmará a criação do lembrete
+#### Parâmetros:
+- **data/hora**: Data e hora para o lembrete (em formato livre)
+  - Exemplo: `!lembrar amanhã às 10:00`
+  - Exemplo: `!lembrar 17/04/2025 07:30`
+  - Exemplo: `!lembrar segunda-feira às 15h`
 
-**Formatos de data/hora aceitos:**
-- `!lembrar amanhã às 10:00`
-- `!lembrar 17/04/2025 07:30`
-- `!lembrar 10:00` (assume a data atual, ou amanhã se o horário já passou)
-- `!lembrar amanhã` (assume 07:00 como horário padrão)
+#### Como usar:
+1. Responda a uma mensagem (que pode conter texto e/ou mídia)
+2. Digite `!lembrar` seguido da data/hora desejada
 
-**Saída:**
-```
-✅ Lembrete configurado para quinta-feira, 18 de abril de 2025 às 10:00 (ID: a1b2c3)
-```
+#### Formato da resposta:
+A resposta de confirmação inclui:
+- Confirmação de que o lembrete foi configurado
+- Data e hora formatadas
+- ID único do lembrete (necessário para cancelamento)
 
-### Comando !lembretes
+#### Reações de emoji:
+- Antes de processar: ⏳
+- Após processamento bem-sucedido: ⏰
 
-Lista os lembretes ativos para o chat atual.
+#### Limitações:
+- O temporizador máximo no JavaScript é de 24h, então lembretes com mais de 24h são verificados periodicamente
+- Mídia muito grande pode não ser salva corretamente
 
-**Entrada:**
-```
-!lembretes
-```
+### !lembretes
 
-**Saída:**
-```
-📅 Lembretes Ativos:
+Este comando lista todos os lembretes ativos do usuário ou do grupo.
 
-ID: a1b2c3
-Data: quinta-feira, 18 de abril de 2025 às 10:00
-Tempo restante: 1d 6h 30m
-Mensagem: Não esquecer de enviar o relatório 📎
+#### Funcionalidades:
+- Lista todos os lembretes ativos
+- Mostra a data e hora de cada lembrete
+- Mostra o tempo restante até cada lembrete
+- Exibe o conteúdo resumido do lembrete
+- Indica se o lembrete contém mídia
 
-Para cancelar um lembrete, use: !cancelar <id>
-```
+#### Formato da resposta:
+A resposta inclui:
+- Lista de lembretes ativos com seus respectivos IDs
+- Data e hora formatadas para cada lembrete
+- Tempo restante para cada lembrete (dias, horas, minutos)
+- Texto do lembrete (limitado a 50 caracteres)
+- Indicador de mídia (📎) se o lembrete contiver mídia
 
-### Comando !cancelar
+#### Reações de emoji:
+- Antes de processar: ⏳
+- Após processamento bem-sucedido: 📋
 
-Cancela um lembrete específico utilizando seu ID.
+### !l-cancelar
 
-**Entrada:**
-```
-!cancelar a1b2c3
-```
+Este comando permite cancelar um lembrete específico usando seu ID.
 
-**Saída:**
-```
-✅ Lembrete com ID a1b2c3 foi cancelado.
-```
+#### Funcionalidades:
+- Cancela um lembrete programado
+- Remove os arquivos de mídia associados ao lembrete (se houver)
+- Verifica permissões (apenas o criador do lembrete pode cancelá-lo)
 
-## Comportamento com Mídias
+#### Parâmetros:
+- **id**: ID único do lembrete a ser cancelado
+  - Exemplo: `!l-cancelar abc123`
 
-Quando um lembrete é criado a partir de uma mensagem que contém mídia (imagem, áudio, vídeo, documento, etc.), o bot irá:
+#### Formato da resposta:
+A resposta inclui:
+- Confirmação de que o lembrete foi cancelado
+- ID do lembrete cancelado
 
-1. Salvar a mídia localmente em seu sistema de arquivos
-2. Ao disparar o lembrete, reenviar a mídia junto com a mensagem
-3. Após o envio bem-sucedido, a mídia é excluída automaticamente para economizar espaço em disco
+#### Reações de emoji:
+- Antes de processar: ⏳
+- Após processamento bem-sucedido: 🗑
 
-## Reações com Emojis
+#### Comportamento especial:
+- Quando um lembrete é disparado, o bot envia:
+  - O texto do lembrete com um prefixo "⏰ LEMBRETE!"
+  - A mídia associada (se houver) com o texto como legenda
+- Os lembretes são verificados periodicamente para garantir que não sejam perdidos, mesmo após reinicialização do bot
 
-| Comando | Antes | Depois |
-|---------|-------|--------|
-| `!lembrar` | ⏰ | ✅ |
-| `!lembretes` | 📋 | ✅ |
-| `!cancelar` | ❌ | ✅ |
-
-## Segurança e Permissões
-
-- Usuários só podem cancelar lembretes que eles próprios criaram
-- Em grupos, os lembretes são associados ao grupo mas controlados por seus criadores
-- Em chats privados, somente os lembretes criados pelo próprio usuário são visíveis/gerenciáveis
-
-## Limitações
-
-- Tempos muito longos (superiores a 24 horas) são gerenciados por um sistema de revalidação periódica
-- Se o bot for reiniciado, os temporizadores são recriados automaticamente na próxima inicialização
-- Há um limite de tamanho para mídias armazenadas (dependente do espaço em disco disponível)
-
-## Pontos Técnicos
-
-- Todos os horários são armazenados como timestamps em UTC
-- Dados são persistidos em `data/lembretes.json`
-- Mídias são armazenadas em `data/lembretes-media/`
-- Cada lembrete recebe um ID único gerado automaticamente
-- O sistema verifica periodicamente a validade dos lembretes para garantir entrega confiável
+#### Dicas:
+- Para lembretes com apenas hora (como `!lembrar 14:30`), se a hora já tiver passado hoje, o lembrete será agendado para o dia seguinte
+- Use `!lembretes` para obter os IDs necessários para cancelamento
+- A interpretação de datas aceita formatos naturais como "amanhã", "próxima terça", "em 3 dias", etc.

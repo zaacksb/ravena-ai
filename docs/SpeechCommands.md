@@ -1,129 +1,93 @@
-# Comandos de Voz
+# Comandos de Fala e Voz
 
-O módulo `SpeechCommands.js` implementa funcionalidades para conversão entre texto e voz, permitindo que os usuários convertam mensagens de texto para áudio e transcreva mensagens de voz para texto.
+Este módulo implementa funcionalidades para conversão de texto para voz (TTS) e voz para texto (STT).
 
-## Implementação
+## Comandos de Texto para Voz (TTS)
 
-Este módulo utiliza tecnologias externas para processamento de áudio:
+### !tts
 
-- **eSpeak**: Motor de síntese de voz (TTS - Text-to-Speech)
-- **FFmpeg**: Para conversão entre formatos de áudio
-- **Vosk**: Motor de reconhecimento de voz (STT - Speech-to-Text)
+Converte texto para voz usando o personagem 'ravena'.
 
-## Requisitos Externos
+**Descrição:** Transforma o texto fornecido em uma mensagem de voz com a voz da Ravena.
 
-Para o funcionamento completo deste módulo, é necessário instalar:
+**Uso:** 
+- `!tts [texto]`
+- `!tts` (em resposta a uma mensagem)
 
-- **eSpeak**: [Download eSpeak](http://espeak.sourceforge.net/)
-  - No Windows: Defina o caminho no arquivo `.env` como `ESPEAK_PATH=C:/path/to/espeak.exe`
-  - No Linux: `sudo apt-get install espeak`
-  - No macOS: `brew install espeak`
+**Exemplos:**
+- `!tts Olá, como vai você?`
+- Responder a uma mensagem com `!tts` para converter seu conteúdo em áudio
 
-- **FFmpeg**: [Download FFmpeg](https://ffmpeg.org/download.html)
-  - No Windows: Defina o caminho no arquivo `.env` como `FFMPEG_PATH=C:/path/to/ffmpeg.exe`
-  - No Linux: `sudo apt-get install ffmpeg`
-  - No macOS: `brew install ffmpeg`
+**Detalhes:**
+- Usa a voz personalizada "ravena" definida no sistema
+- Gera áudios de alta qualidade utilizando o AllTalk/XTTS
+- Envia o resultado como mensagem de voz no WhatsApp
 
-- **Vosk** (para STT):
-  ```bash
-  pip install vosk
-  ```
+### Variações de TTS
 
-Baixe o modelo treinado para PT-BR do [FalaBrasil](https://alphacephei.com/vosk/models/vosk-model-pt-fb-v0.1.1-pruned.zip) em sua versão reduzida (se for rodar no linux, pode baixar a completa!).
-Extraia o mesmo para uma pasta e depois inclua a mesma no `.env`.
+O bot oferece vários personagens para TTS, cada um com sua voz característica:
 
-Configure os caminhos para os executáveis no arquivo `.env`:
+| Comando | Personagem | Descrição |
+|---------|------------|-----------|
+| `!tts-mulher` | Voz feminina | Voz feminina padrão |
+| `!tts-carioca` | Carioca feminina | Voz feminina com sotaque carioca |
+| `!tts-carioco` | Carioca masculina | Voz masculina com sotaque carioca |
+| `!tts-sensual` | Voz sensual feminina | Voz feminina com tom sensual |
+| `!tts-sensuel` | Voz sensual masculina | Voz masculina com tom sensual |
+| `!tts-homem` | Voz masculina | Voz masculina padrão |
+| `!tts-clint` | Voz estilo Clint Eastwood | Voz masculina grave e rasgada |
+| `!tts-morgan` | Voz estilo Morgan Freeman | Voz masculina profunda e calma |
+| `!tts-narrador` | Voz de narrador | Voz masculina em estilo narração |
 
-```env
-ESPEAK_PATH=C:/path/to/espeak.exe
-FFMPEG_PATH=C:/path/to/ffmpeg.exe
-VOSK_STT_MODEL=C:/path/to/vosk-model-ptbr
-```
+**Uso:** Igual ao comando `!tts`, apenas substituindo pelo comando específico da voz desejada.
 
-## Comandos Disponíveis
+## Comando de Voz para Texto (STT)
 
-| Comando | Descrição | Parâmetros |
-|---------|-----------|------------|
-| `!tts` | Converte texto para voz | \<texto\> |
-| `!stt` | Converte voz para texto | - (deve ser usado como resposta a uma mensagem de voz) |
+### !stt
 
-## Exemplos de Uso
+Converte áudios e mensagens de voz para texto.
 
-### Comando !tts
+**Descrição:** Transcreve o conteúdo de áudios ou mensagens de voz para texto.
 
-**Entrada:**
-```
-!tts Olá, esta é uma mensagem gerada por voz sintética
-```
+**Uso:** Responda a uma mensagem de áudio/voz com `!stt`
 
-**Saída:**
-Uma mensagem de áudio com a fala sintetizada contendo o texto solicitado.
+**Exemplos:**
+- Responder a uma mensagem de voz com `!stt`
+- Responder a um áudio com `!stt`
 
-### Comando !stt
+**Detalhes:**
+- Utiliza modelo Whisper para transcrição de alta qualidade
+- Suporta reconhecimento em português e diversos idiomas
+- Otimiza o texto transcrito com pontuação e formatação adequadas
+- Processa automaticamente áudios em grupos onde o autoSTT está ativado
 
-Este comando deve ser usado como resposta a uma mensagem de voz ou áudio.
+## Recursos Adicionais
 
-**Entrada:**
-```
-!stt
-```
-(respondendo a uma mensagem de voz)
+### Auto-STT
 
-**Saída:**
-```
-O texto transcrito da mensagem de voz seria exibido aqui.
-```
+Quando habilitado em um grupo, o bot automaticamente transcreve todas as mensagens de voz recebidas.
 
-## Funcionalidade Auto-STT
+**Configuração:** Administradores podem ativar ou desativar com `!g-autoStt`
 
-Além dos comandos explícitos, o módulo também implementa uma funcionalidade de transcrição automática (`autoStt`) que pode ser ativada em grupos. Quando ativada, todas as mensagens de voz enviadas no grupo são automaticamente transcritas.
+**Detalhes:**
+- Transcrição automática sem necessidade de comandos
+- Configurável separadamente por grupo
+- Útil para acompanhar discussões em grupos sem precisar ouvir os áudios
 
-Esta funcionalidade pode ser ativada/desativada com o comando `!g-autoStt` (comando de gerenciamento).
+## Código-fonte
 
-**Exemplo de saída da transcrição automática:**
-```
-Olá pessoal, vamos nos encontrar às 15h hoje
-```
+Este sistema é implementado no arquivo `src/functions/SpeechCommands.js` e utiliza as seguintes tecnologias:
+- AllTalk/XTTS para síntese de voz de alta qualidade
+- Whisper para reconhecimento de fala
+- FFmpeg para processamento de áudio
+- Otimização de texto via LLM para melhorar a qualidade das transcrições
 
-## Fluxo de Trabalho
+## Observações Técnicas
 
-### Text-to-Speech (TTS)
+- Os modelos de síntese e reconhecimento de voz funcionam localmente
+- O processamento de áudio pode levar alguns segundos dependendo do tamanho do arquivo
+- Atualmente há um limite de aproximadamente 150 caracteres por síntese de voz
 
-1. O usuário envia o comando `!tts` seguido do texto
-2. O bot executa o eSpeak para gerar um arquivo WAV com a voz
-3. O arquivo WAV é convertido para MP3 usando FFmpeg
-4. O arquivo MP3 é enviado como mensagem de voz
+---
 
-### Speech-to-Text (STT)
-
-1. O usuário envia o comando `!stt` como resposta a uma mensagem de voz
-2. O bot baixa o áudio da mensagem
-3. O áudio é convertido para WAV usando FFmpeg
-4. O Vosk-transcriber é usado para transcrever o áudio
-5. O texto transcrito é enviado como resposta
-
-## Funções Auxiliares
-
-O módulo inclui várias funções auxiliares:
-
-- `getMediaFromMessage`: Obtém mídia da mensagem direta ou citada
-- `saveMediaToTemp`: Salva áudio em arquivo temporário
-- `processAutoSTT`: Processa STT automático para mensagens de voz em grupos
-
-## Diretórios Temporários
-
-O módulo utiliza um diretório temporário para armazenar arquivos durante o processamento:
-
-```javascript
-const tempDir = path.join(os.tmpdir(), 'whatsapp-bot-speech');
-```
-
-Este diretório é criado automaticamente e os arquivos são removidos após o processamento.
-
-## Notas e Limitações
-
-- O eSpeak é um sintetizador de voz gratuito, mas a qualidade da voz é relativamente robótica
-- A precisão da transcrição depende da qualidade do áudio e do idioma falado
-- O processamento de áudio pode levar alguns segundos, especialmente para arquivos longos
-- O sistema está otimizado para o idioma português brasileiro, mas pode funcionar com outros idiomas
-- Se o modelo Vosk para português não estiver instalado, a transcrição pode falhar ou ser imprecisa
+*Este documento faz parte da [Documentação de Comandos do RavenaBot AI](README.md#documentação-dos-comandos)*
