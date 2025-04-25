@@ -198,6 +198,7 @@ const commands = [
       before: "⏳",
       after: "✨"
     },
+    cooldown: 30,
     method: generateImage
   })
 ];

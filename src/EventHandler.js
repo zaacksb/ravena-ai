@@ -141,6 +141,15 @@ class EventHandler {
       let group = null;
       if (message.group) {
         group = await this.getOrCreateGroup(message.group);
+
+        // TEMPORÁRIO REMOVER APÓS 1 DIA DE NOVO CÓDIGO
+        // DESTRAVAR GRUPOS ATIVOS
+        if(group.paused){
+          this.logger.info(`[processMessage] DESTRAVADO GRUPO: '${group.name}'`);
+          group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
+          await this.database.saveGroup(group);
+        }
+        // DESTRAVAR
         
         // Armazena mensagem para histórico de conversação
         await SummaryCommands.storeMessage(message, group);
@@ -493,6 +502,7 @@ class EventHandler {
         // Caso 1: Bot entrou no grupo
         this.logger.info(`Bot entrou no grupo ${data.group.name} (${data.group.id})`);
         group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
+        await this.database.saveGroup(group);
         
         // Busca pendingJoins para ver se esse grupo corresponde a um convite pendente
         const pendingJoins = await this.database.getPendingJoins();
@@ -636,6 +646,8 @@ class EventHandler {
       if (bot.grupoLogs) {
         try {
           if(isBotLeaving){
+            group.paused = true; // Sempre que o bot sai do grupo, pausa o mesmo
+            await this.database.saveGroup(group);
             bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} saiu do grupo: ${data.group.name} (${data.group.id})})\nQuem removeu: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
               this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
             });

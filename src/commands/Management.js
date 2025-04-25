@@ -125,6 +125,14 @@ class Management {
         method: 'setInteractionChance',
         description: 'Define a chance de ocorrer interações automáticas'
       },
+      'cmd-setHoras': {
+        method: 'setCmdAllowedHours',
+        description: 'Define horários permitidos para um comando'
+      },
+      'cmd-setDias': {
+        method: 'setCmdAllowedDays',
+        description: 'Define dias permitidos para um comando'
+      },
       'twitch-canal': {
         method: 'toggleTwitchChannel',
         description: 'Adiciona/remove canal da Twitch para monitoramento'
@@ -4542,7 +4550,205 @@ class Management {
   async setYoutubeGroupPhoto(bot, message, args, group) {
     return this.setStreamGroupPhoto(bot, message, args, group, 'youtube');
   }
+  
+  /**
+   * Define horários permitidos para um comando personalizado
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setCmdAllowedHours(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do comando e, opcionalmente, os horários permitidos. Exemplo: !g-cmd-setHoras comando 08:00 20:00'
+      });
+    }
+    
+    // Obtém o nome do comando
+    const commandName = args[0].toLowerCase();
+    
+    // Obtém os horários (start e end)
+    let startTime = null;
+    let endTime = null;
+    
+    if (args.length >= 3) {
+      startTime = args[1];
+      endTime = args[2];
+      
+      // Valida o formato das horas (HH:MM)
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
+      if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Formato de hora inválido. Use o formato HH:MM, por exemplo: 08:00 20:00'
+        });
+      }
+    }
+    
+    // Busca o comando personalizado
+    const commands = await this.database.getCustomCommands(group.id);
+    const command = commands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
+    
+    if (!command) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Comando personalizado '${commandName}' não encontrado.`
+      });
+    }
+    
+    // Inicializa ou atualiza a propriedade allowedTimes
+    if (!command.allowedTimes) {
+      command.allowedTimes = {};
+    }
+    
+    // Se não forneceu horários, remove a restrição
+    if (!startTime || !endTime) {
+      if (command.allowedTimes) {
+        delete command.allowedTimes.start;
+        delete command.allowedTimes.end;
+        
+        // Se não houver mais restrições, remove a propriedade inteira
+        if (!command.allowedTimes.daysOfWeek || command.allowedTimes.daysOfWeek.length === 0) {
+          delete command.allowedTimes;
+        }
+      }
+      
+      // Atualiza o comando
+      await this.database.updateCustomCommand(group.id, command);
+      
+      // Limpa cache de comandos
+      this.database.clearCache(`commands:${group.id}`);
+      await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Restrição de horário removida para o comando '${commandName}'.`
+      });
+    }
+    
+    // Atualiza os horários permitidos
+    command.allowedTimes.start = startTime;
+    command.allowedTimes.end = endTime;
+    
+    // Atualiza o comando
+    await this.database.updateCustomCommand(group.id, command);
+    
+    // Limpa cache de comandos
+    this.database.clearCache(`commands:${group.id}`);
+    await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Horários permitidos para o comando '${commandName}' definidos: das ${startTime} às ${endTime}.`
+    });
+  }
 
+  /**
+   * Define dias permitidos para um comando personalizado
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setCmdAllowedDays(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça o nome do comando e, opcionalmente, os dias permitidos. Exemplo: !g-cmd-setDias comando seg ter qua'
+      });
+    }
+    
+    // Obtém o nome do comando
+    const commandName = args[0].toLowerCase();
+    
+    // Obtém os dias
+    const days = args.slice(1).map(day => day.toLowerCase());
+    
+    // Valida os dias (deve ser seg, ter, qua, qui, sex, sab, dom)
+    const validDays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab', 
+                       'domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+    
+    const invalidDays = days.filter(day => !validDays.includes(day));
+    if (invalidDays.length > 0 && days.length > 0) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Dias inválidos: ${invalidDays.join(', ')}. Use abreviações de três letras (seg, ter, qua, qui, sex, sab, dom).`
+      });
+    }
+    
+    // Busca o comando personalizado
+    const commands = await this.database.getCustomCommands(group.id);
+    const command = commands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
+    
+    if (!command) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Comando personalizado '${commandName}' não encontrado.`
+      });
+    }
+    
+    // Inicializa ou atualiza a propriedade allowedTimes
+    if (!command.allowedTimes) {
+      command.allowedTimes = {};
+    }
+    
+    // Se não forneceu dias, remove a restrição
+    if (days.length === 0) {
+      if (command.allowedTimes) {
+        delete command.allowedTimes.daysOfWeek;
+        
+        // Se não houver mais restrições, remove a propriedade inteira
+        if (!command.allowedTimes.start || !command.allowedTimes.end) {
+          delete command.allowedTimes;
+        }
+      }
+      
+      // Atualiza o comando
+      await this.database.updateCustomCommand(group.id, command);
+      
+      // Limpa cache de comandos
+      this.database.clearCache(`commands:${group.id}`);
+      await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Restrição de dias removida para o comando '${commandName}'.`
+      });
+    }
+    
+    // Atualiza os dias permitidos
+    command.allowedTimes.daysOfWeek = days;
+    
+    // Atualiza o comando
+    await this.database.updateCustomCommand(group.id, command);
+    
+    // Limpa cache de comandos
+    this.database.clearCache(`commands:${group.id}`);
+    await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Dias permitidos para o comando '${commandName}' definidos: ${days.join(', ')}.`
+    });
+  }
 
 }
 

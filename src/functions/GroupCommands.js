@@ -257,6 +257,7 @@ async function apagarMensagem(bot, message, args, group) {
 const commands = [
   new Command({
     name: 'atencao',
+    cooldown: 300,
     description: 'Menciona todos os membros do grupo',
     category: 'grupo',
     reactions: {
@@ -268,6 +269,7 @@ const commands = [
   }),
   new Command({
     name: 'ignorar',
+    cooldown: 0,
     description: 'Alterna ser ignorado pelas menções de grupo',
     category: 'grupo',
     reactions: {
@@ -278,6 +280,7 @@ const commands = [
   }),
   new Command({
     name: 'apagar',
+    cooldown: 0,
     description: 'Apaga a mensagem do bot quando usado em resposta a ela',
     category: 'grupo',
     reactions: {

@@ -1685,3 +1685,65 @@ O sipt deve fazer parte do PlacasCommands.js e o configs.js não deve mais exist
 Use como exemplo o arquivo placas.js enviado, que já tem uma função que chama corretamente a API.
 A chave da API deve ser buscada no .env.
 Use o mesmo validador de placas antes de fazer a chamada da API.
+
+----
+
+
+# Novas funcionalidades no CommandHandler
+
+## Cooldowns
+Quando buscar um comando fixo ou personalizado, deve-se manter em memória um novo objeto que track o cooldown dos comandos, por grupo. (timestamp last used)
+Exemplo:
+
+cooldowns = {
+	"123456@g.us":{
+		"imagine": 1745505948,
+		"ai": 1745505600
+	},
+	"12345@c.us":{
+		...
+	}
+	...
+}
+
+Então antes de confirmar a execução do comando, deve-se se verificar se o mesmo não está em cooldown naquele grupo (ou chat privado)
+
+Esta variável deve ser mantida em memória, mas de tempos em tempos (a cada 1 minuto, por exemplo), deve ser salva em data/cooldowns.json.
+Sempre que o bot for inicializado, deve ser lido este comando para ficar memmória, evitando que perca o cooldown quando o bot reiniciar.
+
+Se estiver em cooldown, o bot deve reagir com: ⏰ e responder :
+	- "O comando '!imagine' está em cooldown, aguarde 12s para usar novamente."
+	- "O comando '!ai' está em cooldown, aguarde 20m para usar novamente."
+
+Para evitar spam, caso já tenha sido enviado uma mensagem de cooldown para este comando, apenas reagir com ⏰
+Quando o comando sai de cooldown, na próxima vez já deve-se enviar a mensagem de aviso novamente.
+
+
+## Hora e dia de funcionamento
+Envie apenas o código que deve ser adicionado e em qual parte da função adicionar.
+
+Comandos fixos ou personalizados podem ter hora e dia definidos pra acontecer, na propriedade 'allowedTimes'
+Se a propriedade não está definida, ignorar.
+
+Permitido das 3 da manhã até ás 3 da tarde, segundas terças e quartas
+{
+	"start": "03:00"
+	"end": "15:00",
+	"daysOfWeek": ["seg", "ter", "qua"]
+}
+
+Permitido das 9 da noite até 5 da manhã nos sábados e domingos:
+{
+	"start": "21:00"
+	"end": "05:00",
+	"daysOfWeek": ["sab", "dom"]
+}
+
+
+## Necessário implementar novos comandos de gerenciamento
+Envie apenas as funções nececessárias e o que adicionar no commandMap.
+
+!g-cmd-setHoras 00:00 20:00
+!g-cmd-setDias seg sex sab
+
+Se enviar sem argumentos, remove a definição (false), permitindo em qualquer hora/dia

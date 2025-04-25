@@ -259,6 +259,7 @@ const commands = [
       before: "⏳",
       after: "🤖"
     },
+    cooldown: 60,
     method: aiCommand
   }),
   new Command({
@@ -271,6 +272,7 @@ const commands = [
       before: "⏳",
       after: "🤖"
     },
+    cooldown: 60,
     method: aiCommand
   }), 
   new Command({
@@ -284,6 +286,7 @@ const commands = [
       before: "⏳",
       after: "🤖"
     },
+    cooldown: 60,
     method: aiCommand
   }), 
   new Command({
@@ -297,6 +300,7 @@ const commands = [
       before: "⏳",
       after: "🤖"
     },
+    cooldown: 60,
     method: aiCommand
   }), 
   new Command({

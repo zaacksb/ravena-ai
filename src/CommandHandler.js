@@ -20,6 +20,11 @@ class CommandHandler {
     this.adminUtils = AdminUtils.getInstance();
     this.customCommands = {}; // Agrupados por groupId
     this.privateManagement = {}; // Para gerenciar grupos a partir de chats privados
+
+    this.cooldowns = {}; // Armazena cooldowns por grupo e comando
+    this.cooldownMessages = {}; // Rastreia quando a última mensagem de cooldown foi enviada
+    this.cooldownsLastSaved = Date.now();
+    this.loadCooldowns(); // Carrega cooldowns do arquivo ao inicializar
     
     // Emojis de reação padrão
     this.defaultReactions = {
@@ -31,6 +36,7 @@ class CommandHandler {
     // Inicializa cache de comandos
     this.loadAllCommands();
   }
+
 
   /**
    * Carrega todos os comandos de arquivos e banco de dados
@@ -66,6 +72,7 @@ class CommandHandler {
     }
   }
 
+
   /**
    * Carrega comandos personalizados para um grupo específico
    * @param {string} groupId - O ID do grupo
@@ -87,6 +94,290 @@ class CommandHandler {
       this.customCommands[groupId] = [];
     }
   }
+
+  /**
+   * Carrega cooldowns do arquivo
+   */
+  async loadCooldowns() {
+    try {
+      const cooldownsPath = path.join(__dirname, '../data/cooldowns.json');
+      try {
+        const data = await fs.readFile(cooldownsPath, 'utf8');
+        this.cooldowns = JSON.parse(data);
+        this.logger.info(`Cooldowns carregados: ${Object.keys(this.cooldowns).length} grupos`);
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          this.logger.error('Erro ao carregar cooldowns:', error);
+        } else {
+          this.logger.info('Arquivo de cooldowns não encontrado, iniciando com cooldowns vazios');
+        }
+        this.cooldowns = {};
+      }
+    } catch (error) {
+      this.logger.error('Erro ao inicializar cooldowns:', error);
+      this.cooldowns = {};
+    }
+  }
+
+  /**
+   * Salva cooldowns em arquivo
+   */
+  async saveCooldowns() {
+    try {
+      const cooldownsPath = path.join(__dirname, '../data/cooldowns.json');
+      
+      // Cria o diretório data se não existir
+      const dataDir = path.join(__dirname, '../data');
+      try {
+        await fs.access(dataDir);
+      } catch (error) {
+        await fs.mkdir(dataDir, { recursive: true });
+      }
+      
+      await fs.writeFile(cooldownsPath, JSON.stringify(this.cooldowns, null, 2));
+      this.cooldownsLastSaved = Date.now();
+      this.logger.debug('Cooldowns salvos com sucesso');
+    } catch (error) {
+      this.logger.error('Erro ao salvar cooldowns:', error);
+    }
+  }
+
+  /**
+   * Verifica se um comando está em cooldown
+   * @param {Command|string} command - Comando ou nome do comando
+   * @param {string} groupId - ID do grupo ou chat
+   * @returns {Object} - Informações sobre o cooldown
+   */
+  checkCooldown(command, groupId) {
+    const commandName = typeof command === 'string' ? command : command.name;
+    
+    // Se não existir cooldown para este grupo, cria
+    if (!this.cooldowns[groupId]) {
+      this.cooldowns[groupId] = {};
+    }
+    
+    // Obtém timestamp do último uso
+    const lastUsed = this.cooldowns[groupId][commandName] || 0;
+    const now = Date.now();
+    
+    // Obtém valor de cooldown (em segundos)
+    let cooldownValue = 5; // Valor padrão
+    
+    if (typeof command === 'object') {
+      cooldownValue = command.cooldown || cooldownValue;
+    }
+    
+    // Converte para milissegundos
+    const cooldownMs = cooldownValue * 1000;
+    
+    // Verifica se ainda está em cooldown
+    if (now - lastUsed < cooldownMs) {
+      // Calcula tempo restante
+      const timeLeft = Math.ceil((cooldownMs - (now - lastUsed)) / 1000);
+      return {
+        inCooldown: true,
+        timeLeft: timeLeft,
+        formattedTime: this.formatCooldownTime(timeLeft)
+      };
+    }
+    
+    // Não está em cooldown
+    return {
+      inCooldown: false,
+      timeLeft: 0,
+      formattedTime: ''
+    };
+  }
+
+  /**
+   * Formata o tempo de cooldown para exibição
+   * @param {number} seconds - Tempo em segundos
+   * @returns {string} - Tempo formatado
+   */
+  formatCooldownTime(seconds) {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+    } else {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      if (minutes > 0) {
+        return `${hours}h ${minutes}m`;
+      } else {
+        return `${hours}h`;
+      }
+    }
+  }
+
+  /**
+   * Atualiza o timestamp de cooldown após uso do comando
+   * @param {Command|string} command - Comando ou nome do comando
+   * @param {string} groupId - ID do grupo ou chat
+   */
+  updateCooldown(command, groupId) {
+    const commandName = typeof command === 'string' ? command : command.name;
+    
+    // Se não existir cooldown para este grupo, cria
+    if (!this.cooldowns[groupId]) {
+      this.cooldowns[groupId] = {};
+    }
+    
+    // Atualiza timestamp
+    this.cooldowns[groupId][commandName] = Date.now();
+    
+    // Salva cooldowns a cada minuto
+    if (Date.now() - this.cooldownsLastSaved > 60000) {
+      this.saveCooldowns().catch(error => {
+        this.logger.error('Erro ao salvar cooldowns:', error);
+      });
+    }
+  }
+
+  /**
+   * Envia mensagem de cooldown para o usuário
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Mensagem original
+   * @param {Command|string} command - Comando ou nome do comando
+   * @param {string} groupId - ID do grupo ou chat
+   * @param {Object} cooldownInfo - Informações sobre o cooldown
+   */
+  async handleCooldownMessage(bot, message, command, groupId, cooldownInfo) {
+    try {
+      // Reage com emoji de relógio
+      await message.origin.react("⏰");
+      
+      // Verifica se já enviamos uma mensagem de cooldown para este comando recentemente
+      const cooldownMsgKey = `${groupId}:${command.name || command}`;
+      const lastCooldownMsg = this.cooldownMessages[cooldownMsgKey] || 0;
+      const now = Date.now();
+      
+      // Envia mensagem apenas se não enviamos uma recentemente (nos últimos 30 segundos)
+      if (now - lastCooldownMsg > 30000) {
+        const returnMessage = new ReturnMessage({
+          chatId: groupId,
+          content: `O comando '${command.name || command}' está em cooldown, aguarde ${cooldownInfo.formattedTime} para usar novamente.`
+        });
+        
+        await bot.sendReturnMessages(returnMessage);
+        
+        // Atualiza timestamp da última mensagem de cooldown
+        this.cooldownMessages[cooldownMsgKey] = now;
+      }
+    } catch (error) {
+      this.logger.error('Erro ao enviar mensagem de cooldown:', error);
+    }
+  }
+
+  /**
+   * Verifica se um comando pode ser executado com base em horário e dias
+   * @param {Command|Object} command - Comando a verificar
+   * @returns {boolean} - True se pode ser executado, false caso contrário
+   */
+  checkAllowedTimes(command) {
+    // Se não tiver a propriedade allowedTimes, permite sempre
+    if (!command.allowedTimes) {
+      return true;
+    }
+    
+    const allowedTimes = command.allowedTimes;
+    const now = new Date();
+    
+    // Verifica dias da semana permitidos
+    if (allowedTimes.daysOfWeek && Array.isArray(allowedTimes.daysOfWeek) && allowedTimes.daysOfWeek.length > 0) {
+      // Mapeia dias da semana para seus equivalentes em português
+      const dayMap = {
+        'dom': 0, 'seg': 1, 'ter': 2, 'qua': 3, 'qui': 4, 'sex': 5, 'sab': 6,
+        'domingo': 0, 'segunda': 1, 'terca': 2, 'quarta': 3, 'quinta': 4, 'sexta': 5, 'sabado': 6
+      };
+      
+      // Obtém o dia atual da semana (0-6, onde 0 é domingo)
+      const currentDay = now.getDay();
+      
+      // Verifica se o dia atual está na lista de dias permitidos
+      const isDayAllowed = allowedTimes.daysOfWeek.some(day => {
+        const mappedDay = dayMap[day.toLowerCase()];
+        return mappedDay === currentDay;
+      });
+      
+      // Se não estiver no dia permitido, retorna falso
+      if (!isDayAllowed) {
+        return false;
+      }
+    }
+    
+    // Verifica horário permitido
+    if (allowedTimes.start && allowedTimes.end) {
+      const [startHour, startMinute] = allowedTimes.start.split(':').map(Number);
+      const [endHour, endMinute] = allowedTimes.end.split(':').map(Number);
+      
+      // Cria objetos Date para comparação
+      const startTime = new Date();
+      startTime.setHours(startHour, startMinute, 0, 0);
+      
+      const endTime = new Date();
+      endTime.setHours(endHour, endMinute, 0, 0);
+      
+      // Se o horário de término for antes do início, significa que atravessa a meia-noite
+      if (endTime <= startTime) {
+        // Verifica se o horário atual está entre o início e meia-noite OU entre meia-noite e o término
+        return now >= startTime || now <= endTime;
+      } else {
+        // Verifica se o horário atual está entre início e término
+        return now >= startTime && now <= endTime;
+      }
+    }
+    
+    // Se chegou aqui, é porque passou em todas as verificações ou não tinha restrições
+    return true;
+  }
+
+  /**
+   * Formata os dias e horários permitidos para exibição
+   * @param {Command|Object} command - Comando a formatar
+   * @returns {string} - Texto formatado
+   */
+  formatAllowedTimes(command) {
+    if (!command.allowedTimes) {
+      return "qualquer horário e dia";
+    }
+    
+    const allowedTimes = command.allowedTimes;
+    let result = "";
+    
+    // Formata horários
+    if (allowedTimes.start && allowedTimes.end) {
+      result += `das ${allowedTimes.start} até ${allowedTimes.end}`;
+    }
+    
+    // Formata dias
+    if (allowedTimes.daysOfWeek && Array.isArray(allowedTimes.daysOfWeek) && allowedTimes.daysOfWeek.length > 0) {
+      // Mapeia abreviações para nomes completos
+      const dayMap = {
+        'dom': 'domingos',
+        'seg': 'segundas',
+        'ter': 'terças',
+        'qua': 'quartas',
+        'qui': 'quintas',
+        'sex': 'sextas',
+        'sab': 'sábados'
+      };
+      
+      // Formata lista de dias
+      const daysText = allowedTimes.daysOfWeek.map(day => dayMap[day.toLowerCase()] || day).join(', ');
+      
+      if (result) {
+        result += ` nos dias: ${daysText}`;
+      } else {
+        result += `nos dias: ${daysText}`;
+      }
+    }
+    
+    return result || "qualquer horário e dia";
+  }
+
 
   delayedReaction(msg, emoji, delay){
     setTimeout((m,e) => {
@@ -491,6 +782,37 @@ class CommandHandler {
           return;
         }
       }
+
+      // Verifica horários permitidos
+      if (!this.checkAllowedTimes(command)) {
+        this.logger.debug(`Comando ${command.name} não está disponível neste horário/dia`);
+        
+        // Reage com emoji de relógio
+        try {
+          await message.origin.react("🕒");
+        } catch (reactError) {
+          this.logger.error('Erro ao aplicar reação "indisponível":', reactError);
+        }
+        
+        const chatId = message.group || message.author;
+        const returnMessage = new ReturnMessage({
+          chatId: chatId,
+          content: `O comando ${command.name} só está disponível ${this.formatAllowedTimes(command)}.`
+        });
+        
+        await bot.sendReturnMessages(returnMessage);
+        return;
+      }
+
+      // Verifica cooldown
+      const groupId = message.group || message.author;
+      const cooldownInfo = this.checkCooldown(command, groupId);
+
+      if (cooldownInfo.inCooldown) {
+        this.logger.debug(`Comando ${command.name} em cooldown por mais ${cooldownInfo.timeLeft}s`);
+        await this.handleCooldownMessage(bot, message, command, groupId, cooldownInfo);
+        return;
+      }
       
       // Reage com emoji "antes" (específico do comando ou padrão)
       if(command.reactions?.before){
@@ -503,6 +825,7 @@ class CommandHandler {
       
       // Executa método do comando
       if (typeof command.method === 'function') {
+        this.updateCooldown(command, groupId);
         const result = await command.method(bot, message, args, group);
         
         // Verifica se o resultado é um ReturnMessage ou array de ReturnMessages
@@ -526,7 +849,7 @@ class CommandHandler {
         }
         
         this.logger.debug(`Comando ${command.name} executado com sucesso, enviando after reaction`);
-        
+
         // Reage com emoji "depois" (específico do comando ou padrão)
         if(command.reactions?.after){
           this.delayedReaction(message.origin, command.reactions.after, 1000);
@@ -597,6 +920,34 @@ class CommandHandler {
         return;
       }
       
+      if (command.allowedTimes && !this.checkAllowedTimes(command)) {
+        this.logger.debug(`Comando ${command.startsWith} não está disponível neste horário/dia`);
+        
+        // Reage com emoji de relógio
+        try {
+          await message.origin.react("🕒");
+        } catch (reactError) {
+          this.logger.error('Erro ao aplicar reação "indisponível":', reactError);
+        }
+        
+        const returnMessage = new ReturnMessage({
+          chatId: message.group,
+          content: `O comando ${command.startsWith} só está disponível ${this.formatAllowedTimes(command)}.`
+        });
+        
+        await bot.sendReturnMessages(returnMessage);
+        return;
+      }
+
+      // Verifica cooldown
+      const cooldownInfo = this.checkCooldown(command.startsWith, message.group);
+
+      if (cooldownInfo.inCooldown) {
+        this.logger.debug(`Comando ${command.startsWith} em cooldown por mais ${cooldownInfo.timeLeft}s`);
+        await this.handleCooldownMessage(bot, message, command.startsWith, message.group, cooldownInfo);
+        return;
+      }
+
       // Reage com emoji antes (do comando ou padrão)
       if(command.reactions?.before){
         try {
@@ -622,6 +973,8 @@ class CommandHandler {
         }
       }
       
+      this.updateCooldown(command.startsWith, message.group);
+
       // Envia todas as respostas ou seleciona uma aleatória
       if (command.sendAllResponses) {
         this.logger.debug(`Enviando todas as ${responses.length} respostas para o comando ${command.startsWith}`);
@@ -647,6 +1000,7 @@ class CommandHandler {
           await bot.sendReturnMessages(returnMessage);
         }
       }
+
       
       // Reage com emoji depois (do comando ou padrão)
       const afterEmoji = command.reactions?.after || null;
