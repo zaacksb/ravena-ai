@@ -537,7 +537,27 @@
                 document.getElementById('retryButton').addEventListener('click', fetchHealthData);
             }
         }
-        
+
+        function formatPhoneNumber(number) {
+          // Check if input is valid
+          if (!number || typeof number !== 'string' || !/^\d+$/.test(number)) {
+            return 'Invalid phone number';
+          }
+
+          // For Brazilian numbers format: +55 (XX) XXXXX-XXXX
+          if (number.length >= 12 && number.startsWith('55')) {
+            const countryCode = number.substring(0, 2);
+            const areaCode = number.substring(2, 4);
+            const prefix = number.substring(4, 9);
+            const suffix = number.substring(9);
+            
+            return `+${countryCode} (${areaCode}) 9${prefix}-${suffix}`;
+          } 
+          
+          // Return original if format doesn't match expected pattern
+          return number;
+        }
+
         // Função para renderizar os bots
         function renderBots(data) {
             const botContainer = document.getElementById('botContainer');
@@ -552,7 +572,7 @@
                 const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
                 const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
                 const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
-                const phoneNumber = extractPhoneFromBotId(bot.id, data.bots);
+                const phoneNumber = formatPhoneNumber(extractPhoneFromBotId(bot.id, data.bots));
                 const whatsappUrl = formatWhatsAppUrl(phoneNumber);
                 const msgsHr = Math.round(bot.msgsHr || 0);
                 const msgActivityClass = getMessageActivityClass(msgsHr);
