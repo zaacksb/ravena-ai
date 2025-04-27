@@ -1846,3 +1846,47 @@ Me diga quais chaves API vou precisar fornecer e colocar no .env
 
 Não use o openrouter mais, pois ele tem um limite curto de requests grátis por dia.
 Chame os endpoints das APIs próprias de cada provider diretamente. Caso seja necessário, instale módulos NPM para cada um, caso fique mais userfriendly.
+
+-----
+
+# WhatsAppBot.js
+Nova função: restartBot()
+
+Essa função irá fazer o que a destroy() faz, mas logo na sequencia, reinicializar tudo como no initialize();
+
+No this.client.on('message'), atualize a variável this.lastMessageReceived para o timestamp atual
+
+
+# SuperAdmin
+
+Comando que invoca a função restartBot() no bot.id especificado
+!sa-restart [bot.id] Frase do Motivo
+
+A "Frase do Motivo" deve ser enviada para o grupo de avisos. Após o envio, agurdar 5 segundos e prosseguir com a reinicialização do bot especificado
+
+# BotAPI.js
+
+Atualize o endpoint /health
+Retorn também o timestamp de quando a última mensagem foi recebida (bot.lastMessageReceived)
+
+Crie novo endpoint com autenticação:
+- restart/:botId
+
+
+O login e senha deve ser lido de .env.BOTAPI_USER E .env.BOTAPI_PASSWORD, caso não exista, padrao "admin/senha12345"
+
+Agora na API, crie endpoint de pasta publica que irá ter arquivos.
+
+No momento, apenas um index.html basta.
+
+Este arquivo será html, css e javascript simples.
+Cores pra utilizar: #23066d, #b7b7c5, #3e0ea7,#04a9f0, #05060d, #47486c, #25224f
+
+Ela deve mostrar a lista dos bots instanciados e o status de cada um, com base no lastMessageReceived.
+Use emojis
+🟢 < 2 min
+🟡 < 5 min
+🟠 < 15 min
+🔴 > 15 min
+
+No meio do topo da página deve ser exibido um banner "ravenabanner.png"

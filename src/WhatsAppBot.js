@@ -42,6 +42,8 @@ class WhatsAppBot {
     this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
     this.grupoAvisos = options.grupoAvisos || process.env.GRUPO_AVISOS;
     this.grupoInteracao = options.grupoInteracao || process.env.GRUPO_INTERACAO;
+
+    this.lastMessageReceived = Date.now();
     
     // Inicializa rastreador de relatórios de carga
     this.loadReport = new LoadReport(this);
@@ -211,6 +213,8 @@ class WhatsAppBot {
 
     // Evento de mensagem
     this.client.on('message', async (message) => {
+      this.lastMessageReceived = Date.now();
+
       try {
         // Verifica se o autor está na lista de bloqueados
         if (this.blockedContacts && Array.isArray(this.blockedContacts)) {
@@ -567,6 +571,127 @@ class WhatsAppBot {
       await this.client.destroy();
       this.client = null;
       this.isConnected = false;
+    }
+  }
+
+  /**
+   * Reinicia o cliente WhatsApp
+   * @param {string} reason - Motivo da reinicialização (opcional)
+   * @returns {Promise<void>}
+   */
+  async restartBot(reason = 'Reinicialização solicitada') {
+    try {
+      this.logger.info(`Reiniciando instância de bot ${this.id}. Motivo: ${reason}`);
+      
+      // Notifica o grupo de avisos sobre a reinicialização
+      if (this.grupoAvisos && this.isConnected) {
+        try {
+          const restartMessage = `🔄 Bot ${this.id} reiniciando em ${new Date().toLocaleString("pt-BR")}\nMotivo: ${reason}`;
+          await this.sendMessage(this.grupoAvisos, restartMessage);
+          // Aguarda 5 segundos para a mensagem ser entregue
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } catch (error) {
+          this.logger.error('Erro ao enviar notificação de reinicialização:', error);
+        }
+      }
+      
+      // Limpa recursos atuais
+      if (this.loadReport) {
+        this.loadReport.destroy();
+      }
+      
+      if (this.inviteSystem) {
+        this.inviteSystem.destroy();
+      }
+      
+      if (this.streamSystem) {
+        this.streamSystem.destroy();
+        this.streamSystem = null;
+        this.streamMonitor = null;
+      }
+      
+      // Destrói cliente atual
+      if (this.client) {
+        await this.client.destroy();
+        this.client = null;
+        this.isConnected = false;
+      }
+      
+      this.logger.info(`Bot ${this.id} desconectado, iniciando reinicialização...`);
+      
+      // Aguarda um curto período antes de reiniciar
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Recria o cliente
+      this.client = new Client({
+        authStrategy: new LocalAuth({ clientId: this.id }),
+        puppeteer: this.puppeteerOptions
+      });
+      
+      // Registra manipuladores de eventos novamente
+      this.registerEventHandlers();
+      
+      // Inicializa cliente
+      await this.client.initialize();
+      this.logger.info(`Bot ${this.id} reinicializado com sucesso`);
+      
+      // Aguarda a conexão ser estabelecida
+      let waitTime = 0;
+      const maxWaitTime = 60000; // 60 segundos de timeout
+      const checkInterval = 2000; // Verifica a cada 2 segundos
+      
+      while (!this.isConnected && waitTime < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        waitTime += checkInterval;
+      }
+      
+      if (this.isConnected) {
+        this.logger.info(`Bot ${this.id} reconectado após ${waitTime}ms`);
+        
+        // Recarrega contatos bloqueados
+        try {
+          this.blockedContacts = await this.client.getBlockedContacts();
+          this.logger.info(`Recarregados ${this.blockedContacts.length} contatos bloqueados`);
+          
+          if (this.otherBots.length > 0) {
+            this.prepareOtherBotsBlockList();
+          }
+        } catch (error) {
+          this.logger.error('Erro ao recarregar contatos bloqueados:', error);
+          this.blockedContacts = [];
+        }
+        
+        // Inicializa o sistema de streaming
+        this.streamSystem = new StreamSystem(this);
+        await this.streamSystem.initialize();
+        this.streamMonitor = this.streamSystem.streamMonitor;
+        
+        // Envia notificação de reinicialização bem-sucedida
+        if (this.grupoAvisos) {
+          try {
+            const successMessage = `✅ Bot ${this.id} reiniciado com sucesso!\nMotivo prévio: ${reason}`;
+            await this.sendMessage(this.grupoAvisos, successMessage);
+          } catch (error) {
+            this.logger.error('Erro ao enviar notificação de sucesso:', error);
+          }
+        }
+      } else {
+        this.logger.error(`Falha ao reconectar bot ${this.id} após ${waitTime}ms`);
+        
+        // Notifica sobre falha na reinicialização
+        if (this.grupoLogs) {
+          try {
+            const errorMessage = `❌ Falha ao reiniciar bot ${this.id}\nMotivo da reinicialização: ${reason}`;
+            // Tenta enviar a mensagem de erro, mas pode falhar se o bot não estiver conectado
+            await this.sendMessage(this.grupoLogs, errorMessage).catch(() => {});
+          } catch (error) {
+            this.logger.error('Erro ao enviar notificação de falha:', error);
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Erro durante a reinicialização do bot ${this.id}:`, error);
+      throw error;
     }
   }
 }

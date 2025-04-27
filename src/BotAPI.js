@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const Logger = require('./utils/Logger');
 const Database = require('./utils/Database');
+const path = require('path');
 
 /**
  * Servidor API para o bot WhatsApp
@@ -19,10 +20,15 @@ class BotAPI {
     this.logger = new Logger('bot-api');
     this.database = Database.getInstance();
     this.app = express();
+
+    // Credenciais de autenticação para endpoints protegidos
+    this.apiUser = process.env.BOTAPI_USER || 'admin';
+    this.apiPassword = process.env.BOTAPI_PASSWORD || 'senha12345';
     
     // Configura middlewares
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
+    this.app.use(express.static(path.join(__dirname, '../public')));
     
     // Configura rotas
     this.setupRoutes();
@@ -39,9 +45,105 @@ class BotAPI {
         timestamp: Date.now(),
         bots: this.bots.map(bot => ({
           id: bot.id,
-          connected: bot.isConnected
+          connected: bot.isConnected,
+          lastMessageReceived: bot.lastMessageReceived || null
         }))
       });
+    });
+    
+    // Middleware de autenticação básica
+    const authenticateBasic = (req, res, next) => {
+      // Verifica se os cabeçalhos de autenticação existem
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        res.set('WWW-Authenticate', 'Basic realm="RavenaBot API"');
+        return res.status(401).json({
+          status: 'error',
+          message: 'Autenticação requerida'
+        });
+      }
+      
+      // Decodifica e verifica credenciais
+      try {
+        // O formato é 'Basic <base64 encoded username:password>'
+        const base64Credentials = authHeader.split(' ')[1];
+        const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8');
+        const [username, password] = credentials.split(':');
+        
+        if (username === this.apiUser && password === this.apiPassword) {
+          return next();
+        }
+      } catch (error) {
+        this.logger.error('Erro ao processar autenticação básica:', error);
+      }
+      
+      // Credenciais inválidas
+      res.set('WWW-Authenticate', 'Basic realm="RavenaBot API"');
+      return res.status(401).json({
+        status: 'error',
+        message: 'Credenciais inválidas'
+      });
+    };
+    
+    // Novo endpoint para reiniciar um bot específico (requer autenticação)
+    this.app.post('/restart/:botId', authenticateBasic, async (req, res) => {
+      try {
+        // Obter parâmetros
+        const { botId } = req.params;
+        const { reason } = req.body || {};
+        
+        // Validar parâmetros
+        if (!botId) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'ID do bot não especificado'
+          });
+        }
+        
+        // Encontrar o bot solicitado
+        const bot = this.bots.find(b => b.id === botId);
+        if (!bot) {
+          return res.status(404).json({
+            status: 'error',
+            message: `Bot com ID '${botId}' não encontrado`
+          });
+        }
+        
+        // Verificar se o método de reinicialização está disponível
+        if (typeof bot.restartBot !== 'function') {
+          return res.status(400).json({
+            status: 'error',
+            message: `Bot '${botId}' não suporta reinicialização`
+          });
+        }
+        
+        // Iniciar reinicialização em modo assíncrono
+        const restartReason = reason || `Reinicialização via API em ${new Date().toLocaleString("pt-BR")}`;
+        
+        // Responder imediatamente ao cliente
+        res.json({
+          status: 'ok',
+          message: `Reiniciando bot '${botId}'`,
+          timestamp: Date.now()
+        });
+        
+        // Executar reinicialização em segundo plano
+        setTimeout(async () => {
+          try {
+            this.logger.info(`Reiniciando bot ${botId} via endpoint API`);
+            await bot.restartBot(restartReason);
+            this.logger.info(`Bot ${botId} reiniciado com sucesso via API`);
+          } catch (error) {
+            this.logger.error(`Erro ao reiniciar bot ${botId} via API:`, error);
+          }
+        }, 500);
+      } catch (error) {
+        this.logger.error('Erro no endpoint de reinicialização:', error);
+        res.status(500).json({
+          status: 'error',
+          message: 'Erro interno do servidor'
+        });
+      }
     });
     
     // Webhook de doação do Tipa.ai

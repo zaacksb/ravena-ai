@@ -31,7 +31,8 @@ class SuperAdmin {
       'block': {'method': 'blockUser'},
       'leaveGrupo': {'method': 'leaveGroup'},
       'foto': {'method': 'changeProfilePicture'},
-      'simular': {'method': 'simulateStreamEvent'}
+      'simular': {'method': 'simulateStreamEvent'},
+      'restart': {'method': 'restartBot'}
     };
   }
 
@@ -621,6 +622,98 @@ class SuperAdmin {
       });
     } catch (error) {
       this.logger.error('Erro no comando simulateStreamEvent:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  /**
+   * Reinicia um bot específico
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async restartBot(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça o ID do bot a reiniciar. Exemplo: !sa-restart ravena-testes Manutenção programada'
+        });
+      }
+      
+      // Obtém ID do bot e motivo
+      const targetBotId = args[0];
+      const reason = args.length > 1 ? args.slice(1).join(' ') : 'Reinicialização solicitada por admin';
+      
+      // Obtém instância do bot alvo
+      let targetBot = null;
+      
+      // Verifica se estamos tentando reiniciar o bot atual
+      if (targetBotId === bot.id) {
+        targetBot = bot;
+      } else {
+        // Verifica se o bot está na lista de outros bots
+        if (bot.otherBots && Array.isArray(bot.otherBots)) {
+          targetBot = bot.otherBots.find(b => b.id === targetBotId);
+        }
+      }
+      
+      if (!targetBot) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Bot com ID '${targetBotId}' não encontrado. Verifique se o ID está correto.`
+        });
+      }
+      
+      // Verifica se o bot tem método de reinicialização
+      if (typeof targetBot.restartBot !== 'function') {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ O bot '${targetBotId}' não possui o método de reinicialização.`
+        });
+      }
+      
+      // Envia mensagem de resposta antes de reiniciar
+      this.logger.info(`Reiniciando bot ${targetBotId} por comando de ${message.authorName}`);
+      
+      // Iniciar processo de reinicialização em um setTimeout para permitir que a resposta seja enviada primeiro
+      setTimeout(async () => {
+        try {
+          // Tenta reiniciar o bot
+          await targetBot.restartBot(reason);
+        } catch (restartError) {
+          this.logger.error(`Erro ao reiniciar bot ${targetBotId}:`, restartError);
+          
+          // Tenta enviar mensagem de erro (se possível)
+          try {
+            await bot.sendMessage(chatId, `❌ Erro ao reiniciar bot ${targetBotId}: ${restartError.message}`);
+          } catch (sendError) {
+            this.logger.error('Erro ao enviar mensagem de falha de reinicialização:', sendError);
+          }
+        }
+      }, 1000);
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✅ Iniciando reinicialização do bot '${targetBotId}'...\nMotivo: ${reason}\n\nEste processo pode levar alguns segundos. Você receberá notificações sobre o progresso no grupo de avisos.`
+      });
+    } catch (error) {
+      this.logger.error('Erro no comando restartBot:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,
