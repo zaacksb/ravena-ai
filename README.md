@@ -143,6 +143,9 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Atualizar código para {mention} e {membroRandom}
 - [ ] Ignorar mensagens entre ravenas (grupos de adm)
 - [ ] Fix Riot API
+- [ ] Quando exceder requests do Gemini, usar o local
+- [x] Usar faster-whisper-xll
+- [x] AllTalk pegar arquivos via API
 
 
 ## ✅ TODO-Extras
@@ -152,6 +155,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Jogo: Pesca
+- [ ] Emoji Kitchen
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 - [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off
