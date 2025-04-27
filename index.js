@@ -34,7 +34,6 @@ async function main() {
       prefix: process.env.DEFAULT_PREFIX || '!',
       // Configurações de puppeteer
       puppeteerOptions: {
-        executablePath: chromePath || undefined,
         args: [
           '--no-sandbox', 
           '--disable-setuid-sandbox', 

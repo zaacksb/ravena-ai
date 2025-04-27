@@ -184,9 +184,8 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 2. Instale as dependências:
    ```bash
    npm install
+   python -m pip install rembg[cli]
    ```
-
-   Este comando também instalará automaticamente as dependências Python necessárias.
 
 3. Copie o arquivo `.env.example` para `.env`:
    ```bash
