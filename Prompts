@@ -1782,3 +1782,6 @@ Linkar estes arquivos nesta sessão do readme, com um breve descrição, exemplo
 - [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web
 
 ----
+Se baseando no arquivo WhatsAppBot.js que utiliza a biblioteca whatsapp-web.js (https://github.com/pedroslopez/whatsapp-web.js), crie um WhatsAppBotBaileys.js utilizando a biblioteca Baileys (https://github.com/WhiskeySockets/Baileys).
+
+Considere que o WhatsappBot.js é uma interface e implemente todos métodos para que eu possa simplesmente instanciar um objeto new WhatsAppBotBailyes no index, assim como é feito com o original.

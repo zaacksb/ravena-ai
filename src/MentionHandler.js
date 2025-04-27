@@ -31,6 +31,7 @@ class MentionHandler {
 
       // Obtém o número de telefone do bot para verificar menções
       const botNumber = bot.client.info.wid._serialized.split('@')[0];
+      //const botNumber = bot.client.info?.wid?._serialized || bot.client.user?.id || '';
       
       // Verifica se a mensagem COMEÇA com uma menção ao bot
       const mentionRegexStart = new RegExp(`^\\s*@${botNumber}\\b`, 'i');

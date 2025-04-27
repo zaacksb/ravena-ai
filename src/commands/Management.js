@@ -899,7 +899,7 @@ class Management {
         : 'Desativado';
       
       // Formata data de criação
-      const creationDate = new Date(group.createdAt).toLocaleString();
+      const creationDate = new Date(group.createdAt).toLocaleString("pt-BR");
       
       // Obtém informações do sistema de arquivos para o grupo
       let filesInfo = {

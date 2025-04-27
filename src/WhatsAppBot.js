@@ -95,12 +95,23 @@ class WhatsAppBot {
     // Envia notificação de inicialização para o grupo de logs
     if (this.grupoLogs && this.isConnected) {
       try {
-        const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString()}`;
+        const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString("pt-BR")}`;
         await this.sendMessage(this.grupoLogs, startMessage);
       } catch (error) {
         this.logger.error('Erro ao enviar notificação de inicialização:', error);
       }
     }
+
+    if (this.grupoAvisos && this.isConnected) {
+      try {
+        const startMessage = `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* tá _on_! (${new Date().toLocaleString("pt-BR")})`;
+        await this.sendMessage(this.grupoAvisos, startMessage);
+      } catch (error) {
+        this.logger.error('Erro ao enviar notificação de inicialização:', error);
+      }
+    }
+
+
     
     return this;
   }
@@ -490,7 +501,7 @@ class WhatsAppBot {
     // Envia notificação de desligamento para o grupo de logs
     if (this.grupoLogs && this.isConnected) {
       try {
-        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString()}`;
+        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString("pt-BR")}`;
         await this.sendMessage(this.grupoLogs, shutdownMessage);
       } catch (error) {
         this.logger.error('Erro ao enviar notificação de desligamento:', error);

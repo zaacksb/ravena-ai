@@ -5,9 +5,24 @@
 > Novo código da ravena completamente desenvolvido utilizando LLM Claude 3.7 Sonnet. Esta versão apresenta uma arquitetura modular, suporte a múltiplas instâncias, comandos personalizáveis e integração com plataformas de streaming. Livre para uso, sem garantias. Consulte o arquivo "Prompts" para ver as coisas que eu pedi pro Claude. Leia mais sobre os [design patterns aqui](docs/DesignPatterns.md).
 
 ## ℹ️ Principais diferenças
-- Comandos de gerenciar agora são !g-
-- Por padrão, agora precisam do prefixo para serem acionados. É possível mudar usando !g-setCustomPrefix. A ravena antiga não tinha prefixo
-- Todos números rodam no mesmo processo e compartilham a base de dados
+
+*No dia a dia:*
+- Os comandos de gerencia foram trocados por !g-xxx, envie !cmd-g para conhecê-los!
+- Todos os comandos precisam de prefixo agora, então quando criar um comando, não coloque o "!" na frente do nome do comando
+- O prefixo dos comandos pode ser alterado usando !g-setPrefixo
+- O !stt, que transformar áudio em texto, agora roda local e não precisa mais de chave azure nenhuma
+- Agora dá pra adicionar quantos canais de twitch, kick e youtube quiser em um grupo
+ 
+
+*Novos comandos legais*
+- Pastas: É o _drive da ravena_! Guarde seus arquivos aqui e use comandos pra baixar todos de uma vez. Útil para grupos que precisam toda hora enviar documentos e outras coisas para membros novos.
+- TTS com voz personalizada: Agora sintetizo as vozes local usando o AllSpeak, sendo o default a voz da ravena, mas podendo aprender a voz de outras pessoas também
+
+*De código:*
+- O código está liberado e qualquer um pode contribuir pra novas funçoes
+- Foi 90% escrito por inteligência artificial _(Claude Sonnet 3.7)_
+- A base de dados é compartilhada entre todas as ravenas agora
+- Todas as ravenas rodam no mesmo processo
 
 ## 🔮 Visão Geral
 

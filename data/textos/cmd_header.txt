@@ -2,3 +2,6 @@
 
 🌟 Versão *nova* da _ravenabot_! _(Código liberado)_
 Para saber as principais diferenças, envie !diferenças
+
+*HOJE 26/04 ESTAMOS RODANDO COMO TESTE APENAS PARA COLETAR PROBLEMAS*
+_*EM BREVE RETORNA O CÓDIGO ANTIGO ATÉ FAZER A MIGRAÇÃO POR COMPLETO*_

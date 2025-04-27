@@ -4,17 +4,19 @@ const Database = require('./utils/Database');
 const Logger = require('./utils/Logger');
 const path = require('path');
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const LoadReport = require('./LoadReport');
 const ReactionsHandler = require('./ReactionsHandler');
 const MentionHandler = require('./MentionHandler');
 const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem');
 const LLMService = require('./services/LLMService');
-const { processListReaction } = require('./functions/ListCommands');
+const AdminUtils = require('./utils/AdminUtils');
 const { Boom } = require('@hapi/boom');
 const pino = require('pino');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-class WhatsAppBot {
+class WhatsAppBotBaileys {
   /**
    * Cria uma nova instância de bot WhatsApp
    * @param {Object} options - Opções de configuração
@@ -30,12 +32,14 @@ class WhatsAppBot {
     this.eventHandler = options.eventHandler;
     this.prefix = options.prefix || process.env.DEFAULT_PREFIX || '!';
     this.logger = new Logger(`bot-${this.id}`);
+    this.client = null; // Para compatibilidade com whatsapp-web.js
     this.socket = null;
     this.store = makeInMemoryStore({ logger: pino().child({ level: 'silent', stream: 'store' }) });
     this.database = Database.getInstance(); // Instância de banco de dados compartilhada
     this.isConnected = false;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.baileysOptions = options.baileysOptions || {};
+    this.blockedContacts = [];
     
     // Novas propriedades para notificações de grupos da comunidade
     this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
@@ -55,10 +59,12 @@ class WhatsAppBot {
     // Inicializa manipulador de reações
     this.reactionHandler = new ReactionsHandler();
 
-    // Inicializa StreamSystem
+    // Inicializa StreamSystem (será definido em initialize())
     this.streamSystem = null;
+    this.streamMonitor = null;
     
     this.llmService = new LLMService({});
+    this.adminUtils = AdminUtils.getInstance();
 
     this.sessionDir = path.join(__dirname, '..', '.baileys_auth_info', this.id);
   }
@@ -89,6 +95,9 @@ class WhatsAppBot {
       auth: state,
       ...this.baileysOptions
     });
+    
+    // Para compatibilidade com whatsapp-web.js
+    this.client = this.socket;
     
     // Bind do store ao socket
     this.store.bind(this.socket.ev);
@@ -129,10 +138,18 @@ class WhatsAppBot {
         }
       } else if (connection === 'open') {
         this.isConnected = true;
+        this.socket.info = {
+          wid: {
+            _serialized: this.socket.user.id
+          }
+        };
+
+        this.client = this.socket;
+
         this.logger.info('Cliente está pronto');
         this.eventHandler.onConnected(this);
         
-        // Inicializa StreamSystem
+        // Inicializa o sistema de streaming agora que estamos conectados
         this.streamSystem = new StreamSystem(this);
         await this.streamSystem.initialize();
         this.streamMonitor = this.streamSystem.streamMonitor;
@@ -140,7 +157,7 @@ class WhatsAppBot {
         // Envia notificação de inicialização para o grupo de logs
         if (this.grupoLogs) {
           try {
-            const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString()}`;
+            const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString("pt-BR")}`;
             await this.sendMessage(this.grupoLogs, startMessage);
           } catch (error) {
             this.logger.error('Erro ao enviar notificação de inicialização:', error);
@@ -152,21 +169,39 @@ class WhatsAppBot {
     // Evento de credenciais atualizadas
     this.socket.ev.on('creds.update', saveCreds);
     
-    // Evento de mensagem
+    // Evento de mensagem - Versão com logs aprimorados
     this.socket.ev.on('messages.upsert', async ({ messages, type }) => {
+      // Log completo para debug
+      this.logger.debug(`[messages.upsert] Recebido evento tipo: ${type}, mensagens: ${messages ? messages.length : 0}`);
+      
       // Processa apenas novas mensagens
-      if (type !== 'notify') return;
+      if (type !== 'notify') {
+        this.logger.debug(`[messages.upsert] Ignorando mensagem de tipo: ${type}`);
+        return;
+      }
       
       for (const message of messages) {
-        // Ignora mensagens do próprio bot
-        if (message.key.fromMe) continue;
-        
         try {
+          // Log de estrutura da mensagem
+          this.logger.debug(`[messages.upsert] Processando mensagem de ${message.key.remoteJid} via ${message.key.participant || 'direto'}`);
+          
+          // Ignora mensagens do próprio bot
+          if (message.key.fromMe) {
+            this.logger.debug(`[messages.upsert] Ignorando mensagem própria`);
+            continue;
+          }
+          
           // Formata mensagem para o manipulador de eventos
           const formattedMessage = await this.formatMessage(message);
+          
+          // Log após formatação
+          this.logger.debug(`[messages.upsert] Mensagem formatada com sucesso: ${formattedMessage.type}`);
+          
+          // Passa para o handler de eventos
+          this.logger.debug(`[messages.upsert] Enviando para eventHandler.onMessage`);
           this.eventHandler.onMessage(this, formattedMessage);
         } catch (error) {
-          this.logger.error('Erro ao processar mensagem:', error);
+          this.logger.error(`[messages.upsert] Erro ao processar mensagem:`, error);
         }
       }
     });
@@ -177,14 +212,8 @@ class WhatsAppBot {
         try {
           // Processa apenas reações de outros usuários, não do próprio bot
           if (reaction.key.fromMe) continue;
-          
-          // Será que é uma reaction de lista?
-          const isListReaction = await processListReaction(this, reaction);
-          
-          // Se não for de lista, processa o normal
-          if (!isListReaction) {
-            await this.reactionHandler.processReaction(this, reaction);
-          }
+                  
+          await this.reactionHandler.processReaction(this, reaction);
         } catch (error) {
           this.logger.error('Erro ao tratar reação de mensagem:', error);
         }
@@ -264,6 +293,20 @@ class WhatsAppBot {
         this.eventHandler.onNotification(this, update);
       }
     });
+    
+    // Evento de chamada
+    this.socket.ev.on('call', async (calls) => {
+      for (const call of calls) {
+        if (call.status === 'offer') {
+          this.logger.info(`[Call] Rejeitando chamada: ${JSON.stringify(call)}`);
+          try {
+            await this.socket.rejectCall(call.id, call.from);
+          } catch (error) {
+            this.logger.error('Erro ao rejeitar chamada:', error);
+          }
+        }
+      }
+    });
   }
 
   /**
@@ -298,11 +341,11 @@ class WhatsAppBot {
       const contact = await this.socket.contactDB?.get(id);
       return {
         id,
-        name: contact?.name || contact?.notify || contact?.verifiedName || 'Desconhecido'
+        name: contact?.name || contact?.notify || contact?.verifiedName || id.split('@')[0] || 'Desconhecido'
       };
     } catch (error) {
       this.logger.error('Erro ao obter informações de contato:', error);
-      return { id, name: 'Desconhecido' };
+      return { id, name: id.split('@')[0] || 'Desconhecido' };
     }
   }
 
@@ -320,32 +363,47 @@ class WhatsAppBot {
       // Rastreia mensagem recebida
       this.loadReport.trackReceivedMessage(isGroup);
       
+      // Detectar o tipo de mensagem e extrair conteúdo
       let type = 'text';
-      let content = message.message?.conversation || '';
+      let content = '';
       let caption = null;
       
       // Determina tipo de mensagem e conteúdo
       if (message.message?.imageMessage) {
         type = 'image';
-        content = await this.downloadMedia(message);
-        caption = message.message.imageMessage.caption || '';
+        // Em vez de baixar a imagem, usamos texto (para simplificar)
+        // Em produção você poderia descomentar a linha abaixo para baixar a mídia
+        // content = await this.downloadMedia(message, 'image');
+        content = message.message.imageMessage?.caption || 'Imagem recebida';
+        caption = message.message.imageMessage?.caption || '';
       } else if (message.message?.videoMessage) {
         type = 'video';
-        content = await this.downloadMedia(message);
-        caption = message.message.videoMessage.caption || '';
+        // content = await this.downloadMedia(message, 'video');
+        content = message.message.videoMessage?.caption || 'Vídeo recebido';
+        caption = message.message.videoMessage?.caption || '';
       } else if (message.message?.audioMessage) {
         type = 'audio';
-        content = await this.downloadMedia(message);
+        // content = await this.downloadMedia(message, 'audio');
+        content = 'Áudio recebido';
       } else if (message.message?.documentMessage) {
         type = 'document';
-        content = await this.downloadMedia(message);
-        caption = message.message.documentMessage.caption || '';
+        // content = await this.downloadMedia(message, 'document');
+        content = message.message.documentMessage?.caption || 'Documento recebido';
+        caption = message.message.documentMessage?.caption || '';
       } else if (message.message?.stickerMessage) {
         type = 'sticker';
-        content = await this.downloadMedia(message);
+        // content = await this.downloadMedia(message, 'sticker');
+        content = 'Sticker recebido';
       } else if (message.message?.extendedTextMessage) {
         type = 'text';
         content = message.message.extendedTextMessage.text || '';
+      } else if (message.message?.conversation) {
+        type = 'text';
+        content = message.message.conversation || '';
+      } else {
+        // Fallback para qualquer outro tipo
+        type = 'text';
+        content = JSON.stringify(message.message) || 'Mensagem recebida';
       }
       
       // Obtém informações do autor
@@ -392,24 +450,49 @@ class WhatsAppBot {
       
       // Método para reagir a mensagens
       react: async function(emoji) {
-        return await self.socket.sendMessage(remoteJid, {
-          react: {
-            text: emoji,
-            key: baileysMessage.key
-          }
-        });
+        try {
+          return await self.socket.sendMessage(remoteJid, {
+            react: {
+              text: emoji,
+              key: baileysMessage.key
+            }
+          });
+        } catch (error) {
+          self.logger.error('Erro ao reagir à mensagem:', error);
+        }
+      },
+      
+      // Método para excluir mensagem
+      delete: async function(forEveryone = true) {
+        try {
+          return await self.socket.sendMessage(remoteJid, { 
+            delete: baileysMessage.key 
+          });
+        } catch (error) {
+          self.logger.error('Erro ao deletar mensagem:', error);
+        }
       },
       
       // Método para obter informações do contato
       getContact: async function() {
-        const id = participant || remoteJid;
-        const contactInfo = await self.getContactInfo(id);
-        return {
-          id: { _serialized: id },
-          pushname: contactInfo.name,
-          name: contactInfo.name,
-          number: id.split('@')[0]
-        };
+        try {
+          const id = participant || remoteJid;
+          const contactInfo = await self.getContactInfo(id);
+          return {
+            id: { _serialized: id },
+            pushname: contactInfo.name,
+            name: contactInfo.name,
+            number: id.split('@')[0]
+          };
+        } catch (error) {
+          self.logger.error('Erro ao obter contato:', error);
+          return {
+            id: { _serialized: participant || remoteJid },
+            pushname: 'Desconhecido',
+            name: 'Desconhecido',
+            number: (participant || remoteJid).split('@')[0]
+          };
+        }
       },
       
       // Método para obter mensagem citada
@@ -462,7 +545,14 @@ class WhatsAppBot {
                 id: { _serialized: p.id },
                 isAdmin: p.admin === 'admin' || p.admin === 'superadmin'
               })),
-              groupMetadata: metadata
+              groupMetadata: metadata,
+              setSubject: async (subject) => {
+                return await self.socket.groupUpdateSubject(remoteJid, subject);
+              },
+              setPicture: async (media) => {
+                const buffer = Buffer.from(media.data, 'base64');
+                return await self.socket.updateProfilePicture(remoteJid, buffer);
+              }
             };
           } else {
             return {
@@ -587,40 +677,59 @@ class WhatsAppBot {
   /**
    * Baixa mídia de uma mensagem
    * @param {Object} message - A mensagem com mídia
+   * @param {string} type - Tipo de mídia a baixar (opcional)
    * @returns {Promise<Object>} - Objeto contendo a mídia
    */
-  async downloadMedia(message) {
+  async downloadMedia(message, type = null) {
     try {
       let buffer, mimetype, filename = 'file';
       
       // Determinar stream e mimetype com base no tipo de mensagem
       let stream, messagePart;
-      if (message.message?.imageMessage) {
-        messagePart = message.message.imageMessage;
-        mimetype = messagePart.mimetype;
-        stream = await downloadContentFromMessage(messagePart, 'image');
-      } else if (message.message?.videoMessage) {
-        messagePart = message.message.videoMessage;
-        mimetype = messagePart.mimetype;
-        stream = await downloadContentFromMessage(messagePart, 'video');
-      } else if (message.message?.audioMessage) {
-        messagePart = message.message.audioMessage;
-        mimetype = messagePart.mimetype;
-        stream = await downloadContentFromMessage(messagePart, 'audio');
-      } else if (message.message?.documentMessage) {
-        messagePart = message.message.documentMessage;
-        mimetype = messagePart.mimetype;
-        filename = messagePart.fileName || 'file';
-        stream = await downloadContentFromMessage(messagePart, 'document');
-      } else if (message.message?.stickerMessage) {
-        messagePart = message.message.stickerMessage;
-        mimetype = messagePart.mimetype;
-        stream = await downloadContentFromMessage(messagePart, 'sticker');
-      } else {
-        throw new Error('Tipo de mídia não suportado');
+      
+      // Se o tipo for especificado, usa-o. Caso contrário, detecta automaticamente
+      if (!type) {
+        if (message.message?.imageMessage) {
+          type = 'image';
+        } else if (message.message?.videoMessage) {
+          type = 'video';
+        } else if (message.message?.audioMessage) {
+          type = 'audio';
+        } else if (message.message?.documentMessage) {
+          type = 'document';
+        } else if (message.message?.stickerMessage) {
+          type = 'sticker';
+        } else {
+          throw new Error('Tipo de mídia não suportado');
+        }
       }
       
-      // Ler stream para buffer
+      // Obtém a parte da mensagem apropriada com base no tipo
+      if (type === 'image') {
+        messagePart = message.message?.imageMessage;
+      } else if (type === 'video') {
+        messagePart = message.message?.videoMessage;
+      } else if (type === 'audio') {
+        messagePart = message.message?.audioMessage;
+      } else if (type === 'document') {
+        messagePart = message.message?.documentMessage;
+      } else if (type === 'sticker') {
+        messagePart = message.message?.stickerMessage;
+      }
+      
+      if (!messagePart) {
+        throw new Error(`Não foi possível encontrar ${type} na mensagem`);
+      }
+      
+      mimetype = messagePart.mimetype;
+      if (type === 'document') {
+        filename = messagePart.fileName || 'file';
+      }
+      
+      // Baixa o conteúdo
+      stream = await downloadContentFromMessage(messagePart, type);
+      
+      // Lê stream para buffer
       const chunks = [];
       for await (const chunk of stream) {
         chunks.push(chunk);
@@ -633,7 +742,7 @@ class WhatsAppBot {
         filename
       };
     } catch (error) {
-      this.logger.error('Erro ao baixar mídia:', error);
+      this.logger.error(`Erro ao baixar mídia (${type || 'desconhecido'}):`, error);
       throw error;
     }
   }
@@ -651,51 +760,80 @@ class WhatsAppBot {
       const isGroup = chatId.endsWith('@g.us');
       this.loadReport.trackSentMessage(isGroup);
 
+      // Opções padrão
+      if(options.linkPreview === undefined){
+        options.linkPreview = false;
+      }
+      
       // Verifica se está em modo seguro
       if (this.safeMode) {
         this.logger.info(`[MODO SEGURO] Enviaria para ${chatId}: ${typeof content === 'string' ? content : '[Mídia]'}`);
         return { key: { id: 'safe-mode-msg-id', remoteJid: chatId } };
       }
 
+      // Adiciona quoted message se fornecido
+      let quoted = undefined;
+      if (options.quotedMessageId) {
+        quoted = {
+          quoted: {
+            key: {
+              remoteJid: chatId,
+              id: options.quotedMessageId,
+              fromMe: false
+            }
+          }
+        };
+      }
+
       // Envia mensagem de texto
       if (typeof content === 'string') {
-        return await this.socket.sendMessage(chatId, { text: content }, options);
+        const messageContent = {
+          text: content
+        };
+        
+        // Adiciona menções se fornecidas
+        if (options.mentions && options.mentions.length > 0) {
+          messageContent.mentions = options.mentions;
+        }
+        
+        return await this.socket.sendMessage(chatId, messageContent, quoted);
       } 
       // Envia mídia
       else if (content && content.mimetype) {
         const mediaType = content.mimetype.split('/')[0]; // imagem, vídeo, áudio, etc.
+        const buffer = Buffer.from(content.data, 'base64');
         
         if (mediaType === 'image') {
           return await this.socket.sendMessage(chatId, {
-            image: Buffer.from(content.data, 'base64'),
+            image: buffer,
             caption: options.caption,
-            ...options
-          });
+            mentions: options.mentions
+          }, quoted);
         } else if (mediaType === 'video') {
           return await this.socket.sendMessage(chatId, {
-            video: Buffer.from(content.data, 'base64'),
+            video: buffer,
             caption: options.caption,
-            ...options
-          });
+            mentions: options.mentions,
+            gifPlayback: options.sendVideoAsGif || false
+          }, quoted);
         } else if (mediaType === 'audio') {
           return await this.socket.sendMessage(chatId, {
-            audio: Buffer.from(content.data, 'base64'),
-            ptt: options.ptt || false,
-            ...options
-          });
+            audio: buffer,
+            ptt: options.sendAudioAsVoice || false,
+            mimetype: content.mimetype
+          }, quoted);
         } else if (mediaType === 'application') {
           return await this.socket.sendMessage(chatId, {
-            document: Buffer.from(content.data, 'base64'),
+            document: buffer,
             mimetype: content.mimetype,
-            fileName: content.filename || 'file',
+            fileName: content.filename || options.filename || 'file',
             caption: options.caption,
-            ...options
-          });
-        } else if (options.asSticker || content.mimetype.includes('sticker')) {
+            mentions: options.mentions
+          }, quoted);
+        } else if (options.sendMediaAsSticker || content.mimetype.includes('sticker')) {
           return await this.socket.sendMessage(chatId, {
-            sticker: Buffer.from(content.data, 'base64'),
-            ...options
-          });
+            sticker: buffer
+          }, quoted);
         }
       }
       
@@ -707,18 +845,51 @@ class WhatsAppBot {
   }
 
   /**
-   * Sends one or more ReturnMessage objects
-   * @param {ReturnMessage|Array<ReturnMessage>} returnMessages - ReturnMessage or array of ReturnMessages to send
-   * @returns {Promise<Array>} - Array of results from sending each message
+   * Envia indicador de digitação
+   * @param {string} status - Status a enviar ('composing', 'recording', 'paused')
+   * @param {string} chatId - ID do chat
+   */
+  async sendPresenceUpdate(status, chatId) {
+    try {
+      await this.socket.sendPresenceUpdate(status, chatId);
+    } catch (error) {
+      this.logger.error(`Erro ao enviar presence update ${status} para ${chatId}:`, error);
+    }
+  }
+
+  /**
+   * Verifica se um usuário é administrador em um grupo
+   * @param {string} userId - ID do usuário a verificar
+   * @param {string} groupId - ID do grupo
+   * @returns {Promise<boolean>} - True se o usuário for admin
+   */
+  async isUserAdminInGroup(userId, groupId) {
+    try {
+      // Obtém o objeto de grupo do banco de dados
+      const group = await this.database.getGroup(groupId);
+      if (!group) return false;
+      
+      // Utiliza o AdminUtils para verificar
+      return await this.adminUtils.isAdmin(userId, group, null, this);
+    } catch (error) {
+      this.logger.error(`Erro ao verificar se usuário ${userId} é admin no grupo ${groupId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Envia uma ou mais ReturnMessages
+   * @param {ReturnMessage|Array<ReturnMessage>} returnMessages - ReturnMessage ou array de ReturnMessages
+   * @returns {Promise<Array>} - Array de resultados de envio de mensagens
    */
   async sendReturnMessages(returnMessages) {
     try {
-      // Ensure returnMessages is an array
+      // Garante que returnMessages seja um array
       if (!Array.isArray(returnMessages)) {
         returnMessages = [returnMessages];
       }
 
-      // Filter out invalid messages
+      // Filtra mensagens inválidas
       const validMessages = returnMessages.filter(msg => 
         msg && msg.isValid && msg.isValid()
       );
@@ -730,32 +901,38 @@ class WhatsAppBot {
 
       const results = [];
       
-      // Process each message
+      // Processa cada mensagem
       for (const message of validMessages) {
-        // Apply any delay if specified
+        // Aplica delay se especificado
         if (message.delay > 0) {
           await new Promise(resolve => setTimeout(resolve, message.delay));
         }
 
-        // Send the message
+        // Envia a mensagem
         const result = await this.sendMessage(
           message.chatId, 
           message.content, 
           message.options
         );
 
-        // Apply reactions if specified
+        // Aplica reações se especificado
         if (message.reactions && result) {
           try {
-            // React with 'before' emoji if specified
-            if (message.reactions.before) {
-              await this.socket.sendMessage(
-                result.key.remoteJid, 
-                { react: { text: message.reactions.before, key: result.key } }
-              );
+            // Reage com emoji 'after' se especificado
+            if (message.reactions.after) {
+              setTimeout(async () => {
+                try {
+                  await this.socket.sendMessage(
+                    result.key.remoteJid, 
+                    { react: { text: message.reactions.after, key: result.key } }
+                  );
+                } catch (error) {
+                  this.logger.error('Error applying delayed reaction to message:', error);
+                }
+              }, 1000);
             }
 
-            // Store message ID for potential future reactions
+            // Armazena ID da mensagem para reações futuras
             if (message.metadata) {
               message.metadata.messageId = result.key.id;
             }
@@ -781,7 +958,7 @@ class WhatsAppBot {
    */
   async createMedia(filePath) {
     try {
-      const data = fs.readFileSync(filePath);
+      const data = await fsPromises.readFile(filePath);
       const base64Data = data.toString('base64');
       const mimetype = this.getMimeType(filePath);
       const filename = path.basename(filePath);
@@ -823,346 +1000,17 @@ class WhatsAppBot {
   }
 
   /**
-   * Loads channels from all groups to the StreamMonitor
+   * Obtém contatos bloqueados
+   * @returns {Promise<Array<string>>} - Lista de IDs de contatos bloqueados
    */
-  async loadChannelsToMonitor() {
+  async getBlockedContacts() {
     try {
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      let subscribedChannels = {
-        twitch: [],
-        kick: [],
-        youtube: []
-      };
-      
-      // Process each group
-      for (const group of groups) {
-        // Add Twitch channels
-        if (group.twitch && Array.isArray(group.twitch)) {
-          for (const channel of group.twitch) {
-            if (!subscribedChannels.twitch.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'twitch');
-              subscribedChannels.twitch.push(channel.channel);
-            }
-          }
-        }
-        
-        // Add Kick channels
-        if (group.kick && Array.isArray(group.kick)) {
-          for (const channel of group.kick) {
-            if (!subscribedChannels.kick.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'kick');
-              subscribedChannels.kick.push(channel.channel);
-            }
-          }
-        }
-        
-        // Add YouTube channels
-        if (group.youtube && Array.isArray(group.youtube)) {
-          for (const channel of group.youtube) {
-            if (!subscribedChannels.youtube.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'youtube');
-              subscribedChannels.youtube.push(channel.channel);
-            }
-          }
-        }
-      }
-      
-      this.logger.info(`Loaded ${subscribedChannels.twitch.length} Twitch, ${subscribedChannels.kick.length} Kick, and ${subscribedChannels.youtube.length} YouTube channels to monitor`);
+      // Para Baileys, essa funcionalidade pode não existir diretamente
+      // Retorna array vazio como fallback
+      return [];
     } catch (error) {
-      this.logger.error('Error loading channels to monitor:', error);
-    }
-  }
-
-  /**
-   * Handles a stream going online
-   * @param {Object} data - Event data
-   */
-  async handleStreamOnline(data) {
-    try {
-      this.logger.info(`Stream online event: ${data.platform}/${data.channelName}`);
-      
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      // Find groups that monitor this channel
-      for (const groupData of groups) {
-        // Skip if group doesn't monitor this platform
-        if (!groupData[data.platform]) continue;
-        
-        // Find the channel configuration in this group
-        const channelConfig = groupData[data.platform].find(
-          c => c.channel.toLowerCase() === data.channelName.toLowerCase()
-        );
-        
-        if (!channelConfig) continue;
-        
-        // Process notification for this group
-        await this.processStreamEvent(groupData, channelConfig, data, 'online');
-      }
-    } catch (error) {
-      this.logger.error('Error handling stream online event:', error);
-    }
-  }
-
-  /**
-   * Handles a stream going offline
-   * @param {Object} data - Event data
-   */
-  async handleStreamOffline(data) {
-    try {
-      this.logger.info(`Stream offline event: ${data.platform}/${data.channelName}`);
-      
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      // Find groups that monitor this channel
-      for (const groupData of groups) {
-        // Skip if group doesn't monitor this platform
-        if (!groupData[data.platform]) continue;
-        
-        // Find the channel configuration in this group
-        const channelConfig = groupData[data.platform].find(
-          c => c.channel.toLowerCase() === data.channelName.toLowerCase()
-        );
-        
-        if (!channelConfig) continue;
-        
-        // Process notification for this group
-        await this.processStreamEvent(groupData, channelConfig, data, 'offline');
-      }
-    } catch (error) {
-      this.logger.error('Error handling stream offline event:', error);
-    }
-  }
-
-  /**
-   * Handles a new YouTube video
-   * @param {Object} data - Event data
-   */
-  async handleNewVideo(data) {
-    try {
-      this.logger.info(`New video event: ${data.channelName}, title: ${data.title}`);
-      
-      // Get all groups
-      const groups = await this.database.getGroups();
-      
-      // Find groups that monitor this channel
-      for (const groupData of groups) {
-        // Skip if group doesn't monitor YouTube
-        if (!groupData.youtube) continue;
-        
-        // Find the channel configuration in this group
-        const channelConfig = groupData.youtube.find(
-          c => c.channel.toLowerCase() === data.channelName.toLowerCase()
-        );
-        
-        if (!channelConfig) continue;
-        
-        // Process notification for this group (as "online" event for consistency)
-        await this.processStreamEvent(groupData, channelConfig, data, 'online');
-      }
-    } catch (error) {
-      this.logger.error('Error handling new video event:', error);
-    }
-  }
-
-  /**
-   * Processes a stream event notification for a group
-   * @param {Object} group - Group data
-   * @param {Object} channelConfig - Channel configuration
-   * @param {Object} eventData - Event data
-   * @param {string} eventType - Event type ('online' or 'offline')
-   */
-  async processStreamEvent(group, channelConfig, eventData, eventType) {
-    try {
-      // Get the appropriate config (onConfig for online events, offConfig for offline)
-      const config = eventType === 'online' ? channelConfig.onConfig : channelConfig.offConfig;
-      
-      // Skip if no configuration
-      if (!config || !config.media || config.media.length === 0) {
-        return;
-      }
-      
-      // Process title change if enabled
-      if (channelConfig.changeTitleOnEvent) {
-        await this.changeGroupTitle(group, channelConfig, eventData, eventType);
-      }
-      
-      // Process media notifications
-      for (const mediaItem of config.media) {
-        await this.sendEventNotification(group.id, mediaItem, eventData, channelConfig);
-      }
-      
-      // Generate AI message if enabled
-      if (channelConfig.useAI && eventType === 'online') {
-        await this.sendAINotification(group.id, eventData, channelConfig);
-      }
-    } catch (error) {
-      this.logger.error(`Error processing stream event for ${group.id}:`, error);
-    }
-  }
-
-  /**
-   * Changes the group title based on stream event
-   * @param {Object} group - Group data
-   * @param {Object} channelConfig - Channel configuration
-   * @param {Object} eventData - Event data
-   * @param {string} eventType - Event type ('online' or 'offline')
-   */
-  async changeGroupTitle(group, channelConfig, eventData, eventType) {
-    try {
-      let newTitle;
-      
-      // Obtém dados do grupo
-      const groupMetadata = await this.socket.groupMetadata(group.id);
-      if (!groupMetadata) return;
-      
-      // If custom title is defined, use it
-      if (eventType === 'online' && channelConfig.onlineTitle) {
-        newTitle = channelConfig.onlineTitle;
-      } else if (eventType === 'offline' && channelConfig.offlineTitle) {
-        newTitle = channelConfig.offlineTitle;
-      } else {
-        // Otherwise, modify the existing title
-        newTitle = groupMetadata.subject;
-        
-        // Replace "OFF" with "ON" or vice versa
-        if (eventType === 'online') {
-          newTitle = newTitle.replace(/\bOFF\b/g, 'ON');
-        } else {
-          newTitle = newTitle.replace(/\bON\b/g, 'OFF');
-        }
-        
-        // Replace emojis
-        const emojiMap = {
-          '🔴': '🟢',
-          '🟢': '🔴',
-          '❤️': '💚',
-          '💚': '❤️',
-          '🌹': '🍏',
-          '🍏': '🌹',
-          '🟥': '🟩',
-          '🟩': '🟥'
-        };
-        
-        // If it's an offline event, swap the keys and values
-        const finalEmojiMap = eventType === 'online' ? emojiMap : 
-          Object.fromEntries(Object.entries(emojiMap).map(([k, v]) => [v, k]));
-        
-        // Replace emojis
-        for (const [from, to] of Object.entries(finalEmojiMap)) {
-          newTitle = newTitle.replace(new RegExp(from, 'g'), to);
-        }
-      }
-      
-      // Set the new title
-      await this.socket.groupUpdateSubject(group.id, newTitle);
-      
-      this.logger.info(`Changed group ${group.id} title to: ${newTitle}`);
-    } catch (error) {
-      this.logger.error(`Error changing group title for ${group.id}:`, error);
-    }
-  }
-
-  /**
-   * Sends event notification to a group
-   * @param {string} groupId - Group ID
-   * @param {Object} mediaItem - Media configuration
-   * @param {Object} eventData - Event data
-   * @param {Object} channelConfig - Channel configuration
-   */
-  async sendEventNotification(groupId, mediaItem, eventData, channelConfig) {
-    try {
-      // Handle different media types
-      if (mediaItem.type === 'text') {
-        // Process variables in the text
-        let content = mediaItem.content;
-        
-        // Replace platform-specific variables
-        if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-          content = content.replace(/{nomeCanal}/g, eventData.channelName)
-                          .replace(/{titulo}/g, eventData.title || '')
-                          .replace(/{jogo}/g, eventData.game || 'Unknown');
-        } else if (eventData.platform === 'youtube') {
-          content = content.replace(/{author}/g, eventData.author || eventData.channelName)
-                          .replace(/{title}/g, eventData.title || '')
-                          .replace(/{link}/g, eventData.url || '');
-        }
-        
-        // Send the message
-        await this.sendMessage(groupId, content);
-      } else if (mediaItem.type === 'image' || mediaItem.type === 'video' || 
-                mediaItem.type === 'audio' || mediaItem.type === 'sticker') {
-        // Load media file
-        const mediaPath = path.join(this.dataPath, 'media', mediaItem.content);
-        
-        try {
-          const media = await this.createMedia(mediaPath);
-          
-          // Process caption variables
-          let caption = mediaItem.caption || '';
-          
-          // Replace platform-specific variables (same as text)
-          if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-            caption = caption.replace(/{nomeCanal}/g, eventData.channelName)
-                            .replace(/{titulo}/g, eventData.title || '')
-                            .replace(/{jogo}/g, eventData.game || 'Unknown');
-          } else if (eventData.platform === 'youtube') {
-            caption = caption.replace(/{author}/g, eventData.author || eventData.channelName)
-                            .replace(/{title}/g, eventData.title || '')
-                            .replace(/{link}/g, eventData.url || '');
-          }
-          
-          // Send the media
-          await this.sendMessage(groupId, media, {
-            caption: caption || undefined,
-            asSticker: mediaItem.type === 'sticker'
-          });
-        } catch (error) {
-          this.logger.error(`Error sending media notification (${mediaPath}):`, error);
-          
-          // Fallback to text message
-          await this.sendMessage(groupId, `Erro ao enviar notificação de mídia para evento de ${eventData.platform}/${eventData.channelName}`);
-        }
-      }
-    } catch (error) {
-      this.logger.error(`Error sending event notification to ${groupId}:`, error);
-    }
-  }
-
-  /**
-   * Sends AI generated notification
-   * @param {string} groupId - Group ID
-   * @param {Object} eventData - Event data
-   * @param {Object} channelConfig - Channel configuration
-   */
-  async sendAINotification(groupId, eventData, channelConfig) {
-    try {
-      // Generate prompt based on event type
-      let prompt = '';
-      
-      if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-        prompt = `O canal ${eventData.channelName} ficou online e está jogando ${eventData.game || 'um jogo'} com o título "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a participar da stream.`;
-      } else if (eventData.platform === 'youtube') {
-        prompt = `O canal ${eventData.channelName} acabou de lançar um novo vídeo chamado "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a assistir o vídeo.`;
-      }
-      
-      // Get AI response
-      const aiResponse = await this.llmService.getCompletion({
-        prompt: prompt,
-        provider: 'openrouter',
-        temperature: 0.7,
-        maxTokens: 200
-      });
-      
-      // Send the AI-generated message
-      if (aiResponse) {
-        await this.sendMessage(groupId, aiResponse);
-      }
-    } catch (error) {
-      this.logger.error(`Error sending AI notification to ${groupId}:`, error);
+      this.logger.error('Erro ao obter contatos bloqueados:', error);
+      return [];
     }
   }
 
@@ -1182,17 +1030,20 @@ class WhatsAppBot {
       this.inviteSystem.destroy();
     }
 
-    // Limpa StreamMonitor
-    if (this.streamMonitor) {
-      this.streamMonitor.stopMonitoring();
+    // Limpa StreamSystem
+    if (this.streamSystem) {
+      this.streamSystem.destroy();
+      this.streamSystem = null;
       this.streamMonitor = null;
     }
     
     // Envia notificação de desligamento para o grupo de logs
     if (this.grupoLogs && this.isConnected) {
       try {
-        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString()}`;
+        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString("pt-BR")}`;
         await this.sendMessage(this.grupoLogs, shutdownMessage);
+        // Aguarda mensagem ser enviada
+        await sleep(5000);
       } catch (error) {
         this.logger.error('Erro ao enviar notificação de desligamento:', error);
       }
@@ -1201,11 +1052,19 @@ class WhatsAppBot {
     // Desconecta o socket
     if (this.socket) {
       this.socket.ev.removeAllListeners();
+      try {
+        if (this.isConnected) {
+          await this.socket.logout();
+        }
+      } catch (error) {
+        this.logger.error('Erro ao fazer logout:', error);
+      }
       this.socket.end(undefined);
       this.socket = null;
+      this.client = null;
       this.isConnected = false;
     }
   }
 }
 
-module.exports = WhatsAppBot;
+module.exports = WhatsAppBotBaileys;

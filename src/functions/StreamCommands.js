@@ -161,7 +161,7 @@ async function showStreamStatus(bot, message, args, group) {
           response += `• ${channelName}: 🟢 *ONLINE*\n`;
           response += `  - Título: ${status.title || 'N/A'}\n`;
           response += `  - Viewers: ${status.viewerCount || 'N/A'}\n`;
-          response += `  - Online desde: ${new Date(status.startedAt || Date.now()).toLocaleString()}\n\n`;
+          response += `  - Online desde: ${new Date(status.startedAt || Date.now()).toLocaleString("pt-BR")}\n\n`;
         } else {
           response += `• ${channelName}: 🔴 *OFFLINE*\n\n`;
         }
@@ -179,7 +179,7 @@ async function showStreamStatus(bot, message, args, group) {
           response += `• ${channelName}: 🟢 *ONLINE*\n`;
           response += `  - Título: ${status.title || 'N/A'}\n`;
           response += `  - Viewers: ${status.viewerCount || 'N/A'}\n`;
-          response += `  - Online desde: ${new Date(status.startedAt || Date.now()).toLocaleString()}\n\n`;
+          response += `  - Online desde: ${new Date(status.startedAt || Date.now()).toLocaleString("pt-BR")}\n\n`;
         } else {
           response += `• ${channelName}: 🔴 *OFFLINE*\n\n`;
         }
@@ -203,7 +203,7 @@ async function showStreamStatus(bot, message, args, group) {
           } else if (status.lastVideo) {
             response += `• ${channelName}: 📹 *Último vídeo*\n`;
             response += `  - Título: ${status.lastVideo.title || 'N/A'}\n`;
-            response += `  - Publicado: ${new Date(status.lastVideo.publishedAt || Date.now()).toLocaleString()}\n`;
+            response += `  - Publicado: ${new Date(status.lastVideo.publishedAt || Date.now()).toLocaleString("pt-BR")}\n`;
             response += `  - Link: ${status.lastVideo.url || 'N/A'}\n\n`;
           } else {
             response += `• ${channelName}: ❓ *Status desconhecido*\n\n`;
@@ -540,7 +540,7 @@ async function getStreamInformation(bot, chatId, platform, channelName) {
       let lastVideoInfo = '';
       if (platform === 'youtube' && status.lastVideo) {
         lastVideoInfo = `\n\n📹 *Último vídeo:* ${status.lastVideo.title}\n` +
-                       `📅 *Publicado:* ${new Date(status.lastVideo.publishedAt).toLocaleString()}`;
+                       `📅 *Publicado:* ${new Date(status.lastVideo.publishedAt).toLocaleString("pt-BR")}`;
       }
       
       return new ReturnMessage({
@@ -612,7 +612,7 @@ async function showPopularStreams(bot, message, args, group) {
     if (options.includeTwitch && topStreams.twitch.length > 0) {
       response += `💜 *TWITCH TOP ${topStreams.twitch.length}*\n`;
       for (const stream of topStreams.twitch) {
-        response += `• *${stream.channelName}*: ${stream.game} (${stream.viewerCount.toLocaleString()} viewers)\n`;
+        response += `• *${stream.channelName}*: ${stream.game} (${stream.viewerCount.toLocaleString("pt-BR")} viewers)\n`;
         response += `  ${stream.title.substring(0, 50)}${stream.title.length > 50 ? '...' : ''}\n\n`;
       }
     } else if (options.includeTwitch) {
@@ -623,7 +623,7 @@ async function showPopularStreams(bot, message, args, group) {
     if (options.includeKick && topStreams.kick.length > 0) {
       response += `💚 *KICK TOP ${topStreams.kick.length}*\n`;
       for (const stream of topStreams.kick) {
-        response += `• *${stream.displayName || stream.channelName}*: ${stream.game} (${stream.viewerCount.toLocaleString()} viewers)\n`;
+        response += `• *${stream.displayName || stream.channelName}*: ${stream.game} (${stream.viewerCount.toLocaleString("pt-BR")} viewers)\n`;
         response += `  ${stream.title.substring(0, 50)}${stream.title.length > 50 ? '...' : ''}\n\n`;
       }
     } else if (options.includeKick) {

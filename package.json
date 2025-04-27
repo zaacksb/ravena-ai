@@ -9,6 +9,8 @@
     "postinstall": "python -m pip install rembg[cli] vosk"
   },
   "dependencies": {
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "^6.7.16",
     "axios": "^1.8.4",
     "baileys": "^6.7.16",
     "chrono-node": "^2.8.0",
@@ -18,6 +20,7 @@
     "lastfm": "^0.9.4",
     "mal-scraper": "^2.13.2",
     "node-html-parser": "^7.0.1",
+    "pino": "^9.6.0",
     "qrcode-terminal": "^0.12.0",
     "sharp": "^0.32.6",
     "translate": "^3.0.1",
