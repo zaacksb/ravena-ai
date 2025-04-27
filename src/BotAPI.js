@@ -39,17 +39,60 @@ class BotAPI {
    */
   setupRoutes() {
     // Endpoint de verificação de saúde
-    this.app.get('/health', (req, res) => {
-      res.json({
-        status: 'ok',
-        timestamp: Date.now(),
-        bots: this.bots.map(bot => ({
-          id: bot.id,
-          phoneNumber: bot.phoneNumber,
-          connected: bot.isConnected,
-          lastMessageReceived: bot.lastMessageReceived || null
-        }))
-      });
+    this.app.get('/health', async (req, res) => {
+      try {
+        // Obtém timestamp de 30 minutos atrás
+        const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+        
+        // Obtém relatórios de carga mais recentes
+        const recentReports = await this.database.getLoadReports(thirtyMinutesAgo);
+        
+        // Mapeia resultados por bot
+        const botReports = {};
+        if (recentReports && Array.isArray(recentReports)) {
+          recentReports.forEach(report => {
+            // Se não existir um relatório para este bot ou se for mais recente
+            if (!botReports[report.botId] || 
+                report.timestamp > botReports[report.botId].timestamp) {
+              botReports[report.botId] = report;
+            }
+          });
+        }
+        
+        // Prepara resposta com dados adicionais
+        res.json({
+          status: 'ok',
+          timestamp: Date.now(),
+          bots: this.bots.map(bot => {
+            // Busca relatório mais recente para este bot
+            const report = botReports[bot.id] || null;
+            const messagesPerHour = report && report.messages ? 
+              report.messages.messagesPerHour || 0 : 0;
+              
+            return {
+              id: bot.id,
+              phoneNumber: bot.phoneNumber,
+              connected: bot.isConnected,
+              lastMessageReceived: bot.lastMessageReceived || null,
+              msgsHr: messagesPerHour
+            };
+          })
+        });
+      } catch (error) {
+        this.logger.error('Erro ao processar dados de health:', error);
+        res.json({
+          status: 'error',
+          timestamp: Date.now(),
+          message: 'Erro ao processar dados',
+          bots: this.bots.map(bot => ({
+            id: bot.id,
+            phoneNumber: bot.phoneNumber,
+            connected: bot.isConnected,
+            lastMessageReceived: bot.lastMessageReceived || null,
+            msgsHr: 0
+          }))
+        });
+      }
     });
     
     // Middleware de autenticação básica

@@ -141,6 +141,11 @@
             font-weight: 600;
         }
         
+        .detail-value-highlight {
+            color: var(--bright-blue);
+            font-weight: 600;
+        }
+        
         .refresh-button {
             display: block;
             margin: 30px auto 10px;
@@ -306,6 +311,23 @@
             background-color: #d9534f;
             color: white;
         }
+
+        /* Badge para msgs/hr */
+        .msgs-badge {
+            background-color: var(--medium-purple);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            margin-left: 5px;
+        }
+        
+        .msgs-badge-high {
+            background-color: var(--bright-blue);
+        }
+        
+        .msgs-badge-low {
+            background-color: var(--medium-gray);
+        }
     </style>
 </head>
 <body>
@@ -423,6 +445,13 @@
             return 'Inativo';
         }
         
+        // Função para classificar o nível de atividade de mensagens
+        function getMessageActivityClass(msgsHr) {
+            if (msgsHr === 0) return 'msgs-badge-low';
+            if (msgsHr > 50) return 'msgs-badge-high';
+            return '';
+        }
+        
         // Função para formatar o tempo desde a última mensagem
         function formatTimeSince(minutes) {
             if (minutes === Infinity) return 'Nunca';
@@ -525,6 +554,8 @@
                 const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
                 const phoneNumber = extractPhoneFromBotId(bot.id, data.bots);
                 const whatsappUrl = formatWhatsAppUrl(phoneNumber);
+                const msgsHr = Math.round(bot.msgsHr || 0);
+                const msgActivityClass = getMessageActivityClass(msgsHr);
                 
                 const botCard = document.createElement('div');
                 botCard.className = 'bot-card';
@@ -554,6 +585,15 @@
                         <div class="detail-item">
                             <span class="detail-label">Telefone:</span>
                             <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Msgs/hora:</span>
+                            <span class="detail-value-highlight">
+                                ${msgsHr}
+                                <span class="msgs-badge ${msgActivityClass}">
+                                    ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
+                                </span>
+                            </span>
                         </div>
                         <div class="detail-item" style="margin-top: 15px; justify-content: center;">
                             <button class="restart-button" data-bot-id="${bot.id}">

@@ -516,6 +516,16 @@ const commands = [
       return await sendCommandList(bot, message, args, group);
     }
   }),
+  new Command({
+    name: 'comandos',
+    description: 'Mostra todos os comandos disponíveis',
+    category: "geral",
+    group: "menu",
+    hidden: true,
+    method: async (bot, message, args, group) => {
+      return await sendCommandList(bot, message, args, group);
+    }
+  }),
   
   new Command({
     name: 'menu',
