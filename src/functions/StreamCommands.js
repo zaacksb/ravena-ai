@@ -330,7 +330,9 @@ async function listOnlineStreamers(bot, message, args, group) {
 }
 
 /**
- * Exibe informações de uma stream da Twitch
+ * Versão atualizada da função showLiveInfo para alterar o título do grupo
+ * quando verificar um canal de stream, simulando o evento de stream online/offline
+ * 
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
@@ -364,6 +366,44 @@ async function showLiveInfo(bot, message, args, group) {
       const returnMessages = [];
       for (const channelName of twitchChannels) {
         const streamInfo = await getStreamInformation(bot, chatId, 'twitch', channelName);
+        
+        // Aciona a atualização de título do grupo com base no status
+        if (group && bot.streamSystem) {
+          try {
+            // Busca a configuração do canal
+            const channelConfig = group.twitch.find(c => c.channel.toLowerCase() === channelName.toLowerCase());
+            
+            logger.debug(`[!live] Mudar titulo: ${channelConfig.changeTitleOnEvent}`);
+            if (channelConfig && channelConfig.changeTitleOnEvent) {
+              // Obtém status atualizado
+              const status = await bot.streamMonitor.getTwitchLiveStatus(channelName);
+
+              
+              // Cria objeto de evento para passar ao sistema de streams
+              const eventData = {
+                platform: 'twitch',
+                channelName: channelName,
+                title: status?.title || 'Sem título',
+                game: status?.game || 'Jogo desconhecido',
+                viewerCount: status?.viewerCount || 0,
+                startedAt: status?.startedAt || new Date().toISOString()
+              };
+
+              logger.debug(`[!live] Mudar titulo, eventData: ${JSON.stringify(eventData)}`);
+              
+              // Simula o evento de mudança de título
+              await bot.streamSystem.changeGroupTitleForStream(
+                group, 
+                channelConfig, 
+                eventData, 
+                status?.isLive ? 'online' : 'offline'
+              );
+            }
+          } catch (titleError) {
+            logger.error(`Erro ao atualizar título para ${channelName}:`, titleError);
+          }
+        }
+        
         returnMessages.push(streamInfo);
       }
       
@@ -372,6 +412,40 @@ async function showLiveInfo(bot, message, args, group) {
     
     // Se foi fornecido um nome de canal, busca informações apenas dele
     const channelName = args[0].toLowerCase();
+    
+    // Busca a configuração do canal caso esteja em um grupo
+    if (group && group.twitch) {
+      // Busca a configuração do canal
+      const channelConfig = group.twitch.find(c => c.channel.toLowerCase() === channelName.toLowerCase());
+      
+      if (channelConfig && channelConfig.changeTitleOnEvent && bot.streamSystem) {
+        try {
+          // Obtém status atualizado
+          const status = await bot.streamMonitor.getTwitchLiveStatus(channelName);
+          
+          // Cria objeto de evento para passar ao sistema de streams
+          const eventData = {
+            platform: 'twitch',
+            channelName: channelName,
+            title: status?.title || 'Sem título',
+            game: status?.game || 'Jogo desconhecido',
+            viewerCount: status?.viewerCount || 0,
+            startedAt: status?.startedAt || new Date().toISOString()
+          };
+          
+          // Simula o evento de mudança de título
+          await bot.streamSystem.changeGroupTitleForStream(
+            group, 
+            channelConfig, 
+            eventData, 
+            status?.isLive ? 'online' : 'offline'
+          );
+        } catch (titleError) {
+          console.error(`Erro ao atualizar título para ${channelName}:`, titleError);
+        }
+      }
+    }
+    
     return await getStreamInformation(bot, chatId, 'twitch', channelName);
   } catch (error) {
     console.error('Erro ao exibir informações de stream Twitch:', error);
@@ -384,7 +458,7 @@ async function showLiveInfo(bot, message, args, group) {
 }
 
 /**
- * Exibe informações de uma stream do Kick
+ * Versão atualizada de showLiveKick que também atualiza o título do grupo
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
@@ -418,6 +492,40 @@ async function showLiveKick(bot, message, args, group) {
       const returnMessages = [];
       for (const channelName of kickChannels) {
         const streamInfo = await getStreamInformation(bot, chatId, 'kick', channelName);
+        
+        // Aciona a atualização de título do grupo com base no status
+        if (group && bot.streamSystem) {
+          try {
+            // Busca a configuração do canal
+            const channelConfig = group.kick.find(c => c.channel.toLowerCase() === channelName.toLowerCase());
+            
+            if (channelConfig && channelConfig.changeTitleOnEvent) {
+              // Obtém status atualizado
+              const status = await bot.streamMonitor.getKickLiveStatus(channelName);
+              
+              // Cria objeto de evento para passar ao sistema de streams
+              const eventData = {
+                platform: 'kick',
+                channelName: channelName,
+                title: status?.title || 'Sem título',
+                game: status?.game || 'Jogo desconhecido',
+                viewerCount: status?.viewerCount || 0,
+                startedAt: status?.startedAt || new Date().toISOString()
+              };
+              
+              // Simula o evento de mudança de título
+              await bot.streamSystem.changeGroupTitleForStream(
+                group, 
+                channelConfig, 
+                eventData, 
+                status?.isLive ? 'online' : 'offline'
+              );
+            }
+          } catch (titleError) {
+            console.error(`Erro ao atualizar título para ${channelName}:`, titleError);
+          }
+        }
+        
         returnMessages.push(streamInfo);
       }
       
@@ -426,6 +534,40 @@ async function showLiveKick(bot, message, args, group) {
     
     // Se foi fornecido um nome de canal, busca informações apenas dele
     const channelName = args[0].toLowerCase();
+    
+    // Busca a configuração do canal caso esteja em um grupo
+    if (group && group.kick) {
+      // Busca a configuração do canal
+      const channelConfig = group.kick.find(c => c.channel.toLowerCase() === channelName.toLowerCase());
+      
+      if (channelConfig && channelConfig.changeTitleOnEvent && bot.streamSystem) {
+        try {
+          // Obtém status atualizado
+          const status = await bot.streamMonitor.getKickLiveStatus(channelName);
+          
+          // Cria objeto de evento para passar ao sistema de streams
+          const eventData = {
+            platform: 'kick',
+            channelName: channelName,
+            title: status?.title || 'Sem título',
+            game: status?.game || 'Jogo desconhecido',
+            viewerCount: status?.viewerCount || 0,
+            startedAt: status?.startedAt || new Date().toISOString()
+          };
+          
+          // Simula o evento de mudança de título
+          await bot.streamSystem.changeGroupTitleForStream(
+            group, 
+            channelConfig, 
+            eventData, 
+            status?.isLive ? 'online' : 'offline'
+          );
+        } catch (titleError) {
+          console.error(`Erro ao atualizar título para ${channelName}:`, titleError);
+        }
+      }
+    }
+    
     return await getStreamInformation(bot, chatId, 'kick', channelName);
   } catch (error) {
     console.error('Erro ao exibir informações de stream Kick:', error);
@@ -436,6 +578,7 @@ async function showLiveKick(bot, message, args, group) {
     });
   }
 }
+
 
 /**
  * Função auxiliar para obter informações detalhadas de uma stream

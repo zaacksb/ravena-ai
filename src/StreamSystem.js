@@ -518,7 +518,7 @@ class StreamSystem {
   async changeGroupTitleForStream(group, channelConfig, eventData, eventType) {
     try {
 
-      console.log(channelConfig, eventData, eventType);
+      console.log("changeGroupTitleForStream", channelConfig, eventData, eventType);
 
       // Obtém o chat do grupo atual (esta parte é específica da plataforma)
       const chat = await this.bot.client.getChatById(group.id);

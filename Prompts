@@ -1890,3 +1890,20 @@ Use emojis
 🔴 > 15 min
 
 No meio do topo da página deve ser exibido um banner "ravenabanner.png"
+
+----
+
+# Management.js
+
+Novos comandos apenas para grupo:
+
+- !g-fechar: Permite que apenas admins enviem mensagens no grupo (chat.setMessagesAdminsOnly(true);)
+- !g-abrir: Libera para todos enviarem mensagens (chat.setMessagesAdminsOnly(false);)
+- !g-setApelido [numero] Apelido: Similar ao !apelido, mas pra ser usado por administradores em grupos que irão definir apelido para os membros. O numero pode vir em vários formatos como "55123456" "@55123456", "123456"
+
+# StreamCommands.js
+
+Atualização no comando !live
+
+Quando executar o comando, triggar a alteração de titulo do grupo que acontece no evento de live on e off no changeGroupTitleForStream em StreamSystem.js
+

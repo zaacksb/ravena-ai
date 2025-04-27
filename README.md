@@ -116,9 +116,10 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
     - [x] Outros
     - [x] News
     - [x] Midia da twitch
-- [ ] Implementar !g-grupo-abrir e !g-grupo-fechar
+- [ ] Implementar !g-abrir e !g-fechar
+- [ ] Implementar !g-setApelido numero Apelido
 - [ ] !live atualizar titulo do grupo
-- [ ] Comando convite
+- [ ] Comando convite com argumento pro id do bot
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -139,35 +140,35 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] !live tá enviando pra ele mesmo as msgs
 - [x] Usar faster-whisper-xll
 - [x] AllTalk pegar arquivos via API
-- [ ] Bot tentando notificar sem estar nos grupos
-- [ ] !le mais de 1 lista
-- [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [x] Revisar cooldowns em todos comandos fixos
 - [x] Cooldown por ravena e por grupo, não global entre as 3
 - [x] Atualizar código para {mention} e {membroRandom}
 - [x] Ignorar mensagens entre ravenas (grupos de adm)
 - [x] Quando exceder requests do Gemini, tentar outro modelo ou local
+- [ ] Bot tentando notificar sem estar nos grupos
+- [ ] !le mais de 1 lista
+- [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
 
 
 ## ✅ TODO-Extras
-- [ ] Gerar README.md atualizado
-- [ ] Interface web para status dos bots
+- [x] Interface web para status dos bots
+    - [ ] Interface web para administração
+- [x] Emoji Kitchen
+- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
+    - [ ] Gerador de código de mockup para os tutoriais
+    - [ ] Tutoriais
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Jogo: Pesca
-- [x] Emoji Kitchen
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 - [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Melhor explicação da implementação do bot no README
-- [ ] Interface web para administração
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
-- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
-    - [ ] Gerador de código de mockup para os tutoriais
-    - [ ] Tutoriais
+- [ ] Gerar README.md atualizado
 
 ## 🔧 Instalação
 

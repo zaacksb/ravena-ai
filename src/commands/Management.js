@@ -125,6 +125,18 @@ class Management {
         method: 'setInteractionChance',
         description: 'Define a chance de ocorrer interações automáticas'
       },
+      'fechar': { 
+        method: 'closeGroup',
+        description: 'Fecha o grupo para que apenas admins possam enviar mensagens' 
+      },
+      'abrir': { 
+        method: 'openGroup',
+        description: 'Abre o grupo para que todos possam enviar mensagens' 
+      },
+      'setApelido': { 
+        method: 'setUserNicknameAdmin',
+        description: 'Define um apelido para um usuário específico' 
+      },
       'cmd-setHoras': {
         method: 'setCmdAllowedHours',
         description: 'Define horários permitidos para um comando'
@@ -4748,6 +4760,182 @@ class Management {
       chatId: group.id,
       content: `Dias permitidos para o comando '${commandName}' definidos: ${days.join(', ')}.`
     });
+  }
+
+  /**
+   * Abre ou fecha o grupo para que apenas admins possam enviar mensagens
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @param {boolean} setAdminsOnly - Se true, apenas admins podem enviar mensagens
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async toggleGroupMessagesAdminsOnly(bot, message, args, group, setAdminsOnly) {
+    try {
+      if (!group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      // Verifica se o bot é administrador do grupo (necessário para esta operação)
+      const isAdmin = await this.isBotAdmin(bot, group.id);
+      
+      if (!isAdmin) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: '⚠️ O bot precisa ser administrador do grupo para poder alterar as configurações do grupo.'
+        });
+      }
+      
+      // Obtém o chat do grupo
+      try {
+        const chat = await bot.client.getChatById(group.id);
+        
+        // Define configuração de apenas admins para mensagens
+        await chat.setMessagesAdminsOnly(setAdminsOnly);
+        
+        const statusMsg = setAdminsOnly ? 
+          '🔒 Grupo fechado. Apenas administradores podem enviar mensagens agora.' : 
+          '🔓 Grupo aberto. Todos os participantes podem enviar mensagens agora.';
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: statusMsg
+        });
+      } catch (error) {
+        this.logger.error(`Erro ao ${setAdminsOnly ? 'fechar' : 'abrir'} grupo:`, error);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `❌ Erro ao ${setAdminsOnly ? 'fechar' : 'abrir'} grupo: ${error.message}`
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao executar comando de ${setAdminsOnly ? 'fechar' : 'abrir'} grupo:`, error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: `❌ Erro ao executar o comando. Por favor, tente novamente.`
+      });
+    }
+  }
+
+  /**
+   * Fecha o grupo para que apenas admins possam enviar mensagens
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async closeGroup(bot, message, args, group) {
+    return this.toggleGroupMessagesAdminsOnly(bot, message, args, group, true);
+  }
+
+  /**
+   * Abre o grupo para que todos possam enviar mensagens
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async openGroup(bot, message, args, group) {
+    return this.toggleGroupMessagesAdminsOnly(bot, message, args, group, false);
+  }
+
+  /**
+   * Define um apelido para um usuário específico (para admins)
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setUserNicknameAdmin(bot, message, args, group) {
+    try {
+      if (!group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      if (args.length < 2) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Por favor, forneça o número do usuário e o apelido. Exemplo: !g-setApelido 5511999999999 Novo Apelido'
+        });
+      }
+      
+      // Processa o número do usuário
+      let userNumber = args[0].replace(/\D/g, ''); // Remove não-dígitos
+      
+      // Verifica se o número tem pelo menos 8 dígitos
+      if (userNumber.length < 8) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'O número deve ter pelo menos 8 dígitos.'
+        });
+      }
+      
+      // Adiciona @c.us ao número se não estiver completo
+      if (!userNumber.includes('@')) {
+        userNumber = `${userNumber}@c.us`;
+      }
+      
+      // Obtém o apelido a partir do resto dos argumentos
+      const nickname = args.slice(1).join(' ');
+      
+      // Limita o apelido a 20 caracteres
+      const trimmedNickname = nickname.length > 20 ? nickname.substring(0, 20) : nickname;
+      
+      // Inicializa o array de apelidos se não existir
+      if (!group.nicks) {
+        group.nicks = [];
+      }
+      
+      // Verifica se o usuário já tem um apelido
+      const existingIndex = group.nicks.findIndex(nick => nick.numero === userNumber);
+      
+      if (existingIndex !== -1) {
+        // Atualiza o apelido existente
+        group.nicks[existingIndex].apelido = trimmedNickname;
+      } else {
+        // Adiciona novo apelido
+        group.nicks.push({
+          numero: userNumber,
+          apelido: trimmedNickname
+        });
+      }
+      
+      // Salva o grupo atualizado
+      await this.database.saveGroup(group);
+      
+      // Tenta obter o nome do contato
+      let contactName = "usuário";
+      try {
+        const contact = await bot.client.getContactById(userNumber);
+        contactName = contact.pushname || contact.name || userNumber.replace('@c.us', '');
+      } catch (contactError) {
+        this.logger.debug(`Não foi possível obter informações do contato ${userNumber}:`, contactError);
+      }
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `✅ Apelido definido para ${contactName}: "${trimmedNickname}"`
+      });
+    } catch (error) {
+      this.logger.error('Erro ao definir apelido para usuário:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao definir apelido. Por favor, tente novamente.'
+      });
+    }
   }
 
 }
