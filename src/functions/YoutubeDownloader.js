@@ -473,6 +473,7 @@ async function srCommand(bot, message, args, group) {
 const commands = [
   new Command({
     name: 'yt',
+    caseSensitive: false,
     description: 'Baixa um vídeo do YouTube',
     category: "downloaders",
     reactions: {
@@ -485,6 +486,7 @@ const commands = [
   
   new Command({
     name: 'sr',
+    caseSensitive: false,
     description: 'Baixa um áudio do YouTube',
     category: "downloaders",
     reactions: {
