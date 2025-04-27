@@ -299,7 +299,7 @@ class CustomVariableProcessor {
         
         if (quotedMsg) {
           // Usa o contato da mensagem citada
-          const quotedContact = await quotedMsg.getContact();
+          const quotedContact = await quotedMsg.getContact() ?? false;
           if (quotedContact) {
             mentionName = quotedContact.pushname || quotedContact.name || "Usuário";
           }
