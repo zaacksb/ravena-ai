@@ -118,6 +118,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
     - [x] Midia da twitch
 - [ ] Implementar !g-grupo-abrir e !g-grupo-fechar
 - [ ] !live atualizar titulo do grupo
+- [ ] Comando convite
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter

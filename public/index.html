@@ -91,10 +91,27 @@
             padding-bottom: 10px;
         }
         
+        .bot-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
         .bot-name {
             font-size: 1.4rem;
             font-weight: bold;
             color: var(--bright-blue);
+        }
+        
+        .whatsapp-icon {
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .whatsapp-icon:hover {
+            transform: scale(1.1);
         }
         
         .status-indicator {
@@ -423,6 +440,38 @@
             return `${days} dias atrás`;
         }
         
+        // Função para formatar número de telefone para URL do WhatsApp
+        function formatWhatsAppUrl(phoneNumber) {
+            // Remove todos os caracteres não numéricos
+            const cleanNumber = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
+            return `https://wa.me/${cleanNumber}`;
+        }
+        
+        // Função para extrair número de telefone do bot ID
+        function extractPhoneFromBotId(botId, bots) {
+            // Primeiro, verifica se podemos obter o número a partir dos metadados do bot
+            for (const bot of bots) {
+                if (bot.id === botId && bot.phoneNumber) {
+                    return bot.phoneNumber;
+                }
+            }
+            
+            // Se não tiver nos metadados, tenta extrair do ID usando expressão regular
+            // Procura um padrão como "número" ou alguma outra lógica baseada no seu padrão de nomeação
+            const phoneMatch = botId.match(/(\d{10,15})/);
+            if (phoneMatch) {
+                return phoneMatch[1];
+            }
+            
+            // Se não conseguir extrair do ID, verifica se temos um mapeamento explícito
+            const botPhoneMap = {
+                'ravena-testes': '555596424307', // Exemplo baseado no código do index.js
+                // Adicione outros mapeamentos conhecidos aqui
+            };
+            
+            return botPhoneMap[botId] || '';
+        }
+        
         // Função para buscar dados de saúde dos bots
         async function fetchHealthData() {
             try {
@@ -474,12 +523,19 @@
                 const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
                 const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
                 const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
+                const phoneNumber = extractPhoneFromBotId(bot.id, data.bots);
+                const whatsappUrl = formatWhatsAppUrl(phoneNumber);
                 
                 const botCard = document.createElement('div');
                 botCard.className = 'bot-card';
                 botCard.innerHTML = `
                     <div class="bot-header">
-                        <div class="bot-name">${bot.id}</div>
+                        <div class="bot-title">
+                            <div class="bot-name">${bot.id}</div>
+                            <a href="${whatsappUrl}" target="_blank" title="Abrir chat no WhatsApp">
+                                <img src="whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+                            </a>
+                        </div>
                         <div class="status-indicator" title="${statusDesc}">${statusEmoji}</div>
                     </div>
                     <div class="bot-details">
@@ -494,6 +550,10 @@
                         <div class="detail-item">
                             <span class="detail-label">Hora recebida:</span>
                             <span class="detail-value">${formatTime(bot.lastMessageReceived)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Telefone:</span>
+                            <span class="detail-value">${phoneNumber || 'Não disponível'}</span>
                         </div>
                         <div class="detail-item" style="margin-top: 15px; justify-content: center;">
                             <button class="restart-button" data-bot-id="${bot.id}">
