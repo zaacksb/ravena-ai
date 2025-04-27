@@ -524,6 +524,8 @@ const commands = [
     category: "midia",
     group: "ssticker",
     needsMedia: true, // Verificará tanto mídia direta quanto mídia de mensagem citada
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       trigger: "🖼",
       before: "⏳",
@@ -539,6 +541,8 @@ const commands = [
     category: "midia",
     group: "ssticker",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       trigger: "🖼",
       before: "⏳",
@@ -556,6 +560,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -571,6 +577,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -586,6 +594,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -601,6 +611,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -617,6 +629,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -632,6 +646,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -648,6 +664,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",
@@ -663,6 +681,8 @@ const commands = [
     category: "midia",
     group: "sstickerqua",
     needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
     reactions: {
       before: "⏳",
       after: "🖼",

@@ -96,12 +96,12 @@ class ReactionsHandler {
    */
   async processReaction(bot, reaction) {
     try {
-      this.logger.info(`Processando reação: ${reaction.reaction} de ${reaction.senderId} na mensagem ${reaction.msgId._serialized}`);
+      //this.logger.info(`Processando reação: ${reaction.reaction} de ${reaction.senderId} na mensagem ${reaction.msgId._serialized}`);
       
       // Verifica se este emoji mapeia para um comando
       const commandName = this.reactionCommands[reaction.reaction];
       if (!commandName) {
-        this.logger.debug(`Nenhum comando mapeado para o emoji: ${reaction.reaction}`);
+        //this.logger.debug(`Nenhum comando mapeado para o emoji: ${reaction.reaction}`);
         //console.log(this.reactionCommands);
         return false;
       }

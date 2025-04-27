@@ -140,7 +140,11 @@ class InviteSystem {
         timestamp: Date.now()
       };
       
-      await this.database.addPendingInvite(invite);
+      // Alteração: usar savePendingJoin em vez de addPendingInvite
+      await this.database.savePendingJoin(inviteCode, {
+        authorId: authorId, 
+        authorName: userName
+      });
       
       // Envia notificação para o usuário
       await this.bot.sendMessage(authorId, 

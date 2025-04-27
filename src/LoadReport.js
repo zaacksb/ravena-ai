@@ -139,6 +139,7 @@ class LoadReport {
     
     return `📊 *LoadReport para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
            `📥 *Mensagens:*\n` +
+           `- Mensagens/h: ${report.messages.messagesPerHour}\n`+
            `- Recebidas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)\n`+
            `- Enviadas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)`;
   }

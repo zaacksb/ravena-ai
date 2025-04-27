@@ -21,6 +21,7 @@ class Command {
     this.needsArgs = data.needsArgs || false;       // Se o comando requer argumentos
     this.minArgs = data.minArgs || 0;               // Número mínimo de argumentos
     this.adminOnly = data.adminOnly || false;       // Se apenas administradores podem usar
+    this.caseSensitive = data.caseSensitive || true;
     
     this.exclusive = undefined;                     // Comandos exclusivos por grupo (como API pagas)
 
@@ -33,7 +34,7 @@ class Command {
     };
     
     // Controle de tempo e limitação
-    this.cooldown = data.cooldown || 30;             // Tempo mínimo entre usos (segundos)
+    this.cooldown = data.cooldown || 0;             // Tempo mínimo entre usos (segundos)
     this.timeout = data.timeout || 30;              // Tempo máximo de execução (segundos)
     
     // Comportamento de resposta

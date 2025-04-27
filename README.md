@@ -116,6 +116,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
     - [x] Outros
     - [x] News
     - [x] Midia da twitch
+- [ ] Implementar !g-grupo-abrir e !g-grupo-fechar
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -132,10 +133,17 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Mention bot apenas no começo
 - [x] Streams midia está substituindo e não adicionando
 - [x] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
-- [ ] Bot tentando notificar sem estar nos grupos
 - [x] Algumas reações do AFTER não vão (ex.: !s)
-- [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [x] !live tá enviando pra ele mesmo as msgs
+- [ ] Bot tentando notificar sem estar nos grupos
+- [ ] Stickers quadrados videos não envia (client.sendMessage)
+- [ ] Revisar cooldowns em todos comandos fixos
+- [ ] Cooldown por ravena e por grupo, não global entre as 3
+- [ ] !le mais de 1 lista
+- [ ] Atualizar código para {mention} e {membroRandom}
+- [ ] Ignorar mensagens entre ravenas (grupos de adm)
+- [ ] Fix Riot API
+
 
 ## ✅ TODO-Extras
 - [ ] Gerar README.md atualizado

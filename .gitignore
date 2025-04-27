@@ -160,3 +160,4 @@ data/example-image.jpg
 data/cooldowns.json
 data/donations.json
 /baileys_auth
+data/pending-joins.json

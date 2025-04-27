@@ -161,7 +161,7 @@ class CommandHandler {
     const now = Date.now();
     
     // Obtém valor de cooldown (em segundos)
-    let cooldownValue = 5; // Valor padrão
+    let cooldownValue = 0; // Valor padrão
     
     if (typeof command === 'object') {
       cooldownValue = command.cooldown || cooldownValue;
@@ -603,6 +603,8 @@ class CommandHandler {
         this.logger.debug(`Identificado como comando personalizado: ${command} (${customCommand.startsWith})`);
         await this.executeCustomCommand(bot, message, customCommand, args, group);
         return;
+      } else {
+        message.origin.react("🆖");
       }
     }
     
@@ -1190,7 +1192,7 @@ class CommandHandler {
         return;
       }
       
-      this.logger.debug(`Verificando comandos auto-acionados para o texto: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
+      //this.logger.debug(`Verificando comandos auto-acionados para o texto: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
       
       // Verifica se interações automáticas estão habilitadas para este grupo
       if (group.interact && group.interact.enabled) {
@@ -1204,7 +1206,7 @@ class CommandHandler {
           const randomValue = Math.floor(Math.random() * 10000) + 1;
           const interactionChance = group.interact.chance || 100; // Padrão 1% de chance (100/10000)
           
-          this.logger.debug(`Verificação de interação automática: ${randomValue} <= ${interactionChance}`);
+          //this.logger.debug(`Verificação de interação automática: ${randomValue} <= ${interactionChance}`);
           
           if (randomValue <= interactionChance) {
             // Seleciona um comando aleatório que tenha ignorePrefix definido como true
@@ -1241,7 +1243,7 @@ class CommandHandler {
         }
       }
       
-      this.logger.debug(`Verificação de comando auto-acionado concluída para o grupo ${group.id}`);
+      //this.logger.debug(`Verificação de comando auto-acionado concluída para o grupo ${group.id}`);
     } catch (error) {
       this.logger.error('Erro ao verificar comandos auto-acionados:', error);
     }

@@ -108,8 +108,7 @@ async function aiCommand(bot, message, args, group) {
     const response = await llmService.getCompletion({
       prompt: question,
       provider: 'openrouter', // Usa LM Studio local por padrão
-      temperature: 0.7,
-      maxTokens: 500
+      temperature: 0.7
     });
     
     logger.debug('Resposta LLM obtida', response);

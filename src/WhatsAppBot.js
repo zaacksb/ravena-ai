@@ -122,8 +122,9 @@ class WhatsAppBot {
   registerEventHandlers() {
     // Evento de QR Code
     this.client.on('qr', (qr) => {
-      this.logger.info('QR Code recebido, escaneie para autenticar');
+      this.logger.info(`QR Code recebido, escaneie para autenticar a '${this.id}'`);
       qrcode.generate(qr, { small: true });
+      this.logger.info(`------------ qrcode '${this.id}' -----------`);
     });
 
     // Evento de pronto

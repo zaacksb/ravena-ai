@@ -86,7 +86,12 @@ class FixedCommands {
    * @returns {Command|null} - Objeto do comando ou null se não encontrado
    */
   getCommand(name) {
-    return this.commands.find(cmd => cmd.name === name) || null;
+    return this.commands.find(cmd => {
+      if (cmd.caseSensitive === false) {
+        return cmd.name.toLowerCase() === name.toLowerCase();
+      }
+      return cmd.name === name;
+    }) || null;
   }
 
   /**
