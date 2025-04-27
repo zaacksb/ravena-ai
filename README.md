@@ -135,17 +135,17 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
 - [x] Algumas reações do AFTER não vão (ex.: !s)
 - [x] !live tá enviando pra ele mesmo as msgs
-- [ ] Bot tentando notificar sem estar nos grupos
-- [ ] Stickers quadrados videos não envia (client.sendMessage)
-- [ ] Revisar cooldowns em todos comandos fixos
-- [ ] Cooldown por ravena e por grupo, não global entre as 3
-- [ ] !le mais de 1 lista
-- [ ] Atualizar código para {mention} e {membroRandom}
-- [ ] Ignorar mensagens entre ravenas (grupos de adm)
-- [ ] Fix Riot API
-- [ ] Quando exceder requests do Gemini, usar o local
 - [x] Usar faster-whisper-xll
 - [x] AllTalk pegar arquivos via API
+- [ ] Bot tentando notificar sem estar nos grupos
+- [ ] !le mais de 1 lista
+- [ ] Stickers quadrados videos não envia (client.sendMessage)
+- [x] Revisar cooldowns em todos comandos fixos
+- [x] Cooldown por ravena e por grupo, não global entre as 3
+- [x] Atualizar código para {mention} e {membroRandom}
+- [x] Ignorar mensagens entre ravenas (grupos de adm)
+- [x] Quando exceder requests do Gemini, tentar outro modelo ou local
+- [ ] Fix Riot API
 
 
 ## ✅ TODO-Extras
@@ -155,7 +155,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Jogo: Pesca
-- [ ] Emoji Kitchen
+- [x] Emoji Kitchen
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 - [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off

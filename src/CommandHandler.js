@@ -148,16 +148,18 @@ class CommandHandler {
    * @param {string} groupId - ID do grupo ou chat
    * @returns {Object} - Informações sobre o cooldown
    */
-  checkCooldown(command, groupId) {
+  checkCooldown(command, groupId, botId) {
     const commandName = typeof command === 'string' ? command : command.name;
     
+    const finalId = `${botId}_${groupId}`;
+
     // Se não existir cooldown para este grupo, cria
-    if (!this.cooldowns[groupId]) {
-      this.cooldowns[groupId] = {};
+    if (!this.cooldowns[finalId]) {
+      this.cooldowns[finalId] = {};
     }
     
     // Obtém timestamp do último uso
-    const lastUsed = this.cooldowns[groupId][commandName] || 0;
+    const lastUsed = this.cooldowns[finalId][commandName] || 0;
     const now = Date.now();
     
     // Obtém valor de cooldown (em segundos)
@@ -217,16 +219,18 @@ class CommandHandler {
    * @param {Command|string} command - Comando ou nome do comando
    * @param {string} groupId - ID do grupo ou chat
    */
-  updateCooldown(command, groupId) {
+  updateCooldown(command, groupId, botId) {
     const commandName = typeof command === 'string' ? command : command.name;
     
+    const finalId = `${botId}_${groupId}`;
+
     // Se não existir cooldown para este grupo, cria
-    if (!this.cooldowns[groupId]) {
-      this.cooldowns[groupId] = {};
+    if (!this.cooldowns[finalId]) {
+      this.cooldowns[finalId] = {};
     }
     
     // Atualiza timestamp
-    this.cooldowns[groupId][commandName] = Date.now();
+    this.cooldowns[finalId][commandName] = Date.now();
     
     // Salva cooldowns a cada minuto
     if (Date.now() - this.cooldownsLastSaved > 60000) {
@@ -808,7 +812,7 @@ class CommandHandler {
 
       // Verifica cooldown
       const groupId = message.group || message.author;
-      const cooldownInfo = this.checkCooldown(command, groupId);
+      const cooldownInfo = this.checkCooldown(command, groupId, bot.id);
 
       if (cooldownInfo.inCooldown) {
         this.logger.debug(`Comando ${command.name} em cooldown por mais ${cooldownInfo.timeLeft}s`);
@@ -827,7 +831,7 @@ class CommandHandler {
       
       // Executa método do comando
       if (typeof command.method === 'function') {
-        this.updateCooldown(command, groupId);
+        this.updateCooldown(command, groupId, bot.id);
         const result = await command.method(bot, message, args, group);
         
         // Verifica se o resultado é um ReturnMessage ou array de ReturnMessages
@@ -942,7 +946,7 @@ class CommandHandler {
       }
 
       // Verifica cooldown
-      const cooldownInfo = this.checkCooldown(command.startsWith, message.group);
+      const cooldownInfo = this.checkCooldown(command.startsWith, message.group, bot.id);
 
       if (cooldownInfo.inCooldown) {
         this.logger.debug(`Comando ${command.startsWith} em cooldown por mais ${cooldownInfo.timeLeft}s`);
@@ -975,7 +979,7 @@ class CommandHandler {
         }
       }
       
-      this.updateCooldown(command.startsWith, message.group);
+      this.updateCooldown(command.startsWith, message.group, bot.id);
 
       // Envia todas as respostas ou seleciona uma aleatória
       if (command.sendAllResponses) {

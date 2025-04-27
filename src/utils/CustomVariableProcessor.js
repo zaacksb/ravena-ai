@@ -179,7 +179,7 @@ class CustomVariableProcessor {
     const sumMatches = text.match(/{somaRandoms}/g);
     if (sumMatches) {
       // Procura por números anteriores no texto que foram gerados por variáveis random
-      const numbersInText = text.split(/\s+/).filter(word => /^\d+$/.test(word)).map(num => parseInt(num));
+      const numbersInText = text.split(/\\s+/).filter(word => /^\\d+$/.test(word)).map(num => parseInt(num));
       const sum = numbersInText.reduce((acc, curr) => acc + curr, 0);
       
       // Substitui {somaRandoms} pela soma
@@ -189,6 +189,51 @@ class CustomVariableProcessor {
     return text;
   }
 
+  /**
+   * Obter um membro aleatório do grupo
+   * @param {Object} bot - Instância do bot
+   * @param {string} groupId - ID do grupo
+   * @returns {Promise<Object|null>} - Membro aleatório ou null
+   */
+  async getRandomGroupMember(bot, groupId) {
+    try {
+      if (!bot || !bot.client || !groupId) {
+        return null;
+      }
+
+      // Obtém o chat do grupo
+      const chat = await bot.client.getChatById(groupId);
+      if (!chat || !chat.isGroup) {
+        return null;
+      }
+
+      // Obtém todos os participantes
+      const participants = chat.participants;
+      if (!participants || participants.length === 0) {
+        return null;
+      }
+
+      // Filtra para excluir o próprio bot
+      const filteredParticipants = participants.filter(
+        p => p.id._serialized !== bot.client.info.wid._serialized
+      );
+
+      if (filteredParticipants.length === 0) {
+        return null;
+      }
+
+      // Seleciona um participante aleatório
+      const randomIndex = Math.floor(Math.random() * filteredParticipants.length);
+      const randomParticipant = filteredParticipants[randomIndex];
+
+      // Obtém o objeto de contato
+      const contact = await bot.client.getContactById(randomParticipant.id._serialized);
+      return contact;
+    } catch (error) {
+      this.logger.error('Erro ao obter membro aleatório do grupo:', error);
+      return null;
+    }
+  }
 
   /**
    * Processa variáveis específicas de contexto (mensagem, grupo, etc.)
@@ -205,7 +250,7 @@ class CustomVariableProcessor {
         authorName = context.message.authorName;
       } else if (context.message.origin && context.message.origin.getContact) {
         try {
-          const contact = context.message.origin.getContact();
+          const contact = await context.message.origin.getContact();
           authorName = contact.pushname || contact.name || "Usuário";
         } catch (error) {
           this.logger.error('Erro ao obter contato para variável {pessoa}:', error);
@@ -231,16 +276,50 @@ class CustomVariableProcessor {
       text = text.replace(/{contador}/g, context.command.count);
     }
     
-    // Variável {mention} - nome da pessoa mencionada em uma mensagem citada
+    // Variável {membroRandom} - nome de um membro aleatório do grupo
+    const membroRandomMatches = text.match(/{membroRandom}/g);
+    if (membroRandomMatches && context.bot && context.message && context.message.group) {
+      try {
+        const randomMember = await this.getRandomGroupMember(context.bot, context.message.group);
+        const memberName = randomMember ? (randomMember.pushname || randomMember.name || "Alguém") : "Alguém";
+        text = text.replace(/{membroRandom}/g, memberName);
+      } catch (error) {
+        this.logger.error('Erro ao processar variável {membroRandom}:', error);
+        text = text.replace(/{membroRandom}/g, "Alguém");
+      }
+    }
+    
+    // Variável {mention} - nome da pessoa mencionada ou um membro aleatório se não houver menção
     if (context.message && context.message.origin) {
       try {
-        const quotedMsg = context.message.origin.getQuotedMessage();
+        let mentionName = null;
+        
+        // Tenta obter a mensagem citada
+        const quotedMsg = await context.message.origin.getQuotedMessage().catch(() => null);
+        
         if (quotedMsg) {
-          const quotedContact = quotedMsg.getContact();
+          // Usa o contato da mensagem citada
+          const quotedContact = await quotedMsg.getContact();
           if (quotedContact) {
-            const quotedName = quotedContact.pushname || quotedContact.name || "Usuário";
-            text = text.replace(/{mention}/g, quotedName);
+            mentionName = quotedContact.pushname || quotedContact.name || "Usuário";
           }
+        } else if (context.bot && context.message.group) {
+          // Se não há mensagem citada, seleciona um membro aleatório
+          const randomMember = await this.getRandomGroupMember(context.bot, context.message.group);
+          if (randomMember) {
+            mentionName = randomMember.pushname || randomMember.name || "Usuário";
+            
+            // Adiciona à lista de menções para notificação
+            if (context.options && context.options.mentions) {
+              context.options.mentions.push(randomMember.id._serialized);
+            } else if (context.options) {
+              context.options.mentions = [randomMember.id._serialized];
+            }
+          }
+        }
+        
+        if (mentionName) {
+          text = text.replace(/{mention}/g, mentionName);
         }
       } catch (error) {
         this.logger.error('Erro ao processar variável {mention}:', error);

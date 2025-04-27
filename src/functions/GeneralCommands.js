@@ -107,8 +107,6 @@ async function aiCommand(bot, message, args, group) {
     logger.debug('Tentando obter completação LLM');
     const response = await llmService.getCompletion({
       prompt: question,
-      model: "hermes-3-llama-3.1-8b",
-      provider: 'local',
       temperature: 0.7
     });
     

@@ -22,6 +22,7 @@ class WhatsAppBot {
    * @param {Object} options.eventHandler - Instância do manipulador de eventos
    * @param {string} options.prefix - Prefixo de comando (padrão: '!')
    * @param {Object} options.puppeteerOptions - Opções para o puppeteer
+   * @param {Array} options.otherBots - Instâncias de outros bots a serem ignorados
    */
   constructor(options) {
     this.id = options.id;
@@ -34,6 +35,7 @@ class WhatsAppBot {
     this.isConnected = false;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.puppeteerOptions = options.puppeteerOptions || {};
+    this.otherBots = options.otherBots || [];
     
     // Novas propriedades para notificações de grupos da comunidade
     this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
@@ -87,6 +89,10 @@ class WhatsAppBot {
     try {
       this.blockedContacts = await this.client.getBlockedContacts();
       this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
+
+      if (this.isConnected && this.otherBots.length > 0) {
+        this.prepareOtherBotsBlockList();
+      }
     } catch (error) {
       this.logger.error('Erro ao carregar contatos bloqueados:', error);
       this.blockedContacts = [];
@@ -105,7 +111,7 @@ class WhatsAppBot {
     if (this.grupoAvisos && this.isConnected) {
       try {
         const startMessage = `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* tá _on_! (${new Date().toLocaleString("pt-BR")})`;
-        await this.sendMessage(this.grupoAvisos, startMessage);
+        //await this.sendMessage(this.grupoAvisos, startMessage);
       } catch (error) {
         this.logger.error('Erro ao enviar notificação de inicialização:', error);
       }
@@ -114,6 +120,48 @@ class WhatsAppBot {
 
     
     return this;
+  }
+
+  /**
+   * Prepara a lista de IDs de outros bots para serem ignorados
+  */
+  prepareOtherBotsBlockList() {
+    if (!this.otherBots || !this.otherBots.length) return;
+    
+    // Garante que blockedContacts seja um array
+    if (!this.blockedContacts || !Array.isArray(this.blockedContacts)) {
+      this.blockedContacts = [];
+    }
+    
+    try {
+      // Adiciona IDs dos outros bots à lista de bloqueados
+      for (const bot of this.otherBots) {
+        if (bot && bot.client && bot.client.info && bot.client.info.wid) {
+          const botId = bot.client.info.wid._serialized;
+          
+          // Verifica se já existe na lista
+          const alreadyBlocked = this.blockedContacts.some(
+            contact => contact.id && contact.id._serialized === botId
+          );
+          
+          if (!alreadyBlocked) {
+            // Formato compatível com o formato de contato interno
+            this.blockedContacts.push({
+              id: {
+                _serialized: botId
+              },
+              name: `Bot: ${bot.id || 'desconhecido'}`
+            });
+            
+            this.logger.info(`Adicionado bot '${bot.id}' (${botId}) à lista de ignorados`);
+          }
+        }
+      }
+      
+      this.logger.info(`Lista de ignorados atualizada: ${this.blockedContacts.length} contatos/bots`);
+    } catch (error) {
+      this.logger.error('Erro ao preparar lista de outros bots para ignorar:', error);
+    }
   }
 
   /**
@@ -132,6 +180,10 @@ class WhatsAppBot {
       this.isConnected = true;
       this.logger.info('Cliente está pronto');
       this.eventHandler.onConnected(this);
+
+      if (this.otherBots && this.otherBots.length > 0) {
+        this.prepareOtherBotsBlockList();
+      }
 
       // Inicializa o sistema de streaming agora que estamos conectados
       this.streamSystem = new StreamSystem(this);

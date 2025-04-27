@@ -360,9 +360,9 @@ async function runTests() {
     logger.info('Setting up test environment...');
     
     // Test: Simulating sticker commands with images
-    logger.info('TEST: Sending image with sq command');
+    //logger.info('TEST: Sending image with sq command');
     // First image message
-    const imageMessage = await simulator.simulateImageMessage(testUser, testGroup, '!sq Teste 1');
+    //const imageMessage = await simulator.simulateImageMessage(testUser, testGroup, '!sq Teste 1');
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 1000));
@@ -387,6 +387,8 @@ async function runTests() {
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 2000));
+
+    await simulator.simulateTextMessage(testUser, testGroup, '!ia Pudim sem leite condensado');
     
     logger.info('All tests completed successfully');
   } catch (error) {

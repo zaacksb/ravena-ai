@@ -144,11 +144,11 @@ class EventHandler {
 
         // TEMPORÁRIO REMOVER APÓS 1 DIA DE NOVO CÓDIGO
         // DESTRAVAR GRUPOS ATIVOS
-        if(group.paused){
-          this.logger.info(`[processMessage] DESTRAVADO GRUPO: '${group.name}'`);
-          group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
-          await this.database.saveGroup(group);
-        }
+        // if(group.paused){
+        //   this.logger.info(`[processMessage] DESTRAVADO GRUPO: '${group.name}'`);
+        //   group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
+        //   await this.database.saveGroup(group);
+        // }
         // DESTRAVAR
         
         // Armazena mensagem para histórico de conversação
@@ -610,7 +610,7 @@ class EventHandler {
         // Caso 2: Outra pessoa entrou no grupo
         // Gera e envia mensagem de boas-vindas para o novo membro
         if (group.greetings) {
-          this.generateGreetingMessage(bot, group, data.user).then(welcomeMessage => {
+          this.generateGreetingMessage(bot, group, data.user, chat).then(welcomeMessage => {
             if (welcomeMessage) {
               bot.sendMessage(data.group.id, welcomeMessage).catch(error => {
                 this.logger.error('Erro ao enviar mensagem de boas-vindas:', error);
@@ -669,23 +669,68 @@ class EventHandler {
       this.logger.error('Erro ao processar saída do grupo:', error);
     }
   }
-
   /**
    * Gera mensagem de saudação para novos membros do grupo
-   * @param {WhatsAppBot} bot - A instância do bot
+   * @param {WhatsAppBot} bot - Instância do bot
    * @param {Group} group - O objeto do grupo
    * @param {Object} user - O usuário que entrou
+   * @param {Object} chatData - Dados adicionais do chat (opcional)
    * @returns {Promise<string|MessageMedia>} - A mensagem de saudação
    */
-  async generateGreetingMessage(bot, group, user) {
+  async generateGreetingMessage(bot, group, user, chatData = null) {
     try {
       if (!group.greetings) return null;
       
+      // Obtém os dados completos do chat, se não fornecidos
+      if (!chatData) {
+        try {
+          // Tenta obter o chat para mais informações
+          chatData = await bot.client.getChatById(group.id);
+        } catch (error) {
+          this.logger.error('Erro ao obter dados do chat para saudação:', error);
+        }
+      }
+      
+      // Se houver múltiplos usuários, prepara os nomes
+      let nomesPessoas = "";
+      let quantidadePessoas = 1;
+      let isPlural = false;
+      
+      if (Array.isArray(user)) {
+        nomesPessoas = user.map(u => u.name || "Alguém").join(", ");
+        quantidadePessoas = user.length;
+        isPlural = quantidadePessoas > 1;
+      } else {
+        nomesPessoas = user.name || "Alguém";
+      }
+
       // Se saudação de texto
       if (group.greetings.text) {
         // Substitui variáveis
         let message = group.greetings.text;
-        message = message.replace(/{pessoa}/g, user.name);
+        
+        // Variáveis básicas
+        message = message.replace(/{pessoa}/g, nomesPessoas);
+        
+        // Variáveis de grupo
+        message = message.replace(/{tituloGrupo}/g, chatData?.name || "Grupo");
+        message = message.replace(/{nomeGrupo}/g, group?.name || "Grupo");
+        message = message.replace(/{nomePessoas}/g, nomesPessoas);
+        
+        // Variáveis de pluralidade
+        if (isPlural) {
+          message = message.replace(/{plural_S}/g, "s");
+          message = message.replace(/{plural_M}/g, "m");
+          message = message.replace(/{plural_s}/g, "s");
+          message = message.replace(/{plural_m}/g, "m");
+          message = message.replace(/{plural_esao}/g, "são");
+        } else {
+          message = message.replace(/{plural_S}/g, "");
+          message = message.replace(/{plural_M}/g, "");
+          message = message.replace(/{plural_s}/g, "");
+          message = message.replace(/{plural_m}/g, "");
+          message = message.replace(/{plural_esao}/g, "é");
+        }
         
         return message;
       }

@@ -1785,3 +1785,64 @@ Linkar estes arquivos nesta sessão do readme, com um breve descrição, exemplo
 Se baseando no arquivo WhatsAppBot.js que utiliza a biblioteca whatsapp-web.js (https://github.com/pedroslopez/whatsapp-web.js), crie um WhatsAppBotBaileys.js utilizando a biblioteca Baileys (https://github.com/WhiskeySockets/Baileys).
 
 Considere que o WhatsappBot.js é uma interface e implemente todos métodos para que eu possa simplesmente instanciar um objeto new WhatsAppBotBailyes no index, assim como é feito com o original.
+
+----------
+
+Novas mudanças
+
+# CustomVariableProcessor
+- Nova: {membroRandom} - Pega nome/apelido de um membro random do grupo
+- Variável {mention} quando não tiver quoted, escolhe um membro random do grupo para dar mention
+
+# EventHandler.js
+
+generateGreetingMessage novas variáveis: 
+{tituloGrupo} - Titulo do grupo (chat.name)
+{nomeGrupo} - Nome do grupo (group.name)
+{nomePessoas} - Nome das pessoas que foram adicionadas separado por virgula
+{plural_S} - Se tiver mais que 1 pessoa add, vira S, se não, vazio
+{plural_M}, {plural_s}, {plural_m}, {plural_esao} - Assim como a anterior, mas outras letras
+
+
+# WhatsAppBot.js
+Adiciona nova propriedade no construtor: otherBots
+Adiciona os otherBots ao blockedContacts para que elas ignorem mensagens uma das outras
+No index.js, pode ser feito com map do rBots
+
+# LLMService.js
+Nova funcionalidade: Se der erro em algum model, tenta outro do array de models.
+Caso todos do openrouter resultem em erro, muda para o openAICompletion com local: true
+
+const freeModels = ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-4-maverick:free", "deepseek/deepseek-chat-v3-0324:free", "deepseek/deepseek-r1:free", "qwen/qwq-32b:free", "nvidia/llama-3.1-nemotron-ultra-253b-v1:free"]
+
+Provider padrão: OpenRouter
+
+
+# Novo comando/function: EmojiKitchenCommands
+!emojik 🥹 😗
+!memoji 🥹 😗
+
+(Pega os primeiros 2 emojis de argumento)
+
+O retorno é uma imagem PNG, que deve ser enviada como sticker usando:
+MessageMedia.fromURL(`https://emojik.vercel.app/s/🥹_😗?size=512`);
+
+Legenda do sticker: Emojik: 🥹+😗 
+---
+
+# LLMService.js
+Nova funcionalidade: quando não receber um provider, criar nova função getCompletionFromProviders
+
+Esta função irá chamar na sequencia vários providers, caso um dê erro, passa pro próximo.
+O erro deve ser mostrado no terminal, como erro 400 ou expiradas solicitações grátis, erro de chave api, etc.
+
+Me diga quais chaves API vou precisar fornecer e colocar no .env
+
+1. API Gemini Oficial gemini-2.0-flash-exp:free
+2. API Meta Llama 4 Maverick Free
+3. API Deepseek R1 Free
+4. API Deepseek Chat V3 free
+5. Local LM Studio
+
+Não use o openrouter mais, pois ele tem um limite curto de requests grátis por dia.
+Chame os endpoints das APIs próprias de cada provider diretamente. Caso seja necessário, instale módulos NPM para cada um, caso fique mais userfriendly.
