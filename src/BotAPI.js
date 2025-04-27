@@ -45,6 +45,7 @@ class BotAPI {
         timestamp: Date.now(),
         bots: this.bots.map(bot => ({
           id: bot.id,
+          phoneNumber: bot.phoneNumber,
           connected: bot.isConnected,
           lastMessageReceived: bot.lastMessageReceived || null
         }))
