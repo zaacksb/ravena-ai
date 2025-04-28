@@ -507,6 +507,20 @@ class WhatsAppBot {
   }
 
   /**
+   * Cria um objeto de mídia a partir de uma URL
+   * @param {string} URL - Caminho para o arquivo de mídia
+   * @returns {Promise<MessageMedia>} - O objeto de mídia
+   */
+  async createMediaFromURL(URL) {
+    try {
+      return MessageMedia.fromUrl(URL, {unsafeMime: true});
+    } catch (error) {
+      this.logger.error(`Erro ao criar mídia de ${URL}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Verifica se um usuário é administrador em um grupo
    * @param {string} userId - ID do usuário a verificar
    * @param {string} groupId - ID do grupo

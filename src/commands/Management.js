@@ -174,6 +174,11 @@ class Management {
         method: 'toggleTwitchAI',
         description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
       },
+      'twitch-usarThumbnail': {
+        method: 'toggleTwitchThumbnail',
+        description: 'Ativa/desativa o envio da thumbnail da stream junto com o texto'
+      },
+
       'kick-canal': {
         method: 'toggleKickChannel',
         description: 'Adiciona/remove canal do Kick para monitoramento'
@@ -1751,9 +1756,14 @@ class Management {
         channel: channelName,
         onConfig: this.createDefaultNotificationConfig('twitch', channelName),
         offConfig: {
-          media: []
+          media: [{
+              "type": "text",
+              "content": "⚠️ ATENÇÃO!⚠️\n\n🌟 *{nomeCanal}* ✨ está *online* streamando *{jogo}*!\n_{titulo}_\n\nhttps://twitch.tv/{nomeCanal}"
+            }
+          ]
         },
         changeTitleOnEvent: false,
+        useThumbnail: true,
         useAI: false
       };
       
@@ -2269,6 +2279,50 @@ class Management {
     });
   }
 
+  async toggleTwitchThumbnail(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Validate and get channel name
+    const channelName = await this.validateChannelName(bot, message, args, group, 'twitch');
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, 'twitch', channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Twitch não configurado: ${channelName}. Use !g-twitch-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Toggle the setting
+    if(!channelConfig.useThumbnail){
+      channelConfig.useThumbnail = true;
+    } else {
+      channelConfig.useThumbnail = false;
+    }
+    
+    await this.database.saveGroup(group);
+    
+    const status = channelConfig.useThumbnail ? 'irá enviar' : 'não irá enviar';
+    
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `O bot agora ${status} junto a thumbnail da stream do canal ${channelName}.\n\n` 
+    });
+    
+  }
   /**
    * Toggles AI generated messages for stream events
    * @param {WhatsAppBot} bot - The bot instance

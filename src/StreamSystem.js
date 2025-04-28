@@ -377,6 +377,9 @@ class StreamSystem {
       }
       
       // Processa notificações de mídia
+      //if(!config.media.some(m => m.type == "text")){ // Não tem texto definido
+        
+    
       for (const mediaItem of config.media) {
         const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig);
         if (returnMessage) {
@@ -651,10 +654,24 @@ class StreamSystem {
         }
         
         // Cria a mensagem de retorno
-        return new ReturnMessage({
-          chatId: groupId,
-          content: content
-        });
+
+        if(channelConfig.useThumbnail && eventData.thumbnail){
+          const media = await this.bot.createMediaFromURL(eventData.thumbnail);
+
+          return new ReturnMessage({
+            chatId: groupId,
+            content: media,
+            options: {
+                caption: content
+            }
+          });  
+        } else {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: content
+          });  
+        }
+        
       } else if (mediaItem.type === 'image' || mediaItem.type === 'video' || 
                 mediaItem.type === 'audio' || mediaItem.type === 'sticker') {
         // Carrega arquivo de mídia
