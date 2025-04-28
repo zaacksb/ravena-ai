@@ -153,16 +153,20 @@ class InviteSystem {
       // Envia notificações para o grupoInvites se configurado
       if (this.bot.grupoInvites) {
         try {
+          const inviteInfo = await this.bot.client.getInviteInfo(inviteCode);
+          console.log(inviteInfo);
+
           // Envia primeira mensagem com informações do usuário e motivo
           const infoMessage = 
             `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
+            `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
             `👤 *De:* ${userName} (${authorId})\n\n` +
             `💬 *Motivo:*\n${reason}`;
           
           await this.bot.sendMessage(this.bot.grupoInvites, infoMessage);
           
           // Envia segunda mensagm com comando para aceitar
-          const commandMessage =   `!g-joinGrupo ${inviteCode} ${authorId} ${userName}`;
+          const commandMessage =  `!sa-joinGrupo ${inviteCode} ${authorId} ${userName}`;
           
           await this.bot.sendMessage(this.bot.grupoInvites, commandMessage);
         } catch (error) {

@@ -120,6 +120,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Implementar !g-setApelido numero Apelido
 - [ ] !live atualizar titulo do grupo
 - [ ] Comando convite com argumento pro id do bot
+- [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -164,7 +165,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Novo Jogo: Pesca
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok)
-- [ ] Nova função Streams: Alterar imagem do grupo quando fica on/off
+- [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Melhor explicação da implementação do bot no README
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
