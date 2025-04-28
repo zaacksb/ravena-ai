@@ -116,9 +116,9 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
     - [x] Outros
     - [x] News
     - [x] Midia da twitch
-- [ ] Implementar !g-abrir e !g-fechar
-- [ ] Implementar !g-setApelido numero Apelido
-- [ ] !live atualizar titulo do grupo
+- [x] Implementar !g-abrir e !g-fechar
+- [x] Implementar !g-setApelido numero Apelido
+- [x] !live atualizar titulo do grupo
 - [ ] Comando convite com argumento pro id do bot
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
 
@@ -185,14 +185,14 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/seu-usuario/ravenabot-ai.git
+   git clone https://github.com/moothz/ravenabot-ai.git
    cd ravenabot-ai
    ```
 
 2. Instale as dependências:
    ```bash
    npm install
-   python -m pip install rembg[cli]
+   python -m pip install backgroundremover
    ```
 
 3. Copie o arquivo `.env.example` para `.env`:

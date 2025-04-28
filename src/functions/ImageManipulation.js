@@ -70,12 +70,12 @@ function saveMediaToTemp(media, extension = 'png') {
     });
 }
 
-// Auxiliar para remover fundo usando rembg
+// Auxiliar para remover fundo usando backgroundremover
 function removeBackground(inputPath) {
   const outputPath = inputPath.replace(/\.[^/.]+$/, '') + '_nobg.png';
   
-  // Executa rembg usando Python com Promise
-  return execPromise(`rembg i "${inputPath}" "${outputPath}"`)
+  // Executa backgroundremover usando Python com Promise
+  return execPromise(`backgroundremover -i "${inputPath}" -o "${outputPath}"`)
     .then(() => outputPath)
     .catch(error => {
       logger.error('Erro ao remover fundo:', error);
@@ -497,6 +497,7 @@ const commands = [
     name: 'removebg',
     description: 'Remove o fundo de uma imagem',
     category: "midia",
+    group: "rremovebg",
     needsMedia: true,
     reactions: {
       before: "⏳",
@@ -533,6 +534,32 @@ const commands = [
       error: "❌"
     },
     method: handleStickerBg
+  }),
+  new Command({
+    name: 'sbg',
+    description: 'Alias para comando stickerbg',
+    category: "midia",
+    group: "stickerbg",
+    needsMedia: true,
+    reactions: {
+      before: "⏳",
+      after: "✂️",
+      error: "❌"
+    },
+    method: handleStickerBg
+  }),
+  new Command({
+    name: 'rbg',
+    description: 'Alias para comando removebg',
+    category: "midia",
+    group: "rremovebg",
+    needsMedia: true,
+    reactions: {
+      before: "⏳",
+      after: "✂️",
+      error: "❌"
+    },
+    method: handleRemoveBg
   })
 ];
 
@@ -558,20 +585,6 @@ const commands = [
 });
 
 // Adiciona alias para stickerbg -> sbg
-const sbgCommand = new Command({
-  name: 'sbg',
-  description: 'Alias para comando stickerbg',
-  category: "midia",
-  group: "stickerbg",
-  needsMedia: true,
-  reactions: {
-    before: "⏳",
-    after: "✂️",
-    error: "❌"
-  },
-  method: handleStickerBg
-});
-commands.push(sbgCommand);
 
 // Registra os comandos sendo exportados
 logger.info(`Módulo ImageManipulation carregado. Exportados ${commands.length} comandos.`);

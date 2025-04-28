@@ -362,7 +362,7 @@ async function runTests() {
     // Test: Simulating sticker commands with images
     //logger.info('TEST: Sending image with sq command');
     // First image message
-    //const imageMessage = await simulator.simulateImageMessage(testUser, testGroup, '!sq Teste 1');
+    const imageMessage = await simulator.simulateImageMessage(testUser, testGroup, '!sbg');
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 1000));
@@ -376,7 +376,7 @@ async function runTests() {
     
     // // Test with quoted message
     // logger.info('TEST: Sending message that quotes an image for sqb command');
-    // await simulator.simulateTextMessage(testUser, testGroup, '!sqb Teste 3', imageMessage);
+     //await simulator.simulateTextMessage(testUser, testGroup, '!sbg', imageMessage);
     
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 1000));
@@ -388,7 +388,7 @@ async function runTests() {
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 2000));
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!tts Pudim sem leite condensado');
+    //await simulator.simulateTextMessage(testUser, testGroup, '!tts Pudim sem leite condensado');
     
     logger.info('All tests completed successfully');
   } catch (error) {
