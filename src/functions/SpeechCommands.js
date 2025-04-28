@@ -13,7 +13,6 @@ const crypto = require('crypto');
 const LLMService = require('../services/LLMService');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
-const { MessageMedia } = require('whatsapp-web.js');
 
 const execPromise = util.promisify(exec);
 const logger = new Logger('speech-commands');
@@ -22,6 +21,7 @@ const llmService = new LLMService({});
 
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
 const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';
+const alltalkOutputFolder = path.join(process.env.ALLTALK_FOLDER, "outputs");
 
 const whisperPath = path.join(process.env.ALLTALK_FOLDER, "alltalk_environment", "env", "Scripts", "Whisper.exe");
 
@@ -169,12 +169,24 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     if (response.data.status !== "generate-success") {
       throw new Error(`Falha na geração de voz: ${response.data.status}`);
     }
+
+    console.log(response.data);
     
     // Obter o arquivo de áudio da API
-    const urlResultado = `${allTalkAPI}/output_file_url/${response.data.output_file_url}`;
+    const urlResultado = `${allTalkAPI}${response.data.output_file_url}`;
+    logger.info(`Baixando mídia de '${urlResultado}'`);
 
-    logger.info(`Criando mídia de '${urlResultado}'`);
-    const media = await MessageMedia.fromUrl(urlResultado, { unsafeMime: true });
+    const audioResponse = await axios({
+      method: 'get',
+      url: urlResultado,
+      responseType: 'arraybuffer'
+    });
+    
+    // Salvar o arquivo localmente (temporariamente)
+    await fs.writeFile(tempFilePath, Buffer.from(audioResponse.data));
+    
+    logger.info(`Criando mídia de '${tempFilePath}'`);
+    const media = await bot.createMedia(tempFilePath);
     
     // Retorna a ReturnMessage com o áudio
     const returnMessage = new ReturnMessage({
@@ -187,7 +199,15 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     });
     
     logger.info(`Áudio TTS gerado com sucesso usando personagem ${character.name}`);
-        
+    
+    // Limpa arquivos temporários
+    try {
+      await fs.unlink(tempFilePath);
+      logger.debug('Arquivos temporários limpos');
+    } catch (cleanupError) {
+      logger.error('Erro ao limpar arquivos temporários:', cleanupError);
+    }
+    
     return returnMessage;
   } catch (error) {
     logger.error('Erro na conversão de texto para voz:', error);
