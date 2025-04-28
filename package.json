@@ -12,6 +12,7 @@
     "@whiskeysockets/baileys": "^6.7.16",
     "axios": "^1.8.4",
     "baileys": "^6.7.16",
+    "cheerio": "^1.0.0",
     "chrono-node": "^2.8.0",
     "dotenv": "^16.3.1",
     "express": "^5.1.0",

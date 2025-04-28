@@ -1,4 +1,5 @@
 const axios = require('axios');
+const cheerio = require('cheerio');
 const { MessageMedia } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
@@ -17,6 +18,91 @@ function decodeHtmlEntities(text) {
 }
 
 //logger.info('Módulo SearchCommands carregado');
+
+/**
+ * Consulta informações de aeronaves no Registro Aeronáutico Brasileiro (RAB)
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} - ReturnMessage com os resultados da consulta
+ */
+async function searchAircraftRAB(bot, message, args, group) {
+  try {
+    const chatId = message.group || message.author;
+    
+    if (args.length === 0) {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: 'Por favor, forneça a matrícula da aeronave. Exemplo: !rab PT-XYZ'
+      });
+    }
+    
+    const marca = args[0].toUpperCase();
+    logger.info(`Consultando aeronave com matrícula: ${marca}`);
+    
+    // URL da consulta RAB
+    const url = `https://sistemas.anac.gov.br/aeronaves/cons_rab_resposta.asp?textMarca=${marca}`;
+    
+    // Realiza a requisição com timeout de 10 segundos
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 10000
+    });
+    
+    // Decodifica a resposta usando ISO-8859-1 (padrão para sites brasileiros antigos)
+    const decoder = new TextDecoder('iso-8859-1');
+    const html = decoder.decode(response.data);
+    
+    // Carrega o HTML para parsing
+    const $ = cheerio.load(html);
+    
+    // Verifica se a aeronave foi encontrada
+    if (html.includes('encontrado')) { // alert("Registro não encontrado!");
+      logger.info(`Matrícula ${marca} não encontrada.`);
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✈️ Consulta RAB - Matrícula '${marca}' não encontrada!`
+      });
+    } 
+    
+    // Encontra a tabela com os dados da aeronave
+    const table = $('.table.table-hover');
+    
+    // Inicializa a mensagem de retorno
+    let retorno = `✈️ *Consulta RAB - Matrícula ${marca}*\n\n`;
+    
+    // Itera sobre cada linha da tabela
+    table.find('tr').each((index, element) => {
+      // Extrai a propriedade e o valor de cada linha
+      const property = $(element).find('th:nth-child(1)').text().trim();
+      const value = $(element).find('td:nth-child(2)').text().trim();
+      
+      // Adiciona à mensagem de retorno se houver conteúdo
+      if (property && value) {
+        retorno += `*${property}*: ${value}\n`;
+      }
+    });
+    
+    logger.info(`Dados da aeronave ${marca} encontrados e processados.`);
+    
+    // Retorna a mensagem com os dados da aeronave
+    return new ReturnMessage({
+      chatId: chatId,
+      content: retorno
+    });
+    
+  } catch (error) {
+    logger.error('Erro na consulta RAB:', error);
+    const chatId = message.group || message.author;
+    
+    return new ReturnMessage({
+      chatId: chatId,
+      content: 'Erro ao consultar o Registro Aeronáutico Brasileiro. Por favor, tente novamente mais tarde.'
+    });
+  }
+}
+
 
 /**
  * Busca na web usando DuckDuckGo
@@ -346,6 +432,17 @@ const commands = [
       after: "🖼️"
     },
     method: searchImages
+  }),
+
+  new Command({
+    name: 'rab',
+    description: 'Consultas ao Registro Aeronáutico Brasileiro',
+    category: "busca",
+    reactions: {
+      before: "⏳",
+      after: "✈️"
+    },
+    method: searchAircraftRAB
   })
 ];
 
