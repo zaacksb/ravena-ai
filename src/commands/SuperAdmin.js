@@ -106,7 +106,7 @@ class SuperAdmin {
           }
           
           // Remove dos convites pendentes se existir
-          await this.database.removePendingInvite(inviteCode);
+          await this.database.removePendingJoin(inviteCode);
           
           return new ReturnMessage({
             chatId: chatId,
