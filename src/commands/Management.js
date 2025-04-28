@@ -4,6 +4,7 @@ const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const NSFWPredict = require('../utils/NSFWPredict');
 const ReturnMessage = require('../models/ReturnMessage');
+const { inicializarGrupo, carregarDadosRoleta, salvarDadosRoleta } = require('../functions/RoletaRussaCommands.js');
 
 /**
  * Manipula comandos de gerenciamento para grupos

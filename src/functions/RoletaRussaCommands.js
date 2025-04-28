@@ -430,4 +430,4 @@ setInterval(async () => {
   }
 }, 30000); // Verifica a cada 30 segundos
 
-module.exports = { commands };
+module.exports = { commands, carregarDadosRoleta, inicializarGrupo, salvarDadosRoleta };
