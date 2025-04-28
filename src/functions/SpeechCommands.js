@@ -13,6 +13,7 @@ const crypto = require('crypto');
 const LLMService = require('../services/LLMService');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const { MessageMedia } = require('whatsapp-web.js');
 
 const execPromise = util.promisify(exec);
 const logger = new Logger('speech-commands');
@@ -21,7 +22,6 @@ const llmService = new LLMService({});
 
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
 const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';
-const alltalkOutputFolder = path.join(process.env.ALLTALK_FOLDER, "outputs");
 
 const whisperPath = path.join(process.env.ALLTALK_FOLDER, "alltalk_environment", "env", "Scripts", "Whisper.exe");
 
@@ -100,6 +100,15 @@ async function saveMediaToTemp(media, extension = 'ogg') {
  * @param {string} character - Personagem a ser usado (opcional)
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
+/**
+ * Converte texto para voz usando AllTalk API (XTTS)
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @param {string} character - Personagem a ser usado (opcional)
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ */
 async function textToSpeech(bot, message, args, group, char = "ravena") {
   try {
     const chatId = message.group || message.author;
@@ -128,13 +137,13 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
 
     logger.debug(`Convertendo texto para voz (${JSON.stringify(character)}): ${text}`);
 
-    // Nome do arquivo de saída
+    // Nome do arquivo temporário
     const hash = crypto.randomBytes(2).toString('hex');
-    const outputFilename = `tts_audio_${hash}`;
-    const localArquivo = path.join(alltalkOutputFolder, `${outputFilename}.mp3`);
+    const tempFilename = `tts_audio_${hash}.mp3`;
+    const tempFilePath = path.join(tempDir, tempFilename);
     
     // Monta a URL para a API do AllTalk
-    const apiUrl = `${allTalkAPI}api/tts-generate`;
+    const apiUrl = `${allTalkAPI}/api/tts-generate`;
     
     // Cria os parâmetros para a requisição usando URLSearchParams
     const params = new URLSearchParams({
@@ -143,7 +152,7 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
       character_voice_gen: character.voice,
       narrator_enabled: "false",
       language: "pt",
-      output_file_name: outputFilename,
+      output_file_name: `tts_audio_${hash}`,
       output_file_timestamp: "false"
     });
     
@@ -161,8 +170,11 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
       throw new Error(`Falha na geração de voz: ${response.data.status}`);
     }
     
-    logger.info(`Criando mídia de '${localArquivo}'`);
-    const media = await bot.createMedia(localArquivo);
+    // Obter o arquivo de áudio da API
+    const urlResultado = `${allTalkAPI}/output_file_url/${response.data.output_file_url}`;
+
+    logger.info(`Criando mídia de '${urlResultado}'`);
+    const media = await MessageMedia.fromUrl(urlResultado, { unsafeMime: true });
     
     // Retorna a ReturnMessage com o áudio
     const returnMessage = new ReturnMessage({
@@ -174,16 +186,8 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
       }
     });
     
-    logger.info(`Áudio TTS gerado com sucesso usando personagem ${character}`);
-    
-    // Limpa arquivos temporários
-    try {
-      await fs.unlink(localArquivo);
-      logger.debug('Arquivos temporários limpos');
-    } catch (cleanupError) {
-      logger.error('Erro ao limpar arquivos temporários:', cleanupError);
-    }
-    
+    logger.info(`Áudio TTS gerado com sucesso usando personagem ${character.name}`);
+        
     return returnMessage;
   } catch (error) {
     logger.error('Erro na conversão de texto para voz:', error);

@@ -261,6 +261,7 @@ const commands = [
     description: 'Menciona todos os membros do grupo',
     category: 'grupo',
     group: "attention",
+    adminOnly: true,
     reactions: {
       trigger: "📢", 
       before: "📢",
@@ -274,6 +275,7 @@ const commands = [
     description: 'Menciona todos os membros do grupo',
     category: 'grupo',
     group: "attention",
+    adminOnly: true,
     reactions: {
       trigger: "📢", 
       before: "📢",

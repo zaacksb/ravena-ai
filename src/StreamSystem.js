@@ -699,7 +699,7 @@ class StreamSystem {
           // Fallback para mensagem de texto
           return new ReturnMessage({
             chatId: groupId,
-            content: `Erro ao enviar notificação de mídia para evento de ${eventData.platform}/${eventData.channelName}`
+            content: `Erro ao enviar notificação de mídia para evento de ${eventData.platform}/${eventData.channelName}.\nConfigure novamente suas mídias de stream usando o comando *!g-twitch-midia*`
           });
         }
       }

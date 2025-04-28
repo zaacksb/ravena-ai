@@ -388,7 +388,7 @@ async function runTests() {
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 2000));
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!ia Pudim sem leite condensado');
+    await simulator.simulateTextMessage(testUser, testGroup, '!tts Pudim sem leite condensado');
     
     logger.info('All tests completed successfully');
   } catch (error) {

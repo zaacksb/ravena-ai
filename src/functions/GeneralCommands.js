@@ -25,7 +25,8 @@ async function pingCommand(bot, message, args, group) {
 }
 
 async function grupaoCommand(bot, message, args, group){
-  const grupao = await client.getChatById(process.env.GRUPO_INTERACAO);
+  const chatId = message.group || message.author;
+  const grupao = await bot.client.getChatById(process.env.GRUPO_INTERACAO);
 
   try{
     await grupao.addParticipants([message.author]);
