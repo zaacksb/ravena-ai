@@ -198,10 +198,10 @@ function renderBots(data) {
         botCard.innerHTML = `
             <div class="bot-header">
                 <div class="bot-title">
-                    <div class="bot-name">${bot.id}</div>
                     <a href="${whatsappUrl}" target="_blank" title="Abrir chat no WhatsApp">
                         <img src="whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
                     </a>
+                    <div class="bot-name">${bot.id}</div>
                 </div>
                 <div class="status-indicator" title="${statusDesc}">${statusEmoji}</div>
             </div>
