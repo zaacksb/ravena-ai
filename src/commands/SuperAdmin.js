@@ -29,6 +29,7 @@ class SuperAdmin {
       'addDonateValor': {'method': 'updateDonationAmount'},
       'mergeDonates': {'method': 'mergeDonors'},
       'block': {'method': 'blockUser'},
+      'unblock': {'method': 'unblockUser'},
       'leaveGrupo': {'method': 'leaveGroup'},
       'foto': {'method': 'changeProfilePicture'},
       'simular': {'method': 'simulateStreamEvent'},
@@ -341,7 +342,7 @@ class SuperAdmin {
       }
       
       // Processa o número para formato padrão (apenas dígitos)
-      let phoneNumber = args[0].replace(/\D/g, '');
+      let phoneNumber = args.join(" ").replace(/\D/g, '');
       
       // Se o número não tiver o formato @c.us, adicione
       if (!phoneNumber.includes('@')) {
@@ -367,6 +368,60 @@ class SuperAdmin {
       }
     } catch (error) {
       this.logger.error('Erro no comando blockUser:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  async unblockUser(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça um número de telefone para desbloquear. Exemplo: !sa-unblock +5511999999999'
+        });
+      }
+      
+      // Processa o número para formato padrão (apenas dígitos)
+      let phoneNumber = args.join(" ").replace(/\D/g, '');
+      
+      // Se o número não tiver o formato @c.us, adicione
+      if (!phoneNumber.includes('@')) {
+        phoneNumber = `${phoneNumber}@c.us`;
+      }
+      
+      try {
+        // Tenta bloquear o contato
+        const contatoDesbloquear = await bot.client.getContactById(phoneNumber);
+        await contatoDesbloquear.unblock();
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `✅ Contato ${JSON.stringify(contatoDesbloquear)} desbloqueado com sucesso.`
+        });
+      } catch (unblockError) {
+        this.logger.error('Erro ao desbloquear contato:', unblockError, contatoDesbloquear);
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao desbloquear contato: ${unblockError.message}, ${JSON.stringify(contatoDesbloquear)}`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando unblockUser:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,

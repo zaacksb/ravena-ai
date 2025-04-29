@@ -164,6 +164,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Jogo: Pesca
 - [ ] Novo Comando: busca no youtube
+- [ ] Novo Comando: Msgs anônimas
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 - [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente
