@@ -360,6 +360,66 @@ function updateBotFilters(bots) {
     });
 }
 
+// Processa dados analíticos
+function processAnalyticsData(data) {
+    console.log('Processando dados analíticos:', data);
+    
+    // Verifica se temos os dados necessários
+    if (!data || !data.daily || !data.weekly || !data.monthly || !data.yearly) {
+        console.error('Dados incompletos ou inválidos');
+        return {
+            daily: { hours: [], series: [] },
+            weekly: { days: [], series: [] },
+            monthly: { days: [], series: [] },
+            yearly: { dates: [], series: [] }
+        };
+    }
+    
+    // Processa os dados diários (gráfico de horas)
+    const processedDaily = {
+        hours: data.daily.hours || Array.from({ length: 24 }, (_, i) => i),
+        series: data.daily.series || []
+    };
+    
+    // Processa os dados semanais (gráfico de dias da semana)
+    const processedWeekly = {
+        days: data.weekly.days || ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
+        series: data.weekly.series || []
+    };
+    
+    // Processa os dados mensais (gráfico de dias do mês)
+    const processedMonthly = {
+        days: data.monthly.days || Array.from({ length: 31 }, (_, i) => i + 1),
+        series: data.monthly.series || []
+    };
+    
+    // Processa os dados anuais (gráfico de dias do ano)
+    let yearlyDates = data.yearly.dates;
+    
+    // Se não temos datas definidas, mas temos dados nas séries,
+    // vamos criar datas fictícias baseadas no número de pontos
+    if ((!yearlyDates || yearlyDates.length === 0) && data.yearly.series && data.yearly.series.length > 0) {
+        const firstSeries = data.yearly.series[0];
+        if (firstSeries && firstSeries.data) {
+            const dataLength = firstSeries.data.length;
+            // Cria array de "Dia 1" até "Dia N"
+            yearlyDates = Array.from({ length: dataLength }, (_, i) => `Dia ${i+1}`);
+        }
+    }
+    
+    const processedYearly = {
+        dates: yearlyDates || [],
+        series: data.yearly.series || []
+    };
+    
+    return {
+        daily: processedDaily,
+        weekly: processedWeekly,
+        monthly: processedMonthly,
+        yearly: processedYearly
+    };
+}
+
 // Função para buscar dados de análise
 async function fetchAnalyticsData() {
     try {
@@ -381,16 +441,42 @@ async function fetchAnalyticsData() {
             params.append('bots[]', botId);
         });
         
-        const response = await fetch(`/analytics?${params.toString()}`);
+        let data;
         
-        if (!response.ok) {
-            throw new Error(`Erro ao obter dados de análise: ${response.status}`);
+        try {
+            const response = await fetch(`/analytics?${params.toString()}`);
+            
+            if (!response.ok) {
+                throw new Error(`Erro ao obter dados de análise: ${response.status}`);
+            }
+            
+            data = await response.json();
+        } catch (error) {
+            console.error('Erro na chamada principal, tentando fallback:', error);
+            
+            // Fallback para dados locais (apenas para desenvolvimento)
+            try {
+                const fallbackResponse = await fetch('/analytics_period=today.json');
+                if (!fallbackResponse.ok) {
+                    throw new Error('Arquivo de fallback não encontrado');
+                }
+                
+                data = await fallbackResponse.json();
+                console.log('Usando dados de fallback para visualização');
+            } catch (fallbackError) {
+                throw new Error(`Erro ao obter dados. Tentativa principal: ${error.message}. Fallback: ${fallbackError.message}`);
+            }
         }
         
-        const data = await response.json();
+        if (!data) {
+            throw new Error('Nenhum dado recebido');
+        }
         
-        // Renderiza os gráficos com os dados recebidos
-        renderCharts(data);
+        // Processa os dados recebidos para garantir compatibilidade
+        const processedData = processAnalyticsData(data);
+        
+        // Renderiza os gráficos com os dados processados
+        renderCharts(processedData);
         
     } catch (error) {
         console.error('Erro ao buscar dados de análise:', error);
@@ -473,6 +559,8 @@ function renderCharts(data) {
         colors: ['#04a9f0', '#3e0ea7', '#47486c', '#b7b7c5', '#6a0dad', '#1e90ff']
     };
     
+    console.log('Dados processados para renderização:', data);
+    
     // Renderiza o gráfico de média diária (por hora)
     renderDailyChart(data.daily, commonOptions);
     
@@ -490,7 +578,7 @@ function renderCharts(data) {
 function renderDailyChart(data, commonOptions) {
     const container = document.getElementById('dailyMessageChart');
     
-    if (!data || !data.hours || !data.values) {
+    if (!data || !data.hours || !data.series || data.series.length === 0) {
         container.innerHTML = `
             <h3 class="chart-title">Média de Mensagens do Dia</h3>
             <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
@@ -534,7 +622,7 @@ function renderDailyChart(data, commonOptions) {
 function renderWeeklyChart(data, commonOptions) {
     const container = document.getElementById('weeklyMessageChart');
     
-    if (!data || !data.days || !data.values) {
+    if (!data || !data.days || !data.series || data.series.length === 0) {
         container.innerHTML = `
             <h3 class="chart-title">Média de Mensagens da Semana</h3>
             <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
@@ -578,7 +666,7 @@ function renderWeeklyChart(data, commonOptions) {
 function renderMonthlyChart(data, commonOptions) {
     const container = document.getElementById('monthlyMessageChart');
     
-    if (!data || !data.days || !data.values) {
+    if (!data || !data.days || !data.series || data.series.length === 0) {
         container.innerHTML = `
             <h3 class="chart-title">Média de Mensagens do Mês</h3>
             <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
@@ -622,7 +710,7 @@ function renderMonthlyChart(data, commonOptions) {
 function renderYearlyChart(data, commonOptions) {
     const container = document.getElementById('yearlyMessageChart');
     
-    if (!data || !data.dates || !data.values) {
+    if (!data || (!data.dates || data.dates.length === 0) || !data.series || data.series.length === 0) {
         container.innerHTML = `
             <h3 class="chart-title">Total de Mensagens por Dia do Ano</h3>
             <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
@@ -640,6 +728,12 @@ function renderYearlyChart(data, commonOptions) {
         xAxis: {
             ...commonOptions.xAxis,
             categories: data.dates,
+            labels: {
+                ...commonOptions.xAxis.labels,
+                // Rotaciona os rótulos para melhor legibilidade quando há muitos pontos
+                rotation: -45,
+                step: Math.ceil(data.dates.length / 30) // Exibe apenas alguns rótulos para não sobrecarregar
+            },
             title: {
                 text: 'Data',
                 style: {
