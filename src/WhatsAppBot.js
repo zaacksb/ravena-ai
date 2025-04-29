@@ -265,9 +265,33 @@ class WhatsAppBot {
     // Evento de entrada no grupo
     this.client.on('group_join', async (notification) => {
       try {
-        const group = await notification.getChat();
-        const users = await notification.getRecipients();
-        const responsavel = await notification.getContact();
+        let group;
+        let users;
+
+        let responsavel;
+
+        try{
+          group = await notification.getChat();
+        } catch(e){
+          this.logger.error("[group_join] Erro buscando chat", e);
+           group = { id: "123456@g.us", name: 'Desconhecido' };
+        }
+
+        try{
+          users = await notification.getRecipients();
+        } catch(e){
+          this.logger.error("[group_join] Erro buscando users", e);
+           users = [{ id: "123456@c.us", name: 'Desconhecido' }];
+        }
+
+        try{
+          responsavel = await notification.getContact();
+        } catch(e){
+          this.logger.error("[group_join] Erro buscando contact do responsável", e);
+           responsavel = { id: "123456@c.us", name: 'Desconhecido' };
+        }
+
+
 
         if(users){
           for(let user of users){

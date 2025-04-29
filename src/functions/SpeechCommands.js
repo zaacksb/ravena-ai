@@ -444,12 +444,10 @@ async function processAutoSTT(bot, message, group) {
       logger.info(`[processAutoSTT] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
 
       // Tenta melhorar o texto com LLM (assíncrono)
+      /*
       try {
         const improvedText = await llmService.getCompletion({
           prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-          provider: 'openrouter',
-          temperature: 0.7,
-          maxTokens: 300
         });
         
         logger.info(`[processAutoSTT] Melhoramento via LLM recebido: ${improvedText}`);
@@ -457,7 +455,7 @@ async function processAutoSTT(bot, message, group) {
         // Nota: Aqui seria necessário um método para editar a mensagem já enviada
       } catch (llmError) {
         logger.error('[processAutoSTT] Melhoramento via LLM deu erro, ignorando.', llmError);
-      }
+      }*/
     }
     
     // Limpa arquivos temporários

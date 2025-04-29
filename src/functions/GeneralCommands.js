@@ -107,8 +107,7 @@ async function aiCommand(bot, message, args, group) {
   try {
     logger.debug('Tentando obter completação LLM');
     const response = await llmService.getCompletion({
-      prompt: question,
-      temperature: 0.7
+      prompt: question
     });
     
     logger.debug('Resposta LLM obtida', response);

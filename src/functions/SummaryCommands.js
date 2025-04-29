@@ -100,12 +100,7 @@ Resumo:`;
     });
     
     // Obtém resumo do LLM
-    const summary = await llmService.getCompletion({
-      prompt: prompt,
-      provider: 'openrouter',
-      temperature: 0.7,
-      maxTokens: 300
-    });
+    const summary = await llmService.getCompletion({ prompt: prompt });
     
     if (!summary) {
       return new ReturnMessage({
@@ -206,12 +201,7 @@ ${formattedMessages}
 Uma mensagem curta para interagir:`;
     
     // Obtém interação do LLM
-    const interaction = await llmService.getCompletion({
-      prompt: prompt,
-      provider: 'openrouter',
-      temperature: 0.9,
-      maxTokens: 100
-    });
+    const interaction = await llmService.getCompletion({ prompt: prompt });
     
     if (!interaction) {
       return new ReturnMessage({

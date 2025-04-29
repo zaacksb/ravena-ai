@@ -61,20 +61,47 @@ async function mentionAllMembers(bot, message, args, group) {
     }
     
     // Cria texto da mensagem (de args ou padrão)
-    const messageText = args.length > 0 ? 
-      args.join(' ') : 
-      '🚨 Atenção pessoal! 🚨';
-    
-    // Envia mensagem com menções através de ReturnMessage
-    logger.info(`Mencionados ${mentions.length} membros no grupo ${message.group}`);
-    
-    return new ReturnMessage({
-      chatId: message.group,
-      content: messageText,
-      options: {
-        mentions: mentions
+    const quotedMsg = await message.origin.getQuotedMessage();
+    if(quotedMsg){
+      if(quotedMsg.hasMedia){
+        logger.info(`[galera-midia] Mencionados ${mentions.length} membros no grupo ${message.group}`);    
+
+        const messageText = '🚨 Atenção pessoal! 🚨\n\n'+quotedMsg.body;
+        const attachmentData = await quotedMsg.downloadMedia();
+
+        return new ReturnMessage({
+          chatId: message.group,
+          content: attachmentData,
+          options: {
+            caption: messageText,
+            mentions: mentions
+          }
+        });
+      } else {
+
+        logger.info(`[galera-texto] Mencionados ${mentions.length} membros no grupo ${message.group}`);    
+        const messageText = '🚨 Atenção pessoal! 🚨\n\n'+quotedMsg.body;
+
+        return new ReturnMessage({
+          chatId: message.group,
+          content: messageText,
+          options: {
+            mentions: mentions
+          }
+        });
       }
-    });
+    } else {
+      const messageText = '🚨 Atenção pessoal! 🚨'+ (args.length > 0 ? "\n\n"+args.join(' ') : "");
+
+      return new ReturnMessage({
+          chatId: message.group,
+          content: messageText,
+          options: {
+            mentions: mentions
+          }
+      });
+    }
+
   } catch (error) {
     logger.error('Erro ao mencionar membros do grupo:', error);
     return new ReturnMessage({
