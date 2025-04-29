@@ -335,13 +335,16 @@ class Management {
       });
     }
 
+    let commandTrigger = args.join(' ').toLowerCase();
+
     // Verifica se a mensagem é uma resposta
     const quotedMsg = await message.origin.getQuotedMessage();
 
     let bodyTexto;
     if (!quotedMsg) {
       if(args.length > 1){
-        bodytexto = args.slice(1).join(" ")
+        bodyTexto = args.slice(1).join(" ");
+        commandTrigger = args[0];
       } else {
         return new ReturnMessage({
           chatId: group.id,
@@ -353,14 +356,13 @@ class Management {
     }
     
     
-    // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
-    const commandTrigger = args.join(' ').toLowerCase();
+    
     
     // Obtém o conteúdo da mensagem citada
     let responseContent = false;
     
     // Trata mensagens de mídia
-    if (quotedMsg.hasMedia) {
+    if (quotedMsg?.hasMedia) {
       this.logger.info(`tem mídia, baixando...`);
       const caption = quotedMsg.caption ?? quotedMsg._data.caption;
       try {
@@ -462,13 +464,16 @@ class Management {
       });
     }
     
+    let commandTrigger = args.join(' ').toLowerCase();
+
     // Verifica se a mensagem é uma resposta
     const quotedMsg = await message.origin.getQuotedMessage();
 
     let bodyTexto;
     if (!quotedMsg) {
       if(args.length > 1){
-        bodytexto = args.slice(1).join(" ")
+        bodyTexto = args.slice(1).join(" ");
+        commandTrigger = args[0];
       } else {
         return new ReturnMessage({
           chatId: group.id,
@@ -482,7 +487,6 @@ class Management {
 
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
-    const commandTrigger = args.join(' ').toLowerCase();
     
     // Obtém comandos personalizados para este grupo
     const commands = await this.database.getCustomCommands(group.id);
@@ -499,7 +503,7 @@ class Management {
     let responseContent = bodyTexto;
     
     // Trata mensagens de mídia
-    if (quotedMsg.hasMedia) {
+    if (quotedMsg?.hasMedia) {
       try {
         const media = await quotedMsg.downloadMedia();
         let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
