@@ -483,6 +483,20 @@ const commands = [
     name: 'stt',
     description: 'Converte voz para texto',
     category: 'utilidades',
+    group: "transcr",
+    needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
+    reactions: {
+      trigger: "👂",
+      before: "⌛️",
+      after: "👂"
+    },
+    method: speechToText
+  }),
+    new Command({
+    name: 'transcrever',
+    description: 'Converte voz para texto',
+    category: 'utilidades',
+    group: "transcr",
     needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
     reactions: {
       trigger: "👂",

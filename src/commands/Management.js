@@ -327,23 +327,31 @@ class Management {
         content: 'Este comando só pode ser usado em grupos.'
       });
     }
-    
-    // Verifica se a mensagem é uma resposta
-    const quotedMsg = await message.origin.getQuotedMessage();
 
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem.'
-      });
-    }
-    
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
         content: 'Por favor, forneça um gatilho para o comando personalizado. Exemplo: !g-addCmd saudação'
       });
     }
+
+    // Verifica se a mensagem é uma resposta
+    const quotedMsg = await message.origin.getQuotedMessage();
+
+    let bodyTexto;
+    if (!quotedMsg) {
+      if(args.length > 1){
+        bodytexto = args.slice(1).join(" ")
+      } else {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Este comando deve ser usado como resposta a uma mensagem.'
+        });
+      }
+    } else {
+      bodyTexto = quotedMsg.body ?? quotedMsg._data.body;
+    }
+    
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
     const commandTrigger = args.join(' ').toLowerCase();
@@ -395,7 +403,7 @@ class Management {
         });
       }
     } else {
-      responseContent = quotedMsg.body ?? quotedMsg._data.body;
+      responseContent = bodyTexto;
     }
     
     // Cria o comando personalizado
@@ -447,21 +455,31 @@ class Management {
       });
     }
     
-    // Verifica se a mensagem é uma resposta
-    const quotedMsg = await message.origin.getQuotedMessage();
-    if (!quotedMsg) {
-      return new ReturnMessage({
-        chatId: group.id,
-        content: 'Este comando deve ser usado como resposta a uma mensagem.'
-      });
-    }
-    
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
         content: 'Por favor, forneça o comando para adicionar uma resposta. Exemplo: !g-addCmdReply saudação'
       });
     }
+    
+    // Verifica se a mensagem é uma resposta
+    const quotedMsg = await message.origin.getQuotedMessage();
+
+    let bodyTexto;
+    if (!quotedMsg) {
+      if(args.length > 1){
+        bodytexto = args.slice(1).join(" ")
+      } else {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Este comando deve ser usado como resposta a uma mensagem.'
+        });
+      }
+    } else {
+      bodyTexto = quotedMsg.body ?? quotedMsg._data.body;
+    }
+    
+
     
     // MELHORIA: Usa o comando completo como gatilho em vez de apenas a primeira palavra
     const commandTrigger = args.join(' ').toLowerCase();
@@ -478,7 +496,7 @@ class Management {
     }
     
     // Obtém o conteúdo da mensagem citada
-    let responseContent = quotedMsg.body;
+    let responseContent = bodyTexto;
     
     // Trata mensagens de mídia
     if (quotedMsg.hasMedia) {

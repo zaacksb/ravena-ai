@@ -345,7 +345,7 @@ class StreamSystem {
           );
         }
         
-        group.paused = true;
+        //group.paused = true;
         await this.bot.database.saveGroup(group);
         return;
       }

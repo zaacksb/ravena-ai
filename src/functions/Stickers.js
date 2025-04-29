@@ -534,9 +534,44 @@ const commands = [
     },
     method: stickerCommand
   }),
+  new Command({
+    name: 'figurinha',
+    description: 'Converte mídia em sticker',
+    category: "midia",
+    group: "ssticker",
+    needsMedia: true, // Verificará tanto mídia direta quanto mídia de mensagem citada
+    caseSensitive: false,
+    cooldown: 0,
+    reactions: {
+      trigger: "🖼",
+      before: "⏳",
+      after: "🖼",
+      error: "❌"
+    },
+    method: stickerCommand
+  }),
   
   new Command({
     name: 's',
+    description: 'Alias curto para comando sticker',
+    category: "midia",
+    group: "ssticker",
+    needsMedia: true,
+    caseSensitive: false,
+    cooldown: 0,
+    reactions: {
+      trigger: "🖼",
+      before: "⏳",
+      after: "🖼",
+      error: "❌"
+    },
+    method: async (bot, message, args, group) => {
+      // Chama o método stickerCommand diretamente
+      return await stickerCommand(bot, message, args, group);
+    }
+  }),
+  new Command({
+    name: 'fig',
     description: 'Alias curto para comando sticker',
     category: "midia",
     group: "ssticker",
