@@ -69,7 +69,8 @@ class LoadReport {
           sentGroup: this.stats.sentGroup,
           totalReceived: this.stats.receivedPrivate + this.stats.receivedGroup,
           totalSent: this.stats.sentPrivate + this.stats.sentGroup,
-        }
+        },
+        timestamp: currentTime // Adicionamos um timestamp para facilitar filtros
       };
       report.messages.messagesPerHour = Math.floor((report.messages.totalReceived + report.messages.totalSent) / (report.duration / 3600));
 
@@ -140,8 +141,8 @@ class LoadReport {
     return `📊 *LoadReport para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
            `📥 *Mensagens:*\n` +
            `- Mensagens/h: ${report.messages.messagesPerHour}\n`+
-           `- Recebidas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)\n`+
-           `- Enviadas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)`;
+           `- Recebidas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)\n`+
+           `- Enviadas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)`;
   }
 
   /**
@@ -155,6 +156,11 @@ class LoadReport {
       
       // Adiciona novo relatório
       reports.push(report);
+      
+      // Limita o tamanho da coleção para evitar arquivos muito grandes
+      // Mantém apenas os últimos 90 dias de relatórios (aproximadamente)
+      const ninetyDaysAgo = Date.now() - (90 * 24 * 60 * 60 * 1000);
+      reports = reports.filter(r => r.timestamp && r.timestamp > ninetyDaysAgo);
       
       // Salva no banco de dados
       await this.database.saveLoadReports(reports);

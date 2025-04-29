@@ -1907,3 +1907,30 @@ Atualização no comando !live
 
 Quando executar o comando, triggar a alteração de titulo do grupo que acontece no evento de live on e off no changeGroupTitleForStream em StreamSystem.js
 
+
+---
+
+Este index.html está maravilhoso.
+
+Exiba o botão "reiniciar bot" apenas se existir um queryParam chamado "admin"
+
+Crie um novo container com o mesmo estilo do status-section, mas dessa vez, recheie ele de gráficos bonitos, na mesma paleta de cor (#23066d, #b7b7c5, #3e0ea7,#04a9f0, #05060d, #47486c, #25224f)
+
+Use o Highcharts.js (pode importar de uma CDN como "https://code.highcharts.com/highcharts.js"".
+
+Gráficos sugeridos:
+* Gráfico de linha: média de mensagens do dia (00:00~23:59)
+* Gráfico de barras: média de msgs da semana, por dia
+* Gráfico de linha: média de mensagens do mês (00:00~23:59)
+* Total de mensagens por dia do ano atual (ocupando a linha toda)
+
+Sugiro 3 gráficos por linha.
+
+Faça gráficos dinâmicos, permita que o usuário selecione  os periodos além de zoom, e opções de download.
+
+Chame a sessão de Análise de Dados
+Coloque os botões como "Hoje, Esta semana, Ano"
+E também uma linha com checkbox onde o usuário pode selecionar a fonte dos dados (cada um dos bots)
+
+Para facilitar a implementação do frontend, crie endpoints que agregue estes dados no BotAPI.js
+Como o arquivo load-report.json fca bem grande (<100Mb), o ideal seria ler ele a cada 10 minutos e manter em memória os dados processados necessários, para não ter que ler e recalcular a cada request.

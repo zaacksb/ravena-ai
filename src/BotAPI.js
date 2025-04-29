@@ -25,6 +25,16 @@ class BotAPI {
     this.apiUser = process.env.BOTAPI_USER || 'admin';
     this.apiPassword = process.env.BOTAPI_PASSWORD || 'senha12345';
     
+    // Cache para os dados analíticos processados
+    this.analyticsCache = {
+      lastUpdate: 0,         // Timestamp da última atualização
+      cacheTime: 10 * 60000, // Tempo de cache (10 minutos)
+      daily: {},             // Dados diários por bot
+      weekly: {},            // Dados semanais por bot
+      monthly: {},           // Dados mensais por bot
+      yearly: {}             // Dados anuais por bot
+    };
+    
     // Configura middlewares
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
@@ -32,6 +42,12 @@ class BotAPI {
     
     // Configura rotas
     this.setupRoutes();
+    
+    // Carrega dados analíticos em cache ao iniciar
+    this.updateAnalyticsCache();
+    
+    // Configura atualização periódica do cache (a cada 10 minutos)
+    this.cacheUpdateInterval = setInterval(() => this.updateAnalyticsCache(), this.analyticsCache.cacheTime);
   }
 
   /**
@@ -263,6 +279,370 @@ class BotAPI {
         });
       }
     });
+    
+    // Novo endpoint para obter dados analíticos
+    this.app.get('/analytics', (req, res) => {
+      try {
+        // Obtém parâmetros da requisição
+        const period = req.query.period || 'today';
+        let selectedBots = req.query['bots[]'];
+        
+        // Converte para array se não for
+        if (!Array.isArray(selectedBots)) {
+          selectedBots = selectedBots ? [selectedBots] : [];
+        }
+        
+        // Se não há bots selecionados, usa todos
+        if (selectedBots.length === 0) {
+          selectedBots = Object.keys(this.analyticsCache.daily);
+        }
+        
+        // Verifica se o cache está atualizado
+        const now = Date.now();
+        if (now - this.analyticsCache.lastUpdate > this.analyticsCache.cacheTime) {
+          // Se o cache está desatualizado, atualiza-o
+          this.updateAnalyticsCache()
+            .then(() => {
+              // Após atualizar, envia os dados filtrados
+              res.json(this.filterAnalyticsData(period, selectedBots));
+            })
+            .catch(error => {
+              this.logger.error('Erro ao atualizar cache para análise:', error);
+              res.status(500).json({
+                status: 'error',
+                message: 'Erro ao processar dados analíticos'
+              });
+            });
+        } else {
+          // Se o cache está atualizado, envia os dados filtrados diretamente
+          res.json(this.filterAnalyticsData(period, selectedBots));
+        }
+      } catch (error) {
+        this.logger.error('Erro no endpoint de análise:', error);
+        res.status(500).json({
+          status: 'error',
+          message: 'Erro interno do servidor'
+        });
+      }
+    });
+  }
+  
+  /**
+   * Atualiza o cache de dados analíticos
+   * @returns {Promise<void>}
+   */
+  async updateAnalyticsCache() {
+    try {
+      this.logger.info('Atualizando cache de dados analíticos...');
+      
+      // Obtém todos os relatórios de carga
+      // Pegamos dados dos últimos 365 dias para análise anual
+      const yearStart = new Date();
+      yearStart.setDate(yearStart.getDate() - 365);
+      
+      const reports = await this.database.getLoadReports(yearStart.getTime());
+      
+      if (!reports || !Array.isArray(reports) || reports.length === 0) {
+        this.logger.warn('Nenhum relatório de carga encontrado para processamento analítico');
+        this.analyticsCache.lastUpdate = Date.now();
+        return;
+      }
+      
+      // Agrupa relatórios por bot
+      const botReports = {};
+      reports.forEach(report => {
+        if (!botReports[report.botId]) {
+          botReports[report.botId] = [];
+        }
+        botReports[report.botId].push(report);
+      });
+      
+      // Processa dados para cada bot
+      Object.keys(botReports).forEach(botId => {
+        // Processa dados diários (por hora)
+        this.analyticsCache.daily[botId] = this.processDailyData(botReports[botId]);
+        
+        // Processa dados semanais (por dia da semana)
+        this.analyticsCache.weekly[botId] = this.processWeeklyData(botReports[botId]);
+        
+        // Processa dados mensais (por dia do mês)
+        this.analyticsCache.monthly[botId] = this.processMonthlyData(botReports[botId]);
+        
+        // Processa dados anuais (por dia)
+        this.analyticsCache.yearly[botId] = this.processYearlyData(botReports[botId]);
+      });
+      
+      // Salva datas comuns para o gráfico anual
+      const yearlyDates = new Set();
+      Object.values(this.analyticsCache.yearly).forEach(data => {
+        if (data && data.dates) {
+          data.dates.forEach(date => yearlyDates.add(date));
+        }
+      });
+      
+      // Ordena as datas
+      const sortedDates = Array.from(yearlyDates).sort();
+      
+      // Atualiza os dados de cada bot para usar as mesmas datas
+      Object.keys(this.analyticsCache.yearly).forEach(botId => {
+        const botData = this.analyticsCache.yearly[botId];
+        if (botData) {
+          // Cria novo array de valores baseado nas datas ordenadas
+          const newValues = [];
+          const dateValueMap = {};
+          
+          // Cria um mapa de data para valor
+          if (botData.dates && botData.values) {
+            for (let i = 0; i < botData.dates.length; i++) {
+              dateValueMap[botData.dates[i]] = botData.values[i] || 0;
+            }
+          }
+          
+          // Preenche o novo array de valores com base nas datas ordenadas
+          sortedDates.forEach(date => {
+            newValues.push(dateValueMap[date] || 0);
+          });
+          
+          // Atualiza o objeto de dados do bot
+          this.analyticsCache.yearly[botId] = {
+            dates: sortedDates,
+            values: newValues
+          };
+        }
+      });
+      
+      // Atualiza o timestamp da última atualização
+      this.analyticsCache.lastUpdate = Date.now();
+      this.logger.info('Cache de dados analíticos atualizado com sucesso');
+    } catch (error) {
+      this.logger.error('Erro ao atualizar cache de dados analíticos:', error);
+    }
+  }
+  
+  /**
+   * Processa dados diários (por hora)
+   * @param {Array} reports - Relatórios de carga
+   * @returns {Object} - Dados processados
+   */
+  processDailyData(reports) {
+    try {
+      // Inicializa array de 24 posições para contagem por hora
+      const hourCounts = Array(24).fill(0);
+      const hourTotals = Array(24).fill(0);
+      
+      // Processa cada relatório
+      reports.forEach(report => {
+        if (report.period && report.period.start && report.messages) {
+          const date = new Date(report.period.start);
+          const hour = date.getHours();
+          
+          // Soma mensagens totais deste relatório
+          const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
+          
+          // Adiciona ao contador de horas e totais
+          hourCounts[hour]++;
+          hourTotals[hour] += totalMsgs;
+        }
+      });
+      
+      // Calcula média por hora
+      const hourlyAverages = hourTotals.map((total, index) => {
+        const count = hourCounts[index];
+        return count > 0 ? Math.round(total / count) : 0;
+      });
+      
+      return {
+        values: hourlyAverages
+      };
+    } catch (error) {
+      this.logger.error('Erro ao processar dados diários:', error);
+      return { values: Array(24).fill(0) };
+    }
+  }
+  
+  /**
+   * Processa dados semanais (por dia da semana)
+   * @param {Array} reports - Relatórios de carga
+   * @returns {Object} - Dados processados
+   */
+  processWeeklyData(reports) {
+    try {
+      // Inicializa arrays para os 7 dias da semana
+      const dayCounts = Array(7).fill(0);
+      const dayTotals = Array(7).fill(0);
+      
+      // Processa cada relatório
+      reports.forEach(report => {
+        if (report.period && report.period.start && report.messages) {
+          const date = new Date(report.period.start);
+          const day = date.getDay(); // 0-6 (Domingo-Sábado)
+          
+          // Soma mensagens totais deste relatório
+          const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
+          
+          // Adiciona ao contador de dias e totais
+          dayCounts[day]++;
+          dayTotals[day] += totalMsgs;
+        }
+      });
+      
+      // Calcula média por dia da semana
+      const dailyAverages = dayTotals.map((total, index) => {
+        const count = dayCounts[index];
+        return count > 0 ? Math.round(total / count) : 0;
+      });
+      
+      return {
+        values: dailyAverages
+      };
+    } catch (error) {
+      this.logger.error('Erro ao processar dados semanais:', error);
+      return { values: Array(7).fill(0) };
+    }
+  }
+  
+  /**
+   * Processa dados mensais (por dia do mês)
+   * @param {Array} reports - Relatórios de carga
+   * @returns {Object} - Dados processados
+   */
+  processMonthlyData(reports) {
+    try {
+      // Inicializa arrays para os 31 dias do mês
+      const dayCounts = Array(31).fill(0);
+      const dayTotals = Array(31).fill(0);
+      
+      // Processa cada relatório
+      reports.forEach(report => {
+        if (report.period && report.period.start && report.messages) {
+          const date = new Date(report.period.start);
+          const day = date.getDate() - 1; // 0-30
+          
+          // Soma mensagens totais deste relatório
+          const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
+          
+          // Adiciona ao contador de dias e totais
+          dayCounts[day]++;
+          dayTotals[day] += totalMsgs;
+        }
+      });
+      
+      // Calcula média por dia do mês
+      const monthlyAverages = dayTotals.map((total, index) => {
+        const count = dayCounts[index];
+        return count > 0 ? Math.round(total / count) : 0;
+      });
+      
+      return {
+        values: monthlyAverages
+      };
+    } catch (error) {
+      this.logger.error('Erro ao processar dados mensais:', error);
+      return { values: Array(31).fill(0) };
+    }
+  }
+  
+  /**
+   * Processa dados anuais (por dia)
+   * @param {Array} reports - Relatórios de carga
+   * @returns {Object} - Dados processados
+   */
+  processYearlyData(reports) {
+    try {
+      // Mapeia totais diários
+      const dailyTotals = {};
+      
+      // Processa cada relatório
+      reports.forEach(report => {
+        if (report.period && report.period.start && report.messages) {
+          const date = new Date(report.period.start);
+          const dateString = date.toISOString().split('T')[0]; // YYYY-MM-DD
+          
+          // Soma mensagens totais deste relatório
+          const totalMsgs = (report.messages.totalReceived || 0) + (report.messages.totalSent || 0);
+          
+          // Adiciona ao total diário
+          if (!dailyTotals[dateString]) {
+            dailyTotals[dateString] = 0;
+          }
+          dailyTotals[dateString] += totalMsgs;
+        }
+      });
+      
+      // Converte para arrays ordenados por data
+      const dates = Object.keys(dailyTotals).sort();
+      const values = dates.map(date => dailyTotals[date] || 0);
+      
+      return {
+        dates,
+        values
+      };
+    } catch (error) {
+      this.logger.error('Erro ao processar dados anuais:', error);
+      return { dates: [], values: [] };
+    }
+  }
+  
+  /**
+   * Filtra dados analíticos do cache com base no período e bots selecionados
+   * @param {string} period - Período (today, week, month, year)
+   * @param {Array} selectedBots - IDs dos bots selecionados
+   * @returns {Object} - Dados filtrados
+   */
+  filterAnalyticsData(period, selectedBots) {
+    try {
+      // Prepara resultado
+      const result = {
+        status: 'ok',
+        timestamp: Date.now(),
+        daily: {},
+        weekly: {},
+        monthly: {},
+        yearly: {}
+      };
+      
+      // Função auxiliar para processar dados por período
+      const processData = (periodKey) => {
+        const periodData = this.analyticsCache[periodKey];
+        const seriesData = [];
+        
+        // Para cada bot selecionado, adiciona uma série de dados
+        selectedBots.forEach(botId => {
+          if (periodData[botId]) {
+            seriesData.push({
+              name: botId,
+              data: periodData[botId].values
+            });
+          }
+        });
+        
+        // Retorna os dados formatados para o período
+        return {
+          hours: periodKey === 'daily' ? Array.from({ length: 24 }, (_, i) => i) : null,
+          days: periodKey === 'weekly' ? ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'] :
+                periodKey === 'monthly' ? Array.from({ length: 31 }, (_, i) => i + 1) : null,
+          dates: periodKey === 'yearly' ? (periodData.dates || []) : null,
+          values: periodKey === 'daily' ? 
+                  (selectedBots.length === 1 ? periodData[selectedBots[0]]?.values || [] : []) : null,
+          series: seriesData
+        };
+      };
+      
+      // Processa dados para cada período
+      result.daily = processData('daily');
+      result.weekly = processData('weekly');
+      result.monthly = processData('monthly');
+      result.yearly = processData('yearly');
+      
+      return result;
+    } catch (error) {
+      this.logger.error('Erro ao filtrar dados analíticos:', error);
+      return {
+        status: 'error',
+        message: 'Erro ao filtrar dados analíticos',
+        timestamp: Date.now()
+      };
+    }
   }
 
   /**
@@ -336,6 +716,17 @@ class BotAPI {
       this.logger.error('Erro ao notificar grupos sobre doação:', error);
     }
   }
+  
+  /**
+   * Limpa recursos antes de fechar
+   */
+  destroy() {
+    // Para a atualização periódica do cache
+    if (this.cacheUpdateInterval) {
+      clearInterval(this.cacheUpdateInterval);
+      this.cacheUpdateInterval = null;
+    }
+  }
 
   /**
    * Inicia o servidor API
@@ -363,6 +754,9 @@ class BotAPI {
         resolve();
         return;
       }
+      
+      // Limpa recursos
+      this.destroy();
       
       try {
         this.server.close(() => {
