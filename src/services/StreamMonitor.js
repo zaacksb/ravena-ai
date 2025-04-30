@@ -17,7 +17,8 @@ class StreamMonitor extends EventEmitter {
     this.twitchToken = null;
     this.twitchClientId = process.env.TWITCH_CLIENT_ID;
     this.twitchClientSecret = process.env.TWITCH_CLIENT_SECRET;
-    this.pollingInterval = 60000; // 1 minute default polling interval
+    this.pollingInterval = 60000*3; // 3 minute default polling interval
+    this.pollingIntervalBatches = 30000; // between batches
     this.pollingTimers = {
       twitch: null,
       kick: null,
@@ -293,8 +294,7 @@ class StreamMonitor extends EventEmitter {
     
     // Ensure we have a valid token
     if (!this.twitchToken) {
-      //const token = await this._refreshTwitchToken();
-      const token = "12345";
+      const token = await this._refreshTwitchToken();
       if (!token) return; // Can't proceed without token
     }
     

@@ -23,7 +23,7 @@ const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
 const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';
 const alltalkOutputFolder = path.join(process.env.ALLTALK_FOLDER, "outputs");
 
-const whisperPath = path.join(process.env.ALLTALK_FOLDER, "alltalk_environment", "env", "Scripts", "Whisper.exe");
+const whisperPath = process.env.WHISPER;
 
 // Definição dos personagens para TTS
 const ttsCharacters = [
@@ -220,10 +220,25 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
   }
 }
 
-function multilineItalic(string){
-  const lines = inputString.split('\n');
-  const processedLines = lines.map(line => `_${line.trim()}_`);
-  return processedLines.join('\n');
+/**
+ * Cleans up a string by removing time formatting in square brackets and trimming whitespace
+ * @param {string} text - The input text to clean
+ * @returns {string} - The cleaned text
+ */
+function cleanupString(text) {
+  // Split the input into lines
+  const lines = text.split('\n');
+  
+  // Process each line
+  const cleanedLines = lines.map(line => {
+    // Remove everything inside square brackets at the start of the line
+    const cleanedLine = line.replace(/^\s*\[.*?\]\s*/, '');
+    // Trim any remaining whitespace
+    return `_${cleanedLine.trim()}_`;
+  });
+  
+  // Filter out empty lines and join the result
+  return cleanedLines.filter(line => line.length > 2).join('\n');
 }
 
 /**
@@ -285,6 +300,8 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     // O arquivo de saída vai ter o mesmo nome que o arquivo de entrada mas com extensão .txt
     const whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
     
+
+    logger.debug(`[speechToText] Lendo arquivo de saida: ${whisperOutputPath}`);
     // Lê o texto transcrito
     let transcribedText = '';
     try {
@@ -293,6 +310,8 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     } catch (readError) {
       logger.error('[speechToText] Erro ao ler arquivo de transcrição:', readError);
     }
+
+    logger.debug(`[speechToText] LIDO arquivo de saida: '${transcribedText}'`);
     
     // Se a transcrição falhar ou estiver vazia, fornece uma mensagem útil
     if (!transcribedText) {
@@ -325,7 +344,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     // Cria a ReturnMessage com a transcrição
     const returnMessage = new ReturnMessage({
       chatId: chatId,
-      content: multilineItalic(transcribedText?.trim()),
+      content: cleanupString(transcribedText?.trim() ?? ""),
       options: {
         quotedMessageId: message.origin.id._serialized
       }
@@ -333,24 +352,24 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     
     logger.info(`[speechToText] Resultado STT gerado com sucesso: ${transcribedText}`);
     
-    // Inicia processamento com LLM para melhoria do texto em paralelo, se habilitado
-    if (optimizeWithLLM) {
-      try {
-        const improvedText = await llmService.getCompletion({
-          prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-          provider: 'openrouter',
-          temperature: 0.7,
-          maxTokens: 300
-        });
+    // // Inicia processamento com LLM para melhoria do texto em paralelo, se habilitado
+    // if (optimizeWithLLM) {
+    //   try {
+    //     const improvedText = await llmService.getCompletion({
+    //       prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
+    //       provider: 'openrouter',
+    //       temperature: 0.7,
+    //       maxTokens: 300
+    //     });
         
-        // Não vamos aguardar essa melhoria para retornar a mensagem inicial
-        logger.info(`[speechToText] Melhoramento via LLM recebido: ${improvedText}`);
+    //     // Não vamos aguardar essa melhoria para retornar a mensagem inicial
+    //     logger.info(`[speechToText] Melhoramento via LLM recebido: ${improvedText}`);
         
-        // Nota: Essa atualização da mensagem precisará ser feita no CommandHandler
-      } catch (llmError) {
-        logger.error('[speechToText] Melhoramento via LLM deu erro, ignorando.', llmError);
-      }
-    }
+    //     // Nota: Essa atualização da mensagem precisará ser feita no CommandHandler
+    //   } catch (llmError) {
+    //     logger.error('[speechToText] Melhoramento via LLM deu erro, ignorando.', llmError);
+    //   }
+    // }
     
     // Limpa arquivos temporários
     try {
@@ -417,6 +436,7 @@ async function processAutoSTT(bot, message, group) {
     // O arquivo de saída vai ter o mesmo nome que o arquivo de entrada mas com extensão .txt
     const whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
     
+    logger.debug(`[processAutoSTT] Lendo arquivo de saida: ${whisperOutputPath}`);
     // Lê o texto transcrito
     let transcribedText = '';
     try {
@@ -424,7 +444,6 @@ async function processAutoSTT(bot, message, group) {
       transcribedText = transcribedText.trim();
     } catch (readError) {
       logger.error('[processAutoSTT] Erro ao ler arquivo de transcrição:', readError);
-      return false;
     }
     
     // Se a transcrição for bem-sucedida, envia-a
@@ -432,7 +451,7 @@ async function processAutoSTT(bot, message, group) {
       // Cria ReturnMessage com a transcrição
       const returnMessage = new ReturnMessage({
         chatId: idChat,
-        content: `_${transcribedText?.trim()}_`,
+        content: cleanupString(transcribedText?.trim() ?? ""),
         options: {
           quotedMessageId: message.origin.id._serialized
         }
