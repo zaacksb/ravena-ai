@@ -10,17 +10,44 @@ class Database {
     this.logger = new Logger('database');
     this.databasePath = path.join(__dirname, '../../data');
     this.backupPath = path.join(__dirname, '../../data/backups');
-    this.maxBackups = parseInt(process.env.MAX_BACKUPS) || 0; // 0 = manter todos os backups
     
-    // Cria diretórios de banco de dados e backup se não existirem
-    this.ensureDirectories();
+    // Configurações de backup
+    this.maxBackups = parseInt(process.env.MAX_BACKUPS) || 120; // 4 backups por dia por 30 dias
+    this.scheduledBackupHours = [0, 6, 12, 18]; // Horários de backup agendados
+    this.backupRetentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS) || 30;
+    
+    // Configuração para persistência em cache
+    this.saveInterval = parseInt(process.env.SAVE_INTERVAL) || 60000; // 60 segundos
+    this.dirtyFlags = {
+      groups: false,
+      variables: false,
+      commands: {},
+      loadReports: false,
+      donations: false,
+      pendingJoins: false
+    };
     
     // Cache para objetos de banco de dados
     this.cache = {
       groups: null,
       variables: null,
-      commands: {}
+      commands: {},
+      loadReports: null,
+      donations: null,
+      pendingJoins: null
     };
+    
+    // Cria diretórios de banco de dados e backup se não existirem
+    this.ensureDirectories();
+    
+    // Inicia o temporizador para salvar periodicamente os dados em cache
+    this.startSaveTimer();
+    
+    // Configura backup programado
+    this.setupScheduledBackups();
+    
+    // Flag para rastrear o backup mais recente
+    this.lastScheduledBackup = this.getLastScheduledBackupTime();
   }
 
   /**
@@ -60,7 +87,227 @@ class Database {
   }
 
   /**
-   * Cria um backup de um arquivo
+   * Inicia o temporizador para salvar periodicamente os dados modificados
+   */
+  startSaveTimer() {
+    setInterval(() => {
+      this.persistCachedData();
+    }, this.saveInterval);
+    
+    // Garantir que os dados sejam salvos quando o programa for encerrado
+    process.on('SIGINT', () => {
+      this.logger.info('Encerrando, salvando dados...');
+      this.persistCachedData(true);
+      process.exit(0);
+    });
+    
+    process.on('SIGTERM', () => {
+      this.logger.info('Encerrando, salvando dados...');
+      this.persistCachedData(true);
+      process.exit(0);
+    });
+  }
+
+  /**
+   * Configura backups programados
+   */
+  setupScheduledBackups() {
+    // Verificar a cada hora se devemos fazer um backup programado
+    setInterval(() => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      // Verificar se estamos em uma hora de backup programado
+      if (this.scheduledBackupHours.includes(currentHour)) {
+        const lastBackupDate = new Date(this.lastScheduledBackup);
+        
+        // Verificar se já fizemos um backup nesta hora hoje
+        if (
+          lastBackupDate.getDate() !== now.getDate() ||
+          lastBackupDate.getMonth() !== now.getMonth() ||
+          lastBackupDate.getFullYear() !== now.getFullYear() ||
+          lastBackupDate.getHours() !== currentHour
+        ) {
+          this.createScheduledBackup();
+          this.lastScheduledBackup = now.getTime();
+        }
+      }
+    }, 60000); // Verificar a cada minuto
+  }
+
+  /**
+   * Obtém o timestamp do último backup programado
+   * @returns {number} - Timestamp do último backup programado
+   */
+  getLastScheduledBackupTime() {
+    try {
+      const backupInfoPath = path.join(this.backupPath, 'backup-info.json');
+      if (fs.existsSync(backupInfoPath)) {
+        const backupInfo = JSON.parse(fs.readFileSync(backupInfoPath, 'utf8'));
+        return backupInfo.lastScheduledBackup || 0;
+      }
+    } catch (error) {
+      this.logger.error('Erro ao obter informações do último backup:', error);
+    }
+    return 0;
+  }
+
+  /**
+   * Salva o timestamp do último backup programado
+   * @param {number} timestamp - Timestamp a salvar
+   */
+  saveLastScheduledBackupTime(timestamp) {
+    try {
+      const backupInfoPath = path.join(this.backupPath, 'backup-info.json');
+      const backupInfo = fs.existsSync(backupInfoPath)
+        ? JSON.parse(fs.readFileSync(backupInfoPath, 'utf8'))
+        : {};
+      
+      backupInfo.lastScheduledBackup = timestamp;
+      fs.writeFileSync(backupInfoPath, JSON.stringify(backupInfo, null, 2), 'utf8');
+    } catch (error) {
+      this.logger.error('Erro ao salvar informações de backup:', error);
+    }
+  }
+
+  /**
+   * Cria um backup programado de todos os arquivos de dados
+   */
+  createScheduledBackup() {
+    try {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-');
+      const backupDir = path.join(this.backupPath, timestamp);
+      
+      // Criar diretório para este backup
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+      
+      // Salvar todos os dados em cache primeiro
+      this.persistCachedData(true);
+      
+      // Fazer backup de todos os arquivos na pasta data
+      this.backupDirectory(this.databasePath, backupDir, [this.backupPath]);
+      
+      this.logger.info(`Backup programado criado: ${backupDir}`);
+      
+      // Atualizar o timestamp do último backup
+      this.saveLastScheduledBackupTime(now.getTime());
+      
+      // Limpar backups antigos
+      this.cleanupOldScheduledBackups();
+    } catch (error) {
+      this.logger.error('Erro ao criar backup programado:', error);
+    }
+  }
+
+  /**
+   * Faz backup de um diretório para outro
+   * @param {string} sourceDir - Diretório de origem
+   * @param {string} targetDir - Diretório de destino
+   * @param {Array<string>} excludeDirs - Diretórios a serem excluídos
+   */
+  backupDirectory(sourceDir, targetDir, excludeDirs = []) {
+    try {
+      const items = fs.readdirSync(sourceDir);
+      
+      for (const item of items) {
+        const sourcePath = path.join(sourceDir, item);
+        const targetPath = path.join(targetDir, item);
+        
+        // Verificar se o item deve ser excluído
+        if (excludeDirs.some(dir => sourcePath.startsWith(dir))) {
+          continue;
+        }
+        
+        const stats = fs.statSync(sourcePath);
+        
+        if (stats.isDirectory()) {
+          // Criar o diretório no destino se não existir
+          if (!fs.existsSync(targetPath)) {
+            fs.mkdirSync(targetPath, { recursive: true });
+          }
+          
+          // Recursivamente fazer backup do diretório
+          this.backupDirectory(sourcePath, targetPath, excludeDirs);
+        } else if (stats.isFile()) {
+          // Fazer backup do arquivo
+          fs.copyFileSync(sourcePath, targetPath);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao fazer backup do diretório ${sourceDir}:`, error);
+    }
+  }
+
+  /**
+   * Limpa backups programados antigos
+   */
+  cleanupOldScheduledBackups() {
+    try {
+      const now = Date.now();
+      const retentionPeriod = this.backupRetentionDays * 24 * 60 * 60 * 1000;
+      
+      // Obter todos os diretórios de backup
+      const backupDirs = fs.readdirSync(this.backupPath)
+        .filter(item => {
+          const fullPath = path.join(this.backupPath, item);
+          return fs.statSync(fullPath).isDirectory() && /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/.test(item);
+        })
+        .map(dir => ({
+          name: dir,
+          path: path.join(this.backupPath, dir),
+          // Extrai a data da string do ISO
+          date: new Date(dir.replace(/-/g, (m, i) => i <= 10 ? m : i === 11 ? ':' : i === 14 ? ':' : '.')).getTime()
+        }))
+        .sort((a, b) => b.date - a.date); // mais recente primeiro
+      
+      // Manter os backups recentes e remover os antigos
+      if (backupDirs.length > this.maxBackups) {
+        const dirsToDelete = backupDirs.slice(this.maxBackups);
+        
+        for (const dir of dirsToDelete) {
+          // Verificar também se o backup é mais antigo que o período de retenção
+          if (now - dir.date > retentionPeriod) {
+            this.deleteDirectory(dir.path);
+            this.logger.info(`Backup antigo removido: ${dir.name}`);
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error('Erro ao limpar backups antigos:', error);
+    }
+  }
+
+  /**
+   * Exclui um diretório e seu conteúdo
+   * @param {string} dirPath - Caminho do diretório a excluir
+   */
+  deleteDirectory(dirPath) {
+    try {
+      if (fs.existsSync(dirPath)) {
+        const items = fs.readdirSync(dirPath);
+        
+        for (const item of items) {
+          const itemPath = path.join(dirPath, item);
+          
+          if (fs.statSync(itemPath).isDirectory()) {
+            this.deleteDirectory(itemPath);
+          } else {
+            fs.unlinkSync(itemPath);
+          }
+        }
+        
+        fs.rmdirSync(dirPath);
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao excluir diretório ${dirPath}:`, error);
+    }
+  }
+
+  /**
+   * Cria um backup de um arquivo individual
    * @param {string} filePath - Caminho para o arquivo a ser copiado
    */
   createBackup(filePath) {
@@ -73,7 +320,7 @@ class Database {
       const backupFilePath = path.join(this.backupPath, backupFileName);
       
       fs.copyFileSync(filePath, backupFilePath);
-      this.logger.info(`Backup criado: ${backupFilePath}`);
+      this.logger.debug(`Backup criado: ${backupFilePath}`);
       
       // Limpa backups antigos se maxBackups estiver definido
       this.cleanupOldBackups(fileName);
@@ -104,7 +351,7 @@ class Database {
         for (const file of filesToDelete) {
           const filePath = path.join(this.backupPath, file);
           fs.unlinkSync(filePath);
-          this.logger.info(`Backup antigo excluído: ${filePath}`);
+          this.logger.debug(`Backup antigo excluído: ${filePath}`);
         }
       }
     } catch (error) {
@@ -112,7 +359,118 @@ class Database {
     }
   }
 
-/**
+  /**
+   * Persiste todos os dados modificados em cache para os arquivos
+   * @param {boolean} [force=false] - Forçar persistência mesmo se não estiver marcado como modificado
+   */
+  persistCachedData(force = false) {
+    try {
+      // Grupos
+      if ((this.dirtyFlags.groups || force) && this.cache.groups) {
+        const groupsPath = path.join(this.databasePath, 'groups.json');
+        this.saveJSONToFile(groupsPath, this.cache.groups);
+        this.dirtyFlags.groups = false;
+        this.logger.info('Dados de grupos persistidos no arquivo');
+      }
+      
+      // Variáveis
+      if ((this.dirtyFlags.variables || force) && this.cache.variables) {
+        const variablesPath = path.join(this.databasePath, 'custom-variables.json');
+        this.saveJSONToFile(variablesPath, this.cache.variables);
+        this.dirtyFlags.variables = false;
+        this.logger.info('Variáveis personalizadas persistidas no arquivo');
+      }
+      
+      // Comandos personalizados para cada grupo
+      for (const groupId in this.dirtyFlags.commands) {
+        if ((this.dirtyFlags.commands[groupId] || force) && this.cache.commands[groupId]) {
+          const customCmdPath = path.join(this.databasePath, 'custom-cmd', `${groupId}.json`);
+          this.saveJSONToFile(customCmdPath, this.cache.commands[groupId]);
+          this.dirtyFlags.commands[groupId] = false;
+          this.logger.info(`Comandos personalizados para o grupo ${groupId} persistidos no arquivo`);
+        }
+      }
+      
+      // Relatórios de carga
+      if ((this.dirtyFlags.loadReports || force) && this.cache.loadReports) {
+        const reportsPath = path.join(this.databasePath, 'load-reports.json');
+        this.saveJSONToFile(reportsPath, this.cache.loadReports);
+        this.dirtyFlags.loadReports = false;
+        this.logger.info('Relatórios de carga persistidos no arquivo');
+      }
+      
+      // Doações
+      if ((this.dirtyFlags.donations || force) && this.cache.donations) {
+        const donationsPath = path.join(this.databasePath, 'donations.json');
+        this.saveJSONToFile(donationsPath, this.cache.donations);
+        this.dirtyFlags.donations = false;
+        this.logger.info('Doações persistidas no arquivo');
+      }
+      
+      // Joins pendentes
+      if ((this.dirtyFlags.pendingJoins || force) && this.cache.pendingJoins) {
+        const joinsPath = path.join(this.databasePath, 'pending-joins.json');
+        this.saveJSONToFile(joinsPath, this.cache.pendingJoins);
+        this.dirtyFlags.pendingJoins = false;
+        this.logger.info('Joins pendentes persistidos no arquivo');
+      }
+    } catch (error) {
+      this.logger.error('Erro ao persistir dados em cache:', error);
+    }
+  }
+
+  /**
+   * Salva dados JSON em um arquivo com backup
+   * @param {string} filePath - Caminho para salvar o arquivo JSON
+   * @param {Object|Array} data - Os dados a serem salvos
+   * @returns {boolean} - Status de sucesso
+   */
+  saveJSONToFile(filePath, data) {
+    try {
+      // Cria backup do arquivo existente
+      this.createBackup(filePath);
+      
+      // Garante que o diretório exista
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      // Clona os dados para evitar modificações por referência
+      const dataToSave = JSON.parse(JSON.stringify(data));
+      
+      // Use sistema de escrita segura para evitar corrupção
+      const tempFilePath = `${filePath}.temp`;
+      
+      // Escreve em um arquivo temporário primeiro
+      fs.writeFileSync(tempFilePath, JSON.stringify(dataToSave, null, 2), 'utf8');
+      
+      // Verifica se a escrita foi bem-sucedida tentando ler de volta
+      try {
+        const testRead = fs.readFileSync(tempFilePath, 'utf8');
+        JSON.parse(testRead); // Verifica se é JSON válido
+      } catch (readError) {
+        this.logger.error(`Erro na verificação do arquivo temporário ${tempFilePath}:`, readError);
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+        }
+        return false;
+      }
+      
+      // Renomeia o arquivo temporário para o arquivo final
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      fs.renameSync(tempFilePath, filePath);
+      
+      return true;
+    } catch (error) {
+      this.logger.error(`Erro ao salvar JSON em ${filePath}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Carrega dados JSON de um arquivo
    * @param {string} filePath - Caminho para o arquivo JSON
    * @returns {Object|Array|null} - Os dados JSON analisados ou null em caso de erro
@@ -154,35 +512,6 @@ class Database {
   }
 
   /**
-   * Salva dados JSON em um arquivo
-   * @param {string} filePath - Caminho para salvar o arquivo JSON
-   * @param {Object|Array} data - Os dados a serem salvos
-   * @returns {boolean} - Status de sucesso
-   */
-  saveJSON(filePath, data) {
-    try {
-      // Cria backup do arquivo existente
-      this.createBackup(filePath);
-      
-      // Garante que o diretório exista
-      const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      
-      // Clona os dados para evitar modificações por referência
-      const dataToSave = JSON.parse(JSON.stringify(data));
-      
-      // Escreve novos dados
-      fs.writeFileSync(filePath, JSON.stringify(dataToSave, null, 2), 'utf8');
-      return true;
-    } catch (error) {
-      this.logger.error(`Erro ao salvar JSON em ${filePath}:`, error);
-      return false;
-    }
-  }
-
-  /**
    * Carrega o backup mais recente de um arquivo
    * @param {string} originalFilePath - Caminho do arquivo original
    * @returns {Object|Array|null} - Os dados JSON analisados ou null em caso de erro
@@ -196,23 +525,99 @@ class Database {
         .reverse();
       
       if (backupFiles.length === 0) {
-        return null;
+        // Verificar se há um backup programado
+        return this.loadFromScheduledBackup(originalFilePath);
       }
       
       // Carrega backup mais recente
-      const latestBackup = backupFiles[0];
-      const backupPath = path.join(this.backupPath, latestBackup);
+      for (const backupFile of backupFiles) {
+        try {
+          const backupPath = path.join(this.backupPath, backupFile);
+          this.logger.info(`Tentando carregar do backup: ${backupPath}`);
+          
+          const data = fs.readFileSync(backupPath, 'utf8');
+          const parsed = JSON.parse(data);
+          this.logger.info(`Backup carregado com sucesso: ${backupPath}`);
+          return parsed;
+        } catch (backupError) {
+          this.logger.error(`Erro ao carregar backup ${backupFile}:`, backupError);
+          // Continua tentando o próximo backup
+        }
+      }
       
-      this.logger.info(`Carregando do backup: ${backupPath}`);
-      const data = fs.readFileSync(backupPath, 'utf8');
-      return JSON.parse(data);
+      // Se todos os backups falharem, tenta restaurar de um backup programado
+      return this.loadFromScheduledBackup(originalFilePath);
     } catch (error) {
       this.logger.error(`Erro ao carregar backup para ${originalFilePath}:`, error);
       return null;
     }
   }
 
-/**
+  /**
+   * Carrega um arquivo do backup programado mais recente
+   * @param {string} originalFilePath - Caminho do arquivo original
+   * @returns {Object|Array|null} - Os dados JSON analisados ou null em caso de erro
+   */
+  loadFromScheduledBackup(originalFilePath) {
+    try {
+      // Obter todos os diretórios de backup programado
+      const backupDirs = fs.readdirSync(this.backupPath)
+        .filter(item => {
+          const fullPath = path.join(this.backupPath, item);
+          return fs.statSync(fullPath).isDirectory() && /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}/.test(item);
+        })
+        .map(dir => ({
+          name: dir,
+          path: path.join(this.backupPath, dir),
+          date: new Date(dir.replace(/-/g, (m, i) => i <= 10 ? m : i === 11 ? ':' : i === 14 ? ':' : '.')).getTime()
+        }))
+        .sort((a, b) => b.date - a.date); // mais recente primeiro
+      
+      if (backupDirs.length === 0) {
+        this.logger.error(`Nenhum backup programado encontrado para ${originalFilePath}`);
+        return null;
+      }
+      
+      // Caminho relativo ao diretório de dados
+      const relativeFilePath = path.relative(this.databasePath, originalFilePath);
+      
+      // Tentar cada diretório de backup até encontrar o arquivo
+      for (const backupDir of backupDirs) {
+        const backupFilePath = path.join(backupDir.path, relativeFilePath);
+        
+        if (fs.existsSync(backupFilePath)) {
+          try {
+            this.logger.info(`Tentando carregar do backup programado: ${backupFilePath}`);
+            const data = fs.readFileSync(backupFilePath, 'utf8');
+            const parsed = JSON.parse(data);
+            this.logger.info(`Backup programado carregado com sucesso: ${backupFilePath}`);
+            
+            // Restaurar o arquivo do backup
+            const dir = path.dirname(originalFilePath);
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
+            
+            fs.copyFileSync(backupFilePath, originalFilePath);
+            this.logger.info(`Arquivo restaurado do backup programado: ${originalFilePath}`);
+            
+            return parsed;
+          } catch (backupError) {
+            this.logger.error(`Erro ao carregar backup programado ${backupFilePath}:`, backupError);
+            // Continua tentando o próximo backup
+          }
+        }
+      }
+      
+      this.logger.error(`Nenhum backup programado válido encontrado para ${originalFilePath}`);
+      return null;
+    } catch (error) {
+      this.logger.error(`Erro ao carregar do backup programado para ${originalFilePath}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Obtém todos os grupos
    * @returns {Array} - Array de objetos de grupo
    */
@@ -231,7 +636,7 @@ class Database {
         this.logger.warn('Arquivo de grupos ausente ou inválido, criando array vazio');
         groups = [];
         // Cria arquivo de grupos vazio se não existir
-        await this.saveJSON(groupsPath, groups);
+        this.saveJSONToFile(groupsPath, groups);
       }
       
       // Atualiza cache
@@ -255,7 +660,7 @@ class Database {
   }
 
   /**
-   * Salva um grupo
+   * Salva um grupo (apenas em cache)
    * @param {Object} group - O objeto do grupo a ser salvo
    * @returns {boolean} - Status de sucesso
    */
@@ -268,7 +673,8 @@ class Database {
         this.logger.error('Groups não é um array em saveGroup:', groups);
         // Inicializa como array vazio se não for um array
         this.cache.groups = [];
-        return this.saveJSON(path.join(this.databasePath, 'groups.json'), [group]);
+        this.dirtyFlags.groups = true;
+        return true;
       }
       
       // Encontra índice do grupo existente
@@ -287,15 +693,10 @@ class Database {
       // Atualiza cache com uma cópia profunda para evitar referências
       this.cache.groups = JSON.parse(JSON.stringify(groups));
       
-      // Salva no arquivo
-      const groupsPath = path.join(this.databasePath, 'groups.json');
-      const result = this.saveJSON(groupsPath, groups);
+      // Marca como modificado
+      this.dirtyFlags.groups = true;
       
-      // Log para debug
-      this.logger.debug(`[saveGroup] Resultado do saveJSON: ${result}`);
-      this.logger.debug(`[saveGroup] Grupos após salvar: ${JSON.stringify(groups.length)}`);
-      
-      return result;
+      return true;
     } catch (error) {
       this.logger.error('Erro ao salvar grupo:', error);
       return false;
@@ -323,7 +724,7 @@ class Database {
   }
 
   /**
-   * Salva um comando personalizado para um grupo
+   * Salva um comando personalizado para um grupo (apenas em cache)
    * @param {string} groupId - O ID do grupo
    * @param {Object} command - O objeto de comando a ser salvo
    * @returns {boolean} - Status de sucesso
@@ -346,13 +747,14 @@ class Database {
     // Atualiza cache
     this.cache.commands[groupId] = commands;
     
-    // Salva no arquivo
-    const customCmdPath = path.join(this.databasePath, 'custom-cmd', `${groupId}.json`);
-    return this.saveJSON(customCmdPath, commands);
+    // Marca como modificado
+    this.dirtyFlags.commands[groupId] = true;
+    
+    return true;
   }
 
   /**
-   * Atualiza um comando personalizado existente
+   * Atualiza um comando personalizado existente (apenas em cache)
    * @param {string} groupId - O ID do grupo
    * @param {Object} command - O objeto de comando a atualizar
    * @returns {boolean} - Status de sucesso
@@ -371,16 +773,17 @@ class Database {
       // Atualiza cache
       this.cache.commands[groupId] = commands;
       
-      // Salva no arquivo
-      const customCmdPath = path.join(this.databasePath, 'custom-cmd', `${groupId}.json`);
-      return this.saveJSON(customCmdPath, commands);
+      // Marca como modificado
+      this.dirtyFlags.commands[groupId] = true;
+      
+      return true;
     }
     
     return false;
   }
 
   /**
-   * Exclui um comando personalizado
+   * Exclui um comando personalizado (apenas em cache)
    * @param {string} groupId - O ID do grupo
    * @param {string} commandStart - O valor startsWith do comando
    * @returns {boolean} - Status de sucesso
@@ -400,9 +803,10 @@ class Database {
       // Atualiza cache
       this.cache.commands[groupId] = commands;
       
-      // Salva no arquivo
-      const customCmdPath = path.join(this.databasePath, 'custom-cmd', `${groupId}.json`);
-      return this.saveJSON(customCmdPath, commands);
+      // Marca como modificado
+      this.dirtyFlags.commands[groupId] = true;
+      
+      return true;
     }
     
     return false;
@@ -428,7 +832,7 @@ class Database {
   }
 
   /**
-   * Salva variáveis personalizadas
+   * Salva variáveis personalizadas (apenas em cache)
    * @param {Object} variables - Objeto de variáveis personalizadas
    * @returns {boolean} - Status de sucesso
    */
@@ -436,9 +840,10 @@ class Database {
     // Atualiza cache
     this.cache.variables = variables;
     
-    // Salva no arquivo
-    const variablesPath = path.join(this.databasePath, 'custom-variables.json');
-    return this.saveJSON(variablesPath, variables);
+    // Marca como modificado
+    this.dirtyFlags.variables = true;
+    
+    return true;
   }
 
   /**
@@ -452,7 +857,10 @@ class Database {
       this.cache = {
         groups: null,
         variables: null,
-        commands: {}
+        commands: {},
+        loadReports: null,
+        donations: null,
+        pendingJoins: null
       };
     }
   }
@@ -464,8 +872,23 @@ class Database {
    */
   async getLoadReports(since = 0) {
     try {
+      // Retorna do cache se disponível
+      if (this.cache.loadReports) {
+        let reports = this.cache.loadReports;
+        
+        // Filtra relatórios por timestamp se 'since' for fornecido
+        if (since > 0) {
+          reports = reports.filter(report => report.period.end > since);
+        }
+        
+        return reports;
+      }
+      
       const reportsPath = path.join(this.databasePath, 'load-reports.json');
       let reports = this.loadJSON(reportsPath) || [];
+      
+      // Atualiza cache
+      this.cache.loadReports = reports;
       
       // Filtra relatórios por timestamp se 'since' for fornecido
       if (since > 0) {
@@ -480,14 +903,19 @@ class Database {
   }
 
   /**
-   * Salva relatórios de carga
+   * Salva relatórios de carga (apenas em cache)
    * @param {Array} reports - Array de objetos de relatório de carga
    * @returns {boolean} - Status de sucesso
    */
   async saveLoadReports(reports) {
     try {
-      const reportsPath = path.join(this.databasePath, 'load-reports.json');
-      return this.saveJSON(reportsPath, reports);
+      // Atualiza cache
+      this.cache.loadReports = reports;
+      
+      // Marca como modificado
+      this.dirtyFlags.loadReports = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao salvar relatórios de carga:', error);
       return false;
@@ -500,8 +928,18 @@ class Database {
    */
   async getDonations() {
     try {
+      // Retorna do cache se disponível
+      if (this.cache.donations) {
+        return this.cache.donations;
+      }
+      
       const donationsPath = path.join(this.databasePath, 'donations.json');
-      return this.loadJSON(donationsPath) || [];
+      const donations = this.loadJSON(donationsPath) || [];
+      
+      // Atualiza cache
+      this.cache.donations = donations;
+      
+      return donations;
     } catch (error) {
       this.logger.error('Erro ao obter doações:', error);
       return [];
@@ -509,14 +947,19 @@ class Database {
   }
 
   /**
-   * Salva doações
+   * Salva doações (apenas em cache)
    * @param {Array} donations - Array de objetos de doação
    * @returns {boolean} - Status de sucesso
    */
   async saveDonations(donations) {
     try {
-      const donationsPath = path.join(this.databasePath, 'donations.json');
-      return this.saveJSON(donationsPath, donations);
+      // Atualiza cache
+      this.cache.donations = donations;
+      
+      // Marca como modificado
+      this.dirtyFlags.donations = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao salvar doações:', error);
       return false;
@@ -524,7 +967,7 @@ class Database {
   }
 
   /**
-   * Adiciona uma doação
+   * Adiciona uma doação (apenas em cache)
    * @param {string} name - Nome do doador
    * @param {number} amount - Valor da doação
    * @param {string} [numero] - Número do WhatsApp (opcional)
@@ -553,8 +996,13 @@ class Database {
         });
       }
       
-      // Salva doações
-      return this.saveDonations(donations);
+      // Atualiza cache
+      this.cache.donations = donations;
+      
+      // Marca como modificado
+      this.dirtyFlags.donations = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao adicionar doação:', error);
       return false;
@@ -562,7 +1010,7 @@ class Database {
   }
 
   /**
-   * Atualiza número do doador
+   * Atualiza número do doador (apenas em cache)
    * @param {string} name - Nome do doador
    * @param {string} numero - Número do WhatsApp
    * @returns {boolean} - Status de sucesso
@@ -583,8 +1031,13 @@ class Database {
       // Atualiza número
       donor.numero = numero;
       
-      // Salva doações
-      return this.saveDonations(donations);
+      // Atualiza cache
+      this.cache.donations = donations;
+      
+      // Marca como modificado
+      this.dirtyFlags.donations = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao atualizar número do doador:', error);
       return false;
@@ -592,7 +1045,7 @@ class Database {
   }
 
   /**
-   * Atualiza valor da doação
+   * Atualiza valor da doação (apenas em cache)
    * @param {string} name - Nome do doador
    * @param {number} amount - Valor a adicionar (pode ser negativo)
    * @returns {boolean} - Status de sucesso
@@ -613,8 +1066,13 @@ class Database {
       // Atualiza valor
       donor.valor += amount;
       
-      // Salva doações
-      return this.saveDonations(donations);
+      // Atualiza cache
+      this.cache.donations = donations;
+      
+      // Marca como modificado
+      this.dirtyFlags.donations = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao atualizar valor da doação:', error);
       return false;
@@ -622,7 +1080,7 @@ class Database {
   }
 
   /**
-   * Une dois doadores
+   * Une dois doadores (apenas em cache)
    * @param {string} targetName - Nome do doador a manter
    * @param {string} sourceName - Nome do doador a fundir
    * @returns {boolean} - Status de sucesso
@@ -652,8 +1110,13 @@ class Database {
       // Remove doador de origem
       donations.splice(sourceIndex, 1);
       
-      // Salva doações
-      return this.saveDonations(donations);
+      // Atualiza cache
+      this.cache.donations = donations;
+      
+      // Marca como modificado
+      this.dirtyFlags.donations = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao unir doadores:', error);
       return false;
@@ -666,8 +1129,18 @@ class Database {
    */
   async getPendingJoins() {
     try {
+      // Retorna do cache se disponível
+      if (this.cache.pendingJoins) {
+        return this.cache.pendingJoins;
+      }
+      
       const joinsPath = path.join(this.databasePath, 'pending-joins.json');
-      return this.loadJSON(joinsPath) || [];
+      const joins = this.loadJSON(joinsPath) || [];
+      
+      // Atualiza cache
+      this.cache.pendingJoins = joins;
+      
+      return joins;
     } catch (error) {
       this.logger.error('Erro ao obter joins pendentes:', error);
       return [];
@@ -675,14 +1148,19 @@ class Database {
   }
 
   /**
-   * Salva joins pendentes
+   * Salva joins pendentes (apenas em cache)
    * @param {Array} joins - Array de objetos de join pendente
    * @returns {boolean} - Status de sucesso
    */
   async savePendingJoins(joins) {
     try {
-      const joinsPath = path.join(this.databasePath, 'pending-joins.json');
-      return this.saveJSON(joinsPath, joins);
+      // Atualiza cache
+      this.cache.pendingJoins = joins;
+      
+      // Marca como modificado
+      this.dirtyFlags.pendingJoins = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao salvar joins pendentes:', error);
       return false;
@@ -690,7 +1168,7 @@ class Database {
   }
 
   /**
-   * Salva um join pendente
+   * Salva um join pendente (apenas em cache)
    * @param {string} inviteCode - Código do convite
    * @param {Object} data - Dados do join (authorId, authorName)
    * @returns {boolean} - Status de sucesso
@@ -721,8 +1199,13 @@ class Database {
         });
       }
       
-      // Salva joins
-      return this.savePendingJoins(joins);
+      // Atualiza cache
+      this.cache.pendingJoins = joins;
+      
+      // Marca como modificado
+      this.dirtyFlags.pendingJoins = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao salvar join pendente:', error);
       return false;
@@ -730,7 +1213,7 @@ class Database {
   }
 
   /**
-   * Remove um join pendente
+   * Remove um join pendente (apenas em cache)
    * @param {string} inviteCode - Código do convite
    * @returns {boolean} - Status de sucesso
    */
@@ -742,13 +1225,32 @@ class Database {
       // Filtra o join
       joins = joins.filter(join => join.code !== inviteCode);
       
-      // Salva joins
-      return this.savePendingJoins(joins);
+      // Atualiza cache
+      this.cache.pendingJoins = joins;
+      
+      // Marca como modificado
+      this.dirtyFlags.pendingJoins = true;
+      
+      return true;
     } catch (error) {
       this.logger.error('Erro ao remover join pendente:', error);
       return false;
     }
   }
+  
+  /**
+   * Força a persistência de todos os dados modificados
+   * @returns {Promise<boolean>} - Status de sucesso
+   */
+  async forcePersist() {
+    try {
+      await this.persistCachedData(true);
+      return true;
+    } catch (error) {
+      this.logger.error('Erro ao forçar persistência:', error);
+      return false;
+    }
+  }
 }
 
-module.exports = Database;
+module.exports = Database

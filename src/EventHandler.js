@@ -641,7 +641,7 @@ class EventHandler {
       if (bot.grupoLogs) {
         try {
           if(isBotLeaving){
-            group.paused = true; // Sempre que o bot sai do grupo, pausa o mesmo
+            //group.paused = true; // Sempre que o bot sai do grupo, pausa o mesmo
             await this.database.saveGroup(group);
             bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} saiu do grupo: ${data.group.name} (${data.group.id})})\nQuem removeu: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
               this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);

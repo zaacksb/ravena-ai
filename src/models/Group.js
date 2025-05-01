@@ -151,7 +151,7 @@ class Group {
    */
   setRemoved(userId) {
     this.removedBy = userId;
-    this.paused = true;
+    //this.paused = true;
     this.updatedAt = Date.now();
   }
 

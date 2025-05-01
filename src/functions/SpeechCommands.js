@@ -415,6 +415,12 @@ async function processAutoSTT(bot, message, group) {
     if (group && !group.autoStt) {
       return false;
     }
+
+    try{
+      await message.origin.react("⌛️");
+    } catch(e){
+      logger.error(`[processAutoSTT] Erro enviando notificação inicial`);
+    }
     
     logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no chat ${idChat}`);
     
