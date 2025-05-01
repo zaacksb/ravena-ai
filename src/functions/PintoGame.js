@@ -1,5 +1,6 @@
 // src/functions/PintoGame.js
 const path = require('path');
+const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
@@ -20,6 +21,61 @@ const COOLDOWN_DAYS = 7; // 7 dias de cooldown
 
 // Armazena os cooldowns por usuário
 const playerCooldowns = {};
+
+// Caminho para o arquivo de dados do jogo
+const PINTO_DATA_PATH = path.join(__dirname, '../../data/pinto.json');
+
+/**
+ * Obtém os dados do jogo do arquivo JSON dedicado
+ * @returns {Promise<Object>} Dados do jogo
+ */
+async function getPintoGameData() {
+  try {
+    // Verifica se o arquivo existe
+    try {
+      await fs.access(PINTO_DATA_PATH);
+    } catch (error) {
+      // Se o arquivo não existir, cria um novo com estrutura padrão
+      const defaultData = {
+        groups: {},
+        history: []
+      };
+      await fs.writeFile(PINTO_DATA_PATH, JSON.stringify(defaultData, null, 2));
+      return defaultData;
+    }
+
+    // Lê o arquivo
+    const data = await fs.readFile(PINTO_DATA_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    logger.error('Erro ao ler dados do jogo:', error);
+    // Retorna objeto padrão em caso de erro
+    return {
+      groups: {},
+      history: []
+    };
+  }
+}
+
+/**
+ * Salva os dados do jogo no arquivo JSON dedicado
+ * @param {Object} gameData Dados do jogo a serem salvos
+ * @returns {Promise<boolean>} Status de sucesso
+ */
+async function savePintoGameData(gameData) {
+  try {
+    // Garante que o diretório exista
+    const dir = path.dirname(PINTO_DATA_PATH);
+    await fs.mkdir(dir, { recursive: true });
+
+    // Salva os dados
+    await fs.writeFile(PINTO_DATA_PATH, JSON.stringify(gameData, null, 2));
+    return true;
+  } catch (error) {
+    logger.error('Erro ao salvar dados do jogo:', error);
+    return false;
+  }
+}
 
 /**
  * Gera um valor aleatório entre min e max com 1 casa decimal
@@ -152,8 +208,43 @@ async function pintoCommand(bot, message, args, group) {
     
     // Salva os resultados no banco de dados
     try {
-      // Salva o resultado no ranking do grupo
-      await savePlayerToGroupRanking(userId, userName, groupId, flaccid, erect, girth, score);
+      // Obtém os dados do jogo
+      const gameData = await getPintoGameData();
+      
+      // Inicializa a estrutura se necessário
+      if (!gameData.groups[groupId]) {
+        gameData.groups[groupId] = {};
+      }
+      
+      // Salva ou atualiza os dados do jogador para este grupo
+      gameData.groups[groupId][userId] = {
+        name: userName,
+        flaccid,
+        erect,
+        girth,
+        score,
+        lastUpdated: Date.now()
+      };
+      
+      // Adiciona ao histórico geral
+      gameData.history.push({
+        userId,
+        userName,
+        groupId,
+        flaccid,
+        erect,
+        girth,
+        score,
+        timestamp: Date.now()
+      });
+      
+      // Limita o histórico a 100 entradas
+      if (gameData.history.length > 100) {
+        gameData.history = gameData.history.slice(-100);
+      }
+      
+      // Salva as alterações
+      await savePintoGameData(gameData);
     } catch (dbError) {
       logger.error('Erro ao salvar dados do jogo:', dbError);
     }
@@ -201,14 +292,11 @@ async function pintoRankingCommand(bot, message, args, group) {
     
     const groupId = message.group;
     
-    // Obtém as variáveis customizadas
-    const customVariables = await database.getCustomVariables();
+    // Obtém os dados do jogo
+    const gameData = await getPintoGameData();
     
-    // Verifica se existem dados do jogo
-    if (!customVariables.pintoGame || 
-        !customVariables.pintoGame.groups || 
-        !customVariables.pintoGame.groups[groupId] ||
-        Object.keys(customVariables.pintoGame.groups[groupId]).length === 0) {
+    // Verifica se existem dados do jogo para este grupo
+    if (!gameData.groups[groupId] || Object.keys(gameData.groups[groupId]).length === 0) {
       return new ReturnMessage({
         chatId: groupId,
         content: '🏆 Ainda não há dados para o ranking neste grupo. Use !pinto para participar!'
@@ -216,7 +304,7 @@ async function pintoRankingCommand(bot, message, args, group) {
     }
     
     // Converte para array para poder ordenar
-    const players = Object.entries(customVariables.pintoGame.groups[groupId]).map(([id, data]) => ({
+    const players = Object.entries(gameData.groups[groupId]).map(([id, data]) => ({
       id,
       ...data
     }));
@@ -257,80 +345,6 @@ async function pintoRankingCommand(bot, message, args, group) {
     });
   }
 }
-
-/**
- * Salva os resultados do jogador no ranking do grupo
- * @param {string} userId - ID do usuário
- * @param {string} userName - Nome do usuário
- * @param {string} groupId - ID do grupo
- * @param {number} flaccid - Comprimento flácido
- * @param {number} erect - Comprimento ereto
- * @param {number} girth - Circunferência
- * @param {number} score - Pontuação total
- * @returns {Promise<boolean>} - Status de sucesso
- */
-async function savePlayerToGroupRanking(userId, userName, groupId, flaccid, erect, girth, score) {
-  try {
-    // Obtém variáveis customizadas
-    const customVariables = await database.getCustomVariables();
-    
-    // Inicializa estrutura de dados se não existir
-    if (!customVariables.pintoGame) {
-      customVariables.pintoGame = {
-        groups: {},
-        history: []
-      };
-    }
-    
-    if (!customVariables.pintoGame.groups) {
-      customVariables.pintoGame.groups = {};
-    }
-    
-    if (!customVariables.pintoGame.groups[groupId]) {
-      customVariables.pintoGame.groups[groupId] = {};
-    }
-    
-    // Salva ou atualiza os dados do jogador para este grupo
-    customVariables.pintoGame.groups[groupId][userId] = {
-      name: userName,
-      flaccid,
-      erect,
-      girth,
-      score,
-      lastUpdated: Date.now()
-    };
-    
-    // Adiciona ao histórico geral
-    if (!customVariables.pintoGame.history) {
-      customVariables.pintoGame.history = [];
-    }
-    
-    customVariables.pintoGame.history.push({
-      userId,
-      userName,
-      groupId,
-      flaccid,
-      erect,
-      girth,
-      score,
-      timestamp: Date.now()
-    });
-    
-    // Limita o histórico a 100 entradas
-    if (customVariables.pintoGame.history.length > 100) {
-      customVariables.pintoGame.history = customVariables.pintoGame.history.slice(-100);
-    }
-    
-    // Salva as variáveis
-    await database.saveCustomVariables(customVariables);
-    
-    return true;
-  } catch (error) {
-    logger.error('Erro ao salvar jogador no ranking do grupo:', error);
-    return false;
-  }
-}
-
 
 // Criar array de comandos usando a classe Command
 const commands = [

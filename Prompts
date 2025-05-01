@@ -1959,5 +1959,23 @@ Quando o bot está carregado, ele não está enviando as mensagens de notificaç
 !anonimo [idGrupo] mensagem de texto: Faz com que o bot envie uma mensagem de texto anonima para o idGrupo especificado (grupo.name), com um header como "👻 Um membro anônimo enviou:\n\n>Mensagem de Texto". Cooldown de 12 horas por pessoa
 
 # Nova function: Jogos
-* !adedona ou !stop: O bot escolhe 5 categorias da lista: [Alimento, Fruta, Animal, Celebridade, Carro, C.E.P (Cidade, Estado, País), Cor, Esporte, Filme, Série, Banda, Marca, Meios de Transporte, Partes do Corpo, Ator ou Atriz, Flor, Objeto] e faz uma mensagem formatada como "🛑 STOP! ✋\n\n- Categoria 1:\n- Categoria 2: ....". As pessoas tem X minutos (padrão 5) para copiar a mensagem e envia ela preenchida no grupo. O bot deve analisar as mensagens que começam com o mesmo cabeçalho. Ao final do tempo, enviar um "Aguarde, analisando respostas.." e analisá-las se são válidas usando o LLM. Para isso, gere um prompt como: "Me diga em formato json quais destas palavras fazem parte das categorias: ...", interprete a resposta do prompt e atribua pontuação para as pessoas. Some os pontos da rodada no ranking da pessoa
+* !adedonha ou !stop: O bot escolhe 5 categorias da lista: [Alimento, Fruta, Animal, Celebridade, Carro, C.E.P (Cidade, Estado, País), Cor, Esporte, Filme, Série, Banda, Marca, Meios de Transporte, Partes do Corpo, Ator ou Atriz, Flor, Objeto] e faz uma mensagem formatada como "🛑 STOP! ✋\n\n- Categoria 1:\n- Categoria 2: ....". As pessoas tem X minutos (padrão 5) para copiar a mensagem e envia ela preenchida no grupo. O bot deve analisar as mensagens que começam com o mesmo cabeçalho. Ao final do tempo, enviar um "Aguarde, analisando respostas.." e analisá-las se são válidas usando o LLM. Para isso, gere um prompt como: "Me diga em formato json quais destas palavras fazem parte das categorias: ...", interprete a resposta do prompt e atribua pontuação para as pessoas. Some os pontos da rodada no ranking da pessoa
+O Jogo Stop precisa sortear uma letra e todos os itens digitados devem começar com essa letra (pode ser o filtro antes de enviar pro LLM)
 * Crie também o comando de reset para o management
+
+# Novo function, jogo
+Comando !pinto
+Gera um tamanho de pinto com 3 variáveis (float):
+* comprimento flácido: de 0.5 a 15cm
+* comprimento duro: de 0.5 a 40cm
+* circunferência: 6 a 20cm
+* score: combinação dos 3 valores de 0 a 1000 (todos no valor máximo)
+
+Responde com:
+{nomeAutor}, fiz a análise completa de seu membro e cheguei nos seguintes resultados:
+* Comprimento Flácido: ...
+* etc
+Você pode voltar daqui a 1 semana para refazermos sua avaliação.
+
+Criar também !pinto-ranking, com os maiores scores de pintos (score apenas) e !g-pinto-reset no management
+Cada usuário pode tentar gerar um tamanho apenas 1x por semana

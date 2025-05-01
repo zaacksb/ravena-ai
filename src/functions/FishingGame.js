@@ -18,6 +18,61 @@ const FISHING_COOLDOWN = 5 * 60; // 5 minutos em segundos
 // Armazena os cooldowns de pesca
 const fishingCooldowns = {};
 
+// Caminho para o arquivo de dados de pesca
+const FISHING_DATA_PATH = path.join(__dirname, '../../data/fishing.json');
+
+/**
+ * Obtém os dados de pesca do arquivo JSON dedicado
+ * @returns {Promise<Object>} Dados de pesca
+ */
+async function getFishingData() {
+  try {
+    // Verifica se o arquivo existe
+    try {
+      await fs.access(FISHING_DATA_PATH);
+    } catch (error) {
+      // Se o arquivo não existir, cria um novo com estrutura padrão
+      const defaultData = {
+        peixes: [], // Lista de tipos de peixes
+        fishingData: {} // Dados dos jogadores
+      };
+      await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(defaultData, null, 2));
+      return defaultData;
+    }
+
+    // Lê o arquivo
+    const data = await fs.readFile(FISHING_DATA_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    logger.error('Erro ao ler dados de pesca:', error);
+    // Retorna objeto padrão em caso de erro
+    return {
+      peixes: [],
+      fishingData: {}
+    };
+  }
+}
+
+/**
+ * Salva os dados de pesca no arquivo JSON dedicado
+ * @param {Object} fishingData Dados de pesca a serem salvos
+ * @returns {Promise<boolean>} Status de sucesso
+ */
+async function saveFishingData(fishingData) {
+  try {
+    // Garante que o diretório exista
+    const dir = path.dirname(FISHING_DATA_PATH);
+    await fs.mkdir(dir, { recursive: true });
+
+    // Salva os dados
+    await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(fishingData, null, 2));
+    return true;
+  } catch (error) {
+    logger.error('Erro ao salvar dados de pesca:', error);
+    return false;
+  }
+}
+
 /**
  * Obtém peixe aleatório do array de peixes
  * @param {Array} fishArray - Array com nomes de peixes
@@ -77,22 +132,12 @@ async function fishCommand(bot, message, args, group) {
       });
     }
     
-    // Obtém variáveis personalizadas
-    const customVariables = await database.getCustomVariables();
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
     
-    // Inicializa peixes se não existir
-    if (!customVariables.peixes) {
-      customVariables.peixes = [];
-    }
-    
-    // Inicializa fishing se não existir
-    if (!customVariables.fishing) {
-      customVariables.fishing = {};
-    }
-    
-    // Inicializa lista de peixes do usuário
-    if (!customVariables.fishing[userId]) {
-      customVariables.fishing[userId] = {
+    // Inicializa os dados do usuário se não existirem
+    if (!fishingData.fishingData[userId]) {
+      fishingData.fishingData[userId] = {
         name: userName,
         fishes: [],
         totalWeight: 0,
@@ -101,33 +146,33 @@ async function fishCommand(bot, message, args, group) {
       };
     } else {
       // Atualiza nome do usuário se mudou
-      customVariables.fishing[userId].name = userName;
+      fishingData.fishingData[userId].name = userName;
     }
     
     // Obtém o peixe aleatório
-    const fish = getRandomFish(customVariables.peixes);
+    const fish = getRandomFish(fishingData.peixes);
     
     // Atualiza estatísticas do usuário
-    customVariables.fishing[userId].totalCatches++;
-    customVariables.fishing[userId].totalWeight += fish.weight;
+    fishingData.fishingData[userId].totalCatches++;
+    fishingData.fishingData[userId].totalWeight += fish.weight;
     
     // Verifica se é o maior peixe
-    if (!customVariables.fishing[userId].biggestFish || 
-        fish.weight > customVariables.fishing[userId].biggestFish.weight) {
-      customVariables.fishing[userId].biggestFish = fish;
+    if (!fishingData.fishingData[userId].biggestFish || 
+        fish.weight > fishingData.fishingData[userId].biggestFish.weight) {
+      fishingData.fishingData[userId].biggestFish = fish;
     }
     
     // Adiciona o peixe à lista do usuário, mantendo apenas os MAX_FISH_PER_USER mais recentes
-    customVariables.fishing[userId].fishes.push(fish);
-    if (customVariables.fishing[userId].fishes.length > MAX_FISH_PER_USER) {
+    fishingData.fishingData[userId].fishes.push(fish);
+    if (fishingData.fishingData[userId].fishes.length > MAX_FISH_PER_USER) {
       // Se exceder o limite, remove o peixe mais antigo
-      const oldFish = customVariables.fishing[userId].fishes.shift();
+      const oldFish = fishingData.fishingData[userId].fishes.shift();
       // Ajusta o peso total
-      customVariables.fishing[userId].totalWeight -= oldFish.weight;
+      fishingData.fishingData[userId].totalWeight -= oldFish.weight;
     }
     
-    // Salva as variáveis atualizadas
-    await database.saveCustomVariables(customVariables);
+    // Salva os dados atualizados
+    await saveFishingData(fishingData);
     
     // Define o cooldown
     fishingCooldowns[userId] = now + FISHING_COOLDOWN;
@@ -152,7 +197,7 @@ async function fishCommand(bot, message, args, group) {
     }
     
     // Adiciona informação sobre o maior peixe do usuário
-    additionalInfo += `\n\n🐳 Seu maior peixe: ${customVariables.fishing[userId].biggestFish.name} (${customVariables.fishing[userId].biggestFish.weight.toFixed(2)} kg)`;
+    additionalInfo += `\n\n🐳 Seu maior peixe: ${fishingData.fishingData[userId].biggestFish.name} (${fishingData.fishingData[userId].biggestFish.weight.toFixed(2)} kg)`;
     
     return new ReturnMessage({
       chatId,
@@ -186,18 +231,18 @@ async function myFishCommand(bot, message, args, group) {
     const userId = message.author;
     const userName = message.authorName || "Pescador";
     
-    // Obtém variáveis personalizadas
-    const customVariables = await database.getCustomVariables();
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
     
     // Verifica se o usuário tem peixes
-    if (!customVariables.fishing || !customVariables.fishing[userId]) {
+    if (!fishingData.fishingData[userId]) {
       return new ReturnMessage({
         chatId,
         content: `🎣 ${userName}, você ainda não pescou nenhum peixe. Use !pescar para começar.`
       });
     }
     
-    const userData = customVariables.fishing[userId];
+    const userData = fishingData.fishingData[userId];
     const fishes = userData.fishes;
     
     // Prepara a mensagem
@@ -254,11 +299,11 @@ async function fishingRankingCommand(bot, message, args, group) {
     // Obtém ID do chat
     const chatId = message.group || message.author;
     
-    // Obtém variáveis personalizadas
-    const customVariables = await database.getCustomVariables();
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
     
     // Verifica se há dados de pescaria
-    if (!customVariables.fishing || Object.keys(customVariables.fishing).length === 0) {
+    if (!fishingData.fishingData || Object.keys(fishingData.fishingData).length === 0) {
       return new ReturnMessage({
         chatId,
         content: '🎣 Ainda não há dados de pescaria. Use !pescar para começar.'
@@ -266,7 +311,7 @@ async function fishingRankingCommand(bot, message, args, group) {
     }
     
     // Converte dados para array
-    const players = Object.entries(customVariables.fishing).map(([id, data]) => ({
+    const players = Object.entries(fishingData.fishingData).map(([id, data]) => ({
       id,
       ...data
     }));
@@ -331,11 +376,11 @@ async function biggestFishCommand(bot, message, args, group) {
     // Obtém ID do chat
     const chatId = message.group || message.author;
     
-    // Obtém variáveis personalizadas
-    const customVariables = await database.getCustomVariables();
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
     
     // Verifica se há dados de pescaria
-    if (!customVariables.fishing || Object.keys(customVariables.fishing).length === 0) {
+    if (!fishingData.fishingData || Object.keys(fishingData.fishingData).length === 0) {
       return new ReturnMessage({
         chatId,
         content: '🎣 Ainda não há dados de pescaria. Use !pescar para começar.'
@@ -345,7 +390,7 @@ async function biggestFishCommand(bot, message, args, group) {
     // Cria uma lista de todos os maiores peixes
     const biggestFishes = [];
     
-    for (const [userId, userData] of Object.entries(customVariables.fishing)) {
+    for (const [userId, userData] of Object.entries(fishingData.fishingData)) {
       if (userData.biggestFish) {
         biggestFishes.push({
           playerName: userData.name,
@@ -389,7 +434,6 @@ async function biggestFishCommand(bot, message, args, group) {
   }
 }
 
-
 /**
  * Lista todos os tipos de peixes disponíveis
  * @param {WhatsAppBot} bot - Instância do bot
@@ -403,11 +447,11 @@ async function listFishTypesCommand(bot, message, args, group) {
     // Obtém ID do chat
     const chatId = message.group || message.author;
     
-    // Obtém variáveis personalizadas
-    const customVariables = await database.getCustomVariables();
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
     
     // Verifica se há peixes
-    if (!customVariables.peixes || customVariables.peixes.length === 0) {
+    if (!fishingData.peixes || fishingData.peixes.length === 0) {
       return new ReturnMessage({
         chatId,
         content: '🎣 Ainda não há tipos de peixes definidos. O sistema usará peixes padrão.'
@@ -415,7 +459,7 @@ async function listFishTypesCommand(bot, message, args, group) {
     }
     
     // Ordena alfabeticamente
-    const sortedFishes = [...customVariables.peixes].sort();
+    const sortedFishes = [...fishingData.peixes].sort();
     
     // Prepara a mensagem
     let fishMessage = '🐟 *Lista de Peixes Disponíveis*\n\n';
@@ -453,7 +497,6 @@ async function listFishTypesCommand(bot, message, args, group) {
     });
   }
 }
-
 
 // Criar array de comandos usando a classe Command
 const commands = [
