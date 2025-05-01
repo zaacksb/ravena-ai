@@ -142,7 +142,7 @@ async function anonymousMessage(bot, message, args, group) {
     // Envia a mensagem para o grupo alvo
     try {
       // Formata a mensagem anônima
-      const formattedMessage = `👻 *Um membro anônimo enviou:*\n\n>${anonymousText}`;
+      const formattedMessage = `👻 *Um membro anônimo enviou:*\n\n> ${anonymousText}`;
       
       // Envia para o grupo alvo
       await bot.sendMessage(targetGroup.id, formattedMessage);
