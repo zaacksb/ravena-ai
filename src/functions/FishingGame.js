@@ -617,7 +617,7 @@ const commands = [
     name: 'meus-pescados',
     description: 'Mostra seus peixes pescados',
     category: "jogos",
-    cooldown: 10,
+    cooldown: 5,
     reactions: {
       after: "🐠",
       error: "❌"
@@ -630,7 +630,7 @@ const commands = [
     description: 'Mostra o ranking de pescaria do grupo atual',
     category: "jogos",
     group: "pescrank",
-    cooldown: 30,
+    cooldown: 5,
     reactions: {
       after: "🏆",
       error: "❌"
@@ -643,7 +643,7 @@ const commands = [
     description: 'Mostra o ranking de pescaria do grupo atual',
     category: "jogos",
     group: "pescrank",
-    cooldown: 30,
+    cooldown: 5,
     reactions: {
       after: "🐋",
       error: "❌"
@@ -654,7 +654,7 @@ const commands = [
     name: 'pesca-peixes',
     description: 'Lista todos os tipos de peixes disponíveis',
     category: "jogos",
-    cooldown: 30,
+    cooldown: 5,
     reactions: {
       after: "📋",
       error: "❌"
