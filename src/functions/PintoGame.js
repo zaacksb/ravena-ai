@@ -19,9 +19,6 @@ const MAX_GIRTH = 20.0;
 const MAX_SCORE = 1000;
 const COOLDOWN_DAYS = 7; // 7 dias de cooldown
 
-// Armazena os cooldowns por usuário
-const playerCooldowns = {};
-
 // Caminho para o arquivo de dados do jogo
 const PINTO_DATA_PATH = path.join(__dirname, '../../data/pinto.json');
 
@@ -154,6 +151,42 @@ function formatDate(timestamp) {
 }
 
 /**
+ * Verifica se o usuário está em cooldown com base no lastUpdated salvo no banco
+ * @param {string} groupId - ID do grupo
+ * @param {string} userId - ID do usuário
+ * @param {Object} gameData - Dados do jogo
+ * @returns {Object} - Status do cooldown e próxima data disponível
+ */
+function checkCooldown(groupId, userId, gameData) {
+  // Verifica se existe registro do usuário no grupo
+  if (gameData.groups[groupId] && 
+      gameData.groups[groupId][userId] && 
+      gameData.groups[groupId][userId].lastUpdated) {
+      
+    const now = Date.now();
+    const lastUsed = gameData.groups[groupId][userId].lastUpdated;
+    const cooldownMs = COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+    
+    if (now - lastUsed < cooldownMs) {
+      const nextAvailable = new Date(lastUsed + cooldownMs);
+      const timeUntil = nextAvailable - now;
+      const daysUntil = Math.ceil(timeUntil / (24 * 60 * 60 * 1000));
+      
+      return {
+        inCooldown: true,
+        nextAvailable,
+        daysUntil
+      };
+    }
+  }
+  
+  // Sem cooldown ativo
+  return {
+    inCooldown: false
+  };
+}
+
+/**
  * Gera os resultados do comando !pinto
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
@@ -176,19 +209,16 @@ async function pintoCommand(bot, message, args, group) {
     const userId = message.author;
     const userName = message.authorName || "Usuário";
     
-    // Verifica cooldown
-    const now = Date.now();
-    const lastUsed = playerCooldowns[userId] || 0;
-    const cooldownMs = COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+    // Obtém os dados do jogo
+    const gameData = await getPintoGameData();
     
-    if (now - lastUsed < cooldownMs) {
-      const nextAvailable = new Date(lastUsed + cooldownMs);
-      const timeUntil = nextAvailable - now;
-      const daysUntil = Math.ceil(timeUntil / (24 * 60 * 60 * 1000));
-      
+    // Verifica o cooldown baseado no lastUpdated salvo no banco
+    const cooldownStatus = checkCooldown(groupId, userId, gameData);
+    
+    if (cooldownStatus.inCooldown) {
       return new ReturnMessage({
         chatId: groupId,
-        content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${daysUntil} dia(s), dia ${formatDate(nextAvailable)}.`
+        content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${cooldownStatus.daysUntil} dia(s), dia ${formatDate(cooldownStatus.nextAvailable)}.`
       });
     }
     
@@ -203,18 +233,15 @@ async function pintoCommand(bot, message, args, group) {
     // Obtém um comentário baseado no score
     const comment = getComment(score);
     
-    // Atualiza o cooldown
-    playerCooldowns[userId] = now;
-    
     // Salva os resultados no banco de dados
     try {
-      // Obtém os dados do jogo
-      const gameData = await getPintoGameData();
-      
       // Inicializa a estrutura se necessário
       if (!gameData.groups[groupId]) {
         gameData.groups[groupId] = {};
       }
+      
+      // Timestamp atual
+      const currentTimestamp = Date.now();
       
       // Salva ou atualiza os dados do jogador para este grupo
       gameData.groups[groupId][userId] = {
@@ -223,7 +250,7 @@ async function pintoCommand(bot, message, args, group) {
         erect,
         girth,
         score,
-        lastUpdated: Date.now()
+        lastUpdated: currentTimestamp
       };
       
       // Adiciona ao histórico geral
@@ -235,7 +262,7 @@ async function pintoCommand(bot, message, args, group) {
         erect,
         girth,
         score,
-        timestamp: Date.now()
+        timestamp: currentTimestamp
       });
       
       // Limita o histórico a 100 entradas
@@ -352,7 +379,7 @@ const commands = [
     name: 'pinto',
     description: 'Gera uma avaliação de tamanho aleatória',
     category: "jogos",
-    cooldown: 0, // 1 minuto de cooldown entre tentativas (o cooldown real é controlado internamente)
+    cooldown: 0, // O cooldown é controlado internamente pelo lastUpdated
     reactions: {
       before: "📏",
       after: "🍆",

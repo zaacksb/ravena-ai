@@ -589,6 +589,7 @@ const commands = [
     name: 'pesca-ranking',
     description: 'Mostra o ranking de pescaria do grupo atual',
     category: "jogos",
+    group: "pescrank",
     cooldown: 30,
     reactions: {
       after: "🏆",
@@ -599,14 +600,15 @@ const commands = [
   
   new Command({
     name: 'pescados',
-    description: 'Mostra os maiores peixes pescados',
+    description: 'Mostra o ranking de pescaria do grupo atual',
     category: "jogos",
+    group: "pescrank",
     cooldown: 30,
     reactions: {
       after: "🐋",
       error: "❌"
     },
-    method: biggestFishCommand
+    method: fishingRankingCommand
   }),
   new Command({
     name: 'pesca-peixes',
