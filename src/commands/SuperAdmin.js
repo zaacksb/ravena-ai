@@ -34,8 +34,8 @@ class SuperAdmin {
       'foto': {'method': 'changeProfilePicture'},
       'simular': {'method': 'simulateStreamEvent'},
       'restart': {'method': 'restartBot'},
-      'addpeixe': { 'Adiciona um tipo de peixe', },
-      'removepeixe': { 'Remove um tipo de peixe', }
+      'addpeixe': {'method': 'Adiciona um tipo de peixe', },
+      'removepeixe': {'method': 'Remove um tipo de peixe', }
     };
   }
 
@@ -787,7 +787,7 @@ class SuperAdmin {
    * @param {Object} group - Dados do grupo
    * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
-  async function addFishTypeCommand(bot, message, args, group) {
+  async addFishTypeCommand(bot, message, args, group) {
     try {
       // Este comando só deve ser disponível para administradores
       
@@ -849,7 +849,7 @@ class SuperAdmin {
    * @param {Object} group - Dados do grupo
    * @returns {Promise<ReturnMessage>} Mensagem de retorno
    */
-  async function removeFishTypeCommand(bot, message, args, group) {
+  async removeFishTypeCommand(bot, message, args, group) {
     try {
       // Este comando só deve ser disponível para administradores
       
