@@ -172,8 +172,20 @@ async function anonymousMessage(bot, message, args, group) {
     
     // Verifica se o grupo existe e se o bot está no grupo
     try {
-      await bot.client.getChatById(targetGroup.id);
+      const chat = await bot.client.getChatById(targetGroup.id);
+      
+      // Verifica se o usuário está no grupo (OBRIGATÓRIO)
+      const participants = await chat.participants;
+      const isUserInGroup = participants.some(p => p.id._serialized === senderId);
+      
+      if (!isUserInGroup) {
+        return new ReturnMessage({
+          chatId: senderId,
+          content: `❌ Você não é membro do grupo "${targetGroup.name}". Apenas membros podem enviar mensagens anônimas para este grupo.`
+        });
+      }
     } catch (error) {
+      logger.error('Erro ao verificar grupo ou participantes:', error);
       return new ReturnMessage({
         chatId: senderId,
         content: `❌ Não foi possível acessar o grupo. O bot pode não estar mais nele ou o grupo foi excluído.`
