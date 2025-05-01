@@ -23,6 +23,12 @@ const CATEGORIES = [
   "Partes do Corpo", "Ator ou Atriz", "Flor", "Objeto"
 ];
 
+// Lista de letras disponíveis para sorteio (excluindo letras difíceis como K, W, X, Y, Z)
+const AVAILABLE_LETTERS = [
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'L',
+  'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V'
+];
+
 // Armazena os jogos ativos
 const activeGames = {};
 
@@ -42,6 +48,33 @@ function getRandomCategories(count) {
   }
   
   return selected;
+}
+
+/**
+ * Seleciona uma letra aleatória da lista de letras disponíveis
+ * @returns {string} - Letra selecionada
+ */
+function getRandomLetter() {
+  const index = Math.floor(Math.random() * AVAILABLE_LETTERS.length);
+  return AVAILABLE_LETTERS[index];
+}
+
+/**
+ * Verifica se uma string começa com a letra especificada (ignorando acentos)
+ * @param {string} text - Texto a verificar
+ * @param {string} letter - Letra inicial
+ * @returns {boolean} - Verdadeiro se começar com a letra
+ */
+function startsWithLetter(text, letter) {
+  if (!text || typeof text !== 'string' || text.trim() === '') {
+    return false;
+  }
+  
+  // Normaliza para remover acentos e converte para maiúscula
+  const normalizedText = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  const normalizedLetter = letter.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  
+  return normalizedText.startsWith(normalizedLetter);
 }
 
 /**
@@ -106,16 +139,20 @@ async function startStopGame(bot, message, args, group) {
     // Seleciona categorias aleatórias
     const selectedCategories = getRandomCategories(numCategories);
     
+    // Seleciona uma letra aleatória
+    const selectedLetter = getRandomLetter();
+    
     // Cria o objeto do jogo
     activeGames[groupId] = {
       categories: selectedCategories,
+      letter: selectedLetter,
       startTime: Date.now(),
       endTime: Date.now() + gameDuration,
       responses: [],
       initiatedBy: message.author,
       initiatorName: message.authorName || "Jogador",
       results: null,
-      gameHeader: `🛑 *STOP!* ✋`
+      gameHeader: `🛑 *STOP!* ✋ - Letra: *${selectedLetter}*`
     };
     
     // Prepara a mensagem do jogo
@@ -130,6 +167,7 @@ async function startStopGame(bot, message, args, group) {
     const seconds = Math.floor((gameDuration % 60000) / 1000);
     
     gameMessage += `\nVocê tem ${minutes}m${seconds > 0 ? ` ${seconds}s` : ''} para responder!\n`;
+    gameMessage += `Todas as respostas devem começar com a letra *${selectedLetter}*.\n`;
     gameMessage += `Copie esta mensagem, preencha as categorias e envie no grupo!`;
     
     // Envia a mensagem do jogo
@@ -244,11 +282,13 @@ async function processStopGameResponse(bot, message) {
  * Analisa respostas do jogo usando LLM
  * @param {Array} categories - Lista de categorias do jogo
  * @param {Array} responses - Lista de respostas dos usuários
+ * @param {string} letter - Letra sorteada para o jogo
  * @returns {Promise<Object>} - Resultados da análise
  */
-async function analyzeResponses(categories, responses) {
+async function analyzeResponses(categories, responses, letter) {
   try {
     const results = {};
+    const game = activeGames[responses[0].messageContent.split('\n')[0].split('*')[4]];
     
     // Processa cada resposta
     for (const response of responses) {
@@ -294,8 +334,29 @@ async function analyzeResponses(categories, responses) {
         continue;
       }
       
+      // Se muitas categorias estão faltando ou muitas respostas não começam com a letra correta
+      let invalidLetterCount = 0;
+      for (const category of categories) {
+        const answer = userAnswers[category] || '';
+        if (answer && !startsWithLetter(answer, letter)) {
+          invalidLetterCount++;
+        }
+      }
+      
+      // Se mais da metade das respostas não começa com a letra correta, considera a resposta inválida
+      if (invalidLetterCount > Object.keys(userAnswers).length / 2) {
+        results[response.userId] = {
+          userName: response.userName,
+          invalid: true,
+          reason: `Muitas respostas não começam com a letra ${letter} (${invalidLetterCount}/${Object.keys(userAnswers).length})`,
+          score: 0,
+          answers: {}
+        };
+        continue;
+      }
+      
       // Prepara para validar as respostas usando LLM
-      const validationPrompt = createValidationPrompt(categories, userAnswers);
+      const validationPrompt = createValidationPrompt(categories, userAnswers, letter);
       
       try {
         const llmResponse = await llmService.getCompletion({
@@ -333,18 +394,18 @@ async function analyzeResponses(categories, responses) {
       } catch (llmError) {
         logger.error('Erro ao validar respostas com LLM:', llmError);
         
-        // Caso haja erro com o LLM, aceita todas as respostas não vazias
+        // Caso haja erro com o LLM, aceita todas as respostas não vazias que começam com a letra correta
         const validatedAnswers = {};
         let totalScore = 0;
         
         for (const category of categories) {
           const answer = userAnswers[category] || '';
-          const valid = answer.trim() !== '';
+          const valid = answer.trim() !== '' && startsWithLetter(answer, letter);
           
           validatedAnswers[category] = {
             answer,
             valid,
-            reason: valid ? 'Resposta fornecida' : 'Resposta ausente',
+            reason: valid ? 'Resposta fornecida com letra correta' : (answer.trim() === '' ? 'Resposta ausente' : 'Não começa com a letra correta'),
             score: valid ? 10 : 0
           };
           
@@ -372,10 +433,11 @@ async function analyzeResponses(categories, responses) {
  * Cria um prompt para validação das respostas
  * @param {Array} categories - Lista de categorias
  * @param {Object} userAnswers - Respostas do usuário por categoria
+ * @param {string} letter - Letra sorteada para o jogo
  * @returns {string} - Prompt para enviar ao LLM
  */
-function createValidationPrompt(categories, userAnswers) {
-  let prompt = `Você é um juiz de um jogo chamado "Stop" ou "Adedonha". Preciso que analise as respostas de um jogador para as seguintes categorias:\n\n`;
+function createValidationPrompt(categories, userAnswers, letter) {
+  let prompt = `Você é um juiz de um jogo chamado "Stop" ou "Adedonha". Preciso que analise as respostas de um jogador para as seguintes categorias. Todas as respostas devem começar com a letra "${letter}":\n\n`;
   
   for (const category of categories) {
     const answer = userAnswers[category] || '';
@@ -384,9 +446,9 @@ function createValidationPrompt(categories, userAnswers) {
   
   prompt += `Para cada categoria, avalie se a resposta é válida de acordo com estas regras:
 1. A resposta deve pertencer realmente à categoria indicada
-2. Respostas em branco ou "N/A" são inválidas
-3. A resposta deve ser específica e não genérica demais
-4. Para categorias com iniciais específicas, você pode ignorar essa restrição (não estamos usando letras iniciais)
+2. A resposta deve começar com a letra "${letter}" (ignorando acentos)
+3. Respostas em branco ou "N/A" são inválidas
+4. A resposta deve ser específica e não genérica demais
 
 Forneça sua avaliação em formato JSON, seguindo este modelo:
 {
@@ -450,13 +512,13 @@ async function endGame(bot, groupId) {
     }
     
     // Analisa as respostas
-    const results = await analyzeResponses(game.categories, game.responses);
+    const results = await analyzeResponses(game.categories, game.responses, game.letter);
     
     // Armazena os resultados no objeto do jogo
     game.results = results;
     
     // Prepara a mensagem de resultados
-    let resultsMessage = '🏁 *Resultados do Stop/Adedonha*\n\n';
+    let resultsMessage = `🏁 *Resultados do Stop/Adedonha - Letra: ${game.letter}*\n\n`;
     
     // Ordena os jogadores por pontuação
     const sortedPlayers = Object.entries(results)
@@ -513,7 +575,7 @@ async function endGame(bot, groupId) {
 }
 
 /**
- * Atualiza o ranking global do jogo Stop/Adedonha
+ * Atualiza o ranking do jogo Stop/Adedona
  * @param {Object} game - Objeto do jogo
  * @param {Object} results - Resultados da rodada
  */
@@ -525,7 +587,6 @@ async function updateStopGameRanking(game, results) {
     // Inicializa ranking se não existir
     if (!customVariables.stopGameRanking) {
       customVariables.stopGameRanking = {
-        global: {},
         groups: {}
       };
     }
@@ -540,31 +601,6 @@ async function updateStopGameRanking(game, results) {
     for (const [userId, result] of Object.entries(results)) {
       if (result.invalid) continue;
       
-      // Atualiza ranking global
-      if (!customVariables.stopGameRanking.global[userId]) {
-        customVariables.stopGameRanking.global[userId] = {
-          name: result.userName,
-          score: 0,
-          games: 0,
-          wins: 0
-        };
-      }
-      
-      customVariables.stopGameRanking.global[userId].score += result.score;
-      customVariables.stopGameRanking.global[userId].games += 1;
-      
-      // Verifica se foi o vencedor (maior pontuação)
-      const isWinner = Object.entries(results)
-        .filter(([id, r]) => !r.invalid && id !== userId)
-        .every(([, r]) => r.score <= result.score);
-      
-      if (isWinner) {
-        customVariables.stopGameRanking.global[userId].wins += 1;
-      }
-      
-      // Atualiza nome se mudou
-      customVariables.stopGameRanking.global[userId].name = result.userName;
-      
       // Atualiza ranking do grupo
       if (!customVariables.stopGameRanking.groups[groupId][userId]) {
         customVariables.stopGameRanking.groups[groupId][userId] = {
@@ -578,6 +614,11 @@ async function updateStopGameRanking(game, results) {
       customVariables.stopGameRanking.groups[groupId][userId].score += result.score;
       customVariables.stopGameRanking.groups[groupId][userId].games += 1;
       
+      // Verifica se foi o vencedor (maior pontuação)
+      const isWinner = Object.entries(results)
+        .filter(([id, r]) => !r.invalid && id !== userId)
+        .every(([, r]) => r.score <= result.score);
+      
       if (isWinner) {
         customVariables.stopGameRanking.groups[groupId][userId].wins += 1;
       }
@@ -589,12 +630,12 @@ async function updateStopGameRanking(game, results) {
     // Salva variáveis atualizadas
     await database.saveCustomVariables(customVariables);
   } catch (error) {
-    logger.error('Erro ao atualizar ranking do jogo Stop/Adedonha:', error);
+    logger.error('Erro ao atualizar ranking do jogo Stop/Adedona:', error);
   }
 }
 
 /**
- * Mostra o ranking do jogo Stop/Adedonha
+ * Mostra o ranking do jogo Stop/Adedona
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
@@ -603,24 +644,31 @@ async function updateStopGameRanking(game, results) {
  */
 async function showStopGameRanking(bot, message, args, group) {
   try {
-    const chatId = message.group || message.author;
+    // Verifica se está em um grupo
+    if (!message.group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: '🏆 O ranking do jogo Stop/Adedona só pode ser visualizado em grupos.'
+      });
+    }
+    
+    const chatId = message.group;
     
     // Obtém as variáveis customizadas
     const customVariables = await database.getCustomVariables();
     
     // Verifica se existe ranking
-    if (!customVariables.stopGameRanking) {
+    if (!customVariables.stopGameRanking || 
+        !customVariables.stopGameRanking.groups ||
+        !customVariables.stopGameRanking.groups[chatId]) {
       return new ReturnMessage({
         chatId,
-        content: '🏆 Ainda não há ranking do jogo Stop/Adedonha. Jogue algumas partidas!'
+        content: '🏆 Ainda não há ranking do jogo Stop/Adedona neste grupo. Jogue algumas partidas!'
       });
     }
     
-    // Determina qual ranking mostrar (global ou do grupo)
-    const showGlobal = args[0] === 'global' || !message.group;
-    const rankingData = showGlobal 
-      ? customVariables.stopGameRanking.global 
-      : (customVariables.stopGameRanking.groups[message.group] || {});
+    // Obtém o ranking do grupo
+    const rankingData = customVariables.stopGameRanking.groups[chatId];
     
     // Converte para array para poder ordenar
     const players = Object.entries(rankingData).map(([id, data]) => ({
@@ -632,9 +680,7 @@ async function showStopGameRanking(bot, message, args, group) {
     if (players.length === 0) {
       return new ReturnMessage({
         chatId,
-        content: showGlobal 
-          ? '🏆 Ainda não há jogadores no ranking global. Jogue algumas partidas!'
-          : '🏆 Ainda não há jogadores no ranking deste grupo. Jogue algumas partidas!'
+        content: '🏆 Ainda não há jogadores no ranking deste grupo. Jogue algumas partidas!'
       });
     }
     
@@ -645,7 +691,7 @@ async function showStopGameRanking(bot, message, args, group) {
     const topPlayers = players.slice(0, 10);
     
     // Prepara a mensagem de ranking
-    let rankingMessage = `🏆 *Ranking do Stop/Adedonha ${showGlobal ? 'Global' : 'do Grupo'}*\n\n`;
+    let rankingMessage = `🏆 *Ranking do Stop/Adedona - ${group.name || "Grupo"}*\n\n`;
     
     topPlayers.forEach((player, index) => {
       const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
@@ -654,19 +700,12 @@ async function showStopGameRanking(bot, message, args, group) {
       rankingMessage += `${medal} ${player.name}: ${player.score} pts (${player.games} jogos, média: ${avgPoints}, vitórias: ${player.wins})\n`;
     });
     
-    // Adiciona instruções para ver outro ranking
-    if (message.group) {
-      rankingMessage += `\nUse "!stop-ranking global" para ver o ranking global`;
-    } else {
-      rankingMessage += `\nEste é o ranking global. Use o comando em um grupo para ver o ranking específico.`;
-    }
-    
     return new ReturnMessage({
       chatId,
       content: rankingMessage
     });
   } catch (error) {
-    logger.error('Erro ao mostrar ranking do jogo Stop/Adedonha:', error);
+    logger.error('Erro ao mostrar ranking do jogo Stop/Adedona:', error);
     
     return new ReturnMessage({
       chatId: message.group || message.author,
@@ -681,10 +720,10 @@ const commands = [
     name: 'adedonha',
     description: 'Inicia um jogo de Stop/Adedonha',
     category: "jogos",
-    group: "stop",
     cooldown: 60,
     reactions: {
-      after: "🛑",
+      before: "🛑",
+      after: "📝",
       error: "❌"
     },
     method: startStopGame
@@ -694,10 +733,10 @@ const commands = [
     name: 'stop',
     description: 'Alias para o jogo de Stop/Adedonha',
     category: "jogos",
-    group: "stop",
     cooldown: 60,
     reactions: {
-      after: "🛑",
+      before: "🛑",
+      after: "📝",
       error: "❌"
     },
     method: startStopGame
@@ -716,4 +755,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands, processStopGameResponse };
+module.exports = { commands, processStopGameResponse };h

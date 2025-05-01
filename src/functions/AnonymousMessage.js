@@ -31,7 +31,7 @@ async function anonymousMessage(bot, message, args, group) {
     if (args.length < 2) {
       return new ReturnMessage({
         chatId: senderId,
-        content: '⚠️ Formato incorreto. Use: !anonimo [idGrupo] mensagem\n\nExemplo: !anonimo grupoteste Olá, esta é uma mensagem anônima!'
+        content: `⚠️ Formato incorreto. Use: !anonimo ${group.name} mensagem\n\nExemplo: !anonimo ${group.name} Olá, esta é uma mensagem anônima!`
       });
     }
     
@@ -142,7 +142,7 @@ async function anonymousMessage(bot, message, args, group) {
     // Envia a mensagem para o grupo alvo
     try {
       // Formata a mensagem anônima
-      const formattedMessage = `👻 *Um membro anônimo enviou:*\n\n"${anonymousText}"`;
+      const formattedMessage = `👻 *Um membro anônimo enviou:*\n\n>${anonymousText}`;
       
       // Envia para o grupo alvo
       await bot.sendMessage(targetGroup.id, formattedMessage);
@@ -178,8 +178,21 @@ const commands = [
     category: "jogos",
     cooldown: 0, // O cooldown é gerenciado internamente
     reactions: {
-      before: "📨",
-      after: "👻",
+      before: "👻",
+      after: "📨",
+      error: "❌"
+    },
+    method: anonymousMessage
+  }),
+  new Command({
+    name: 'anônimo',
+    description: 'Envia uma mensagem anônima para um grupo',
+    category: "jogos",
+    hidden: true,
+    cooldown: 0, // O cooldown é gerenciado internamente
+    reactions: {
+      before: "👻",
+      after: "📨",
       error: "❌"
     },
     method: anonymousMessage

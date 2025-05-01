@@ -107,8 +107,16 @@ function formatDate(timestamp) {
  */
 async function pintoCommand(bot, message, args, group) {
   try {
+    // Verifica se está em um grupo
+    if (!message.group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este jogo só pode ser usado em grupos.'
+      });
+    }
+    
     // Obtém IDs e nome
-    const chatId = message.group || message.author;
+    const groupId = message.group;
     const userId = message.author;
     const userName = message.authorName || "Usuário";
     
@@ -123,7 +131,7 @@ async function pintoCommand(bot, message, args, group) {
       const daysUntil = Math.ceil(timeUntil / (24 * 60 * 60 * 1000));
       
       return new ReturnMessage({
-        chatId,
+        chatId: groupId,
         content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${daysUntil} dia(s), dia ${formatDate(nextAvailable)}.`
       });
     }
@@ -144,60 +152,23 @@ async function pintoCommand(bot, message, args, group) {
     
     // Salva os resultados no banco de dados
     try {
-      // Obtém variáveis customizadas
-      const customVariables = await database.getCustomVariables();
-      
-      // Inicializa dados do jogo se não existirem
-      if (!customVariables.pintoGame) {
-        customVariables.pintoGame = {
-          players: {},
-          history: []
-        };
-      }
-      
-      // Salva ou atualiza os dados do jogador
-      customVariables.pintoGame.players[userId] = {
-        name: userName,
-        flaccid,
-        erect,
-        girth,
-        score,
-        lastUpdated: now
-      };
-      
-      // Adiciona ao histórico
-      customVariables.pintoGame.history.push({
-        userId,
-        userName,
-        flaccid,
-        erect,
-        girth,
-        score,
-        timestamp: now
-      });
-      
-      // Limita o histórico a 100 entradas
-      if (customVariables.pintoGame.history.length > 100) {
-        customVariables.pintoGame.history = customVariables.pintoGame.history.slice(-100);
-      }
-      
-      // Salva as variáveis
-      await database.saveCustomVariables(customVariables);
+      // Salva o resultado no ranking do grupo
+      await savePlayerToGroupRanking(userId, userName, groupId, flaccid, erect, girth, score);
     } catch (dbError) {
       logger.error('Erro ao salvar dados do jogo:', dbError);
     }
     
     // Prepara a mensagem de resposta
     const response = `${userName}, fiz a análise completa de seu membro e cheguei nos seguintes resultados:\n\n` +
-                    `• Comprimento Flácido: ${flaccid.toFixed(1)} cm\n` +
-                    `• Comprimento Ereto: ${erect.toFixed(1)} cm\n` +
-                    `• Circunferência: ${girth.toFixed(1)} cm\n` +
-                    `• Score: ${score} pontos\n\n` +
+                    `• *Comprimento Flácido:* ${flaccid.toFixed(1)} cm\n` +
+                    `• *Comprimento Ereto:* ${erect.toFixed(1)} cm\n` +
+                    `• *Circunferência:* ${girth.toFixed(1)} cm\n` +
+                    `• *Score:* _${score} pontos_\n\n` +
                     `${comment}\n\n` +
-                    `Você pode voltar daqui a 1 semana para refazermos sua avaliação.`;
+                    `>Você pode voltar daqui a 1 semana para refazermos sua avaliação.`;
     
     return new ReturnMessage({
-      chatId,
+      chatId: groupId,
       content: response
     });
   } catch (error) {
@@ -211,7 +182,7 @@ async function pintoCommand(bot, message, args, group) {
 }
 
 /**
- * Mostra o ranking do jogo
+ * Mostra o ranking do jogo Pinto
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
@@ -220,23 +191,32 @@ async function pintoCommand(bot, message, args, group) {
  */
 async function pintoRankingCommand(bot, message, args, group) {
   try {
-    // Obtém ID do chat
-    const chatId = message.group || message.author;
+    // Verifica se está em um grupo
+    if (!message.group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: '🏆 O ranking do jogo só pode ser visualizado em grupos.'
+      });
+    }
+    
+    const groupId = message.group;
     
     // Obtém as variáveis customizadas
     const customVariables = await database.getCustomVariables();
     
     // Verifica se existem dados do jogo
-    if (!customVariables.pintoGame || !customVariables.pintoGame.players || 
-        Object.keys(customVariables.pintoGame.players).length === 0) {
+    if (!customVariables.pintoGame || 
+        !customVariables.pintoGame.groups || 
+        !customVariables.pintoGame.groups[groupId] ||
+        Object.keys(customVariables.pintoGame.groups[groupId]).length === 0) {
       return new ReturnMessage({
-        chatId,
-        content: '🏆 Ainda não há dados para o ranking. Use !pinto para participar!'
+        chatId: groupId,
+        content: '🏆 Ainda não há dados para o ranking neste grupo. Use !pinto para participar!'
       });
     }
     
     // Converte para array para poder ordenar
-    const players = Object.entries(customVariables.pintoGame.players).map(([id, data]) => ({
+    const players = Object.entries(customVariables.pintoGame.groups[groupId]).map(([id, data]) => ({
       id,
       ...data
     }));
@@ -248,7 +228,7 @@ async function pintoRankingCommand(bot, message, args, group) {
     const topPlayers = players.slice(0, 10);
     
     // Prepara a mensagem de ranking
-    let rankingMessage = `🍆 *Ranking do Tamanho*\n\n`;
+    let rankingMessage = `🍆 *Ranking do Tamanho - ${group.name || "Grupo"}*\n\n`;
     
     topPlayers.forEach((player, index) => {
       const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
@@ -265,7 +245,7 @@ async function pintoRankingCommand(bot, message, args, group) {
     }
     
     return new ReturnMessage({
-      chatId,
+      chatId: groupId,
       content: rankingMessage
     });
   } catch (error) {
@@ -277,6 +257,80 @@ async function pintoRankingCommand(bot, message, args, group) {
     });
   }
 }
+
+/**
+ * Salva os resultados do jogador no ranking do grupo
+ * @param {string} userId - ID do usuário
+ * @param {string} userName - Nome do usuário
+ * @param {string} groupId - ID do grupo
+ * @param {number} flaccid - Comprimento flácido
+ * @param {number} erect - Comprimento ereto
+ * @param {number} girth - Circunferência
+ * @param {number} score - Pontuação total
+ * @returns {Promise<boolean>} - Status de sucesso
+ */
+async function savePlayerToGroupRanking(userId, userName, groupId, flaccid, erect, girth, score) {
+  try {
+    // Obtém variáveis customizadas
+    const customVariables = await database.getCustomVariables();
+    
+    // Inicializa estrutura de dados se não existir
+    if (!customVariables.pintoGame) {
+      customVariables.pintoGame = {
+        groups: {},
+        history: []
+      };
+    }
+    
+    if (!customVariables.pintoGame.groups) {
+      customVariables.pintoGame.groups = {};
+    }
+    
+    if (!customVariables.pintoGame.groups[groupId]) {
+      customVariables.pintoGame.groups[groupId] = {};
+    }
+    
+    // Salva ou atualiza os dados do jogador para este grupo
+    customVariables.pintoGame.groups[groupId][userId] = {
+      name: userName,
+      flaccid,
+      erect,
+      girth,
+      score,
+      lastUpdated: Date.now()
+    };
+    
+    // Adiciona ao histórico geral
+    if (!customVariables.pintoGame.history) {
+      customVariables.pintoGame.history = [];
+    }
+    
+    customVariables.pintoGame.history.push({
+      userId,
+      userName,
+      groupId,
+      flaccid,
+      erect,
+      girth,
+      score,
+      timestamp: Date.now()
+    });
+    
+    // Limita o histórico a 100 entradas
+    if (customVariables.pintoGame.history.length > 100) {
+      customVariables.pintoGame.history = customVariables.pintoGame.history.slice(-100);
+    }
+    
+    // Salva as variáveis
+    await database.saveCustomVariables(customVariables);
+    
+    return true;
+  } catch (error) {
+    logger.error('Erro ao salvar jogador no ranking do grupo:', error);
+    return false;
+  }
+}
+
 
 // Criar array de comandos usando a classe Command
 const commands = [

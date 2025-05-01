@@ -916,7 +916,7 @@ const commands = [
   }),
   
   new Command({
-    name: 'georanking',
+    name: 'geo-ranking',
     description: 'Mostra o ranking de jogadores',
     category: "jogos",
     cooldown: 30,
@@ -928,4 +928,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands, processLocationMessage };
+//module.exports = { commands, processLocationMessage };

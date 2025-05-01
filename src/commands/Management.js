@@ -5519,7 +5519,7 @@ class Management {
   }
 
   /**
-   * Reseta o ranking do jogo Stop/Adedona para um grupo ou globalmente
+   * Reseta o ranking do jogo Stop/Adedona para um grupo
    * @param {WhatsAppBot} bot - Instância do bot
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
@@ -5541,112 +5541,58 @@ class Management {
       // Obtém variáveis customizadas
       const customVariables = await this.database.getCustomVariables();
       
-      // Verifica se existe ranking de Stop/Adedona
-      if (!customVariables.stopGameRanking) {
+      // Verifica se existe ranking de Stop/Adedona para este grupo
+      if (!customVariables.stopGameRanking || 
+          !customVariables.stopGameRanking.groups || 
+          !customVariables.stopGameRanking.groups[groupId]) {
         return new ReturnMessage({
           chatId: groupId,
-          content: '🛑 Não há dados do jogo Stop/Adedona para resetar.'
+          content: '🛑 Não há dados do jogo Stop/Adedona para resetar neste grupo.'
         });
       }
-
-      // Verifica o tipo de reset
-      const isGlobal = args.length > 0 && args[0].toLowerCase() === 'global';
       
-      if (isGlobal) {
-        // Verifica se o usuário é um super admin
-        const isSuperAdmin = await this.isSuperAdmin(message.author);
-        if (!isSuperAdmin) {
-          return new ReturnMessage({
-            chatId: groupId,
-            content: '⚠️ Apenas super administradores podem resetar o ranking global do Stop/Adedona.'
-          });
-        }
+      // Armazena o backup antes de resetar
+      const backupData = JSON.stringify(customVariables.stopGameRanking.groups[groupId]);
+      
+      // Registra o backup no histórico
+      if (!customVariables.stopGameRankingHistory) {
+        customVariables.stopGameRankingHistory = [];
+      }
+      
+      customVariables.stopGameRankingHistory.push({
+        groupId,
+        timestamp: Date.now(),
+        data: backupData,
+        performedBy: message.author,
+        performedByName: message.authorName || "Admin"
+      });
+      
+      // Limita o histórico a 5 entradas por grupo
+      const groupHistories = customVariables.stopGameRankingHistory.filter(h => h.groupId === groupId);
+      if (groupHistories.length > 5) {
+        // Remove os históricos mais antigos
+        const toRemove = groupHistories.length - 5;
+        let removed = 0;
         
-        // Armazena o backup antes de resetar
-        const backupData = JSON.stringify(customVariables.stopGameRanking);
-        
-        // Registra o backup no histórico
-        if (!customVariables.stopGameRankingHistory) {
-          customVariables.stopGameRankingHistory = [];
-        }
-        
-        customVariables.stopGameRankingHistory.push({
-          type: 'global',
-          timestamp: Date.now(),
-          data: backupData
-        });
-        
-        // Limita o histórico a 5 entradas
-        if (customVariables.stopGameRankingHistory.length > 5) {
-          customVariables.stopGameRankingHistory = customVariables.stopGameRankingHistory.slice(-5);
-        }
-        
-        // Reseta os dados do Stop/Adedona
-        customVariables.stopGameRanking = {
-          global: {},
-          groups: {}
-        };
-        
-        // Salva as variáveis atualizadas
-        await this.database.saveCustomVariables(customVariables);
-        
-        return new ReturnMessage({
-          chatId: groupId,
-          content: '🛑 O ranking global do jogo Stop/Adedona foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.'
-        });
-      } else {
-        // Reset apenas para este grupo
-        
-        // Verifica se existem dados para este grupo
-        if (!customVariables.stopGameRanking.groups || !customVariables.stopGameRanking.groups[groupId]) {
-          return new ReturnMessage({
-            chatId: groupId,
-            content: '🛑 Não há dados do jogo Stop/Adedona para este grupo específico.'
-          });
-        }
-        
-        // Armazena o backup antes de resetar
-        const backupData = JSON.stringify(customVariables.stopGameRanking.groups[groupId]);
-        
-        // Registra o backup no histórico
-        if (!customVariables.stopGameRankingHistory) {
-          customVariables.stopGameRankingHistory = [];
-        }
-        
-        customVariables.stopGameRankingHistory.push({
-          type: 'group',
-          groupId,
-          timestamp: Date.now(),
-          data: backupData
-        });
-        
-        // Limita o histórico a 5 entradas por grupo
-        const groupHistories = customVariables.stopGameRankingHistory.filter(h => h.type === 'group' && h.groupId === groupId);
-        if (groupHistories.length > 5) {
-          // Remove os históricos mais antigos
-          const toRemove = groupHistories.length - 5;
-          let removed = 0;
-          
-          customVariables.stopGameRankingHistory = customVariables.stopGameRankingHistory.filter(h => {
-            if (h.type === 'group' && h.groupId === groupId && removed < toRemove) {
-              removed++;
-              return false;
-            }
-            return true;
-          });
-        }
-        
-        // Reseta os dados do Stop/Adedona deste grupo
-        customVariables.stopGameRanking.groups[groupId] = {};
-        
-        // Salva as variáveis atualizadas
-        await this.database.saveCustomVariables(customVariables);
-        
-        return new ReturnMessage({
-          chatId: groupId,
-          content: `🛑 O ranking do jogo Stop/Adedona para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+        customVariables.stopGameRankingHistory = customVariables.stopGameRankingHistory.filter(h => {
+          if (h.groupId === groupId && removed < toRemove) {
+            removed++;
+            return false;
+          }
+          return true;
         });
       }
+      
+      // Reseta os dados do Stop/Adedona deste grupo
+      customVariables.stopGameRanking.groups[groupId] = {};
+      
+      // Salva as variáveis atualizadas
+      await this.database.saveCustomVariables(customVariables);
+      
+      return new ReturnMessage({
+        chatId: groupId,
+        content: `🛑 O ranking do jogo Stop/Adedona para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+      });
     } catch (error) {
       this.logger.error('Erro ao resetar ranking do jogo Stop/Adedona:', error);
       
@@ -5659,7 +5605,7 @@ class Management {
 
 
   /**
-   * Reseta o ranking do jogo Pinto
+   * Reseta o ranking do jogo Pinto para um grupo
    * @param {WhatsAppBot} bot - Instância do bot
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
@@ -5681,11 +5627,13 @@ class Management {
       // Obtém variáveis customizadas
       const customVariables = await this.database.getCustomVariables();
       
-      // Verifica se existe ranking do jogo
-      if (!customVariables.pintoGame) {
+      // Verifica se existe ranking do jogo para este grupo
+      if (!customVariables.pintoGame || 
+          !customVariables.pintoGame.groups || 
+          !customVariables.pintoGame.groups[groupId]) {
         return new ReturnMessage({
           chatId: groupId,
-          content: '🍆 Não há dados do jogo para resetar.'
+          content: '🍆 Não há dados do jogo para resetar neste grupo.'
         });
       }
 
@@ -5693,7 +5641,7 @@ class Management {
       const resetType = args.length > 0 ? args[0].toLowerCase() : 'full';
       
       if (resetType === 'cooldown' || resetType === 'cooldowns') {
-        // Reset apenas dos cooldowns
+        // Reset apenas dos cooldowns para este grupo
         const playerCooldowns = {};
         
         // Salva o histórico de reset
@@ -5703,14 +5651,26 @@ class Management {
         
         customVariables.pintoGameResetHistory.push({
           type: 'cooldowns',
+          groupId,
           timestamp: Date.now(),
           performedBy: message.author,
           performedByName: message.authorName || "Admin"
         });
         
-        // Limita o histórico a 5 entradas
-        if (customVariables.pintoGameResetHistory.length > 5) {
-          customVariables.pintoGameResetHistory = customVariables.pintoGameResetHistory.slice(-5);
+        // Limita o histórico a 5 entradas por grupo
+        const groupHistories = customVariables.pintoGameResetHistory.filter(h => h.groupId === groupId);
+        if (groupHistories.length > 5) {
+          // Remove os históricos mais antigos
+          const toRemove = groupHistories.length - 5;
+          let removed = 0;
+          
+          customVariables.pintoGameResetHistory = customVariables.pintoGameResetHistory.filter(h => {
+            if (h.groupId === groupId && removed < toRemove) {
+              removed++;
+              return false;
+            }
+            return true;
+          });
         }
         
         // Salva as variáveis atualizadas
@@ -5718,13 +5678,13 @@ class Management {
         
         return new ReturnMessage({
           chatId: groupId,
-          content: '🍆 Os cooldowns do jogo foram resetados! Todos os jogadores podem jogar novamente imediatamente.'
+          content: '🍆 Os cooldowns do jogo foram resetados para este grupo! Todos os jogadores podem jogar novamente imediatamente.'
         });
       } else {
-        // Reset completo (ranking e histórico)
+        // Reset completo do ranking deste grupo
         
         // Armazena o backup antes de resetar
-        const backupData = JSON.stringify(customVariables.pintoGame);
+        const backupData = JSON.stringify(customVariables.pintoGame.groups[groupId]);
         
         // Registra o backup no histórico
         if (!customVariables.pintoGameResetHistory) {
@@ -5733,29 +5693,38 @@ class Management {
         
         customVariables.pintoGameResetHistory.push({
           type: 'full',
+          groupId,
           timestamp: Date.now(),
           data: backupData,
           performedBy: message.author,
           performedByName: message.authorName || "Admin"
         });
         
-        // Limita o histórico a 5 entradas
-        if (customVariables.pintoGameResetHistory.length > 5) {
-          customVariables.pintoGameResetHistory = customVariables.pintoGameResetHistory.slice(-5);
+        // Limita o histórico a 5 entradas por grupo
+        const groupHistories = customVariables.pintoGameResetHistory.filter(h => h.groupId === groupId);
+        if (groupHistories.length > 5) {
+          // Remove os históricos mais antigos
+          const toRemove = groupHistories.length - 5;
+          let removed = 0;
+          
+          customVariables.pintoGameResetHistory = customVariables.pintoGameResetHistory.filter(h => {
+            if (h.groupId === groupId && removed < toRemove) {
+              removed++;
+              return false;
+            }
+            return true;
+          });
         }
         
-        // Reseta os dados do jogo
-        customVariables.pintoGame = {
-          players: {},
-          history: []
-        };
+        // Reseta os dados do jogo para este grupo
+        customVariables.pintoGame.groups[groupId] = {};
         
         // Salva as variáveis atualizadas
         await this.database.saveCustomVariables(customVariables);
         
         return new ReturnMessage({
           chatId: groupId,
-          content: '🍆 O ranking do jogo foi completamente resetado!\n\nUm backup do ranking anterior foi salvo.'
+          content: '🍆 O ranking do jogo para este grupo foi completamente resetado!\n\nUm backup do ranking anterior foi salvo.'
         });
       }
     } catch (error) {
