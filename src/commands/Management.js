@@ -198,7 +198,10 @@ class Management {
         method: 'toggleTwitchThumbnail',
         description: 'Ativa/desativa o envio da thumbnail da stream junto com o texto'
       },
-
+      'twitch-marcar': {
+        method: 'toggleTwitchMentions',
+        description: 'Ativa/desativa menção a todos os membros nas notificações de canal da Twitch'
+      },
       'kick-canal': {
         method: 'toggleKickChannel',
         description: 'Adiciona/remove canal do Kick para monitoramento'
@@ -227,6 +230,10 @@ class Management {
         method: 'toggleKickAI',
         description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
       },
+      'kick-marcar': {
+        method: 'toggleKickMentions',
+        description: 'Ativa/desativa menção a todos os membros nas notificações de canal do Kick'
+      },
       'youtube-canal': {
         method: 'toggleYoutubeChannel',
         description: 'Adiciona/remove canal do YouTube para monitoramento'
@@ -254,6 +261,10 @@ class Management {
       'youtube-usarIA': {
         method: 'toggleYoutubeAI',
         description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
+      },
+      'youtube-marcar': {
+        method: 'toggleYoutubeMentions',
+        description: 'Ativa/desativa menção a todos os membros nas notificações de canal do YouTube'
       },
       'variaveis': {
         method: 'listVariables',
@@ -5735,6 +5746,74 @@ class Management {
         content: 'Erro ao resetar ranking do jogo. Por favor, tente novamente.'
       });
     }
+  }
+
+  /**
+   * Alterna a funcionalidade de mencionar todos os membros nas notificações de stream
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @param {string} platform - Plataforma (twitch, kick, youtube)
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async toggleStreamMentions(bot, message, args, group, platform) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Valida e obtém o nome do canal
+    const channelName = await this.validateChannelName(bot, message, args, group, platform);
+    
+    // Se validateChannelName retornou um ReturnMessage, retorna-o
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Encontra a configuração do canal
+    const channelConfig = this.findChannelConfig(group, platform, channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do ${platform} não configurado: ${channelName}. Use !g-${platform}-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Inicializa a propriedade mentionAllMembers se não existir
+    if (channelConfig.mentionAllMembers === undefined) {
+      channelConfig.mentionAllMembers = true;
+    }
+    
+    // Alterna o valor
+    channelConfig.mentionAllMembers = !channelConfig.mentionAllMembers;
+    
+    // Salva a configuração atualizada
+    await this.database.saveGroup(group);
+    
+    // Retorna uma mensagem informando o novo estado
+    const novoEstado = channelConfig.mentionAllMembers ? 'ativada' : 'desativada';
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `✅ Função de mencionar todos os membros ${novoEstado} para notificações do canal ${channelName} da ${platform}.`
+    });
+  }
+
+  // Métodos para cada plataforma
+  async toggleTwitchMentions(bot, message, args, group) {
+    return this.toggleStreamMentions(bot, message, args, group, 'twitch');
+  }
+
+  async toggleKickMentions(bot, message, args, group) {
+    return this.toggleStreamMentions(bot, message, args, group, 'kick');
+  }
+
+  async toggleYoutubeMentions(bot, message, args, group) {
+    return this.toggleStreamMentions(bot, message, args, group, 'youtube');
   }
 }
 

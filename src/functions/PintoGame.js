@@ -120,7 +120,7 @@ function getComment(score) {
   } else if (score >= 600) {
     return "👏 Muito bem! Acima da média!";
   } else if (score >= 500) {
-    return "👍 Bom resultado! Na média superior!";
+    return "👍 Bom resultado. Na média superior!";
   } else if (score >= 400) {
     return "😊 Resultado decente! Na média!";
   } else if (score >= 300) {

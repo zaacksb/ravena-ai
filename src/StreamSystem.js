@@ -374,13 +374,19 @@ class StreamSystem {
       if (channelConfig.changeTitleOnEvent) {
         await this.changeGroupTitleForStream(group, channelConfig, eventData, eventType);
       }
+
+      // Obter menções para todos os membros se a funcionalidade estiver ativada
+      let mentions = [];
+      if (channelConfig.mentionAllMembers && eventType === 'online') {
+        mentions = await this.getAllMembersMentions(group.id);
+      }
       
       // Processa notificações de mídia
       //if(!config.media.some(m => m.type == "text")){ // Não tem texto definido
         
     
       for (const mediaItem of config.media) {
-        const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig);
+        const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig, mentions);
         if (returnMessage) {
           returnMessages.push(returnMessage);
           
@@ -413,7 +419,7 @@ class StreamSystem {
       
       // Gera mensagem de IA se habilitada
       if (channelConfig.useAI && eventType === 'online') {
-        const aiMessage = await this.createAINotification(group.id, eventData, channelConfig);
+        const aiMessage = await this.createAINotification(group.id, eventData, channelConfig, mentions);
         if (aiMessage) {
           returnMessages.push(aiMessage);
           
@@ -469,6 +475,39 @@ class StreamSystem {
           `🔥 [DEBUG] Erro ao processar evento para grupo ${group.id}: ${error.message}`
         );
       }
+    }
+  }
+
+    /**
+   * Obtém as menções para todos os membros do grupo, excluindo os ignorados
+   * @param {string} groupId - ID do grupo
+   * @returns {Promise<Array<string>>} - Array de strings de menção
+   */
+  async getAllMembersMentions(groupId) {
+    try {
+      // Obter o grupo do banco de dados
+      const group = await this.bot.database.getGroup(groupId);
+      if (!group) return [];
+      
+      // Obter o chat para acessar participantes
+      const chat = await this.bot.client.getChatById(groupId);
+      if (!chat || !chat.isGroup) return [];
+      
+      // Obter usuários ignorados para este grupo
+      const ignoredUsers = group.ignoredUsers || [];
+      
+      // Filtrar usuários ignorados
+      const participants = chat.participants.filter(
+        participant => !ignoredUsers.includes(participant.id._serialized)
+      );
+      
+      // Criar array de menções
+      const mentions = participants.map(p => p.id._serialized);
+      
+      return mentions;
+    } catch (error) {
+      this.logger.error(`Erro ao obter menções para grupo ${groupId}:`, error);
+      return [];
     }
   }
 
@@ -632,9 +671,10 @@ class StreamSystem {
    * @param {Object} mediaItem - Configuração de mídia
    * @param {Object} eventData - Dados do evento
    * @param {Object} channelConfig - Configuração do canal
+   * @param {Array<string>} mentions - Menções para incluir na mensagem
    * @returns {Promise<ReturnMessage|null>} - A mensagem de retorno
    */
-  async createEventNotification(groupId, mediaItem, eventData, channelConfig) {
+  async createEventNotification(groupId, mediaItem, eventData, channelConfig, mentions = []) {
     try {
       // Trata diferentes tipos de mídia
       if (mediaItem.type === 'text') {
@@ -652,22 +692,25 @@ class StreamSystem {
                           .replace(/{link}/g, eventData.url || '');
         }
         
-        // Cria a mensagem de retorno
-
-        if(channelConfig.useThumbnail && eventData.thumbnail){
+        // Cria a mensagem de retorno com opções de menções, se disponíveis
+        if (channelConfig.useThumbnail && eventData.thumbnail) {
           const media = await this.bot.createMediaFromURL(eventData.thumbnail);
 
           return new ReturnMessage({
             chatId: groupId,
             content: media,
             options: {
-                caption: content
+                caption: content,
+                mentions: mentions.length > 0 ? mentions : undefined
             }
           });  
         } else {
           return new ReturnMessage({
             chatId: groupId,
-            content: content
+            content: content,
+            options: {
+              mentions: mentions.length > 0 ? mentions : undefined
+            }
           });  
         }
         
@@ -693,13 +736,14 @@ class StreamSystem {
                             .replace(/{link}/g, eventData.url || '');
           }
           
-          // Cria a mensagem de retorno
+          // Cria a mensagem de retorno, incluindo menções se fornecidas
           return new ReturnMessage({
             chatId: groupId,
             content: media,
             options: {
               caption: caption || undefined,
-              sendMediaAsSticker: mediaItem.type === 'sticker'
+              sendMediaAsSticker: mediaItem.type === 'sticker',
+              mentions: mentions.length > 0 ? mentions : undefined
             }
           });
         } catch (error) {

@@ -219,11 +219,11 @@ async function fishCommand(bot, message, args, group) {
     
     // Seleciona uma mensagem aleatória
     const fishingMessages = [
-      `🎣 ${userName} pescou um(a) ${fish.name} de ${fish.weight.toFixed(2)} kg!`,
-      `🐟 Wow! ${userName} fisgou um(a) ${fish.name} pesando ${fish.weight.toFixed(2)} kg!`,
-      `🎣 Um(a) ${fish.name} de ${fish.weight.toFixed(2)} kg mordeu a isca de ${userName}!`,
-      `🐠 ${userName} recolheu a linha e encontrou um(a) ${fish.name} de ${fish.weight.toFixed(2)} kg!`,
-      `🏆 ${userName} capturou um(a) impressionante ${fish.name} de ${fish.weight.toFixed(2)} kg!`
+      `🎣 ${userName} pescou um *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`,
+      `🐟 Wow! ${userName} fisgou um(a) *${fish.name}* pesando _${fish.weight.toFixed(2)} kg_!`,
+      `🎣 Um(a) *${fish.name}* de ${fish.weight.toFixed(2)} kg mordeu a isca de ${userName}!`,
+      `🐠 ${userName} recolheu a linha e encontrou um(a) *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`,
+      `🏆 ${userName} capturou um(a) impressionante *${fish.name}* de _${fish.weight.toFixed(2)} kg_!`
     ];
     
     const randomMessage = fishingMessages[Math.floor(Math.random() * fishingMessages.length)];
@@ -231,13 +231,13 @@ async function fishCommand(bot, message, args, group) {
     // Adiciona informações adicionais para peixes grandes
     let additionalInfo = '';
     if (fish.weight > 20) {
-      additionalInfo = '\n\n🏆 Uau! Este é um peixe enorme!';
+      additionalInfo = '\n\n🏆 *Uau!* Este é um peixe enorme!';
     } else if (fish.weight > 15) {
       additionalInfo = '\n\n👏 Que belo exemplar!';
     }
     
     // Adiciona informação sobre o maior peixe do usuário
-    additionalInfo += `\n\n🐳 Seu maior peixe: ${fishingData.fishingData[userId].biggestFish.name} (${fishingData.fishingData[userId].biggestFish.weight.toFixed(2)} kg)`;
+    additionalInfo += `\n\n> 🐳 Seu maior peixe: ${fishingData.fishingData[userId].biggestFish.name} (${fishingData.fishingData[userId].biggestFish.weight.toFixed(2)} kg)`;
     
     return new ReturnMessage({
       chatId,
