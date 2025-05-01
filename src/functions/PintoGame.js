@@ -165,7 +165,7 @@ async function pintoCommand(bot, message, args, group) {
                     `• *Circunferência:* ${girth.toFixed(1)} cm\n` +
                     `• *Score:* _${score} pontos_\n\n` +
                     `${comment}\n\n` +
-                    `>Você pode voltar daqui a 1 semana para refazermos sua avaliação.`;
+                    `> Você pode voltar daqui a 1 semana para refazermos sua avaliação.`;
     
     return new ReturnMessage({
       chatId: groupId,
@@ -338,7 +338,7 @@ const commands = [
     name: 'pinto',
     description: 'Gera uma avaliação de tamanho aleatória',
     category: "jogos",
-    cooldown: 60, // 1 minuto de cooldown entre tentativas (o cooldown real é controlado internamente)
+    cooldown: 0, // 1 minuto de cooldown entre tentativas (o cooldown real é controlado internamente)
     reactions: {
       before: "📏",
       after: "🍆",
