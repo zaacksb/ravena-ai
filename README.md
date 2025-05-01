@@ -163,12 +163,13 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
-- [ ] Novo Jogo: Geoguesser
-- [ ] Novo Jogo: Stop/Adedonha
+- [x] Novo Jogo: Geoguesser
+- [x] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
-- [ ] Novo Jogo: Pesca
+- [x] Novo Jogo: Pesca
+- [x] Novo Jogo: Pinto
+- [x] Novo Comando: Msgs anônimas
 - [ ] Novo Comando: busca no youtube
-- [ ] Novo Comando: Msgs anônimas
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 - [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente

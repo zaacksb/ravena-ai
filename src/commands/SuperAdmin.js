@@ -33,7 +33,9 @@ class SuperAdmin {
       'leaveGrupo': {'method': 'leaveGroup'},
       'foto': {'method': 'changeProfilePicture'},
       'simular': {'method': 'simulateStreamEvent'},
-      'restart': {'method': 'restartBot'}
+      'restart': {'method': 'restartBot'},
+      'addpeixe': { 'Adiciona um tipo de peixe', },
+      'removepeixe': { 'Remove um tipo de peixe', }
     };
   }
 
@@ -776,6 +778,139 @@ class SuperAdmin {
       });
     }
   }
+
+  /**
+   * Adiciona um tipo de peixe à lista de peixes disponíveis
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async function addFishTypeCommand(bot, message, args, group) {
+    try {
+      // Este comando só deve ser disponível para administradores
+      
+      // Obtém ID do chat
+      const chatId = message.group || message.author;
+      
+      // Verifica se há argumentos
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId,
+          content: '⚠️ Por favor, forneça o nome do peixe a ser adicionado. Exemplo: !addpeixe Tilápia'
+        });
+      }
+      
+      // Obtém o nome do peixe
+      const fishName = args.join(' ');
+      
+      // Obtém variáveis personalizadas
+      const customVariables = await database.getCustomVariables();
+      
+      // Inicializa peixes se não existir
+      if (!customVariables.peixes) {
+        customVariables.peixes = [];
+      }
+      
+      // Verifica se o peixe já existe
+      if (customVariables.peixes.includes(fishName)) {
+        return new ReturnMessage({
+          chatId,
+          content: `⚠️ O peixe "${fishName}" já está na lista.`
+        });
+      }
+      
+      // Adiciona o peixe à lista
+      customVariables.peixes.push(fishName);
+      
+      // Salva as variáveis atualizadas
+      await database.saveCustomVariables(customVariables);
+      
+      return new ReturnMessage({
+        chatId,
+        content: `✅ Peixe "${fishName}" adicionado à lista com sucesso! A lista agora tem ${customVariables.peixes.length} tipos de peixes.`
+      });
+    } catch (error) {
+      logger.error('Erro ao adicionar tipo de peixe:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Ocorreu um erro ao adicionar o peixe. Por favor, tente novamente.'
+      });
+    }
+  }
+
+  /**
+   * Remove um tipo de peixe da lista
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async function removeFishTypeCommand(bot, message, args, group) {
+    try {
+      // Este comando só deve ser disponível para administradores
+      
+      // Obtém ID do chat
+      const chatId = message.group || message.author;
+      
+      // Verifica se há argumentos
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId,
+          content: '⚠️ Por favor, forneça o nome do peixe a ser removido. Exemplo: !removepeixe Tilápia'
+        });
+      }
+      
+      // Obtém o nome do peixe
+      const fishName = args.join(' ');
+      
+      // Obtém variáveis personalizadas
+      const customVariables = await database.getCustomVariables();
+      
+      // Verifica se há peixes
+      if (!customVariables.peixes || customVariables.peixes.length === 0) {
+        return new ReturnMessage({
+          chatId,
+          content: '🎣 Ainda não há tipos de peixes definidos.'
+        });
+      }
+      
+      // Verifica se o peixe existe
+      const index = customVariables.peixes.findIndex(
+        fish => fish.toLowerCase() === fishName.toLowerCase()
+      );
+      
+      if (index === -1) {
+        return new ReturnMessage({
+          chatId,
+          content: `⚠️ O peixe "${fishName}" não está na lista.`
+        });
+      }
+      
+      // Remove o peixe da lista
+      customVariables.peixes.splice(index, 1);
+      
+      // Salva as variáveis atualizadas
+      await database.saveCustomVariables(customVariables);
+      
+      return new ReturnMessage({
+        chatId,
+        content: `✅ Peixe "${fishName}" removido da lista com sucesso! A lista agora tem ${customVariables.peixes.length} tipos de peixes.`
+      });
+    } catch (error) {
+      logger.error('Erro ao remover tipo de peixe:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Ocorreu um erro ao remover o peixe. Por favor, tente novamente.'
+      });
+    }
+  }
+
+
 }
 
 module.exports = SuperAdmin;

@@ -205,6 +205,12 @@ class WhatsAppBot {
       this.lastMessageReceived = Date.now();
 
       try {
+        // Verifica se a mensagem é de um grupo a ser ignorado
+        if (message.from === this.grupoLogs || message.from === this.grupoInvites) {
+          this.logger.debug(`Ignorando mensagem do grupo de logs/invites: ${message.from}`);
+          return; // Ignora o processamento adicional
+        }
+
         // Verifica se o autor está na lista de bloqueados
         if (this.blockedContacts && Array.isArray(this.blockedContacts)) {
           const isBlocked = this.blockedContacts.some(contact => 

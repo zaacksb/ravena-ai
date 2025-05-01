@@ -114,6 +114,26 @@ class Management {
         method: 'definirTempoRoleta',
         description: 'Define tempo de timeout da roleta russa'
       },
+      'roleta-reset':{
+        method: 'resetRoletaRanking',
+        description: 'Apaga os dados do ranking atuais da roleta russa'
+      },
+      'pesca-reset': {
+        method: 'resetPescaRanking',
+        description: 'Reseta o ranking do jogo de pesca'
+      },
+      'geo-reset': {
+        method: 'resetGeoguesserRanking',
+        description: 'Reseta o ranking do jogo Geoguesser'
+      },
+      'stop-reset': {
+        method: 'resetStopGameRanking',
+        description: 'Reseta o ranking do jogo Stop/Adedona'
+      },
+      'pinto-reset': {
+        method: 'resetPintoRanking',
+        description: 'Reseta o ranking do jogo Pinto'
+      },
       'interagir': {
         method: 'toggleInteraction',
         description: 'Ativa/desativa interações automáticas do bot'
@@ -5103,6 +5123,650 @@ class Management {
     }
   }
 
+  /**
+   * Reseta o ranking da roleta russa para um grupo
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async resetRoletaRanking(bot, message, args, group) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      const groupId = message.group;
+      
+      // Carrega dados da roleta
+      const { carregarDadosRoleta, salvarDadosRoleta } = require('../functions/RoletaRussaCommands.js');
+      let dados = await carregarDadosRoleta();
+      
+      // Verifica se existem dados para este grupo
+      if (!dados.grupos[groupId]) {
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🎮 Não há dados de roleta russa para este grupo.'
+        });
+      }
+
+      // Primeiro, vamos mostrar o ranking atual antes de resetar
+      try {
+        // Executa o comando de ranking
+        const rankingCommand = bot.eventHandler.commandHandler.fixedCommands.getCommand('roletaranking');
+        if (rankingCommand) {
+          await rankingCommand.execute(bot, message, [], group);
+        }
+      } catch (rankingError) {
+        this.logger.error('Erro ao mostrar ranking antes do reset:', rankingError);
+      }
+
+      // Aguarda um momento para garantir que o ranking seja exibido
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Armazena uma cópia dos dados para backup
+      const backupData = JSON.stringify(dados.grupos[groupId]);
+      
+      // Reseta os dados do grupo
+      dados.grupos[groupId] = {
+        tempoTimeout: dados.grupos[groupId].tempoTimeout || dados.configuracoes.tempoDefault,
+        jogadores: {},
+        ultimoJogador: null,
+        historicoResets: dados.grupos[groupId].historicoResets || []
+      };
+      
+      // Adiciona dados do reset ao histórico
+      const timestamp = Date.now();
+      dados.grupos[groupId].historicoResets.push({
+        timestamp,
+        dadosAnteriores: backupData
+      });
+      
+      // Mantém apenas os últimos 5 resets no histórico
+      if (dados.grupos[groupId].historicoResets.length > 5) {
+        dados.grupos[groupId].historicoResets = dados.grupos[groupId].historicoResets.slice(-5);
+      }
+      
+      // Salva os dados atualizados
+      await salvarDadosRoleta(dados);
+      
+      return new ReturnMessage({
+        chatId: groupId,
+        content: '🎮 Ranking da roleta russa foi resetado com sucesso para este grupo!\n\nO histórico do ranking anterior foi salvo.'
+      });
+    } catch (error) {
+      this.logger.error('Erro ao resetar ranking da roleta russa:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao resetar ranking da roleta russa. Por favor, tente novamente.'
+      });
+    }
+  }
+
+  /**
+   * Reseta o ranking do jogo de pesca para um grupo ou globalmente
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async resetPescaRanking(bot, message, args, group) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      const groupId = message.group;
+      
+      // Obtém variáveis customizadas
+      const customVariables = await this.database.getCustomVariables();
+      
+      // Verifica se existe ranking de pesca
+      if (!customVariables.fishing) {
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🎣 Não há dados de pescaria para resetar.'
+        });
+      }
+
+      // Verifica o tipo de reset
+      const isGlobal = args.length > 0 && args[0].toLowerCase() === 'global';
+      
+      if (isGlobal) {
+        // Verifica se o usuário é um super admin (adicione sua própria lógica aqui)
+        const isSuperAdmin = await this.isSuperAdmin(message.author);
+        if (!isSuperAdmin) {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: '⚠️ Apenas super administradores podem resetar o ranking global de pescaria.'
+          });
+        }
+        
+        // Armazena o backup antes de resetar
+        const backupData = JSON.stringify(customVariables.fishing);
+        
+        // Registra o backup no histórico
+        if (!customVariables.fishingRankingHistory) {
+          customVariables.fishingRankingHistory = [];
+        }
+        
+        customVariables.fishingRankingHistory.push({
+          type: 'global',
+          timestamp: Date.now(),
+          data: backupData
+        });
+        
+        // Limita o histórico a 5 entradas
+        if (customVariables.fishingRankingHistory.length > 5) {
+          customVariables.fishingRankingHistory = customVariables.fishingRankingHistory.slice(-5);
+        }
+        
+        // Reseta os dados de pescaria
+        customVariables.fishing = {};
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🎣 O ranking global de pescaria foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.'
+        });
+      } else {
+        // Reset apenas para este grupo
+        
+        // Primeiro, identifica todos os usuários que têm dados neste grupo
+        const affectedUsers = [];
+        
+        for (const [userId, userData] of Object.entries(customVariables.fishing)) {
+          // Se o usuário tem peixes neste grupo, vamos resetar
+          const hasFishInGroup = userData.groupData && userData.groupData[groupId];
+          
+          if (hasFishInGroup) {
+            affectedUsers.push(userId);
+          }
+        }
+        
+        if (affectedUsers.length === 0) {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: '🎣 Não há dados de pescaria para este grupo específico.'
+          });
+        }
+        
+        // Armazena o backup antes de resetar
+        const groupData = {};
+        for (const userId of affectedUsers) {
+          if (customVariables.fishing[userId].groupData && customVariables.fishing[userId].groupData[groupId]) {
+            groupData[userId] = customVariables.fishing[userId].groupData[groupId];
+          }
+        }
+        
+        const backupData = JSON.stringify(groupData);
+        
+        // Registra o backup no histórico
+        if (!customVariables.fishingRankingHistory) {
+          customVariables.fishingRankingHistory = [];
+        }
+        
+        customVariables.fishingRankingHistory.push({
+          type: 'group',
+          groupId,
+          timestamp: Date.now(),
+          data: backupData
+        });
+        
+        // Limita o histórico a 5 entradas por grupo
+        const groupHistories = customVariables.fishingRankingHistory.filter(h => h.type === 'group' && h.groupId === groupId);
+        if (groupHistories.length > 5) {
+          // Remove os históricos mais antigos
+          const toRemove = groupHistories.length - 5;
+          let removed = 0;
+          
+          customVariables.fishingRankingHistory = customVariables.fishingRankingHistory.filter(h => {
+            if (h.type === 'group' && h.groupId === groupId && removed < toRemove) {
+              removed++;
+              return false;
+            }
+            return true;
+          });
+        }
+        
+        // Reseta os dados de pescaria deste grupo
+        for (const userId of affectedUsers) {
+          if (customVariables.fishing[userId].groupData) {
+            delete customVariables.fishing[userId].groupData[groupId];
+          }
+        }
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: `🎣 O ranking de pescaria para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro ao resetar ranking de pescaria:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao resetar ranking de pescaria. Por favor, tente novamente.'
+      });
+    }
+  }
+
+  /**
+   * Verifica se o usuário é um super admin
+   * @param {string} userId - ID do usuário
+   * @returns {Promise<boolean>} - Se o usuário é super admin
+   */
+  async isSuperAdmin(userId) {
+    // Implemente sua própria lógica aqui
+    // Por exemplo, verificar contra uma lista de super admins no banco de dados
+    const superAdmins = process.env.SUPER_ADMINS ? process.env.SUPER_ADMINS.split(',') : [];
+    return superAdmins.includes(userId);
+  }
+
+  /**
+   * Reseta o ranking do jogo Geoguesser para um grupo ou globalmente
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async resetGeoguesserRanking(bot, message, args, group) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      const groupId = message.group;
+      
+      // Obtém variáveis customizadas
+      const customVariables = await this.database.getCustomVariables();
+      
+      // Verifica se existe ranking de Geoguesser
+      if (!customVariables.geoguesserRanking) {
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🌍 Não há dados de Geoguesser para resetar.'
+        });
+      }
+
+      // Verifica o tipo de reset
+      const isGlobal = args.length > 0 && args[0].toLowerCase() === 'global';
+      
+      if (isGlobal) {
+        // Verifica se o usuário é um super admin
+        const isSuperAdmin = await this.isSuperAdmin(message.author);
+        if (!isSuperAdmin) {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: '⚠️ Apenas super administradores podem resetar o ranking global de Geoguesser.'
+          });
+        }
+        
+        // Armazena o backup antes de resetar
+        const backupData = JSON.stringify(customVariables.geoguesserRanking);
+        
+        // Registra o backup no histórico
+        if (!customVariables.geoguesserRankingHistory) {
+          customVariables.geoguesserRankingHistory = [];
+        }
+        
+        customVariables.geoguesserRankingHistory.push({
+          type: 'global',
+          timestamp: Date.now(),
+          data: backupData
+        });
+        
+        // Limita o histórico a 5 entradas
+        if (customVariables.geoguesserRankingHistory.length > 5) {
+          customVariables.geoguesserRankingHistory = customVariables.geoguesserRankingHistory.slice(-5);
+        }
+        
+        // Reseta os dados de Geoguesser
+        customVariables.geoguesserRanking = {
+          global: {},
+          groups: {}
+        };
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🌍 O ranking global de Geoguesser foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.'
+        });
+      } else {
+        // Reset apenas para este grupo
+        
+        // Verifica se existem dados para este grupo
+        if (!customVariables.geoguesserRanking.groups || !customVariables.geoguesserRanking.groups[groupId]) {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: '🌍 Não há dados de Geoguesser para este grupo específico.'
+          });
+        }
+        
+        // Armazena o backup antes de resetar
+        const backupData = JSON.stringify(customVariables.geoguesserRanking.groups[groupId]);
+        
+        // Registra o backup no histórico
+        if (!customVariables.geoguesserRankingHistory) {
+          customVariables.geoguesserRankingHistory = [];
+        }
+        
+        customVariables.geoguesserRankingHistory.push({
+          type: 'group',
+          groupId,
+          timestamp: Date.now(),
+          data: backupData
+        });
+        
+        // Limita o histórico a 5 entradas por grupo
+        const groupHistories = customVariables.geoguesserRankingHistory.filter(h => h.type === 'group' && h.groupId === groupId);
+        if (groupHistories.length > 5) {
+          // Remove os históricos mais antigos
+          const toRemove = groupHistories.length - 5;
+          let removed = 0;
+          
+          customVariables.geoguesserRankingHistory = customVariables.geoguesserRankingHistory.filter(h => {
+            if (h.type === 'group' && h.groupId === groupId && removed < toRemove) {
+              removed++;
+              return false;
+            }
+            return true;
+          });
+        }
+        
+        // Reseta os dados de Geoguesser deste grupo
+        customVariables.geoguesserRanking.groups[groupId] = {};
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: `🌍 O ranking de Geoguesser para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro ao resetar ranking de Geoguesser:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao resetar ranking de Geoguesser. Por favor, tente novamente.'
+      });
+    }
+  }
+
+  /**
+   * Reseta o ranking do jogo Stop/Adedona para um grupo ou globalmente
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async resetStopGameRanking(bot, message, args, group) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      const groupId = message.group;
+      
+      // Obtém variáveis customizadas
+      const customVariables = await this.database.getCustomVariables();
+      
+      // Verifica se existe ranking de Stop/Adedona
+      if (!customVariables.stopGameRanking) {
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🛑 Não há dados do jogo Stop/Adedona para resetar.'
+        });
+      }
+
+      // Verifica o tipo de reset
+      const isGlobal = args.length > 0 && args[0].toLowerCase() === 'global';
+      
+      if (isGlobal) {
+        // Verifica se o usuário é um super admin
+        const isSuperAdmin = await this.isSuperAdmin(message.author);
+        if (!isSuperAdmin) {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: '⚠️ Apenas super administradores podem resetar o ranking global do Stop/Adedona.'
+          });
+        }
+        
+        // Armazena o backup antes de resetar
+        const backupData = JSON.stringify(customVariables.stopGameRanking);
+        
+        // Registra o backup no histórico
+        if (!customVariables.stopGameRankingHistory) {
+          customVariables.stopGameRankingHistory = [];
+        }
+        
+        customVariables.stopGameRankingHistory.push({
+          type: 'global',
+          timestamp: Date.now(),
+          data: backupData
+        });
+        
+        // Limita o histórico a 5 entradas
+        if (customVariables.stopGameRankingHistory.length > 5) {
+          customVariables.stopGameRankingHistory = customVariables.stopGameRankingHistory.slice(-5);
+        }
+        
+        // Reseta os dados do Stop/Adedona
+        customVariables.stopGameRanking = {
+          global: {},
+          groups: {}
+        };
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🛑 O ranking global do jogo Stop/Adedona foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.'
+        });
+      } else {
+        // Reset apenas para este grupo
+        
+        // Verifica se existem dados para este grupo
+        if (!customVariables.stopGameRanking.groups || !customVariables.stopGameRanking.groups[groupId]) {
+          return new ReturnMessage({
+            chatId: groupId,
+            content: '🛑 Não há dados do jogo Stop/Adedona para este grupo específico.'
+          });
+        }
+        
+        // Armazena o backup antes de resetar
+        const backupData = JSON.stringify(customVariables.stopGameRanking.groups[groupId]);
+        
+        // Registra o backup no histórico
+        if (!customVariables.stopGameRankingHistory) {
+          customVariables.stopGameRankingHistory = [];
+        }
+        
+        customVariables.stopGameRankingHistory.push({
+          type: 'group',
+          groupId,
+          timestamp: Date.now(),
+          data: backupData
+        });
+        
+        // Limita o histórico a 5 entradas por grupo
+        const groupHistories = customVariables.stopGameRankingHistory.filter(h => h.type === 'group' && h.groupId === groupId);
+        if (groupHistories.length > 5) {
+          // Remove os históricos mais antigos
+          const toRemove = groupHistories.length - 5;
+          let removed = 0;
+          
+          customVariables.stopGameRankingHistory = customVariables.stopGameRankingHistory.filter(h => {
+            if (h.type === 'group' && h.groupId === groupId && removed < toRemove) {
+              removed++;
+              return false;
+            }
+            return true;
+          });
+        }
+        
+        // Reseta os dados do Stop/Adedona deste grupo
+        customVariables.stopGameRanking.groups[groupId] = {};
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: `🛑 O ranking do jogo Stop/Adedona para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro ao resetar ranking do jogo Stop/Adedona:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao resetar ranking do jogo Stop/Adedona. Por favor, tente novamente.'
+      });
+    }
+  }
+
+
+  /**
+   * Reseta o ranking do jogo Pinto
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async resetPintoRanking(bot, message, args, group) {
+    try {
+      // Verifica se está em um grupo
+      if (!message.group) {
+        return new ReturnMessage({
+          chatId: message.author,
+          content: 'Este comando só pode ser usado em grupos.'
+        });
+      }
+      
+      const groupId = message.group;
+      
+      // Obtém variáveis customizadas
+      const customVariables = await this.database.getCustomVariables();
+      
+      // Verifica se existe ranking do jogo
+      if (!customVariables.pintoGame) {
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🍆 Não há dados do jogo para resetar.'
+        });
+      }
+
+      // Verifica o tipo de reset (completo ou apenas cooldowns)
+      const resetType = args.length > 0 ? args[0].toLowerCase() : 'full';
+      
+      if (resetType === 'cooldown' || resetType === 'cooldowns') {
+        // Reset apenas dos cooldowns
+        const playerCooldowns = {};
+        
+        // Salva o histórico de reset
+        if (!customVariables.pintoGameResetHistory) {
+          customVariables.pintoGameResetHistory = [];
+        }
+        
+        customVariables.pintoGameResetHistory.push({
+          type: 'cooldowns',
+          timestamp: Date.now(),
+          performedBy: message.author,
+          performedByName: message.authorName || "Admin"
+        });
+        
+        // Limita o histórico a 5 entradas
+        if (customVariables.pintoGameResetHistory.length > 5) {
+          customVariables.pintoGameResetHistory = customVariables.pintoGameResetHistory.slice(-5);
+        }
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🍆 Os cooldowns do jogo foram resetados! Todos os jogadores podem jogar novamente imediatamente.'
+        });
+      } else {
+        // Reset completo (ranking e histórico)
+        
+        // Armazena o backup antes de resetar
+        const backupData = JSON.stringify(customVariables.pintoGame);
+        
+        // Registra o backup no histórico
+        if (!customVariables.pintoGameResetHistory) {
+          customVariables.pintoGameResetHistory = [];
+        }
+        
+        customVariables.pintoGameResetHistory.push({
+          type: 'full',
+          timestamp: Date.now(),
+          data: backupData,
+          performedBy: message.author,
+          performedByName: message.authorName || "Admin"
+        });
+        
+        // Limita o histórico a 5 entradas
+        if (customVariables.pintoGameResetHistory.length > 5) {
+          customVariables.pintoGameResetHistory = customVariables.pintoGameResetHistory.slice(-5);
+        }
+        
+        // Reseta os dados do jogo
+        customVariables.pintoGame = {
+          players: {},
+          history: []
+        };
+        
+        // Salva as variáveis atualizadas
+        await this.database.saveCustomVariables(customVariables);
+        
+        return new ReturnMessage({
+          chatId: groupId,
+          content: '🍆 O ranking do jogo foi completamente resetado!\n\nUm backup do ranking anterior foi salvo.'
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro ao resetar ranking do jogo Pinto:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao resetar ranking do jogo. Por favor, tente novamente.'
+      });
+    }
+  }
 }
 
 module.exports = Management;

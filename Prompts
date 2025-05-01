@@ -1934,3 +1934,30 @@ E também uma linha com checkbox onde o usuário pode selecionar a fonte dos dad
 
 Para facilitar a implementação do frontend, crie endpoints que agregue estes dados no BotAPI.js
 Como o arquivo load-report.json fca bem grande (<100Mb), o ideal seria ler ele a cada 10 minutos e manter em memória os dados processados necessários, para não ter que ler e recalcular a cada request.
+---
+
+Me envie apenas artefatos com as partes relevantes código a ter adicionado/alterado e exatamente onde ele deve ser colocado (após isso, antes disso, etc.)
+
+# Management.js
+
+Novo comando para roleta
+
+g-roletaReset: Envia o último ranking disponível para o grupo e reseta o ranking atual
+
+# WhatsAppBot.js
+
+Ignorar mensagens dos grupos: GRUPO_LOGS e GRUPO_INVITES
+
+Quando o bot está carregado, ele não está enviando as mensagens de notificações para o GRUPO_AVISOS e GRUPO_LOGS
+
+# Novas Functions: Jogos
+
+!geoguesser: 1. O bot escolhe um ponto aleatório no mundo (lat, long) que possua street view 2. Envia 4 fotos de angulos distintos do street view desse lugar. 3. Os membros tem 5 minutos para enviar uma localização usando a localização do whatsapp ou !geoguess latitude longitude. 5. Quando acaba o timer, o membro que chegar mais próximo ganha pontos. Pontuação máxima 100, minima 0. 100 quer dizer que ficou pelo menos 500m de distancia do ponto, 0 é mais que 500km
+
+!pescar: Simples jogo com variáveis aleatórias. O custom-variables.json possue o atributo "peixes" (customVariables.peixe), um array com nome de peixe. Escolha um peixe aleatório e um peso de 1 a 30kg. Guarde um vetor de até 10 peixes por membro. !pesca-ranking mostra o ranking de total de peso de peixes e numero total de peixes capturados de cada membro
+
+!anonimo [idGrupo] mensagem de texto: Faz com que o bot envie uma mensagem de texto anonima para o idGrupo especificado (grupo.name), com um header como "👻 Um membro anônimo enviou:\n\n>Mensagem de Texto". Cooldown de 12 horas por pessoa
+
+# Nova function: Jogos
+* !adedona ou !stop: O bot escolhe 5 categorias da lista: [Alimento, Fruta, Animal, Celebridade, Carro, C.E.P (Cidade, Estado, País), Cor, Esporte, Filme, Série, Banda, Marca, Meios de Transporte, Partes do Corpo, Ator ou Atriz, Flor, Objeto] e faz uma mensagem formatada como "🛑 STOP! ✋\n\n- Categoria 1:\n- Categoria 2: ....". As pessoas tem X minutos (padrão 5) para copiar a mensagem e envia ela preenchida no grupo. O bot deve analisar as mensagens que começam com o mesmo cabeçalho. Ao final do tempo, enviar um "Aguarde, analisando respostas.." e analisá-las se são válidas usando o LLM. Para isso, gere um prompt como: "Me diga em formato json quais destas palavras fazem parte das categorias: ...", interprete a resposta do prompt e atribua pontuação para as pessoas. Some os pontos da rodada no ranking da pessoa
+* Crie também o comando de reset para o management
