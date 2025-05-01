@@ -368,22 +368,46 @@ async function fishingRankingCommand(bot, message, args, group) {
     }));
     
     // Determina o tipo de ranking
-    let rankingType = 'weight';
-    if (args.length > 0 && args[0].toLowerCase() === 'quantidade') {
-      rankingType = 'count';
+    let rankingType = 'biggest'; // Padrão: maior peixe (sem argumentos)
+    
+    if (args.length > 0) {
+      const arg = args[0].toLowerCase();
+      if (arg === 'quantidade') {
+        rankingType = 'count';
+      } else if (arg === 'pesado') {
+        rankingType = 'weight';
+      }
     }
     
     // Ordena jogadores com base no tipo de ranking
     if (rankingType === 'weight') {
       // Ordena por peso total
       players.sort((a, b) => b.totalWeight - a.totalWeight);
-    } else {
+    } else if (rankingType === 'count') {
       // Ordena por quantidade total de peixes
       players.sort((a, b) => b.totalCatches - a.totalCatches);
+    } else {
+      // Ordena por tamanho do maior peixe
+      players.sort((a, b) => {
+        // Se algum jogador não tiver um maior peixe, coloca-o no final
+        if (!a.biggestFish) return 1;
+        if (!b.biggestFish) return -1;
+        return b.biggestFish.weight - a.biggestFish.weight;
+      });
+    }
+    
+    // Prepara o título do ranking de acordo com o tipo
+    let rankingTitle = '';
+    if (rankingType === 'weight') {
+      rankingTitle = 'Peso Total';
+    } else if (rankingType === 'count') {
+      rankingTitle = 'Quantidade Total';
+    } else {
+      rankingTitle = 'Maior Peixe';
     }
     
     // Prepara a mensagem de ranking
-    let rankingMessage = `🏆 *Ranking de Pescaria deste Grupo* (${rankingType === 'weight' ? 'Peso Total' : 'Quantidade Total'})\n\n`;
+    let rankingMessage = `🏆 *Ranking de Pescaria deste Grupo* (${rankingTitle})\n\n`;
     
     // Lista os jogadores
     const topPlayers = players.slice(0, 10);
@@ -392,13 +416,29 @@ async function fishingRankingCommand(bot, message, args, group) {
       
       if (rankingType === 'weight') {
         rankingMessage += `${medal} ${player.name}: ${player.totalWeight.toFixed(2)} kg (${player.totalCatches} peixes)\n`;
-      } else {
+      } else if (rankingType === 'count') {
         rankingMessage += `${medal} ${player.name}: ${player.totalCatches} peixes (${player.totalWeight.toFixed(2)} kg)\n`;
+      } else {
+        // Se o jogador não tiver um maior peixe, mostra uma mensagem apropriada
+        if (!player.biggestFish) {
+          rankingMessage += `${medal} ${player.name}: Ainda não pescou nenhum peixe\n`;
+        } else {
+          rankingMessage += `${medal} ${player.name}: ${player.biggestFish.name} de ${player.biggestFish.weight.toFixed(2)} kg\n`;
+        }
       }
     });
     
-    // Informações sobre o outro ranking
-    rankingMessage += `\nPara ver o ranking por ${rankingType === 'weight' ? 'quantidade' : 'peso'}, use !pesca-ranking ${rankingType === 'weight' ? 'quantidade' : 'peso'}`;
+    // Informações sobre os outros rankings
+    rankingMessage += `\nOutros rankings disponíveis:`;
+    if (rankingType !== 'biggest') {
+      rankingMessage += `\n- !pesca-ranking (sem argumentos): Ranking por maior peixe`;
+    }
+    if (rankingType !== 'weight') {
+      rankingMessage += `\n- !pesca-ranking pesado: Ranking por peso total`;
+    }
+    if (rankingType !== 'count') {
+      rankingMessage += `\n- !pesca-ranking quantidade: Ranking por quantidade de peixes`;
+    }
     
     return new ReturnMessage({
       chatId,
