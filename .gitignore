@@ -162,3 +162,4 @@ data/donations.json
 /baileys_auth
 data/pending-joins.json
 data/cooldowns.json
+data/custom-variables.json

@@ -146,10 +146,14 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Atualizar código para {mention} e {membroRandom}
 - [x] Ignorar mensagens entre ravenas (grupos de adm)
 - [x] Quando exceder requests do Gemini, tentar outro modelo ou local
+- [x] Fix novo Database.js com politica mais robusta de backups e gravações
+- [ ] Fix: Comando g-roletaReset
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] !le mais de 1 lista
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
+- [ ] Ignorar mensagens grupo de invites
+- [ ] Bot não envia mensagem de RAEDY
 
 
 ## ✅ TODO-Extras

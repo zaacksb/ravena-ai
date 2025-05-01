@@ -136,36 +136,23 @@ class WhatsAppBot {
     if (!this.blockedContacts || !Array.isArray(this.blockedContacts)) {
       this.blockedContacts = [];
     }
-    
-    try {
-      // Adiciona IDs dos outros bots à lista de bloqueados
-      for (const bot of this.otherBots) {
-        if (bot && bot.client && bot.client.info && bot.client.info.wid) {
-          const botId = bot.client.info.wid._serialized;
-          
-          // Verifica se já existe na lista
-          const alreadyBlocked = this.blockedContacts.some(
-            contact => contact.id && contact.id._serialized === botId
-          );
-          
-          if (!alreadyBlocked) {
-            // Formato compatível com o formato de contato interno
-            this.blockedContacts.push({
-              id: {
-                _serialized: botId
-              },
-              name: `Bot: ${bot.id || 'desconhecido'}`
-            });
-            
-            this.logger.info(`Adicionado bot '${bot.id}' (${botId}) à lista de ignorados`);
-          }
-        }
-      }
+
+    // Adiciona IDs dos outros bots à lista de bloqueados
+    for (const bot of this.otherBots) {
+      const botId = bot.endsWith("@c.us") ? botId : `${bot}@c.us`;
+      this.blockedContacts.push({
+        id: {
+          _serialized: botId
+        },
+        name: `Bot: ${bot.id || 'desconhecido'}`
+      });
       
-      this.logger.info(`Lista de ignorados atualizada: ${this.blockedContacts.length} contatos/bots`);
-    } catch (error) {
-      this.logger.error('Erro ao preparar lista de outros bots para ignorar:', error);
+      this.logger.info(`Adicionado bot '${bot.id}' (${botId}) à lista de ignorados`);
+      
     }
+    
+    this.logger.info(`Lista de ignorados atualizada: ${this.blockedContacts.length} contatos/bots`, this.blockedContacts );
+
   }
 
   /**

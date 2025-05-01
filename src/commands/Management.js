@@ -891,7 +891,7 @@ class Management {
   }
 
 
-   /**
+  /**
    * Mostra informações detalhadas do grupo
    * @param {WhatsAppBot} bot - Instância do bot
    * @param {Object} message - Dados da mensagem
@@ -927,16 +927,16 @@ class Management {
         : 'Nenhuma palavra filtrada';
       
       const linkFiltering = group.filters && group.filters.links 
-        ? 'Ativado' 
-        : 'Desativado';
+        ? 'Sim' 
+        : 'Não';
       
       const personFilters = group.filters && group.filters.people && group.filters.people.length > 0
         ? group.filters.people.join(', ')
         : 'Nenhuma pessoa filtrada';
       
       const nsfwFiltering = group.filters && group.filters.nsfw 
-        ? 'Ativado' 
-        : 'Desativado';
+        ? 'Sim' 
+        : 'Não';
       
       // Formata data de criação
       const creationDate = new Date(group.createdAt).toLocaleString("pt-BR");
@@ -978,12 +978,42 @@ class Management {
       const kickChannels = Array.isArray(group.kick) ? group.kick : [];
       const youtubeChannels = Array.isArray(group.youtube) ? group.youtube : [];
       
+      // Função auxiliar para formatar as configurações de mídia
+      const formatMediaConfig = (config) => {
+        if (!config || !config.media || config.media.length === 0) {
+          return "Nenhuma mídia configurada";
+        }
+        
+        const mediaTypes = config.media.reduce((types, media) => {
+          if (!types.includes(media.type)) {
+            types.push(media.type);
+          }
+          return types;
+        }, []);
+        
+        return mediaTypes.join(", ");
+      };
+      
       // Constrói mensagem informativa
       let infoMessage = `*📊 Informações do Grupo*\n\n`;
       infoMessage += `*Nome:* ${group.name}\n`;
       infoMessage += `*ID:* ${group.id}\n`;
       infoMessage += `*Prefixo:* "${group.prefix}"\n`;
-      infoMessage += `*Data de Criação:* ${creationDate}\n\n`;
+      infoMessage += `*Data de Criação:* ${creationDate}\n`;
+      infoMessage += `*Pausado:* ${group.paused ? 'Sim' : 'Não'}\n\n`;
+      
+      // Adiciona informações de admins adicionais
+      const admins = group.additionalAdmins || [];
+      if (admins.length > 0) {
+        infoMessage += `*Administradores Adicionais:* ${admins.length}\n`;
+        for (let i = 0; i < Math.min(3, admins.length); i++) {
+          infoMessage += `- ${this.formatPhoneNumber(admins[i])}\n`;
+        }
+        if (admins.length > 3) {
+          infoMessage += `... e mais ${admins.length - 3} administradores\n`;
+        }
+        infoMessage += '\n';
+      }
       
       // Adiciona informações de armazenamento
       infoMessage += `*Armazenamento:*\n`;
@@ -993,7 +1023,7 @@ class Management {
       infoMessage += `*Configurações de Mensagens:*\n`;
       infoMessage += `- *Boas-vindas:* ${welcomeMessage}\n`;
       infoMessage += `- *Despedidas:* ${farewellMessage}\n`;
-      infoMessage += `- *Auto-STT:* ${group.autoStt ? 'Ativado' : 'Desativado'}\n\n`;
+      infoMessage += `- *Auto-STT:* ${group.autoStt ? 'Sim' : 'Não'}\n\n`;
       
       infoMessage += `*Filtros:*\n`;
       infoMessage += `- *Palavras:* ${wordFilters}\n`;
@@ -1001,75 +1031,125 @@ class Management {
       infoMessage += `- *Pessoas:* ${personFilters}\n`;
       infoMessage += `- *NSFW:* ${nsfwFiltering}\n\n`;
       
-      // NOVA SEÇÃO: Adiciona informações de streams configurados
+      // Adiciona informações de interações automáticas
+      if (group.interact) {
+        infoMessage += `*Interações Automáticas:*\n`;
+        infoMessage += `- *Ativado:* ${group.interact.enabled ? 'Sim' : 'Não'}\n`;
+        infoMessage += `- *Chance:* ${group.interact.chance/100}% (${group.interact.chance}/10000)\n`;
+        infoMessage += `- *Cooldown:* ${group.interact.cooldown} minutos\n\n`;
+      }
+      
+      // SEÇÃO DETALHADA: Adiciona informações de streams configurados
       infoMessage += `*Canais Monitorados:*\n`;
       
       // Twitch
       if (twitchChannels.length > 0) {
         infoMessage += `*Twitch (${twitchChannels.length}):*\n`;
         
-        // Lista no máximo 3 canais para não tornar a mensagem muito longa
-        const maxChannels = Math.min(3, twitchChannels.length);
-        for (let i = 0; i < maxChannels; i++) {
-          const channel = twitchChannels[i];
-          infoMessage += `- *${channel.channel}*: `;
-          infoMessage += `${channel.onConfig?.media?.length || 0} notif. online, `;
-          infoMessage += `${channel.offConfig?.media?.length || 0} notif. offline, `;
-          infoMessage += `título: ${channel.changeTitleOnEvent ? 'Sim' : 'Não'}, `;
-          infoMessage += `IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
+        for (const channel of twitchChannels) {
+          infoMessage += `- *${channel.channel}*:\n`;
+          
+          // Tipos de mídia configurados para online/offline
+          const onlineMedia = formatMediaConfig(channel.onConfig);
+          const offlineMedia = formatMediaConfig(channel.offConfig);
+          
+          infoMessage += `  • Mídias Online: ${onlineMedia}\n`;
+          infoMessage += `  • Mídias Offline: ${offlineMedia}\n`;
+          
+          // Configurações adicionais
+          infoMessage += `  • Mudar título do grupo: ${channel.changeTitleOnEvent ? 'Sim' : 'Não'}\n`;
+          
+          if (channel.changeTitleOnEvent) {
+            if (channel.onlineTitle) {
+              infoMessage += `  • Título Online: "${channel.onlineTitle}"\n`;
+            }
+            if (channel.offlineTitle) {
+              infoMessage += `  • Título Offline: "${channel.offlineTitle}"\n`;
+            }
+          }
+          
+          infoMessage += `  • Usar Thumbnail: ${channel.useThumbnail ? 'Sim' : 'Não'}\n`;
+          infoMessage += `  • Usar IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
+          
+          if (channel.groupPhotoOnline) {
+            infoMessage += `  • Foto de grupo Online: Configurada\n`;
+          }
+          
+          if (channel.groupPhotoOffline) {
+            infoMessage += `  • Foto de grupo Offline: Configurada\n`;
+          }
+          
+          infoMessage += '\n';
         }
-        
-        // Indica se existem mais canais
-        if (twitchChannels.length > maxChannels) {
-          infoMessage += `... e mais ${twitchChannels.length - maxChannels} canais\n`;
-        }
-        
-        infoMessage += '\n';
       }
       
       // Kick
       if (kickChannels.length > 0) {
         infoMessage += `*Kick (${kickChannels.length}):*\n`;
         
-        // Lista no máximo 3 canais
-        const maxChannels = Math.min(3, kickChannels.length);
-        for (let i = 0; i < maxChannels; i++) {
-          const channel = kickChannels[i];
-          infoMessage += `- *${channel.channel}*: `;
-          infoMessage += `${channel.onConfig?.media?.length || 0} notif. online, `;
-          infoMessage += `${channel.offConfig?.media?.length || 0} notif. offline, `;
-          infoMessage += `título: ${channel.changeTitleOnEvent ? 'Sim' : 'Não'}, `;
-          infoMessage += `IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
+        for (const channel of kickChannels) {
+          infoMessage += `- *${channel.channel}*:\n`;
+          
+          // Tipos de mídia configurados para online/offline
+          const onlineMedia = formatMediaConfig(channel.onConfig);
+          const offlineMedia = formatMediaConfig(channel.offConfig);
+          
+          infoMessage += `  • Mídias Online: ${onlineMedia}\n`;
+          infoMessage += `  • Mídias Offline: ${offlineMedia}\n`;
+          
+          // Configurações adicionais
+          infoMessage += `  • Mudar título do grupo: ${channel.changeTitleOnEvent ? 'Sim' : 'Não'}\n`;
+          
+          if (channel.changeTitleOnEvent) {
+            if (channel.onlineTitle) {
+              infoMessage += `  • Título Online: "${channel.onlineTitle}"\n`;
+            }
+            if (channel.offlineTitle) {
+              infoMessage += `  • Título Offline: "${channel.offlineTitle}"\n`;
+            }
+          }
+          
+          infoMessage += `  • Usar IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
+          
+          if (channel.groupPhotoOnline) {
+            infoMessage += `  • Foto de grupo Online: Configurada\n`;
+          }
+          
+          if (channel.groupPhotoOffline) {
+            infoMessage += `  • Foto de grupo Offline: Configurada\n`;
+          }
+          
+          infoMessage += '\n';
         }
-        
-        // Indica se existem mais canais
-        if (kickChannels.length > maxChannels) {
-          infoMessage += `... e mais ${kickChannels.length - maxChannels} canais\n`;
-        }
-        
-        infoMessage += '\n';
       }
       
       // YouTube
       if (youtubeChannels.length > 0) {
         infoMessage += `*YouTube (${youtubeChannels.length}):*\n`;
         
-        // Lista no máximo 3 canais
-        const maxChannels = Math.min(3, youtubeChannels.length);
-        for (let i = 0; i < maxChannels; i++) {
-          const channel = youtubeChannels[i];
-          infoMessage += `- *${channel.channel}*: `;
-          infoMessage += `${channel.onConfig?.media?.length || 0} notif. novos vídeos, `;
-          infoMessage += `título: ${channel.changeTitleOnEvent ? 'Sim' : 'Não'}, `;
-          infoMessage += `IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
+        for (const channel of youtubeChannels) {
+          infoMessage += `- *${channel.channel}*:\n`;
+          
+          // Tipos de mídia configurados 
+          const mediaConfig = formatMediaConfig(channel.onConfig);
+          
+          infoMessage += `  • Mídias Notificação: ${mediaConfig}\n`;
+          
+          // Configurações adicionais
+          infoMessage += `  • Mudar título do grupo: ${channel.changeTitleOnEvent ? 'Sim' : 'Não'}\n`;
+          
+          if (channel.changeTitleOnEvent && channel.onlineTitle) {
+            infoMessage += `  • Título Novo Vídeo: "${channel.onlineTitle}"\n`;
+          }
+          
+          infoMessage += `  • Usar IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
+          
+          if (channel.groupPhotoOnline) {
+            infoMessage += `  • Foto de grupo Novo Vídeo: Configurada\n`;
+          }
+          
+          infoMessage += '\n';
         }
-        
-        // Indica se existem mais canais
-        if (youtubeChannels.length > maxChannels) {
-          infoMessage += `... e mais ${youtubeChannels.length - maxChannels} canais\n`;
-        }
-        
-        infoMessage += '\n';
       }
       
       if (twitchChannels.length === 0 && kickChannels.length === 0 && youtubeChannels.length === 0) {
@@ -1079,32 +1159,30 @@ class Management {
       // Adiciona informação sobre comandos personalizados
       infoMessage += `*Comandos Personalizados (${activeCommands.length}):*\n`;
       
-      // Lista comandos personalizados com suas respostas (limitado a 10 para não ficar muito grande)
-      const maxCommands = Math.min(10, activeCommands.length);
+      // Lista comandos personalizados com suas informações detalhadas
+      const maxCommands = Math.min(5, activeCommands.length);
       for (let i = 0; i < maxCommands; i++) {
         const cmd = activeCommands[i];
         infoMessage += `- *${group.prefix}${cmd.startsWith}*: `;
         
-        // Mostra respostas (limitado a 2 por comando)
+        // Mostra contagem de respostas
         if (cmd.responses && cmd.responses.length > 0) {
-          const responsesCount = cmd.responses.length;
-          const maxResponses = Math.min(2, responsesCount);
+          infoMessage += `${cmd.responses.length} respostas`;
           
-          for (let j = 0; j < maxResponses; j++) {
-            // Limita tamanho da resposta para exibição
-            let response = cmd.responses[j];
-            if (response.length > 50) {
-              response = response.substring(0, 47) + '...';
+          // Mostra se tem restrições de horário/dias
+          if (cmd.allowedTimes) {
+            infoMessage += `, `;
+            if (cmd.allowedTimes.start && cmd.allowedTimes.end) {
+              infoMessage += `${cmd.allowedTimes.start}-${cmd.allowedTimes.end}`;
             }
-            infoMessage += `"${response}"`;
-            
-            if (j < maxResponses - 1) {
-              infoMessage += `, `;
+            if (cmd.allowedTimes.daysOfWeek && cmd.allowedTimes.daysOfWeek.length > 0) {
+              infoMessage += ` [${cmd.allowedTimes.daysOfWeek.join(', ')}]`;
             }
           }
           
-          if (responsesCount > maxResponses) {
-            infoMessage += ` (+ ${responsesCount - maxResponses} mais)`;
+          // Mostra contador de uso
+          if (cmd.count) {
+            infoMessage += `, usado ${cmd.count} vezes`;
           }
         } else {
           infoMessage += 'Sem respostas';
@@ -1116,6 +1194,20 @@ class Management {
       // Indica se existem mais comandos
       if (activeCommands.length > maxCommands) {
         infoMessage += `_... e mais ${activeCommands.length - maxCommands} comandos_\n`;
+      }
+      
+      // Números e strings ignorados
+      if (group.ignoredNumbers && group.ignoredNumbers.length > 0) {
+        infoMessage += `\n*Números Ignorados:* ${group.ignoredNumbers.length}\n`;
+      }
+      
+      if (group.mutedStrings && group.mutedStrings.length > 0) {
+        infoMessage += `*Strings Ignoradas:* ${group.mutedStrings.length}\n`;
+      }
+      
+      // Apelidos configurados
+      if (group.nicks && group.nicks.length > 0) {
+        infoMessage += `\n*Apelidos Configurados:* ${group.nicks.length}\n`;
       }
       
       return new ReturnMessage({
@@ -1778,13 +1870,9 @@ class Management {
         channel: channelName,
         onConfig: this.createDefaultNotificationConfig('twitch', channelName),
         offConfig: {
-          media: [{
-              "type": "text",
-              "content": "⚠️ ATENÇÃO!⚠️\n\n🌟 *{nomeCanal}* ✨ está *online* streamando *{jogo}*!\n_{titulo}_\n\nhttps://twitch.tv/{nomeCanal}"
-            }
-          ]
+          "media": []
         },
-        changeTitleOnEvent: false,
+        changeTitleOnEvent: true,
         useThumbnail: true,
         useAI: false
       };
@@ -2456,7 +2544,7 @@ class Management {
         offConfig: {
           media: []
         },
-        changeTitleOnEvent: false,
+        changeTitleOnEvent: true,
         useAI: false
       };
       
@@ -3070,7 +3158,7 @@ class Management {
         offConfig: {
           media: []
         },
-        changeTitleOnEvent: false,
+        changeTitleOnEvent: true,
         useAI: false
       };
       
