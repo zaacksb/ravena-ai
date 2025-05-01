@@ -33,8 +33,8 @@ async function getFishingData() {
     } catch (error) {
       // Se o arquivo não existir, cria um novo com estrutura padrão
       const defaultData = {
-        peixes: [], // Lista de tipos de peixes
-        fishingData: {} // Dados dos jogadores
+        fishingData: {}, // Dados dos jogadores
+        groupData: {}  // Dados por grupo
       };
       await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(defaultData, null, 2));
       return defaultData;
@@ -42,13 +42,22 @@ async function getFishingData() {
 
     // Lê o arquivo
     const data = await fs.readFile(FISHING_DATA_PATH, 'utf8');
-    return JSON.parse(data);
+    const parsedData = JSON.parse(data);
+    
+    // Verifica se o campo groupData existe, caso contrário, adiciona-o
+    if (!parsedData.groupData) {
+      parsedData.groupData = {};
+      // Salva o arquivo atualizado
+      await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(parsedData, null, 2));
+    }
+    
+    return parsedData;
   } catch (error) {
     logger.error('Erro ao ler dados de pesca:', error);
     // Retorna objeto padrão em caso de erro
     return {
-      peixes: [],
-      fishingData: {}
+      fishingData: {},
+      groupData: {}
     };
   }
 }
@@ -118,6 +127,7 @@ async function fishCommand(bot, message, args, group) {
     const chatId = message.group || message.author;
     const userId = message.author;
     const userName = message.authorName || "Pescador";
+    const groupId = message.group; // ID do grupo, se for uma mensagem de grupo
     
     // Verifica cooldown
     const now = Math.floor(Date.now() / 1000);
@@ -149,17 +159,47 @@ async function fishCommand(bot, message, args, group) {
       fishingData.fishingData[userId].name = userName;
     }
     
+    // Inicializa os dados do grupo se for uma mensagem de grupo e não existirem
+    if (groupId && !fishingData.groupData[groupId]) {
+      fishingData.groupData[groupId] = {};
+    }
+    
+    // Inicializa os dados do usuário no grupo se for uma mensagem de grupo
+    if (groupId && !fishingData.groupData[groupId][userId]) {
+      fishingData.groupData[groupId][userId] = {
+        name: userName,
+        totalWeight: 0,
+        biggestFish: null,
+        totalCatches: 0
+      };
+    } else if (groupId) {
+      // Atualiza nome do usuário no grupo se mudou
+      fishingData.groupData[groupId][userId].name = userName;
+    }
+    
     // Obtém o peixe aleatório
-    const fish = getRandomFish(fishingData.peixes);
+    const fish = await getRandomFish();
     
     // Atualiza estatísticas do usuário
     fishingData.fishingData[userId].totalCatches++;
     fishingData.fishingData[userId].totalWeight += fish.weight;
     
-    // Verifica se é o maior peixe
+    // Atualiza estatísticas do usuário no grupo, se for uma mensagem de grupo
+    if (groupId) {
+      fishingData.groupData[groupId][userId].totalCatches++;
+      fishingData.groupData[groupId][userId].totalWeight += fish.weight;
+    }
+    
+    // Verifica se é o maior peixe do usuário
     if (!fishingData.fishingData[userId].biggestFish || 
         fish.weight > fishingData.fishingData[userId].biggestFish.weight) {
       fishingData.fishingData[userId].biggestFish = fish;
+    }
+    
+    // Verifica se é o maior peixe do usuário no grupo, se for uma mensagem de grupo
+    if (groupId && (!fishingData.groupData[groupId][userId].biggestFish || 
+                     fish.weight > fishingData.groupData[groupId][userId].biggestFish.weight)) {
+      fishingData.groupData[groupId][userId].biggestFish = fish;
     }
     
     // Adiciona o peixe à lista do usuário, mantendo apenas os MAX_FISH_PER_USER mais recentes
@@ -287,7 +327,7 @@ async function myFishCommand(bot, message, args, group) {
 }
 
 /**
- * Mostra o ranking de pescaria
+ * Mostra o ranking de pescaria do grupo atual
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
@@ -298,20 +338,31 @@ async function fishingRankingCommand(bot, message, args, group) {
   try {
     // Obtém ID do chat
     const chatId = message.group || message.author;
+    const groupId = message.group;
+    
+    // Verifica se o comando foi executado em um grupo
+    if (!groupId) {
+      return new ReturnMessage({
+        chatId,
+        content: '🎣 Este comando só funciona em grupos. Use-o em um grupo para ver o ranking desse grupo específico.'
+      });
+    }
     
     // Obtém dados de pesca
     const fishingData = await getFishingData();
     
-    // Verifica se há dados de pescaria
-    if (!fishingData.fishingData || Object.keys(fishingData.fishingData).length === 0) {
+    // Verifica se há dados para este grupo
+    if (!fishingData.groupData || 
+        !fishingData.groupData[groupId] || 
+        Object.keys(fishingData.groupData[groupId]).length === 0) {
       return new ReturnMessage({
         chatId,
-        content: '🎣 Ainda não há dados de pescaria. Use !pescar para começar.'
+        content: '🎣 Ainda não há dados de pescaria neste grupo. Use !pescar para começar.'
       });
     }
     
-    // Converte dados para array
-    const players = Object.entries(fishingData.fishingData).map(([id, data]) => ({
+    // Obtém os dados dos jogadores deste grupo
+    const players = Object.entries(fishingData.groupData[groupId]).map(([id, data]) => ({
       id,
       ...data
     }));
@@ -332,9 +383,9 @@ async function fishingRankingCommand(bot, message, args, group) {
     }
     
     // Prepara a mensagem de ranking
-    let rankingMessage = `🏆 *Ranking de Pescaria* (${rankingType === 'weight' ? 'Peso Total' : 'Quantidade Total'})\n\n`;
+    let rankingMessage = `🏆 *Ranking de Pescaria deste Grupo* (${rankingType === 'weight' ? 'Peso Total' : 'Quantidade Total'})\n\n`;
     
-    // Lista os 10 primeiros jogadores
+    // Lista os jogadores
     const topPlayers = players.slice(0, 10);
     topPlayers.forEach((player, index) => {
       const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
@@ -447,19 +498,28 @@ async function listFishTypesCommand(bot, message, args, group) {
     // Obtém ID do chat
     const chatId = message.group || message.author;
     
-    // Obtém dados de pesca
-    const fishingData = await getFishingData();
-    
-    // Verifica se há peixes
-    if (!fishingData.peixes || fishingData.peixes.length === 0) {
+    // Obtém peixes das custom-variables
+    let fishArray = [];
+    try {
+      const customVariables = await database.getCustomVariables();
+      if (customVariables?.peixes && Array.isArray(customVariables.peixes) && customVariables.peixes.length > 0) {
+        fishArray = customVariables.peixes;
+      } else {
+        return new ReturnMessage({
+          chatId,
+          content: '🎣 Ainda não há tipos de peixes definidos nas variáveis personalizadas. O sistema usará peixes padrão ao pescar.'
+        });
+      }
+    } catch (error) {
+      logger.error('Erro ao obter peixes de custom-variables:', error);
       return new ReturnMessage({
         chatId,
-        content: '🎣 Ainda não há tipos de peixes definidos. O sistema usará peixes padrão.'
+        content: '❌ Ocorreu um erro ao buscar os tipos de peixes. Por favor, tente novamente.'
       });
     }
     
     // Ordena alfabeticamente
-    const sortedFishes = [...fishingData.peixes].sort();
+    const sortedFishes = [...fishArray].sort();
     
     // Prepara a mensagem
     let fishMessage = '🐟 *Lista de Peixes Disponíveis*\n\n';
@@ -527,7 +587,7 @@ const commands = [
   
   new Command({
     name: 'pesca-ranking',
-    description: 'Mostra o ranking de pescaria',
+    description: 'Mostra o ranking de pescaria do grupo atual',
     category: "jogos",
     cooldown: 30,
     reactions: {
