@@ -755,4 +755,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands, processStopGameResponse };h
+module.exports = { commands, processStopGameResponse };
