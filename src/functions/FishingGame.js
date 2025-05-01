@@ -504,7 +504,7 @@ const commands = [
       error: "❌"
     },
     method: biggestFishCommand
-  })
+  }),
   new Command({
     name: 'pesca-peixes',
     description: 'Lista todos os tipos de peixes disponíveis',
