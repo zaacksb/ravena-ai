@@ -266,6 +266,8 @@ async function sendCommandList(bot, message, args, group) {
     // 2. Comandos Fixos por categoria
     if(!group){
       menuText += '📌 *PV da _ravena_:*\n';
+    } else {
+      menuText += `> _Grupo *${group.name}*_`;
     }
     
     // Processa cada categoria na ordem definida em CATEGORY_EMOJIS
