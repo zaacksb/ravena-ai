@@ -12,7 +12,7 @@ const database = Database.getInstance();
 // Constantes do jogo
 const MAX_FISH_PER_USER = 10;
 const MIN_FISH_WEIGHT = 1;
-const MAX_FISH_WEIGHT = 51;
+const MAX_FISH_WEIGHT = 30;
 const FISHING_COOLDOWN = 5 * 60; // 5 minutos em segundos
 
 // Armazena os cooldowns de pesca
