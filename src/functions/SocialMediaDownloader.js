@@ -4,18 +4,141 @@ const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
-const SocialMediaCacheManager = require('../utils/SocialMediaCacheManager')
 const Database = require('../utils/Database');
 const crypto = require('crypto');
+const youtubedl = require('youtube-dl-exec');
 
 const logger = new Logger('social-media-downloader');
 const database = Database.getInstance();
 
+// Sistema de cache para o SocialMediaDownloader
+class SMDCacheManager {
+  constructor(databasePath) {
+    this.cachePath = path.join(databasePath, "smd-cache.json");
+  }
+
+  /**
+   * Obtém o timestamp atual no formato legível
+   * @returns {string} Timestamp formatado
+   */
+  getTimestamp() {
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000; // Offset em milissegundos
+    const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().replace(/T/, ' ').replace(/\..+/, '');
+    return localISOTime;
+  }
+
+  /**
+   * Lê o arquivo de cache, criando-o se não existir
+   * @returns {Promise<Object>} Objeto de cache parseado
+   */
+  async _readCache() {
+    try {
+      const cacheContent = await fs.readFile(this.cachePath, 'utf8');
+      return JSON.parse(cacheContent);
+    } catch (error) {
+      // Se o arquivo não existe ou não pode ser lido, retorna um cache vazio
+      logger.error(`[_readCache] Erro, reiniciando cache.`);
+      await this._writeCache({});
+      return {};
+    }
+  }
+
+  /**
+   * Escreve o cache inteiro no arquivo
+   * @param {Object} cache - O objeto de cache a ser escrito
+   */
+  async _writeCache(cache) {
+    try {
+      await fs.writeFile(this.cachePath, JSON.stringify(cache, null, 2), 'utf8');
+    } catch (error) {
+      logger.error('Erro ao escrever cache:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica se um arquivo existe
+   * @param {string} filePath - Caminho do arquivo
+   * @returns {Promise<boolean>} Verdadeiro se o arquivo existir
+   */
+  async fileExists(filePath) {
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Armazena informações de download no cache
+   * @param {string} url - URL do conteúdo baixado
+   * @param {Array<string>} filePaths - Caminhos dos arquivos baixados
+   * @param {string} platform - Plataforma de origem (instagram, tiktok, etc)
+   */
+  async storeDownloadInfo(url, filePaths, platform) {
+    const cache = await this._readCache();
+    
+    // Normaliza a URL como chave do cache
+    const normalizedUrl = url.trim().toLowerCase();
+    
+    // Armazena os dados no cache
+    cache[normalizedUrl] = {
+      url: url,
+      platform: platform,
+      files: filePaths,
+      timestamp: this.getTimestamp(),
+      ts: Math.round(+new Date()/1000)
+    };
+    
+    // Salva o cache atualizado
+    await this._writeCache(cache);
+  }
+
+  /**
+   * Verifica se o conteúdo da URL já foi baixado e ainda existe
+   * @param {string} url - URL do conteúdo
+   * @returns {Promise<Object|null>} Informações do cache ou null se não existe
+   */
+  async getCachedDownload(url) {
+    const cache = await this._readCache();
+    const normalizedUrl = url.trim().toLowerCase();
+    
+    if (!cache[normalizedUrl]) {
+      return null;
+    }
+    
+    const cacheEntry = cache[normalizedUrl];
+    
+    // Verifica se todos os arquivos ainda existem
+    if (cacheEntry.files && Array.isArray(cacheEntry.files)) {
+      for (const filePath of cacheEntry.files) {
+        const fileStillExists = await this.fileExists(filePath);
+        if (!fileStillExists) {
+          // Se algum arquivo não existir, considera o cache inválido
+          logger.info(`[getCachedDownload] Arquivo em cache não encontrado: ${filePath}`);
+          return null;
+        }
+      }
+      
+      // Todos os arquivos existem, retorna a entrada do cache
+      logger.info(`[getCachedDownload] Cache encontrado para: ${url}`);
+      return {
+        files: cacheEntry.files,
+        platform: cacheEntry.platform,
+        fromCache: true
+      };
+    }
+    
+    return null;
+  }
+}
+
 // Inicializa o cache manager
-const smdCacheManager = new SocialMediaCacheManager(database.databasePath);
+const smdCacheManager = new SMDCacheManager(database.databasePath);
 
 /**
- * Extrai a plataforma da URL
+ * Detecta a plataforma da URL
  * @param {string} url - URL do conteúdo
  * @returns {string|null} - Nome da plataforma ou null se não for reconhecida
  */
@@ -58,60 +181,6 @@ function detectPlatform(url) {
 }
 
 /**
- * Executa o programa SMD para baixar o conteúdo
- * @param {string} url - URL do conteúdo
- * @returns {Promise<Array<string>>} - Array com caminhos dos arquivos baixados
- */
-function executeSMD(url) {
-  return new Promise((resolve, reject) => {
-    const smdPath = process.env.SMD_PATH;
-    const outputFolder = process.env.DL_FOLDER;
-    
-    if (!smdPath || !outputFolder) {
-      return reject(new Error('Configuração SMD_PATH ou DL_FOLDER não definida no .env'));
-    }
-    
-    const command = `"${smdPath}" -u "${url}" -o "${outputFolder}"`;
-    logger.info(`Executando: ${command}`);
-    
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        logger.error(`Erro ao executar SMD: ${error.message}`);
-        return reject(error);
-      }
-      
-      if (stderr) {
-        logger.warn(`SMD stderr: ${stderr}`);
-      }
-      
-      logger.info(`SMD stdout: ${stdout}`);
-      
-      // Extrai o JSON da saída (último item na saída)
-      try {
-        // Encontra o último [ para começar o JSON
-        const startJsonIndex = stdout.lastIndexOf('[');
-        
-        if (startJsonIndex === -1) {
-          return reject(new Error('Não foi possível encontrar a lista de arquivos na saída'));
-        }
-        
-        const jsonOutput = stdout.substring(startJsonIndex);
-        const files = JSON.parse(jsonOutput);
-        
-        if (!Array.isArray(files)) {
-          return reject(new Error('A saída do SMD não é um array válido'));
-        }
-        
-        resolve(files);
-      } catch (parseError) {
-        logger.error(`Erro ao processar saída do SMD: ${parseError.message}`);
-        reject(parseError);
-      }
-    });
-  });
-}
-
-/**
  * Lê o conteúdo de arquivos de texto encontrados nos arquivos baixados
  * @param {Array<string>} filePaths - Caminhos dos arquivos baixados
  * @returns {Promise<string|null>} - Conteúdo do arquivo de texto ou null
@@ -130,6 +199,122 @@ async function readTextFileContent(filePaths) {
   } catch (error) {
     logger.error(`Erro ao ler arquivo de texto: ${error.message}`);
     return null;
+  }
+}
+
+/**
+ * Download genérico usando youtube-dl-exec
+ * @param {string} url - URL do conteúdo
+ * @param {string} platform - Plataforma identificada
+ * @returns {Promise<Array<string>>} - Array com caminhos dos arquivos baixados
+ */
+async function downloadWithYoutubeDL(url, platform) {
+  // Gera um nome temporário para o arquivo
+  const hash = crypto.randomBytes(2).toString('hex');
+  const tempName = `smd-${platform}-${hash}`;
+  const outputPath = path.join(process.env.DL_FOLDER, `${tempName}.%(ext)s`);
+  
+  try {
+    logger.info(`Baixando de ${platform}: ${url}`);
+    
+    const options = {
+      o: outputPath,
+      f: "best",
+      cookies: path.join(database.databasePath, "smd_cookies.txt"),
+      ffmpegLocation: process.env.FFMPEG_PATH,
+    };
+    
+    // Para outros sites, ajusta as opções conforme necessário
+    if (platform === 'tiktok') {
+      options.f = "(bestvideo+bestaudio/best)[filesize<55M]";
+    } else if (['facebook', 'twitter', 'x'].includes(platform)) {
+      options.f = "(bestvideo+bestaudio/best)[filesize<55M]";
+    }
+    
+    const result = await youtubedl(url, options);
+    logger.info(`Download concluído: ${result}`);
+    
+    // Busca arquivos baixados na pasta de destino
+    const dlFolder = process.env.DL_FOLDER;
+    const files = await fs.readdir(dlFolder);
+    const downloadedFiles = files
+      .filter(file => file.startsWith(`smd-${platform}-${hash}`))
+      .map(file => path.join(dlFolder, file));
+    
+    return downloadedFiles;
+  } catch (error) {
+    logger.error(`Erro ao baixar com youtube-dl: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Download de conteúdo do Instagram usando instaloader
+ * @param {string} url - URL do Instagram
+ * @returns {Promise<Array<string>>} - Array com caminhos dos arquivos baixados
+ */
+async function downloadInstagram(url) {
+  try {
+    // Extrai o shortcode da URL
+    let shortcode = '';
+    if (url.includes('/p/')) {
+      shortcode = url.split('/p/')[1].split('/')[0];
+    } else if (url.includes('/reel/')) {
+      shortcode = url.split('/reel/')[1].split('/')[0];
+    } else {
+      // Tenta extrair de qualquer URL
+      const segments = url.split('/').filter(s => s.length > 0);
+      shortcode = segments[segments.length - 1] || segments[segments.length - 2];
+    }
+    
+    if (!shortcode) {
+      throw new Error('Não foi possível extrair o ID da postagem do Instagram');
+    }
+    
+    logger.info(`Baixando postagem do Instagram ${shortcode}`);
+    
+    // Pasta temporária para download
+    const hash = crypto.randomBytes(2).toString('hex');
+    const tempFolder = path.join(process.env.DL_FOLDER, `insta-${hash}`);
+    await fs.mkdir(tempFolder, { recursive: true });
+    
+    // Constrói o comando instaloader
+    let instaloaderCmd = `"${process.env.INSTALOADER_PATH}" --dirname-pattern "${tempFolder}" --no-video-thumbnails --no-metadata-json --no-captions`;
+    
+    // Adiciona login se disponível
+    if (process.env.INSTA_SESSION) {
+      instaloaderCmd += ` --login "${process.env.INSTA_SESSION}"`;
+    }
+    
+    // Adiciona o shortcode
+    instaloaderCmd += ` -- -p ${shortcode}`;
+    
+    logger.info(`Executando comando: ${instaloaderCmd}`);
+    
+    // Executa o instaloader
+    return new Promise((resolve, reject) => {
+      exec(instaloaderCmd, async (error, stdout, stderr) => {
+        if (error) {
+          logger.error(`Erro ao executar instaloader: ${error.message}`);
+          return reject(error);
+        }
+        
+        // Lista arquivos da pasta temporária
+        try {
+          const files = await fs.readdir(tempFolder);
+          const downloadedFiles = files.map(file => path.join(tempFolder, file));
+          
+          logger.info(`Arquivos baixados do Instagram: ${JSON.stringify(downloadedFiles)}`);
+          resolve(downloadedFiles);
+        } catch (fsError) {
+          logger.error(`Erro ao listar arquivos baixados: ${fsError.message}`);
+          reject(fsError);
+        }
+      });
+    });
+  } catch (error) {
+    logger.error(`Erro ao baixar do Instagram: ${error.message}`);
+    throw error;
   }
 }
 
@@ -161,6 +346,11 @@ async function downloadSocialMedia(url, userId, callback) {
       return callback(new Error('Plataforma não suportada ou URL não reconhecida'), null);
     }
     
+    // Redireciona para o YouTube Downloader para links do YouTube
+    if (platform === 'youtube') {
+      return callback(new Error('Para baixar vídeos do YouTube, use o comando !yt'), null);
+    }
+    
     logger.info(`Baixando conteúdo de ${platform}: ${url}`);
     
     // Verifica se já existe no cache
@@ -183,9 +373,21 @@ async function downloadSocialMedia(url, userId, callback) {
       });
     }
     
-    // Executa o downloader
-    const files = await executeSMD(url);
+    // Baixa o conteúdo dependendo da plataforma
+    let files = [];
+    
+    if (platform === 'instagram') {
+      files = await downloadInstagram(url);
+    } else {
+      files = await downloadWithYoutubeDL(url, platform);
+    }
+    
     logger.info(`Arquivos baixados: ${JSON.stringify(files)}`);
+    
+    // Verifica se baixou algum arquivo
+    if (!files || files.length === 0) {
+      return callback(new Error('Não foi possível baixar nenhum arquivo da URL fornecida'), null);
+    }
     
     // Armazena no cache
     await smdCacheManager.storeDownloadInfo(url, files, platform);
@@ -226,7 +428,7 @@ async function downloadCommand(bot, message, args, group) {
   if (args.length === 0) {
     // Lista das plataformas suportadas
     const supportedPlatforms = [
-      '📹 *YouTube*',
+      '📹 *YouTube* (use !yt)',
       '📱 *TikTok*',
       '📸 *Instagram*',
       '👥 *Facebook*',

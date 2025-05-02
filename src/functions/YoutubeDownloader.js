@@ -199,7 +199,7 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
             recodeVideo: "mp4",
             audioFormat: "aac",
             ffmpegLocation: process.env.FFMPEG_PATH,
-            cookies: path.join(database.databasePath,"www.youtube.com_cookies.txt")
+            cookies: path.join(database.databasePath,"smd_cookies.txt")
           }
         ).then(output => {
           if(output.fromCache){
