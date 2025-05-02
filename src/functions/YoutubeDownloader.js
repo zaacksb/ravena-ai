@@ -179,7 +179,7 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
     // Baixa video
     const hash = crypto.randomBytes(2).toString('hex');
     let nomeVideoTemp = `ytdlp-${hash}`; // ${dadosSolicitante}
-    let destinoVideo = path.join(process.env.YOUTUBE_DL_FOLDER,`${nomeVideoTemp}_v.mp4`);
+    let destinoVideo = path.join(process.env.DL_FOLDER,`${nomeVideoTemp}_v.mp4`);
     logger.info(`[baixarVideoYoutube][${nomeVideoTemp}] Buscando info do video '${urlSafe}'`);
     
     // Pega dados primeiro
@@ -234,7 +234,7 @@ async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
     // Baixa video
     const hash = crypto.randomBytes(2).toString('hex');
     let nomeVideoTemp = `ytdlp-${hash}`; // ${dadosSolicitante}
-    let destinoVideo = path.join(process.env.YOUTUBE_DL_FOLDER,`${nomeVideoTemp}_a.mp3`);
+    let destinoVideo = path.join(process.env.DL_FOLDER,`${nomeVideoTemp}_a.mp3`);
     logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Buscando info do video '${urlSafe}'`);
     
     // Pega dados primeiro
