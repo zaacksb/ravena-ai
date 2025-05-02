@@ -9,7 +9,7 @@ const logger = new Logger('anonymous-message');
 const database = Database.getInstance();
 
 // Constantes
-const COOLDOWN_HOURS = 12; // Cooldown de 12 horas
+const COOLDOWN_HOURS = 6; // Cooldown de 12 horas
 const COOLDOWN_MS = COOLDOWN_HOURS * 60 * 60 * 1000; // Cooldown em milissegundos
 
 // Caminho para o arquivo de mensagens anônimas
@@ -87,13 +87,13 @@ function saveAnonMessages(messages) {
  * @param {string} userId - ID do usuário
  * @returns {object} - Objeto com status e tempo restante em horas
  */
-function checkUserCooldown(userId) {
+function checkUserCooldown(userId, targetGroup) {
   const messages = getAnonMessages();
   const now = Date.now();
   
   // Encontra a mensagem mais recente do usuário
   const lastMessage = messages
-    .filter(msg => msg.senderId === userId)
+    .filter(msg => msg.senderId === userId && msg.targetGroupName.toLowerCase() === targetGroup.toLowerCase())
     .sort((a, b) => b.timestamp - a.timestamp)[0];
   
   if (!lastMessage) {
@@ -131,8 +131,11 @@ async function anonymousMessage(bot, message, args, group) {
       });
     }
     
+    // Obtém o ID do grupo alvo
+    const targetGroupName = args[0].toLowerCase();
+
     // Verifica cooldown
-    const cooldownCheck = checkUserCooldown(senderId);
+    const cooldownCheck = checkUserCooldown(senderId, targetGroupName);
     if (cooldownCheck.onCooldown) {
       return new ReturnMessage({
         chatId: senderId,
@@ -140,8 +143,6 @@ async function anonymousMessage(bot, message, args, group) {
       });
     }
     
-    // Obtém o ID do grupo alvo
-    const targetGroupName = args[0].toLowerCase();
     
     // Obtém a mensagem a ser enviada
     const anonymousText = args.slice(1).join(' ');
