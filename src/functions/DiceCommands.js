@@ -69,7 +69,10 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
       if (!match) {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Formato inválido. Use algo como: d20, 2d6, d8+3, 3d10-2'
+          content: 'Formato inválido. Use algo como: d20, 2d6, d8+3, 3d10-2',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
       
@@ -92,7 +95,10 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
       returnMessages.push(
         new ReturnMessage({
           chatId: chatId,
-          content: `⚠️ Número máximo de dados é ${MAX_DICE}.`
+          content: `⚠️ Número máximo de dados é ${MAX_DICE}.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         })
       );
       numDice = MAX_DICE;
@@ -102,7 +108,10 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
       returnMessages.push(
         new ReturnMessage({
           chatId: chatId,
-          content: `⚠️ Número máximo de faces é ${MAX_SIDES}.`
+          content: `⚠️ Número máximo de faces é ${MAX_SIDES}.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         })
       );
       numSides = MAX_SIDES;
@@ -209,7 +218,10 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
     const chatId = message.group || message.author;
     return new ReturnMessage({
       chatId: chatId,
-      content: '❌ Erro ao rolar dados. Por favor, tente novamente.'
+      content: '❌ Erro ao rolar dados. Por favor, tente novamente.',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }

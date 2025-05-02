@@ -217,7 +217,10 @@ async function newsCommand(bot, message, args, group) {
             // Formato de data inválido
             return new ReturnMessage({
               chatId: chatId,
-              content: `❌ Formato de data não reconhecido. Tente usar formatos como "hoje", "ontem", "segunda-feira passada", "19/04/2025" ou "YYYY-MM-DD".\n\n${stringDatasDisponiveis}`
+              content: `❌ Formato de data não reconhecido. Tente usar formatos como "hoje", "ontem", "segunda-feira passada", "19/04/2025" ou "YYYY-MM-DD".\n\n${stringDatasDisponiveis}`,
+              options: {
+                quotedMessageId: message.origin.id._serialized
+              }
             });
           }
         }
@@ -243,6 +246,9 @@ async function newsCommand(bot, message, args, group) {
         content: newsContent,
         reactions: {
           after: "📰"
+        },
+        options: {
+          quotedMessageId: message.origin.id._serialized
         }
       });
     } catch (error) {
@@ -255,6 +261,9 @@ async function newsCommand(bot, message, args, group) {
         content: `ℹ️ *MuNews não encontrada para ${formattedDate}*\n\nAs MuNews geralmente chegam entre 06:00 e 7:30 da manhã. Tente novamente mais tarde ou verifique a data informada.\n\n${stringDatasDisponiveis}`,
         reactions: {
           after: "⏰"
+        },
+        options: {
+          quotedMessageId: message.origin.id._serialized
         }
       });
     }

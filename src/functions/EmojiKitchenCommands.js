@@ -3,8 +3,78 @@ const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
 const { MessageMedia } = require('whatsapp-web.js');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const Database = require('../utils/Database');
+const database = Database.getInstance();
 
 const logger = new Logger('emoji-kitchen-commands');
+
+// Diretório para armazenar os emojis em cache
+const EMOJI_CACHE_DIR = path.join(database.databasePath, 'media', 'emojikitchen');
+
+// Certifica-se de que o diretório de cache existe
+try {
+  if (!fs.existsSync(EMOJI_CACHE_DIR)) {
+    fs.mkdirSync(EMOJI_CACHE_DIR, { recursive: true });
+    logger.info(`Diretório de cache criado: ${EMOJI_CACHE_DIR}`);
+  }
+} catch (error) {
+  logger.error(`Erro ao criar diretório de cache: ${error.message}`);
+}
+
+/**
+ * Gera um hash único para uma combinação de emojis
+ * @param {string} emoji1 - Primeiro emoji
+ * @param {string} emoji2 - Segundo emoji
+ * @returns {string} - Hash da combinação
+ */
+function generateEmojiHash(emoji1, emoji2) {
+  // Ordenar os emojis para que a combinação seja consistente independente da ordem
+  const emojis = [emoji1, emoji2].sort().join('_');
+  return crypto.createHash('md5').update(emojis).digest('hex');
+}
+
+/**
+ * Verifica se a combinação de emojis já existe em cache
+ * @param {string} emoji1 - Primeiro emoji
+ * @param {string} emoji2 - Segundo emoji
+ * @returns {string|null} - Caminho para o arquivo em cache ou null se não existir
+ */
+function getEmojiFromCache(emoji1, emoji2) {
+  const hash = generateEmojiHash(emoji1, emoji2);
+  const filePath = path.join(EMOJI_CACHE_DIR, `${hash}.png`);
+  
+  if (fs.existsSync(filePath)) {
+    logger.debug(`Emoji em cache encontrado: ${filePath}`);
+    return filePath;
+  }
+  
+  logger.debug(`Emoji não encontrado em cache: ${emoji1} + ${emoji2}`);
+  return null;
+}
+
+/**
+ * Salva a imagem da combinação de emojis em cache
+ * @param {string} emoji1 - Primeiro emoji
+ * @param {string} emoji2 - Segundo emoji
+ * @param {Buffer} imageBuffer - Buffer da imagem
+ * @returns {string} - Caminho para o arquivo salvo
+ */
+function saveEmojiToCache(emoji1, emoji2, imageBuffer) {
+  const hash = generateEmojiHash(emoji1, emoji2);
+  const filePath = path.join(EMOJI_CACHE_DIR, `${hash}.png`);
+  
+  try {
+    fs.writeFileSync(filePath, imageBuffer);
+    logger.info(`Emoji salvo em cache: ${filePath}`);
+    return filePath;
+  } catch (error) {
+    logger.error(`Erro ao salvar emoji em cache: ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Extrai os primeiros dois emojis de um texto
@@ -79,6 +149,33 @@ async function emojiKitchenCommand(bot, message, args, group) {
     
     logger.debug(`Processando Emoji Kitchen para: ${emojis[0]} + ${emojis[1]}`);
     
+    // Verificar se os emojis já estão em cache
+    const cachedFilePath = getEmojiFromCache(emojis[0], emojis[1]);
+    
+    if (cachedFilePath) {
+      logger.info(`Usando emoji em cache: ${emojis[0]} + ${emojis[1]}`);
+      
+      try {
+        // Criar MessageMedia a partir do arquivo em cache
+        const media = MessageMedia.fromFilePath(cachedFilePath);
+        
+        // Retorna como sticker
+        return new ReturnMessage({
+          chatId: chatId,
+          content: media,
+          options: {
+            sendMediaAsSticker: true,
+            stickerAuthor: "ravena",
+            stickerName: `Emojik: ${emojis[0]}+${emojis[1]}`,
+            quotedMessageId: message.origin.id._serialized
+          }
+        });
+      } catch (error) {
+        logger.error(`Erro ao criar MessageMedia do arquivo em cache: ${error.message}`);
+        // Continua para baixar da API em caso de erro
+      }
+    }
+    
     // Construir URL para o Emoji Kitchen
     const emoji1 = encodeURIComponent(emojis[0]);
     const emoji2 = encodeURIComponent(emojis[1]);
@@ -86,7 +183,15 @@ async function emojiKitchenCommand(bot, message, args, group) {
     
     // Baixar imagem
     try {
-      const media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
+      // Baixar a imagem usando axios para obter o buffer
+      const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      const imageBuffer = Buffer.from(response.data);
+      
+      // Salvar a imagem em cache
+      saveEmojiToCache(emojis[0], emojis[1], imageBuffer);
+      
+      // Criar MessageMedia a partir do buffer
+      const media = new MessageMedia('image/png', imageBuffer.toString('base64'));
       
       // Retorna como sticker
       return new ReturnMessage({

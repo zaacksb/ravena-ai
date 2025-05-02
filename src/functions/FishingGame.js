@@ -133,7 +133,10 @@ async function fishCommand(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId,
-        content: `🎣 ${userName}, você precisa esperar ${minutes}m ${seconds}s para pescar novamente.`
+        content: `🎣 ${userName}, você precisa esperar ${minutes}m ${seconds}s para pescar novamente.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -239,6 +242,9 @@ async function fishCommand(bot, message, args, group) {
       content: randomMessage + additionalInfo,
       reactions: {
         after: "🎣"
+      },
+      options: {
+        quotedMessageId: message.origin.id._serialized
       }
     });
   } catch (error) {
@@ -273,7 +279,10 @@ async function myFishCommand(bot, message, args, group) {
     if (!fishingData.fishingData[userId]) {
       return new ReturnMessage({
         chatId,
-        content: `🎣 ${userName}, você ainda não pescou nenhum peixe. Use !pescar para começar.`
+        content: `🎣 ${userName}, você ainda não pescou nenhum peixe. Use !pescar para começar.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -309,7 +318,10 @@ async function myFishCommand(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId,
-      content: fishMessage
+      content: fishMessage,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   } catch (error) {
     logger.error('Erro ao mostrar peixes do jogador:', error);

@@ -340,7 +340,10 @@ async function handleTranslation(bot, message, args, group) {
         chatId,
         content: 'Por favor, forneça o idioma de destino e o texto a ser traduzido.\n' +
                  'Exemplo: !traduzir en Olá, mundo!\n' +
-                 'Ou responda a uma mensagem com: !traduzir en'
+                 'Ou responda a uma mensagem com: !traduzir en',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -352,7 +355,10 @@ async function handleTranslation(bot, message, args, group) {
       return new ReturnMessage({
         chatId,
         content: `Idioma não reconhecido: "${args[0]}".\n` +
-                 'Exemplo de idiomas suportados: en (inglês), es (espanhol), fr (francês), etc.'
+                 'Exemplo de idiomas suportados: en (inglês), es (espanhol), fr (francês), etc.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -366,7 +372,10 @@ async function handleTranslation(bot, message, args, group) {
         if (!quotedMsg) {
           return new ReturnMessage({
             chatId,
-            content: 'Por favor, responda a uma mensagem ou forneça um texto para traduzir.'
+            content: 'Por favor, responda a uma mensagem ou forneça um texto para traduzir.',
+            options: {
+              quotedMessageId: message.origin.id._serialized
+            }
           });
         }
         
@@ -376,7 +385,10 @@ async function handleTranslation(bot, message, args, group) {
         logger.error('Erro ao obter mensagem citada:', error);
         return new ReturnMessage({
           chatId,
-          content: 'Erro ao obter a mensagem citada. Por favor, tente novamente.'
+          content: 'Erro ao obter a mensagem citada. Por favor, tente novamente.',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     } else {
@@ -387,7 +399,10 @@ async function handleTranslation(bot, message, args, group) {
     if (!textToTranslate || textToTranslate.trim() === '') {
       return new ReturnMessage({
         chatId,
-        content: 'Texto vazio. Por favor, forneça um texto para traduzir.'
+        content: 'Texto vazio. Por favor, forneça um texto para traduzir.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     

@@ -330,7 +330,10 @@ async function handleWeatherCommand(bot, message, args, group) {
       if (!quotedMsg) {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo'
+          content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
       
@@ -342,21 +345,16 @@ async function handleWeatherCommand(bot, message, args, group) {
       } else {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo'
+          content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     } 
     // Caso 2: Usuário fornece o nome de uma cidade
     else {
       const cityName = args.join(' ');
-      
-      // Envia mensagem de aguarde
-      returnMessages.push(
-        new ReturnMessage({
-          chatId: chatId,
-          content: `🔍 Buscando informações de clima para ${cityName}...`
-        })
-      );
       
       try {
         // Obtém coordenadas da cidade
@@ -367,7 +365,10 @@ async function handleWeatherCommand(bot, message, args, group) {
       } catch (error) {
         return new ReturnMessage({
           chatId: chatId,
-          content: `❌ Não foi possível encontrar a cidade: ${cityName}. Verifique o nome e tente novamente.`
+          content: `❌ Não foi possível encontrar a cidade: ${cityName}. Verifique o nome e tente novamente.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     }
@@ -382,7 +383,10 @@ async function handleWeatherCommand(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: weatherMessage
+        content: weatherMessage,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       })
     );
     

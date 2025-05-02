@@ -16,11 +16,16 @@ const llmService = new LLMService({});
 // Define os métodos de comando separadamente
 async function pingCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
+
+  const delayMsg = bot.getCurrentTimestamp() - (msg.timestamp ?? bot.getCurrentTimestamp());
   logger.debug(`Executando comando ping para ${chatId}`);
   
   return new ReturnMessage({
     chatId: chatId,
-    content: 'Pong! 🏓'
+    content: `Pong! 🏓 _(${delayMsg})_`,
+    options: {
+      quotedMessageId: message.origin.id._serialized
+    }
   });
 }
 
@@ -91,17 +96,23 @@ async function aiCommand(bot, message, args, group) {
     logger.debug('Comando ai chamado sem pergunta');
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Por favor, forneça uma pergunta. Exemplo: !ai Qual é a capital da França?'
+      content: 'Por favor, forneça uma pergunta. Exemplo: !ai Qual é a capital da França?',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
   
   logger.debug(`Comando ai com pergunta: ${question}`);
   
   // Primeiro, envia uma mensagem indicando que está processando
-  const processingMessage = new ReturnMessage({
+  bot.sendReturnMessages(new ReturnMessage({
     chatId: chatId,
-    content: `🔍 Processando: "${question}"...`
-  });
+    content: `🔍 Processando: "${question}"...`,
+    options: {
+      quotedMessageId: message.origin.id._serialized
+    }
+  }))
   
   // Obtém resposta da IA
   try {
@@ -115,13 +126,19 @@ async function aiCommand(bot, message, args, group) {
     // Retorna a resposta da IA
     return new ReturnMessage({
       chatId: chatId,
-      content: response
+      content: response,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   } catch (error) {
     logger.error('Erro ao obter completação LLM:', error);
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Desculpe, encontrei um erro ao processar sua solicitação.'
+      content: 'Desculpe, encontrei um erro ao processar sua solicitação.',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }
@@ -150,12 +167,18 @@ async function apelidoCommand(bot, message, args, group) {
       if (userNick) {
         return new ReturnMessage({
           chatId: group.id,
-          content: `Seu apelido atual é: ${userNick}`
+          content: `Seu apelido atual é: *${userNick}*`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       } else {
         return new ReturnMessage({
           chatId: group.id,
-          content: 'Você não tem um apelido definido. Use !apelido [apelido] para definir um.'
+          content: 'Você não tem um apelido definido.\nUse !apelido [apelido] para definir um.',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     }
@@ -167,7 +190,10 @@ async function apelidoCommand(bot, message, args, group) {
     if (nickname.length < 2) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'O apelido deve ter pelo menos 2 caracteres.'
+        content: 'O apelido deve ter pelo menos 2 caracteres.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -177,7 +203,10 @@ async function apelidoCommand(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: group.id,
-        content: `O apelido foi limitado a 20 caracteres: ${nickname}`
+        content: `O apelido foi limitado a 20 caracteres: *${nickname}*`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -205,7 +234,10 @@ async function apelidoCommand(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `Apelido definido: ${nickname}`
+      content: `Apelido definido: *${nickname}*`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
     });
   } catch (error) {
     logger.error('Erro ao definir apelido:', error);

@@ -34,7 +34,10 @@ async function searchAircraftRAB(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça a matrícula da aeronave. Exemplo: !rab PT-XYZ'
+        content: 'Por favor, forneça a matrícula da aeronave. Exemplo: !rab PT-XYZ',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -62,7 +65,10 @@ async function searchAircraftRAB(bot, message, args, group) {
       logger.info(`Matrícula ${marca} não encontrada.`);
       return new ReturnMessage({
         chatId: chatId,
-        content: `✈️ Consulta RAB - Matrícula '${marca}' não encontrada!`
+        content: `✈️ Consulta RAB - Matrícula '${marca}' não encontrada!`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     } 
     
@@ -89,7 +95,10 @@ async function searchAircraftRAB(bot, message, args, group) {
     // Retorna a mensagem com os dados da aeronave
     return new ReturnMessage({
       chatId: chatId,
-      content: retorno
+      content: retorno,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
     
   } catch (error) {
@@ -98,7 +107,10 @@ async function searchAircraftRAB(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Erro ao consultar o Registro Aeronáutico Brasileiro. Por favor, tente novamente mais tarde.'
+      content: 'Erro ao consultar o Registro Aeronáutico Brasileiro. Por favor, tente novamente mais tarde.',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }
@@ -119,7 +131,10 @@ async function searchWeb(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar tutorial javascript'
+        content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar tutorial javascript',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -192,7 +207,10 @@ async function searchWeb(bot, message, args, group) {
     // Retorna os resultados
     return new ReturnMessage({
       chatId: chatId,
-      content: resultsMessage
+      content: resultsMessage,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
     
     logger.info(`Resultados de busca enviados com sucesso para "${query}"`);
@@ -202,7 +220,10 @@ async function searchWeb(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Erro ao realizar busca na web. Por favor, tente novamente.'
+      content: 'Erro ao realizar busca na web. Por favor, tente novamente.',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }
@@ -223,7 +244,10 @@ async function searchImages(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar-img gatos fofos'
+        content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar-img gatos fofos',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -241,7 +265,10 @@ async function searchImages(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: `🔍 Buscando imagens para "${query}"...`
+        content: `🔍 Buscando imagens para "${query}"...`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       })
     );
     
@@ -267,7 +294,10 @@ async function searchImages(bot, message, args, group) {
       if (!results || results.length === 0) {
         return new ReturnMessage({
           chatId: chatId,
-          content: `Não foram encontradas imagens para "${query}". Tente outra consulta.`
+          content: `Não foram encontradas imagens para "${query}". Tente outra consulta.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
       
@@ -303,7 +333,8 @@ async function searchImages(bot, message, args, group) {
               chatId: chatId,
               content: media,
               options: {
-                caption: `Resultado ${i + 1} para "${query}" | Fonte: Unsplash`
+                caption: `Resultado ${i + 1} para "${query}" | Fonte: Unsplash`,
+                quotedMessageId: message.origin.id._serialized
               },
               delay: i * 1500 // Adiciona um pequeno atraso entre imagens
             })
@@ -323,7 +354,10 @@ async function searchImages(bot, message, args, group) {
         logger.warn(`Nenhuma imagem processada com sucesso para "${query}"`);
         return new ReturnMessage({
           chatId: chatId,
-          content: `Erro ao processar imagens para "${query}". Tente novamente mais tarde.`
+          content: `Erro ao processar imagens para "${query}". Tente novamente mais tarde.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     } catch (apiError) {
@@ -338,7 +372,10 @@ async function searchImages(bot, message, args, group) {
       if (isRateLimitError) {
         return new ReturnMessage({
           chatId: chatId,
-          content: `Limite de requisições de API excedido. Por favor, tente novamente mais tarde ou configure uma chave de API válida no arquivo .env (UNSPLASH_API_KEY=sua_chave_aqui).`
+          content: `Limite de requisições de API excedido. Por favor, tente novamente mais tarde ou configure uma chave de API válida no arquivo .env (UNSPLASH_API_KEY=sua_chave_aqui).`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
       
@@ -376,6 +413,7 @@ async function searchImages(bot, message, args, group) {
               chatId: chatId,
               content: media,
               options: {
+                quotedMessageId: message.origin.id._serialized,
                 caption: `Resultado ${i + 1} para "${query}"`
               },
               delay: i * 1000 // Adiciona um pequeno atraso entre imagens
@@ -392,7 +430,10 @@ async function searchImages(bot, message, args, group) {
       } else {
         return new ReturnMessage({
           chatId: chatId,
-          content: `Erro ao buscar imagens para "${query}". Tente novamente mais tarde.`
+          content: `Erro ao buscar imagens para "${query}". Tente novamente mais tarde.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
     }
@@ -402,7 +443,10 @@ async function searchImages(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Erro ao realizar busca de imagens. Por favor, tente novamente.'
+      content: 'Erro ao realizar busca de imagens. Por favor, tente novamente.',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
     });
   }
 }

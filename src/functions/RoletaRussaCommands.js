@@ -172,7 +172,10 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `☠️ ${userName} já está morto na roleta russa. Ressuscita em ${minutos}m${segundos}s.`
+        content: `☠️ ${userName} já está morto na roleta russa. Ressuscita em ${minutos}m${segundos}s.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -180,7 +183,10 @@ async function jogarRoletaRussa(bot, message, args, group) {
     if (dados.grupos[groupId].ultimoJogador === userId) {
       return new ReturnMessage({
         chatId: groupId,
-        content: `🔄 ${userName}, espere outra pessoa jogar antes de tentar novamente.`
+        content: `🔄 ${userName}, espere outra pessoa jogar antes de tentar novamente.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -231,7 +237,10 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `💥🔫 *BANG* - *F no chat* ${info}`
+        content: `💥🔫 *BANG* - *F no chat* ${info}`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     } else {
       // Jogador sobreviveu
@@ -240,7 +249,10 @@ async function jogarRoletaRussa(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `💨🔫 *click* - Tá *safe*! \`\`\`${jogadorDados.tentativasAtuais}\`\`\``
+        content: `💨🔫 *click* - Tá *safe*! \`\`\`${jogadorDados.tentativasAtuais}\`\`\``,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
   } catch (error) {

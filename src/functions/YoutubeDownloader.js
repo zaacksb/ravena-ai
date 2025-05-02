@@ -97,7 +97,10 @@ async function processYoutubeReaction(bot, message, emoji) {
     const chatId = message.group || message.author;
     const processingMsg = new ReturnMessage({
       chatId: chatId,
-      content: 'Baixando vídeo do YouTube...'
+      content: 'Baixando vídeo do YouTube...',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
     
     bot.sendReturnMessages(processingMsg);
@@ -109,7 +112,10 @@ async function processYoutubeReaction(bot, message, emoji) {
         
         const errorMsg = new ReturnMessage({
           chatId: chatId,
-          content: `Erro ao baixar vídeo: ${error.message}`
+          content: `Erro ao baixar vídeo: ${error.message}`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
         
         await bot.sendReturnMessages(errorMsg);
@@ -133,6 +139,9 @@ async function processYoutubeReaction(bot, message, emoji) {
           content: media,
           options: {
             caption: result.legenda
+          },
+          options: {
+            quotedMessageId: message.origin.id._serialized
           }
         });
         
@@ -149,7 +158,10 @@ async function processYoutubeReaction(bot, message, emoji) {
         
         const errorMsg = new ReturnMessage({
           chatId: chatId,
-          content: 'Erro ao enviar vídeo.'
+          content: 'Erro ao enviar vídeo.',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
         
         await bot.sendReturnMessages(errorMsg);
@@ -295,7 +307,10 @@ async function ytCommand(bot, message, args, group) {
     logger.debug('Comando yt chamado sem argumentos');
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Por favor, forneça um link do YouTube ou termo de busca. Exemplo: !yt https://youtu.be/dQw4w9WgXcQ ou !yt despacito'
+      content: 'Por favor, forneça um link do YouTube ou termo de busca. Exemplo: !yt https://youtu.be/dQw4w9WgXcQ ou !yt despacito',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
     });
   }
   
@@ -311,7 +326,10 @@ async function ytCommand(bot, message, args, group) {
     
     bot.sendReturnMessages(new ReturnMessage({
       chatId: chatId,
-      content: `🔍 Buscando: "${input}" no YouTube...`
+      content: `🔍 Buscando: "${input}" no YouTube...`,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     }));
     
     videoId = await searchYoutubeVideo(input);
@@ -319,7 +337,10 @@ async function ytCommand(bot, message, args, group) {
     if (!videoId) {
       return new ReturnMessage({
         chatId: chatId,
-        content: `❌ Nenhum vídeo encontrado para: "${input}"`
+        content: `❌ Nenhum vídeo encontrado para: "${input}"`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
   }
@@ -336,7 +357,10 @@ async function ytCommand(bot, message, args, group) {
         
         const errorMsg = new ReturnMessage({
           chatId: chatId,
-          content: `Erro ao baixar vídeo: ${error.message}`
+          content: `Erro ao baixar vídeo: ${error.message}`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
         
         await bot.sendReturnMessages(errorMsg);
@@ -354,6 +378,9 @@ async function ytCommand(bot, message, args, group) {
           content: media,
           options: {
             caption: result.legenda
+          },
+          options: {
+            quotedMessageId: message.origin.id._serialized
           }
         });
         
@@ -364,7 +391,10 @@ async function ytCommand(bot, message, args, group) {
         
         const errorMsg = new ReturnMessage({
           chatId: chatId,
-          content: 'Erro ao enviar vídeo.'
+          content: 'Erro ao enviar vídeo.',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
         
         await bot.sendReturnMessages(errorMsg);
@@ -390,7 +420,10 @@ async function srCommand(bot, message, args, group) {
     logger.debug('Comando sr chamado sem argumentos');
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Por favor, forneça um link do YouTube ou termo de busca. Exemplo: !sr https://youtu.be/dQw4w9WgXcQ ou !sr despacito'
+      content: 'Por favor, forneça um link do YouTube ou termo de busca. Exemplo: !sr https://youtu.be/dQw4w9WgXcQ ou !sr despacito',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
   
@@ -406,7 +439,10 @@ async function srCommand(bot, message, args, group) {
     
     bot.sendReturnMessages(new ReturnMessage({
       chatId: chatId,
-      content: `🔍 Buscando: "${input}" no YouTube...`
+      content: `🔍 Buscando: "${input}" no YouTube...`,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     }));
     
     videoId = await searchYoutubeVideo(input);
@@ -414,7 +450,10 @@ async function srCommand(bot, message, args, group) {
     if (!videoId) {
       return new ReturnMessage({
         chatId: chatId,
-        content: `❌ Nenhum vídeo encontrado para: "${input}"`
+        content: `❌ Nenhum vídeo encontrado para: "${input}"`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
   }
@@ -431,7 +470,10 @@ async function srCommand(bot, message, args, group) {
         
         const errorMsg = new ReturnMessage({
           chatId: chatId,
-          content: `Erro ao baixar áudio: ${error.message}`
+          content: `Erro ao baixar áudio: ${error.message}`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
         
         await bot.sendReturnMessages(errorMsg);
@@ -449,6 +491,9 @@ async function srCommand(bot, message, args, group) {
           content: media,
           options: {
             caption: result.legenda
+          },
+          options: {
+            quotedMessageId: message.origin.id._serialized
           }
         });
         

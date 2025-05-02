@@ -727,6 +727,10 @@ class WhatsAppBot {
       throw error;
     }
   }
+
+  getCurrentTimestamp(){
+    return Math.round(+new Date()/1000);
+  }
 }
 
 module.exports = WhatsAppBot;

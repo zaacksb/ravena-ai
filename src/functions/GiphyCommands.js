@@ -38,14 +38,7 @@ async function enviarGif(bot, message, args, group) {
         content: '⚠️ API do Giphy não configurada. Defina GIPHY_API_KEY no arquivo .env'
       });
     }
-    
-    // Envia mensagem de aguarde
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: '🔍 Buscando GIF...'
-      })
-    );
+  
     
     let gifUrl, gifTitle, gifRating, gifSource, gifTrending;
     let gifData;
@@ -66,7 +59,10 @@ async function enviarGif(bot, message, args, group) {
       if (!response.data || !response.data.data || response.data.data.length === 0) {
         return new ReturnMessage({
           chatId: chatId,
-          content: '❌ Não foi possível encontrar GIFs populares. Tente novamente mais tarde.'
+          content: '❌ Não foi possível encontrar GIFs populares. Tente novamente mais tarde.',
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
       
@@ -93,7 +89,10 @@ async function enviarGif(bot, message, args, group) {
       if (!response.data || !response.data.data || response.data.data.length === 0) {
         return new ReturnMessage({
           chatId: chatId,
-          content: `❌ Nenhum GIF encontrado para "${searchTerm}". Tente outra busca.`
+          content: `❌ Nenhum GIF encontrado para "${searchTerm}". Tente outra busca.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized
+          }
         });
       }
       
@@ -226,7 +225,10 @@ async function enviarGif(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: chatId,
-      content: `❌ ${errorMessage}`
+      content: `❌ ${errorMessage}`,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }

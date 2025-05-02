@@ -38,7 +38,6 @@ class Command {
     this.timeout = data.timeout || 30;              // Tempo máximo de execução (segundos)
     
     // Comportamento de resposta
-    this.reply = data.reply !== undefined ? data.reply : true; // Se deve responder à mensagem original
     this.deleteOnComplete = data.deleteOnComplete || false;    // Se deve excluir a mensagem original após concluir
     
     // Processamento e execução
@@ -156,7 +155,6 @@ class Command {
       reactions: this.reactions,
       cooldown: this.cooldown,
       timeout: this.timeout,
-      reply: this.reply,
       deleteOnComplete: this.deleteOnComplete,
       // Não inclui o method para evitar problemas de serialização de funções
       middlewares: this.middlewares.length,

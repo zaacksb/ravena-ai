@@ -200,7 +200,10 @@ async function pintoCommand(bot, message, args, group) {
     if (!message.group) {
       return new ReturnMessage({
         chatId: message.author,
-        content: 'Este jogo só pode ser usado em grupos.'
+        content: 'Este jogo só pode ser jogado em grupos.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -218,7 +221,10 @@ async function pintoCommand(bot, message, args, group) {
     if (cooldownStatus.inCooldown) {
       return new ReturnMessage({
         chatId: groupId,
-        content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${cooldownStatus.daysUntil} dia(s), dia ${formatDate(cooldownStatus.nextAvailable)}.`
+        content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${cooldownStatus.daysUntil} dia(s), dia ${formatDate(cooldownStatus.nextAvailable)}.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -287,14 +293,20 @@ async function pintoCommand(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: groupId,
-      content: response
+      content: response,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   } catch (error) {
     logger.error('Erro no comando de pinto:', error);
     
     return new ReturnMessage({
       chatId: message.group || message.author,
-      content: '❌ Erro ao processar o comando. Por favor, tente novamente.'
+      content: '❌ Erro ao processar o comando. Por favor, tente novamente.',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }

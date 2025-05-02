@@ -152,7 +152,10 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     if (text.length < 1) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça texto para converter em voz.'
+        content: 'Por favor, forneça texto para converter em voz.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -163,7 +166,10 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     if(text.length > 150){
       await bot.sendReturnMessages(new ReturnMessage({
         chatId: chatId,
-        content: '🔉 Sintetizando áudio, isso pode levar alguns segundos...'
+        content: '🔉 Sintetizando áudio, isso pode levar alguns segundos...',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       }));
     }
 
@@ -247,7 +253,10 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Erro ao gerar voz. Por favor, tente novamente.'
+      content: 'Erro ao gerar voz. Por favor, tente novamente.',
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }
@@ -291,7 +300,10 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     if (!media) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça um áudio ou mensagem de voz.'
+        content: 'Por favor, forneça um áudio ou mensagem de voz.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -302,17 +314,17 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     if (!isAudio) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça um áudio ou mensagem de voz.'
+        content: 'Por favor, forneça um áudio ou mensagem de voz.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
     logger.debug('[speechToText] Convertendo voz para texto');
     
     // Primeiro, envia mensagem de processamento
-    const processingMessage = new ReturnMessage({
-      chatId: chatId,
-      content: 'Processando áudio...'
-    });
+
     
     // Salva áudio em arquivo temporário
     const audioPath = await saveMediaToTemp(media, 'ogg');
@@ -416,7 +428,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     }
     
     // Cria um array com a mensagem de processamento e a mensagem de resultado
-    return [processingMessage, returnMessage];
+    return returnMessage;
   } catch (error) {
     logger.error('Erro na conversão de voz para texto:', error);
     const chatId = message.group || message.author;

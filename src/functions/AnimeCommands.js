@@ -25,7 +25,10 @@ async function buscarAnime(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça o nome de um anime para buscar. Exemplo: !anime Naruto'
+        content: 'Por favor, forneça o nome de um anime para buscar. Exemplo: !anime Naruto',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -35,11 +38,6 @@ async function buscarAnime(bot, message, args, group) {
     // Cria array de ReturnMessages para retornar
     const returnMessages = [];
     
-    // Adiciona mensagem de processamento
-    returnMessages.push(new ReturnMessage({
-      chatId: chatId,
-      content: `🔍 Buscando informações sobre "${nome}"...`
-    }));
     
     // Busca informações do anime usando mal-scraper
     const data = await malScraper.getInfoFromName(nome);
@@ -48,7 +46,10 @@ async function buscarAnime(bot, message, args, group) {
     if (!data || !data.title) {
       return new ReturnMessage({
         chatId: chatId,
-        content: `❌ Não foi possível encontrar informações sobre "${nome}". Verifique se o nome está correto.`
+        content: `❌ Não foi possível encontrar informações sobre "${nome}". Verifique se o nome está correto.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -95,6 +96,7 @@ async function buscarAnime(bot, message, args, group) {
           chatId: chatId,
           content: media,
           options: {
+            quotedMessageId: message.origin.id._serialized,
             caption: mensagem
           }
         });
@@ -110,7 +112,10 @@ async function buscarAnime(bot, message, args, group) {
       // Se não tiver imagem, envia apenas o texto
       return new ReturnMessage({
         chatId: chatId,
-        content: mensagem
+        content: mensagem,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
   } catch (error) {
@@ -127,7 +132,10 @@ async function buscarAnime(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: chatId,
-      content: `❌ ${errorMessage}`
+      content: `❌ ${errorMessage}`,
+      options: {
+        quotedMessageId: message.origin.id._serialized
+      }
     });
   }
 }

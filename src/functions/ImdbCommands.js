@@ -39,20 +39,16 @@ async function buscarImdb(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça o nome de um filme ou série para buscar. Exemplo: !imdb Inception'
+        content: 'Por favor, forneça o nome de um filme ou série para buscar. Exemplo: !imdb Inception',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
     // Obtém o nome do filme/série
     const nome = args.join(' ');
     
-    // Envia mensagem de processamento
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: `🔍 Buscando informações sobre "${nome}"...`
-      })
-    );
     
     // Realiza a busca inicial para obter o ID do filme/série
     const searchResponse = await axios.get(OMDB_API_URL, {
@@ -68,7 +64,10 @@ async function buscarImdb(bot, message, args, group) {
     if (searchResponse.data.Response === 'False' || !searchResponse.data.Search || searchResponse.data.Search.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: `❌ Não foi possível encontrar "${nome}". Verifique se o nome está correto.`
+        content: `❌ Não foi possível encontrar "${nome}". Verifique se o nome está correto.`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
@@ -90,7 +89,10 @@ async function buscarImdb(bot, message, args, group) {
     if (detailResponse.data.Response === 'False') {
       return new ReturnMessage({
         chatId: chatId,
-        content: `❌ Erro ao buscar detalhes para "${nome}".`
+        content: `❌ Erro ao buscar detalhes para "${nome}".`,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
       });
     }
     
