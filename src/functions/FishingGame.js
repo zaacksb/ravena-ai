@@ -91,12 +91,7 @@ function getRandomFish(fishArray) {
   // Verifica se o array tem peixes
   if (!fishArray || !Array.isArray(fishArray) || fishArray.length === 0) {
     // Lista de peixes padrão caso não tenha
-    fishArray = [
-      "Tilápia", "Tucunaré", "Tambaqui", "Dourado", "Pintado", 
-      "Pirarucu", "Traíra", "Pacu", "Robalo", "Salmão", 
-      "Atum", "Sardinha", "Bacalhau", "Piranha", "Peixe-Boi",
-      "Lambari", "Bagre", "Linguado", "Anchova", "Corvina"
-    ];
+    fishArray = ["Aba-aba","Abrotea","Acará","Acari","Agulha","Anchova","Arenque","Arraia","Aruanã","Atum","Bacalhau","Badejo","Bagre","Baiacu","Barbo","Barracuda","Betta","Betara","Bicuda","Bótia","Black Bass","Bonito","Bota-velha","Budião","Baiacu-de-espinhos","Cachara","Cação","Caranha","Carapau","Carapeba","Tubarão","Carapicu","Cascudo","Cachorra","Clarias","Candiru","Carpa","Cavala","Cavalinha","Cavalo-marinho","Cherne","Celacanto","Ciliares","Cirurgião-patela","Congro","Corvina","Curimã","Curimbatá","Dunkerocampus dactyliophorus","Dojô","Dourada","Dourado","Enguia","Espadarte","Estriatos","Esturjão","Enchova","Frade-de-rabo-de-andorinha","Frade-vermelho","Garoupa","Guarajuba","Guaru","Hadoque","Jacundá","Jamanta","Jaú","Kipper","Lambari","Lampreia","Linguado","Limpa-vidro","Mandi","Manjuba","Marlim-branco","Martens-belo","Martens-do-mar","Martens-roxo","Matrinxã","Merluza","Mero","Miraguaia","Mapará","Moreia","Muçum","Mugil cephalus","Namorado","Neon","Neymar-cirurgião","Olhete","Olho-de-boi","Oscar","Pacu","Pampo","Papa-terra","Parati","Patinga","Pargo","Paru","Pavlaki Branco","Pavlaki-da-areia","Peixe-anjo","Peixe-agulha","Peixe-aranha","Peixe-arlequim","Peixe-bala","Peixe-borboleta","Peixe-bruxa","Peixe-cabra","Peixe-carvão","Peixe-cão","Peixe-cego-das-cavernas","Peixe-cirurgião","Peixe-cofre","Peixe-corda","Peixe-dentado","Peixe-dourado","Peixe-elefante","Peixe-escorpião","Peixe-espada","Peixe-esparadrapo","Peixe-faca","Peixe-farol","Peixe-folha","Peixe-frade","Peixe-galo","Peixe-gatilho","Peixe-gato","Peixe-gelo","Peixe-imperador","Peixe-lanterna","Peixe-leão","Peixe-lua","Peixe-machado","Peixe-mandarim","Peixe-martelo","Peixe-médico","Peixe-morcego","Peixe-mosquito","Peixe-nuvem","Peixe-palhaço","Peixe-palmito","Peixe-papagaio","Peixe-pedra","Peixe-pescador","Peixe-piloto","Peixe-porco","Peixe-rato","Peixe-rei","Peixe-remo","Peixe-royal-gramma","Peixe-sapo","Peixe-serra","Peixe-sol","Peixe-soldado","Peixe-tigre","Peixe-tripé","Peixe-trombeta","Peixe-unicórnio","Peixe-ventosa","Peixe-vermelho","Peixe-víbora","Peixe-voador","Peixe-zebra","Perca","Pescada","Piaba","Piapara","Piau","Pintado","Piracanjuba","Piraíba","Pirambóia","Piranha","Piraputanga","Pirarara","Pirarucu","Piratinga","Poraquê","Porquinho","Prejereba","Quimera","Raia","Rêmora","Robalo","Rodóstomo","Saicanga","Sarda","Sardinha","Sargocentron diadema","Salmão","Solha","Surubi","Tabarana","Tainha","Tambacu","Tambaqui","Tamboril","Tamuatá","Tilápia","Traíra","Tricolor","Truta","Tubarana","Tubarão","Tucunaré","Ubarana","Ubeba","Xaréu","Zigão-preto"];
   }
   
   // Seleciona um peixe aleatório
@@ -654,6 +649,7 @@ const commands = [
     name: 'pesca-peixes',
     description: 'Lista todos os tipos de peixes disponíveis',
     category: "jogos",
+    hidden: true,
     cooldown: 5,
     reactions: {
       after: "📋",
