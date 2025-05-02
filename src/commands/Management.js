@@ -1185,6 +1185,7 @@ async setWelcomeMessage(bot, message, args, group) {
             }
           }
           
+          infoMessage += `  • Marcar Todos: ${channel.mentionAllMembers ? 'Sim' : 'Não'}\n`;
           infoMessage += `  • Usar Thumbnail: ${channel.useThumbnail ? 'Sim' : 'Não'}\n`;
           infoMessage += `  • Usar IA: ${channel.useAI ? 'Sim' : 'Não'}\n`;
           
