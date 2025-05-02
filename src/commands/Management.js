@@ -801,44 +801,87 @@ class Management {
     }
   }
   
-  /**
-   * Define mensagem de boas-vindas para um grupo
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async setWelcomeMessage(bot, message, args, group) {
-    if (!group) {
-      return new ReturnMessage({
-        chatId: message.author,
-        content: 'Este comando só pode ser usado em grupos.'
-      });
+/**
+ * Define mensagem de boas-vindas para um grupo
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async setWelcomeMessage(bot, message, args, group) {
+  if (!group) {
+    return new ReturnMessage({
+      chatId: message.author,
+      content: 'Este comando só pode ser usado em grupos.'
+    });
+  }
+  
+  // Verifica se a mensagem é uma resposta a outra mensagem
+  const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+  
+  // Se tiver mensagem citada, usa o corpo dela
+  if (quotedMsg && quotedMsg.body) {
+    // Atualiza mensagem de boas-vindas do grupo
+    if (!group.greetings) {
+      group.greetings = {};
     }
+    group.greetings.text = quotedMsg.body;
+    await this.database.saveGroup(group);
     
-    if (args.length === 0) {
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Mensagem de boas-vindas atualizada para: ${quotedMsg.body}`
+    });
+  } 
+  // Se tiver argumentos, usa o corpo da mensagem completa
+  else if (message.origin && message.origin.body) {
+    // Extrai o texto após o comando
+    const prefixo = group.prefix || '!';
+    const comandoCompleto = `${prefixo}g-setBoasvindas`;
+    const texto = message.origin.body.substring(message.origin.body.indexOf(comandoCompleto) + comandoCompleto.length).trim();
+    
+    // Se não tem texto, desativa a mensagem de boas-vindas
+    if (!texto) {
+      if (group.greetings) {
+        delete group.greetings.text;
+      }
+      await this.database.saveGroup(group);
+      
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça uma mensagem de boas-vindas. Exemplo: !g-setWelcome Bem-vindo ao grupo, {pessoa}!'
+        content: 'Mensagem de boas-vindas desativada.'
       });
     }
-    
-    const welcomeText = args.join(' ');
     
     // Atualiza mensagem de boas-vindas do grupo
     if (!group.greetings) {
       group.greetings = {};
     }
-    group.greetings.text = welcomeText;
+    group.greetings.text = texto;
     await this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `Mensagem de boas-vindas atualizada para: ${welcomeText}`
+      content: `Mensagem de boas-vindas atualizada para: ${texto}`
     });
   }
-  
+  else {
+    // Se não tem argumentos nem mensagem citada, mostra a mensagem atual ou instrui como usar
+    if (group.greetings && group.greetings.text) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Mensagem de boas-vindas atual: ${group.greetings.text}\n\nPara alterar, use:\n!g-setBoasvindas Nova mensagem\nou responda a uma mensagem com !g-setBoasvindas`
+      });
+    } else {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Não há mensagem de boas-vindas definida. Para definir, use:\n!g-setBoasvindas Bem-vindo ao grupo, {pessoa}!\nou responda a uma mensagem com !g-setBoasvindas'
+      });
+    }
+  }
+}
+
   /**
    * Define mensagem de despedida para um grupo
    * @param {WhatsAppBot} bot - Instância do bot
@@ -855,26 +898,69 @@ class Management {
       });
     }
     
-    if (args.length === 0) {
+    // Verifica se a mensagem é uma resposta a outra mensagem
+    const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+    
+    // Se tiver mensagem citada, usa o corpo dela
+    if (quotedMsg && quotedMsg.body) {
+      // Atualiza mensagem de despedida do grupo
+      if (!group.farewells) {
+        group.farewells = {};
+      }
+      group.farewells.text = quotedMsg.body;
+      await this.database.saveGroup(group);
+      
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça uma mensagem de despedida. Exemplo: !g-setFarewell Adeus, {pessoa}!'
+        content: `Mensagem de despedida atualizada para: ${quotedMsg.body}`
+      });
+    } 
+    // Se tiver argumentos, usa o corpo da mensagem completa
+    else if (message.origin && message.origin.body) {
+      // Extrai o texto após o comando
+      const prefixo = group.prefix || '!';
+      const comandoCompleto = `${prefixo}g-setDespedida`;
+      const texto = message.origin.body.substring(message.origin.body.indexOf(comandoCompleto) + comandoCompleto.length).trim();
+      
+      // Se não tem texto, desativa a mensagem de despedida
+      if (!texto) {
+        if (group.farewells) {
+          delete group.farewells.text;
+        }
+        await this.database.saveGroup(group);
+        
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Mensagem de despedida desativada.'
+        });
+      }
+      
+      // Atualiza mensagem de despedida do grupo
+      if (!group.farewells) {
+        group.farewells = {};
+      }
+      group.farewells.text = texto;
+      await this.database.saveGroup(group);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Mensagem de despedida atualizada para: ${texto}`
       });
     }
-    
-    const farewellText = args.join(' ');
-    
-    // Atualiza mensagem de despedida do grupo
-    if (!group.farewells) {
-      group.farewells = {};
+    else {
+      // Se não tem argumentos nem mensagem citada, mostra a mensagem atual ou instrui como usar
+      if (group.farewells && group.farewells.text) {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: `Mensagem de despedida atual: ${group.farewells.text}\n\nPara alterar, use:\n!g-setDespedida Nova mensagem\nou responda a uma mensagem com !g-setDespedida`
+        });
+      } else {
+        return new ReturnMessage({
+          chatId: group.id,
+          content: 'Não há mensagem de despedida definida. Para definir, use:\n!g-setDespedida Adeus, {pessoa}!\nou responda a uma mensagem com !g-setDespedida'
+        });
+      }
     }
-    group.farewells.text = farewellText;
-    await this.database.saveGroup(group);
-    
-    return new ReturnMessage({
-      chatId: group.id,
-      content: `Mensagem de despedida atualizada para: ${farewellText}`
-    });
   }
   
   /**
@@ -890,30 +976,30 @@ class Management {
     
     const helpText = `*Comandos de Gerenciamento de Grupo:*
 
-*!g-setName* <nome> - Define um nome personalizado para o grupo
-*!g-addCmd* <gatilho> - Adiciona um comando personalizado (deve ser usado como resposta)
-*!g-addCmdReply* <comando> - Adiciona outra resposta a um comando existente
-*!g-delCmd* <comando> - Exclui um comando personalizado
-*!g-enableCmd* <comando> - Habilita um comando desabilitado
-*!g-disableCmd* <comando> - Desabilita um comando
-*!g-setCustomPrefix* <prefixo> - Altera o prefixo de comando
-*!g-setWelcome* <mensagem> - Define mensagem de boas-vindas para novos membros
-*!g-setFarewell* <mensagem> - Define mensagem de despedida para membros que saem
-*!g-info* - Mostra informações detalhadas do grupo
-*!g-manage* <nomeGrupo> - Gerencia um grupo a partir de chat privado
+  *!g-setName* <nome> - Define um nome personalizado para o grupo
+  *!g-addCmd* <gatilho> - Adiciona um comando personalizado (deve ser usado como resposta)
+  *!g-addCmdReply* <comando> - Adiciona outra resposta a um comando existente
+  *!g-delCmd* <comando> - Exclui um comando personalizado
+  *!g-enableCmd* <comando> - Habilita um comando desabilitado
+  *!g-disableCmd* <comando> - Desabilita um comando
+  *!g-setPrefixo* <prefixo> - Altera o prefixo de comando
+  *!g-setBoasvindas* <mensagem> - Define mensagem de boas-vindas para novos membros
+  *!g-setDespedida* <mensagem> - Define mensagem de despedida para membros que saem
+  *!g-info* - Mostra informações detalhadas do grupo
+  *!g-manage* <nomeGrupo> - Gerencia um grupo a partir de chat privado
 
-*Comandos de Filtro:*
-*!g-filtro-palavra* <palavra> - Adiciona/remove palavra do filtro
-*!g-filtro-links* - Ativa/desativa filtro de links
-*!g-filtro-pessoa* <número> - Adiciona/remove número do filtro
-*!g-filtro-nsfw* - Ativa/desativa filtro de conteúdo NSFW
+  *Comandos de Filtro:*
+  *!g-filtro-palavra* <palavra> - Adiciona/remove palavra do filtro
+  *!g-filtro-links* - Ativa/desativa filtro de links
+  *!g-filtro-pessoa* <número> - Adiciona/remove número do filtro
+  *!g-filtro-nsfw* - Ativa/desativa filtro de conteúdo NSFW
 
-*Variáveis em mensagens:*
-{pessoa} - Nome da pessoa que entrou/saiu do grupo
-{day} - Dia atual
-{date} - Data atual
-{time} - Hora atual
-{cmd-!comando arg} - Executa outro comando (criando um alias)`;
+  *Variáveis em mensagens:*
+  {pessoa} - Nome da pessoa que entrou/saiu do grupo
+  {day} - Dia atual
+  {date} - Data atual
+  {time} - Hora atual
+  {cmd-!comando arg} - Executa outro comando (criando um alias)`;
 
     return new ReturnMessage({
       chatId: chatId,

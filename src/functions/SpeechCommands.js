@@ -92,14 +92,43 @@ async function saveMediaToTemp(media, extension = 'ogg') {
 }
 
 /**
- * Converte texto para voz usando AllTalk API (XTTS)
- * @param {WhatsAppBot} bot - Instância do bot
- * @param {Object} message - Dados da mensagem
- * @param {Array} args - Argumentos do comando
- * @param {Object} group - Dados do grupo
- * @param {string} character - Personagem a ser usado (opcional)
- * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ * Remove marcações do WhatsApp do texto
+ * @param {string} text - Texto a ser limpo
+ * @returns {string} - Texto limpo
  */
+function removeWhatsAppMarkup(text) {
+  if (!text) return "";
+  
+  // Remove marcações de negrito
+  text = text.replace(/\*/g, '');
+  
+  // Remove marcações de itálico
+  text = text.replace(/\_/g, '');
+  
+  // Remove marcações de riscado
+  text = text.replace(/\~/g, '');
+  
+  // Remove marcações de monospace
+  text = text.replace(/\`/g, '');
+  
+  // Remove marcações de citação (>)
+  text = text.replace(/^\s*>\s*/gm, '');
+  
+  // Remove qualquer outra marcação especial que possa afetar a síntese de voz
+  text = text.replace(/[\[\]\(\)]/g, ' ');
+  
+  // Remove caracteres de formatação especiais
+  text = text.replace(/[\u0000-\u001F\u007F-\u009F\u2000-\u200F\u2028-\u202F]/g, ' ');
+  
+  // Remove múltiplos espaços em branco
+  text = text.replace(/\s+/g, ' ');
+  
+  // Preserva quebras de linha
+  text = text.replace(/\\n/g, '\n');
+  
+  return text.trim();
+}
+
 /**
  * Converte texto para voz usando AllTalk API (XTTS)
  * @param {WhatsAppBot} bot - Instância do bot
@@ -126,6 +155,9 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
         content: 'Por favor, forneça texto para converter em voz.'
       });
     }
+    
+    // Limpa as marcações do WhatsApp antes de processar com AllTalk
+    text = removeWhatsAppMarkup(text);
     
     const character = ttsCharacters.find(ttsC => ttsC.name === char);
     if(text.length > 150){
