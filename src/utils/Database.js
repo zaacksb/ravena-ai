@@ -16,6 +16,13 @@ class Database {
     this.scheduledBackupHours = [0, 6, 12, 18]; // Horários de backup agendados
     this.backupRetentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS) || 30;
     
+    // Pastas a serem excluídas do backup
+    this.excludedDirs = [
+      this.backupPath,
+      path.join(this.databasePath, 'media'),
+      path.join(this.databasePath, 'lembretes-media')
+    ];
+    
     // Configuração para persistência em cache
     this.saveInterval = parseInt(process.env.SAVE_INTERVAL) || 60000; // 60 segundos
     this.dirtyFlags = {
@@ -188,7 +195,7 @@ class Database {
       this.persistCachedData(true);
       
       // Fazer backup de todos os arquivos na pasta data
-      this.backupDirectory(this.databasePath, backupDir, [this.backupPath]);
+      this.backupDirectory(this.databasePath, backupDir, this.excludedDirs);
       
       this.logger.info(`Backup programado criado: ${backupDir}`);
       
@@ -218,6 +225,7 @@ class Database {
         
         // Verificar se o item deve ser excluído
         if (excludeDirs.some(dir => sourcePath.startsWith(dir))) {
+          this.logger.debug(`Diretório excluído do backup: ${sourcePath}`);
           continue;
         }
         
@@ -313,6 +321,12 @@ class Database {
   createBackup(filePath) {
     try {
       if (!fs.existsSync(filePath)) return;
+      
+      // Verificar se o arquivo está em um diretório excluído
+      if (this.excludedDirs.some(dir => filePath.startsWith(dir))) {
+        this.logger.debug(`Arquivo excluído do backup: ${filePath}`);
+        return;
+      }
       
       const fileName = path.basename(filePath);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -617,6 +631,9 @@ class Database {
     }
   }
 
+  // Métodos para trabalhar com objetos de banco de dados específicos
+  // Todos estes métodos foram modificados para usar o sistema de cache
+  
   /**
    * Obtém todos os grupos
    * @returns {Array} - Array de objetos de grupo
@@ -702,7 +719,16 @@ class Database {
       return false;
     }
   }
-
+  
+  /**
+   * Verifica se um caminho está em um diretório excluído do backup
+   * @param {string} filePath - Caminho do arquivo a verificar
+   * @returns {boolean} - Verdadeiro se o caminho estiver em um diretório excluído
+   */
+  isInExcludedDirectory(filePath) {
+    return this.excludedDirs.some(dir => filePath.startsWith(dir));
+  }
+  
   /**
    * Obtém comandos personalizados para um grupo
    * @param {string} groupId - O ID do grupo
@@ -1253,4 +1279,4 @@ class Database {
   }
 }
 
-module.exports = Database
+module.exports = Database;
