@@ -194,7 +194,7 @@ function renderBots(data) {
     });
     
     // Cria o contador de mensagens total
-    const msgsCounterDiv = document.getElementById('msgsCounterDiv');
+    const msgsCounterDiv = document.getElementById('msgsCounter');
     
     if (msgsCounterDiv) {
         // Adiciona o contador de mensagens total
