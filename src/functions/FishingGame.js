@@ -5,7 +5,7 @@ const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
-const sdModule = require('./StableDiffusionCommands');;
+const sdModule = require('./StableDiffusionCommands');
 
 const logger = new Logger('fishing-game');
 const database = Database.getInstance();
@@ -17,9 +17,15 @@ const MAX_FISH_WEIGHT = 60; // Aumentado para 60kg
 const FISHING_COOLDOWN = 5;
 const MAX_BAITS = 10; // Máximo de iscas
 const BAIT_REGEN_TIME = 60 * 60; // 1 hora em segundos para regenerar isca
+const SAVE_INTERVAL = 30 * 1000; // 30 segundos em milissegundos
 
 // Armazena os cooldowns de pesca
 const fishingCooldowns = {};
+
+// Buffer para os dados de pesca
+let fishingDataBuffer = null;
+let lastSaveTime = 0;
+let hasUnsavedChanges = false;
 
 // Peixes raríssimos e seus pesos adicionais
 const RARE_FISH = [
@@ -62,12 +68,17 @@ const DOWNGRADES = [
 const FISHING_DATA_PATH = path.join(__dirname, '../../data/fishing.json');
 
 /**
- * Obtém os dados de pesca do arquivo JSON dedicado
+ * Obtém os dados de pesca do arquivo JSON dedicado ou do buffer
  * @returns {Promise<Object>} Dados de pesca
  */
 async function getFishingData() {
   try {
-    // Verifica se o arquivo existe
+    // Se já temos dados no buffer, retornamos ele
+    if (fishingDataBuffer !== null) {
+      return fishingDataBuffer;
+    }
+
+    // Caso contrário, carregamos do arquivo
     try {
       await fs.access(FISHING_DATA_PATH);
     } catch (error) {
@@ -76,7 +87,14 @@ async function getFishingData() {
         fishingData: {}, // Dados dos jogadores
         groupData: {}  // Dados por grupo
       };
-      await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(defaultData, null, 2));
+      
+      // Atualiza o buffer e retorna
+      fishingDataBuffer = defaultData;
+      hasUnsavedChanges = true;
+      
+      // Forçar primeira gravação
+      await saveToFile(defaultData);
+      
       return defaultData;
     }
 
@@ -87,38 +105,137 @@ async function getFishingData() {
     // Verifica se o campo groupData existe, caso contrário, adiciona-o
     if (!parsedData.groupData) {
       parsedData.groupData = {};
+      hasUnsavedChanges = true;
     }
+    
+    // Atualiza o buffer
+    fishingDataBuffer = parsedData;
     
     return parsedData;
   } catch (error) {
     logger.error('Erro ao ler dados de pesca:', error);
     // Retorna objeto padrão em caso de erro
-    return {
+    const defaultData = {
       fishingData: {},
       groupData: {}
     };
+    
+    // Atualiza o buffer
+    fishingDataBuffer = defaultData;
+    hasUnsavedChanges = true;
+    
+    return defaultData;
   }
 }
 
 /**
- * Salva os dados de pesca no arquivo JSON dedicado
- * @param {Object} fishingData Dados de pesca a serem salvos
+ * Verifica se é hora de salvar os dados no arquivo
+ * @returns {boolean} True se for hora de salvar
+ */
+function shouldSaveToFile() {
+  const now = Date.now();
+  return hasUnsavedChanges && (now - lastSaveTime > SAVE_INTERVAL);
+}
+
+/**
+ * Salva os dados no arquivo (operação real de I/O)
+ * @param {Object} data Dados a serem salvos
  * @returns {Promise<boolean>} Status de sucesso
  */
-async function saveFishingData(fishingData) {
+async function saveToFile(data) {
   try {
     // Garante que o diretório exista
     const dir = path.dirname(FISHING_DATA_PATH);
     await fs.mkdir(dir, { recursive: true });
 
-    // Salva os dados
-    await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(fishingData, null, 2));
+    // Salva os dados no arquivo temporário primeiro
+    const tempPath = `${FISHING_DATA_PATH}.temp`;
+    await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
+    
+    // Renomeia o arquivo temporário para o arquivo final
+    // Isso reduz o risco de corrupção durante a gravação
+    try {
+      await fs.unlink(FISHING_DATA_PATH);
+    } catch (err) {
+      // Arquivo pode não existir, ignoramos o erro
+    }
+    await fs.rename(tempPath, FISHING_DATA_PATH);
+    
+    // Atualiza o tempo da última gravação
+    lastSaveTime = Date.now();
+    hasUnsavedChanges = false;
+    
+    logger.debug('Dados de pesca salvos no arquivo');
+    return true;
+  } catch (error) {
+    logger.error('Erro ao salvar dados de pesca no arquivo:', error);
+    return false;
+  }
+}
+
+/**
+ * Salva os dados de pesca no buffer e possivelmente no arquivo
+ * @param {Object} fishingData Dados de pesca a serem salvos
+ * @returns {Promise<boolean>} Status de sucesso
+ */
+async function saveFishingData(fishingData) {
+  try {
+    // Atualiza o buffer
+    fishingDataBuffer = fishingData;
+    hasUnsavedChanges = true;
+    
+    // Verifica se é hora de salvar no arquivo
+    if (shouldSaveToFile()) {
+      await saveToFile(fishingData);
+    }
+    
     return true;
   } catch (error) {
     logger.error('Erro ao salvar dados de pesca:', error);
     return false;
   }
 }
+
+/**
+ * Força o salvamento dos dados no arquivo, independente do temporizador
+ */
+async function forceSave() {
+  if (fishingDataBuffer !== null && hasUnsavedChanges) {
+    await saveToFile(fishingDataBuffer);
+  }
+}
+
+// Configura salvar periodicamente, independente das alterações
+setInterval(async () => {
+  if (fishingDataBuffer !== null && hasUnsavedChanges) {
+    await saveToFile(fishingDataBuffer);
+  }
+}, SAVE_INTERVAL);
+
+// Configura salvamento antes do fechamento do programa
+process.on('exit', () => {
+  if (fishingDataBuffer !== null && hasUnsavedChanges) {
+    // Usando writeFileSync pois estamos no evento 'exit'
+    try {
+      if (!fs.existsSync(path.dirname(FISHING_DATA_PATH))) {
+        fs.mkdirSync(path.dirname(FISHING_DATA_PATH), { recursive: true });
+      }
+      fs.writeFileSync(FISHING_DATA_PATH, JSON.stringify(fishingDataBuffer, null, 2));
+      logger.info('Dados de pesca salvos antes de encerrar');
+    } catch (error) {
+      logger.error('Erro ao salvar dados de pesca antes de encerrar:', error);
+    }
+  }
+});
+
+// Configura salvamento em sinais de término
+['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
+  process.on(signal, async () => {
+    logger.info(`Recebido sinal ${signal}, salvando dados de pesca...`);
+    await forceSave();
+    process.exit(0);
+  });
+});
 
 /**
  * Obtém peixe aleatório do array de peixes
@@ -388,7 +505,6 @@ async function generateRareFishImage(bot, userName, fishName) {
     
     // Verifica se o módulo StableDiffusionCommands está disponível
     try {
-      
       if (!sdModule || !sdModule.commands || !sdModule.commands[0] || !sdModule.commands[0].method) {
         logger.error('Módulo StableDiffusionCommands não está configurado corretamente');
         return null;
@@ -1242,6 +1358,177 @@ async function showBaitsCommand(bot, message, args, group) {
   }
 }
 
+/**
+ * Salva imagem de peixe raro em disco
+ * @param {Object} mediaContent - Objeto MessageMedia
+ * @param {string} userId - ID do usuário
+ * @param {string} fishName - Nome do peixe
+ * @returns {Promise<string>} - Caminho onde a imagem foi salva
+ */
+async function saveRareFishImage(mediaContent, userId, fishName) {
+  try {
+    // Cria o diretório de mídia se não existir
+    const mediaDir = path.join(__dirname, '../../data/media');
+    try {
+      await fs.access(mediaDir);
+    } catch (error) {
+      await fs.mkdir(mediaDir, { recursive: true });
+    }
+
+    // Cria nome de arquivo único com timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `peixe_raro_${fishName.toLowerCase().replace(/\s+/g, '_')}_${userId.split('@')[0]}_${timestamp}.jpg`;
+    const filePath = path.join(mediaDir, fileName);
+
+    // Salva a imagem
+    const imageBuffer = Buffer.from(mediaContent.data, 'base64');
+    await fs.writeFile(filePath, imageBuffer);
+    
+    logger.info(`Imagem de peixe raro salva em: ${filePath}`);
+    return fileName;
+  } catch (error) {
+    logger.error('Erro ao salvar imagem de peixe raro:', error);
+    return null;
+  }
+}
+
+// Dentro do método fishCommand, na parte onde trata os peixes raros (linha ~721):
+// Se pescou um peixe raro, gera imagem e notifica grupo de interação
+if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
+  try {
+    // Gera a imagem para o peixe raro
+    const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
+    
+    if (rareFishImage) {
+      // Salva a imagem e registra o peixe lendário
+      const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
+      
+      // Inicializa o array de peixes lendários se não existir
+      if (!fishingData.legendaryFishes) {
+        fishingData.legendaryFishes = [];
+      }
+      
+      // Adiciona o peixe lendário à lista
+      fishingData.legendaryFishes.push({
+        fishName: caughtFishes[0].name,
+        weight: caughtFishes[0].weight,
+        userId: userId,
+        userName: userName,
+        groupId: groupId || null,
+        groupName: group ? group.name : "chat privado",
+        timestamp: Date.now(),
+        imageName: savedImageName
+      });
+      
+      // Notifica o grupo de interação sobre o peixe raro
+      if (bot.grupoInteracao) {
+        // [código existente...]
+      }
+      
+      // Envia a mensagem com a imagem
+      return new ReturnMessage({
+        // [código existente...]
+      });
+    }
+  } catch (imageError) {
+    logger.error('Erro ao gerar ou enviar imagem de peixe raro:', imageError);
+  }
+}
+
+/**
+ * Mostra os peixes lendários que foram pescados
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} Mensagem(ns) de retorno
+ */
+async function legendaryFishCommand(bot, message, args, group) {
+  try {
+    // Obtém ID do chat
+    const chatId = message.group || message.author;
+    
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
+    
+    // Verifica se há peixes lendários
+    if (!fishingData.legendaryFishes || fishingData.legendaryFishes.length === 0) {
+      return new ReturnMessage({
+        chatId,
+        content: '🐉 Ainda não foram pescados peixes lendários. Continue pescando e você pode ser o primeiro a encontrar um!'
+      });
+    }
+    
+    // Ordena os peixes lendários por data (mais recente primeiro)
+    const sortedLegendaryFishes = [...fishingData.legendaryFishes].sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Limita a 10 peixes para evitar spam
+    const legendaryToShow = sortedLegendaryFishes.slice(0, 10);
+    
+    // Cria uma mensagem para cada peixe lendário
+    const messages = [];
+    
+    for (const legendary of legendaryToShow) {
+      try {
+        let content;
+        let options = {};
+        
+        // Tenta carregar a imagem se existir
+        if (legendary.imageName) {
+          const imagePath = path.join(__dirname, '../../data/media', legendary.imageName);
+          try {
+            await fs.access(imagePath);
+            // Imagem existe, cria média
+            const media = await bot.createMedia(imagePath);
+            content = media;
+            
+            // Prepara a legenda
+            const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
+            options.caption = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName}\nData: ${date}`;
+          } catch (imageError) {
+            // Imagem não existe, usa mensagem de texto
+            logger.error(`Imagem do peixe lendário não encontrada: ${imagePath}`, imageError);
+            const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
+            content = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName}\nData: ${date}\n\n_(Imagem não disponível)_`;
+          }
+        } else {
+          // Sem imagem, usa mensagem de texto
+          const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
+          content = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName}\nData: ${date}`;
+        }
+        
+        // Adiciona a mensagem à lista
+        messages.push(new ReturnMessage({
+          chatId,
+          content,
+          options,
+          // Adiciona delay para evitar envio muito rápido
+          delay: messages.length * 1000 
+        }));
+        
+      } catch (legendaryError) {
+        logger.error('Erro ao processar peixe lendário:', legendaryError);
+      }
+    }
+    
+    if (messages.length === 0) {
+      return new ReturnMessage({
+        chatId,
+        content: '❌ Ocorreu um erro ao mostrar os peixes lendários.'
+      });
+    }
+    
+    return messages;
+  } catch (error) {
+    logger.error('Erro no comando de peixes lendários:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: '❌ Ocorreu um erro ao mostrar os peixes lendários. Por favor, tente novamente.'
+    });
+  }
+}
+
 // Criar array de comandos usando a classe Command
 const commands = [
   new Command({
@@ -1256,6 +1543,7 @@ const commands = [
     },
     method: fishCommand
   }),
+  
   new Command({
     name: 'pesca',
     hidden: true,
@@ -1269,6 +1557,7 @@ const commands = [
     },
     method: fishCommand
   }),
+  
   new Command({
     name: 'meus-pescados',
     description: 'Mostra seus peixes pescados',
@@ -1330,7 +1619,22 @@ const commands = [
       error: "❌"
     },
     method: showBaitsCommand
+  }),
+  new Command({
+    name: 'pesca-lendas',
+    description: 'Mostra os peixes lendários que foram pescados',
+    category: "jogos",
+    cooldown: 10,
+    reactions: {
+      after: "🐉",
+      error: "❌"
+    },
+    method: legendaryFishCommand
   })
 ];
 
-module.exports = { commands };
+// Exporta os comandos e uma função para forçar o salvamento
+module.exports = { 
+  commands,
+  forceSaveFishingData: forceSave 
+};
