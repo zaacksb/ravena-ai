@@ -70,6 +70,7 @@ const COMMAND_ORDER = [
 	"roletarussa",
 	"roletaranking",
 	"pescar",
+	"iscas",
 	"pesca-ranking",
 	"pescados",
 	"meus-pescados",
