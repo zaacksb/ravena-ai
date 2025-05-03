@@ -130,6 +130,8 @@ class UserGreetingManager {
       if (this.wasGreetedRecently(userId)) {
         this.logger.debug(`Usuário ${userId} já foi saudado recentemente`);
         return false;
+      } else {
+        this.logger.debug(`Usuário ${userId} será saudado!`);
       }
       
       // Obter o texto de saudação
