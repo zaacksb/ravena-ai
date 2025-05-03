@@ -2009,37 +2009,28 @@ Após reiniciar, o bot não deve ser reiniciado novamente pelo mesmo motivo dent
 # SuperAdmin
 
 ## !sa-getMembros
-
 Lista o numero e nome (se possivel) de todos os membros do grupo, separado por admin e membros normais
 
 Ex.:
-
 Admins
-
 12345@c.us - Pessoa
 
 Membros
-
 67890@c.us - Pessoa
 
 ## !sa-leaveGrupo
 
-leaveGroup
 
 Antes de sair, pega o id (123456@c.us) de todos os membros do grupo
-
 Na mensagem de retorno, enviar, separado por virgula duas linhas diferentes escrito
 
 Bloquear admins:
-
 ```!sa-blockList 123456@c.us, 78901@c.us...```
 
 Bloquear demais membros:
-
 ```!sa-blockList 98876@c.us, 54321c.us...```
 
 ## !sa-blockList contato1, contato2,contato3..
-
 Similar ao !sa-block (block), mas bloqueia todos os contatos recebidos separado por vírgula.
 
 Responde status de bloqueio para cada um dos numeros como lista
@@ -2059,7 +2050,6 @@ Pega o contato da pessoa e usa a função Contact.getCommonGroups(), que retorna
 Gerar mensagem com a lista dos ids e pegar o group name na base de dados:
 
 12345@g.us - nomeGrupo
-
 67890@g.us - grupoDois
 
 ## !sa-blockTudoPessoa 123456@c.us
@@ -2068,10 +2058,13 @@ Une o listaGruposPessoa com a leaveGrupo e getMembros.
 
 Pega todos os grupos em comuns da pessoa, sai de todos eles e bloqueia todos os membros que estão nestes grupos.
 
-As funçoes devem receber o nome de cadastro da base de dados (group.id) como argumento, e o bot deve buscar o groupID (12345@g.us) com base nisso.
+O bot NÃO DEVE processar os grupos bot.grupoInteracao e bot.grupoAvisos (bloquear outros e sair), apenas remover a pessoa deles. 
 
-A função database.getGroup("nome") faz isso
+## !sa-getGroupInfo nomeCadastro
+buscando pelo nome de cadastro, lista todos os dados da base de dados deste grupo
+Também envia um JSON.stringify formatado do client.getChatById(groupId)
 
-leaveGroup, getMembros
+
+## Observação
 
 Me envie um artefato completo do SuperAdmin.js, em 2 ou 3 partes para não perder código.

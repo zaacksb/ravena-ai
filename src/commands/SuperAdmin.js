@@ -527,7 +527,7 @@ class SuperAdmin {
         const blockMembersCmd = `!sa-blockList ${members.join(', ')}`;
         
         // Envia mensagem de despedida para o grupo
-        await bot.sendMessage(groupId, '👋 Saindo do grupo por comando administrativo. Até mais!');
+        //await bot.sendMessage(groupId, '👋 Saindo do grupo por comando administrativo. Até mais!');
         
         // Tenta sair do grupo
         await bot.client.leaveGroup(groupId);
@@ -1394,6 +1394,7 @@ class SuperAdmin {
 
   /**
    * Sai de todos os grupos em comum com um contato e bloqueia todos os membros
+   * Comportamento especial: Não sai dos grupos de interação e avisos, apenas remove a pessoa
    * @param {WhatsAppBot} bot - Instância do bot
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
@@ -1417,6 +1418,15 @@ class SuperAdmin {
           content: 'Por favor, forneça o número do contato. Exemplo: !sa-blockTudoPessoa 5511999999999'
         });
       }
+      
+      // Grupos especiais que não devem ser deixados, apenas remover a pessoa
+      const specialGroups = [];
+      
+      // Adicionar grupos especiais se estiverem definidos
+      if (bot.grupoInteracao) specialGroups.push(bot.grupoInteracao);
+      if (bot.grupoAvisos) specialGroups.push(bot.grupoAvisos);
+      
+      this.logger.info(`Grupos especiais configurados: ${specialGroups.join(', ')}`);
       
       // Processa o número para formato padrão
       let phoneNumber = args[0].replace(/\D/g, '');
@@ -1445,6 +1455,7 @@ class SuperAdmin {
         const results = {
           totalGroups: commonGroups.length,
           leftGroups: 0,
+          specialGroups: 0,
           totalContacts: 0,
           blockedContacts: 0,
           errors: 0,
@@ -1461,46 +1472,84 @@ class SuperAdmin {
             const chat = await bot.client.getChatById(groupId);
             const groupName = chat.name || groupId;
             
-            // Obtém participantes do grupo
-            const participants = chat.participants || [];
+            // Verifica se é um grupo especial
+            const isSpecialGroup = specialGroups.includes(groupId);
             
-            // Adiciona ID de cada participante ao conjunto
-            participants.forEach(participant => {
-              allContacts.add(participant.id._serialized);
-            });
-            
-            // Envia mensagem de despedida
-            await bot.sendMessage(groupId, '👋 Saindo deste grupo por motivos administrativos. Até mais!');
-            
-            // Sai do grupo
-            await bot.client.leaveGroup(groupId);
-            
-            results.leftGroups++;
-            results.groupsInfo.push({
-              id: groupId,
-              name: groupName,
-              status: 'Sucesso',
-              members: participants.length
-            });
-          } catch (leaveError) {
-            this.logger.error(`Erro ao sair do grupo ${groupId}:`, leaveError);
+            if (isSpecialGroup) {
+              this.logger.info(`Grupo especial detectado: ${groupId} (${groupName}). Apenas removendo o contato.`);
+              results.specialGroups++;
+              
+              try {
+                // Remove apenas a pessoa do grupo
+                await chat.removeParticipants([phoneNumber]);
+                
+                results.groupsInfo.push({
+                  id: groupId,
+                  name: groupName,
+                  status: 'Especial',
+                  action: 'Removido',
+                  members: chat.participants.length
+                });
+                
+                //await bot.sendMessage(groupId, `👤 Contato ${contactName} removido do grupo por comando administrativo.`);
+              } catch (removeError) {
+                this.logger.error(`Erro ao remover contato do grupo especial ${groupId}:`, removeError);
+                
+                results.errors++;
+                results.groupsInfo.push({
+                  id: groupId,
+                  name: groupName,
+                  status: 'Erro',
+                  action: 'Remover',
+                  error: removeError.message
+                });
+              }
+            } else {
+              // Para grupos normais, obtém participantes e sai do grupo
+              const participants = chat.participants || [];
+              
+              // Adiciona ID de cada participante ao conjunto
+              participants.forEach(participant => {
+                // Não adicione o próprio contato sendo bloqueado
+                if (participant.id._serialized !== phoneNumber) {
+                  allContacts.add(participant.id._serialized);
+                }
+              });
+              
+              // Envia mensagem de despedida
+              //await bot.sendMessage(groupId, '👋 Saindo deste grupo por comando administrativo. Até mais!');
+              
+              // Sai do grupo
+              await bot.client.leaveGroup(groupId);
+              
+              results.leftGroups++;
+              results.groupsInfo.push({
+                id: groupId,
+                name: groupName,
+                status: 'Sucesso',
+                action: 'Saiu',
+                members: participants.length
+              });
+            }
+          } catch (groupError) {
+            this.logger.error(`Erro ao processar grupo ${groupId}:`, groupError);
             
             results.errors++;
             results.groupsInfo.push({
               id: groupId,
               status: 'Erro',
-              error: leaveError.message
+              error: groupError.message
             });
           }
         }
         
         results.totalContacts = allContacts.size;
         
-        // Bloqueia todos os contatos
+        // Bloqueia todos os contatos coletados dos grupos não-especiais
         for (const contactId of allContacts) {
           try {
-            // Verifica se não é o próprio usuário
-            if (contactId === message.author) continue;
+            // Verifica se não é o próprio usuário ou o contato alvo
+            if (contactId === message.author || contactId === phoneNumber) continue;
             
             // Tenta bloquear o contato
             const contactToBlock = await bot.client.getContactById(contactId);
@@ -1513,10 +1562,20 @@ class SuperAdmin {
           }
         }
         
+        // Bloqueia o contato alvo por último
+        try {
+          await contact.block();
+          this.logger.info(`Contato alvo ${phoneNumber} bloqueado.`);
+        } catch (blockTargetError) {
+          this.logger.error(`Erro ao bloquear contato alvo ${phoneNumber}:`, blockTargetError);
+          results.errors++;
+        }
+        
         // Constrói a mensagem de resposta
         let responseMessage = `*Operação completa para ${contactName} (${phoneNumber}):*\n\n`;
         responseMessage += `📊 *Resumo:*\n`;
         responseMessage += `• Grupos encontrados: ${results.totalGroups}\n`;
+        responseMessage += `• Grupos especiais (apenas remoção): ${results.specialGroups}\n`;
         responseMessage += `• Grupos deixados: ${results.leftGroups}\n`;
         responseMessage += `• Contatos únicos: ${results.totalContacts}\n`;
         responseMessage += `• Contatos bloqueados: ${results.blockedContacts}\n`;
@@ -1524,8 +1583,12 @@ class SuperAdmin {
         
         responseMessage += `*Detalhes dos grupos:*\n`;
         for (const group of results.groupsInfo) {
-          const statusEmoji = group.status === 'Sucesso' ? '✅' : '❌';
-          responseMessage += `${statusEmoji} ${group.id} - ${group.name || 'Nome desconhecido'}\n`;
+          let statusEmoji;
+          if (group.status === 'Sucesso') statusEmoji = '✅';
+          else if (group.status === 'Especial') statusEmoji = '⭐';
+          else statusEmoji = '❌';
+          
+          responseMessage += `${statusEmoji} ${group.id} - ${group.name || 'Nome desconhecido'} (${group.action || group.status})\n`;
         }
         
         return new ReturnMessage({
@@ -1656,7 +1719,7 @@ class SuperAdmin {
       });
     }
   }
-  
+
 }
 
 module.exports = SuperAdmin;
