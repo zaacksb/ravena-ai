@@ -4,6 +4,7 @@ const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
+const fs = require('fs').promises;
 
 const logger = new Logger('general-commands');
 
@@ -58,7 +59,7 @@ async function avisosCommand(bot, message, args, group){
 
   return new ReturnMessage({
     chatId: chatId,
-    content: `Ok! Tentei de adicionar no grupão da ravena. Se não tiver sido adicionado, entre pelo link: ${bot.linkAvisos}`
+    content: `Ok! Tentei de adicionar no grupo de avisos da ravena. Se não tiver sido adicionado, entre pelo link: ${bot.linkAvisos}`
   });
 }
 
@@ -66,8 +67,8 @@ async function codigoCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   try {
-    const codigoPath = path.join(process.cwd(), 'data', 'textos', 'codigo.txt');
-    const codigoContent = await fs.readFile(headerPath, 'utf8');
+    const codigoPath = path.join(database.databasePath, 'textos', 'codigo.txt');
+    const codigoContent = await fs.readFile(codigoPath, 'utf8');
 
     return new ReturnMessage({
       chatId: chatId,

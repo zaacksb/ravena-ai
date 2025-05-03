@@ -3,6 +3,7 @@ const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
+const fs = require('fs').promises;
 
 const logger = new Logger('donation-commands');
 const database = Database.getInstance();
@@ -15,9 +16,9 @@ const database = Database.getInstance();
  */
 async function readDonationHeader() {
   try {
-    const headerPath = path.join(process.cwd(), 'data', 'textos', 'donate_header.txt');
+    const headerPath = path.join(database.databasePath, 'textos', 'donate_header.txt');
     const headerContent = await fs.readFile(headerPath, 'utf8');
-    return headerContent.trim();
+    return headerContent;
   } catch (error) {
     logger.warn('Erro ao ler cabeçalho do donate:', error);
     return '💖 *Ajuda de custos _ravenabot_!* 🐦‍⬛\n\n';
@@ -30,9 +31,9 @@ async function readDonationHeader() {
  */
 async function readDonationFooter() {
   try {
-    const headerPath = path.join(process.cwd(), 'data', 'textos', 'donate_footer.txt');
+    const headerPath = path.join(database.databasePath, 'textos', 'donate_footer.txt');
     const headerContent = await fs.readFile(headerPath, 'utf8');
-    return headerContent.trim();
+    return headerContent;
   } catch (error) {
     logger.warn('Erro ao ler footer do donate:', error);
     return '';

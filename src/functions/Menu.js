@@ -222,7 +222,7 @@ async function sendCommandList(bot, message, args, group) {
     } else {
       menuText += `> _Grupo *${group.name}*_\n`;
     }
-    menuText += header + '\n\n';
+    menuText += header + '\n';
     
     // 1. Comandos Personalizados
     // Muita poluição
