@@ -17,7 +17,7 @@ const llmService = new LLMService({});
 async function pingCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
-  const delayMsg = bot.getCurrentTimestamp() - (msg.timestamp ?? bot.getCurrentTimestamp());
+  const delayMsg = bot.getCurrentTimestamp() - (message.origin.timestamp ?? bot.getCurrentTimestamp());
   logger.debug(`Executando comando ping para ${chatId}`);
   
   return new ReturnMessage({
