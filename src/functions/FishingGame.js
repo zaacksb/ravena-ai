@@ -648,7 +648,7 @@ async function fishCommand(bot, message, args, group) {
     if (caughtFishes.length === 0) {
       return new ReturnMessage({
         chatId,
-        content: `🎣 ${userName} jogou a linha... ${effectMessage}\n\nIscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`,
+        content: `🎣 ${userName} jogou a linha... ${effectMessage}\n\n> 🪱 Iscas restantes: ${fishingData.fishingData[userId].baits}/${MAX_BAITS}`,
         reactions: {
           after: "🎣"
         },
