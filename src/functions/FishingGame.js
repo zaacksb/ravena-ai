@@ -1321,7 +1321,7 @@ const commands = [
   }),
   
   new Command({
-    name: '!pesca-iscas',
+    name: 'pesca-iscas',
     description: 'Mostra suas iscas de pesca',
     category: "jogos",
     cooldown: 5,
