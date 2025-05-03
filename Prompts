@@ -2102,3 +2102,54 @@ Conteúdo da mensagem está em: path.join(database.databasePath, 'textos', 'bot-
 # CommandHandler
 
 Apenas reagir com  🆖 se o comando tiver prefixo. Grupos com prefixo vazio, não reagir com este emoji .
+
+----
+
+FishingGame.js
+
+- O peso dos peixes agora pode ser de 1 até 60kg
+
+- Sistema de Iscas, renova a cada 1 hora 1 isca
+
+- Máximo 10 iscas
+
+- Todos começam com 10 iscas
+
+- Alterar cooldown para 30 segundos, sem mandar mensages, apenas reage com emoji de relógio
+
+- Peixes raríssimos: Adiciona peso na pesca original
+
+	- Megalodon: 0,001% - Adiciona 5000kg
+
+	- Leviathan: 0,001% - Adiciona 5000kg
+
+	- Baleia: 0,005% - Adiciona 1000kg
+
+	- Tubarão: 0,01% - Adiciona 500kg
+
+	- Envia junto na mensagem uma imagem gerada no StableDiffusion.js com o prompt: "{nomeAutor} fishing an epic enormous fish named '{fishName}' using only a wooden fishing rod"
+
+	- Notifica no grupo interação támbém: A imagem gerada e na legenda o nome da pessoa, id do grupo e qual peixe especial pegou
+
+- Chance de pegar coisas além de peixes: Crie flair texts legais pra quando acontecer
+
+	- Lixos: 10% de chance. Bota, sacola, latinha, mochila, saco de lixo (invente mais com base em emojis). 0kg, gasta a isca apenas
+
+	- Upgrades (vem junto com o peixe): Chance de pegar [x%]
+
+		- [5%] Chapéu de Pescador: Aumenta 10% o peso dos próximos 10 peixes pescados
+
+		- [5%] Minhocão: O próximo peixe pescado terá um adicional de 20 a 50kg
+
+		- [5%] Rede: Pega 2 peixes de uma vez na próxima pesca
+
+		- [1%] Carretel: Aumenta 50% o peso dos próximos 10 peixes pescados
+
+		- [5%] Pacote de Iscas: Adiciona 1 a 5 iscas extras
+
+	- Downgrades (vem junto com o peixe):
+
+		- [0.01%] Mina Aquática: Explode Limpa o inventário do jogador
+
+		- [1%] Tartaruga Gulosa: Tira de 1 a 5 iscas do jogador
+
