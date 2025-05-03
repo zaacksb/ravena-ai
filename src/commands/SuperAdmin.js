@@ -36,6 +36,11 @@ class SuperAdmin {
       'restart': {'method': 'restartBot'},
       'addpeixe': {'method': 'Adiciona um tipo de peixe', },
       'removepeixe': {'method': 'Remove um tipo de peixe', }
+      'getMembros': {'method': 'getMembros', 'description': 'Lista todos os membros do grupo separados por admin e membros normais'},
+      'blockList': {'method': 'blockList', 'description': 'Bloqueia todos os contatos recebidos separados por vírgula'},
+      'unblockList': {'method': 'unblockList', 'description': 'Desbloqueia todos os contatos recebidos separados por vírgula'},
+      'listaGruposPessoa': {'method': 'listaGruposPessoa', 'description': 'Lista todos os grupos em comum com uma pessoa'},
+      'blockTudoPessoa': {'method': 'blockTudoPessoa', 'description': 'Sai de todos os grupos em comum com uma pessoa e bloqueia todos os membros'}
     };
   }
 
@@ -433,7 +438,7 @@ class SuperAdmin {
   }
 
   /**
-   * Faz o bot sair de um grupo
+   * Versão melhorada do comando leaveGroup com lista de bloqueio
    * @param {WhatsAppBot} bot - Instância do bot
    * @param {Object} message - Dados da mensagem
    * @param {Array} args - Argumentos do comando
@@ -451,19 +456,21 @@ class SuperAdmin {
         });
       }
       
-      if (args.length === 0) {
+      if (args.length === 0 && !message.group) {
         return new ReturnMessage({
           chatId: chatId,
-          content: 'Por favor, forneça o ID do grupo ou o nome cadastrado. Exemplo: !sa-leaveGrupo 123456789@g.us ou !sa-leaveGrupo nomeGrupo'
+          content: 'Por favor, forneça o ID do grupo ou execute o comando dentro de um grupo. Exemplo: !sa-leaveGrupo 123456789@g.us ou !sa-leaveGrupo nomeGrupo'
         });
       }
       
-      const groupIdentifier = args[0];
+      const groupIdentifier = args.length > 0 ? args[0] : message.group;
       let groupId;
       
       // Verifica se o formato é um ID de grupo
       if (groupIdentifier.includes('@g.us')) {
         groupId = groupIdentifier;
+      } else if (message.group) {
+        groupId = message.group;
       } else {
         // Busca o grupo pelo nome
         const groups = await this.database.getGroups();
@@ -480,15 +487,51 @@ class SuperAdmin {
       }
       
       try {
+        // Obtém o chat do grupo
+        const chat = await bot.client.getChatById(groupId);
+        
+        if (!chat.isGroup) {
+          return new ReturnMessage({
+            chatId: chatId,
+            content: `O ID fornecido (${groupId}) não corresponde a um grupo.`
+          });
+        }
+        
+        // Obtém participantes do grupo
+        const participants = chat.participants || [];
+        
+        // Separa administradores e membros normais
+        const admins = [];
+        const members = [];
+        
+        for (const participant of participants) {
+          const contactId = participant.id._serialized;
+          
+          if (participant.isAdmin || participant.isSuperAdmin) {
+            admins.push(contactId);
+          } else {
+            members.push(contactId);
+          }
+        }
+        
+        // Constrói os comandos de bloqueio
+        const blockAdminsCmd = `!sa-blockList ${admins.join(', ')}`;
+        const blockMembersCmd = `!sa-blockList ${members.join(', ')}`;
+        
         // Envia mensagem de despedida para o grupo
         await bot.sendMessage(groupId, '👋 Saindo do grupo por comando administrativo. Até mais!');
         
         // Tenta sair do grupo
         await bot.client.leaveGroup(groupId);
         
+        // Prepara mensagem de retorno com comandos de bloqueio
+        let responseMessage = `✅ Bot saiu do grupo ${chat.name} (${groupId}) com sucesso.\n\n`;
+        responseMessage += `*Para bloquear administradores:*\n\`\`\`${blockAdminsCmd}\`\`\`\n\n`;
+        responseMessage += `*Para bloquear demais membros:*\n\`\`\`${blockMembersCmd}\`\`\``;
+        
         return new ReturnMessage({
           chatId: chatId,
-          content: `✅ Bot saiu do grupo ${groupIdentifier} com sucesso.`
+          content: responseMessage
         });
       } catch (leaveError) {
         this.logger.error('Erro ao sair do grupo:', leaveError);
@@ -910,6 +953,584 @@ class SuperAdmin {
     }
   }
 
+  /**
+   * Lista os membros de um grupo separando administradores e membros normais
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem com a lista de membros
+   */
+  async getMembros(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      // Verifica se é um grupo ou se recebeu o ID do grupo
+      let groupId = message.group;
+      
+      if (!groupId && args.length > 0) {
+        groupId = args[0];
+        
+        // Verifica se o formato é válido para ID de grupo
+        if (!groupId.endsWith('@g.us')) {
+          groupId = `${groupId}@g.us`;
+        }
+      }
+      
+      if (!groupId) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça o ID do grupo ou execute o comando dentro de um grupo.'
+        });
+      }
+      
+      try {
+        // Obtém o chat do grupo
+        const chat = await bot.client.getChatById(groupId);
+        
+        if (!chat.isGroup) {
+          return new ReturnMessage({
+            chatId: chatId,
+            content: `O ID fornecido (${groupId}) não corresponde a um grupo.`
+          });
+        }
+        
+        // Obtém participantes do grupo
+        const participants = chat.participants || [];
+        
+        // Separa administradores e membros normais
+        const admins = [];
+        const members = [];
+        
+        for (const participant of participants) {
+          const contactId = participant.id._serialized;
+          let contactName = 'Desconhecido';
+          
+          try {
+            // Tenta obter dados do contato
+            const contact = await bot.client.getContactById(contactId);
+            contactName = contact.pushname || contact.name || contactId.replace('@c.us', '');
+          } catch (contactError) {
+            this.logger.debug(`Não foi possível obter informações do contato ${contactId}:`, contactError);
+          }
+          
+          if (participant.isAdmin || participant.isSuperAdmin) {
+            admins.push({ id: contactId, name: contactName });
+          } else {
+            members.push({ id: contactId, name: contactName });
+          }
+        }
+        
+        // Constrói a mensagem de resposta
+        let responseMessage = `*Membros do Grupo:* ${chat.name}\n\n`;
+        
+        responseMessage += `*Administradores (${admins.length}):*\n`;
+        for (const admin of admins) {
+          responseMessage += `• ${admin.id} - ${admin.name}\n`;
+        }
+        
+        responseMessage += `\n*Membros (${members.length}):*\n`;
+        for (const member of members) {
+          responseMessage += `• ${member.id} - ${member.name}\n`;
+        }
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: responseMessage
+        });
+      } catch (error) {
+        this.logger.error(`Erro ao obter membros do grupo ${groupId}:`, error);
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao obter membros do grupo: ${error.message}`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando getMembros:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+
+
+  /**
+   * Bloqueia uma lista de contatos de uma vez
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem com resultados dos bloqueios
+   */
+  async blockList(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      // Obtém o texto completo de argumentos e divide por vírgulas
+      const contactsText = args.join(' ');
+      if (!contactsText.trim()) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça uma lista de contatos separados por vírgula. Exemplo: !sa-blockList 5511999999999@c.us, 5511888888888@c.us'
+        });
+      }
+      
+      // Divide a lista de contatos por vírgula
+      const contactsList = contactsText.split(',').map(contact => contact.trim());
+      
+      if (contactsList.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Nenhum contato válido encontrado na lista.'
+        });
+      }
+      
+      // Resultados do bloqueio
+      const results = [];
+      
+      // Processa cada contato
+      for (const contactItem of contactsList) {
+        // Processa o número para formato padrão
+        let phoneNumber = contactItem.replace(/\D/g, '');
+        
+        // Se o número estiver vazio, pula para o próximo
+        if (!phoneNumber) {
+          results.push({ id: contactItem, status: 'Erro', message: 'Número inválido' });
+          continue;
+        }
+        
+        // Se o número não tiver o formato @c.us, adicione
+        if (!contactItem.includes('@')) {
+          phoneNumber = `${phoneNumber}@c.us`;
+        } else {
+          phoneNumber = contactItem;
+        }
+        
+        try {
+          // Tenta bloquear o contato
+          const contact = await bot.client.getContactById(phoneNumber);
+          await contact.block();
+          
+          results.push({ id: phoneNumber, status: 'Bloqueado', message: 'Sucesso' });
+        } catch (blockError) {
+          this.logger.error(`Erro ao bloquear contato ${phoneNumber}:`, blockError);
+          
+          results.push({ 
+            id: phoneNumber, 
+            status: 'Erro', 
+            message: blockError.message || 'Erro desconhecido'
+          });
+        }
+      }
+      
+      // Constrói a mensagem de resposta
+      let responseMessage = `*Resultados do bloqueio (${results.length} contatos):*\n\n`;
+      
+      // Conta bloqueados e erros
+      const blocked = results.filter(r => r.status === 'Bloqueado').length;
+      const errors = results.filter(r => r.status === 'Erro').length;
+      
+      responseMessage += `✅ *Bloqueados com sucesso:* ${blocked}\n`;
+      responseMessage += `❌ *Erros:* ${errors}\n\n`;
+      
+      // Lista detalhada
+      responseMessage += `*Detalhes:*\n`;
+      for (const result of results) {
+        const statusEmoji = result.status === 'Bloqueado' ? '✅' : '❌';
+        responseMessage += `${statusEmoji} ${result.id}: ${result.status}\n`;
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: responseMessage
+      });
+    } catch (error) {
+      this.logger.error('Erro no comando blockList:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  /**
+   * Desbloqueia uma lista de contatos de uma vez
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem com resultados dos desbloqueios
+   */
+  async unblockList(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      // Obtém o texto completo de argumentos e divide por vírgulas
+      const contactsText = args.join(' ');
+      if (!contactsText.trim()) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça uma lista de contatos separados por vírgula. Exemplo: !sa-unblockList 5511999999999@c.us, 5511888888888@c.us'
+        });
+      }
+      
+      // Divide a lista de contatos por vírgula
+      const contactsList = contactsText.split(',').map(contact => contact.trim());
+      
+      if (contactsList.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Nenhum contato válido encontrado na lista.'
+        });
+      }
+      
+      // Resultados do desbloqueio
+      const results = [];
+      
+      // Processa cada contato
+      for (const contactItem of contactsList) {
+        // Processa o número para formato padrão
+        let phoneNumber = contactItem.replace(/\D/g, '');
+        
+        // Se o número estiver vazio, pula para o próximo
+        if (!phoneNumber) {
+          results.push({ id: contactItem, status: 'Erro', message: 'Número inválido' });
+          continue;
+        }
+        
+        // Se o número não tiver o formato @c.us, adicione
+        if (!contactItem.includes('@')) {
+          phoneNumber = `${phoneNumber}@c.us`;
+        } else {
+          phoneNumber = contactItem;
+        }
+        
+        try {
+          // Tenta desbloquear o contato
+          const contact = await bot.client.getContactById(phoneNumber);
+          await contact.unblock();
+          
+          results.push({ id: phoneNumber, status: 'Desbloqueado', message: 'Sucesso' });
+        } catch (unblockError) {
+          this.logger.error(`Erro ao desbloquear contato ${phoneNumber}:`, unblockError);
+          
+          results.push({ 
+            id: phoneNumber, 
+            status: 'Erro', 
+            message: unblockError.message || 'Erro desconhecido'
+          });
+        }
+      }
+      
+      // Constrói a mensagem de resposta
+      let responseMessage = `*Resultados do desbloqueio (${results.length} contatos):*\n\n`;
+      
+      // Conta desbloqueados e erros
+      const unblocked = results.filter(r => r.status === 'Desbloqueado').length;
+      const errors = results.filter(r => r.status === 'Erro').length;
+      
+      responseMessage += `✅ *Desbloqueados com sucesso:* ${unblocked}\n`;
+      responseMessage += `❌ *Erros:* ${errors}\n\n`;
+      
+      // Lista detalhada
+      responseMessage += `*Detalhes:*\n`;
+      for (const result of results) {
+        const statusEmoji = result.status === 'Desbloqueado' ? '✅' : '❌';
+        responseMessage += `${statusEmoji} ${result.id}: ${result.status}\n`;
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: responseMessage
+      });
+    } catch (error) {
+      this.logger.error('Erro no comando unblockList:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  /**
+   * Lista todos os grupos em comum com um contato
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem com a lista de grupos
+   */
+  async listaGruposPessoa(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça o número do contato. Exemplo: !sa-listaGruposPessoa 5511999999999'
+        });
+      }
+      
+      // Processa o número para formato padrão
+      let phoneNumber = args[0].replace(/\D/g, '');
+      
+      // Se o número não tiver o formato @c.us, adicione
+      if (!phoneNumber.includes('@')) {
+        phoneNumber = `${phoneNumber}@c.us`;
+      }
+      
+      try {
+        // Obtém o contato
+        const contact = await bot.client.getContactById(phoneNumber);
+        const contactName = contact.pushname || contact.name || phoneNumber;
+        
+        // Obtém grupos em comum
+        const commonGroups = await contact.getCommonGroups();
+        
+        if (!commonGroups || commonGroups.length === 0) {
+          return new ReturnMessage({
+            chatId: chatId,
+            content: `Nenhum grupo em comum encontrado com ${contactName} (${phoneNumber}).`
+          });
+        }
+        
+        // Obtém informações dos grupos do banco de dados
+        const groups = await this.database.getGroups();
+        
+        // Constrói a mensagem de resposta
+        let responseMessage = `*Grupos em comum com ${contactName} (${phoneNumber}):*\n\n`;
+        
+        // Adiciona cada grupo à resposta
+        for (const groupId of commonGroups) {
+          // Busca informações do banco de dados
+          const groupData = groups.find(g => g.id === groupId);
+          const groupName = groupData ? groupData.name : 'Nome desconhecido';
+          
+          // Tenta obter nome do chat
+          let chatName = groupName;
+          try {
+            const chat = await bot.client.getChatById(groupId);
+            chatName = chat.name || groupName;
+          } catch (error) {
+            this.logger.debug(`Erro ao obter informações do chat ${groupId}:`, error);
+          }
+          
+          responseMessage += `• ${groupId} - ${chatName}\n`;
+        }
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: responseMessage
+        });
+      } catch (error) {
+        this.logger.error(`Erro ao listar grupos em comum com ${phoneNumber}:`, error);
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao listar grupos em comum: ${error.message}`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando listaGruposPessoa:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  /**
+   * Sai de todos os grupos em comum com um contato e bloqueia todos os membros
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem com o resultado da operação
+   */
+  async blockTudoPessoa(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça o número do contato. Exemplo: !sa-blockTudoPessoa 5511999999999'
+        });
+      }
+      
+      // Processa o número para formato padrão
+      let phoneNumber = args[0].replace(/\D/g, '');
+      
+      // Se o número não tiver o formato @c.us, adicione
+      if (!phoneNumber.includes('@')) {
+        phoneNumber = `${phoneNumber}@c.us`;
+      }
+      
+      try {
+        // Obtém o contato
+        const contact = await bot.client.getContactById(phoneNumber);
+        const contactName = contact.pushname || contact.name || phoneNumber;
+        
+        // Obtém grupos em comum
+        const commonGroups = await contact.getCommonGroups();
+        
+        if (!commonGroups || commonGroups.length === 0) {
+          return new ReturnMessage({
+            chatId: chatId,
+            content: `Nenhum grupo em comum encontrado com ${contactName} (${phoneNumber}).`
+          });
+        }
+        
+        // Resultados da operação
+        const results = {
+          totalGroups: commonGroups.length,
+          leftGroups: 0,
+          totalContacts: 0,
+          blockedContacts: 0,
+          errors: 0,
+          groupsInfo: []
+        };
+        
+        // Conjunto para armazenar todos os contatos únicos
+        const allContacts = new Set();
+        
+        // Processa cada grupo
+        for (const groupId of commonGroups) {
+          try {
+            // Obtém o chat do grupo
+            const chat = await bot.client.getChatById(groupId);
+            const groupName = chat.name || groupId;
+            
+            // Obtém participantes do grupo
+            const participants = chat.participants || [];
+            
+            // Adiciona ID de cada participante ao conjunto
+            participants.forEach(participant => {
+              allContacts.add(participant.id._serialized);
+            });
+            
+            // Envia mensagem de despedida
+            await bot.sendMessage(groupId, '👋 Saindo deste grupo por motivos administrativos. Até mais!');
+            
+            // Sai do grupo
+            await bot.client.leaveGroup(groupId);
+            
+            results.leftGroups++;
+            results.groupsInfo.push({
+              id: groupId,
+              name: groupName,
+              status: 'Sucesso',
+              members: participants.length
+            });
+          } catch (leaveError) {
+            this.logger.error(`Erro ao sair do grupo ${groupId}:`, leaveError);
+            
+            results.errors++;
+            results.groupsInfo.push({
+              id: groupId,
+              status: 'Erro',
+              error: leaveError.message
+            });
+          }
+        }
+        
+        results.totalContacts = allContacts.size;
+        
+        // Bloqueia todos os contatos
+        for (const contactId of allContacts) {
+          try {
+            // Verifica se não é o próprio usuário
+            if (contactId === message.author) continue;
+            
+            // Tenta bloquear o contato
+            const contactToBlock = await bot.client.getContactById(contactId);
+            await contactToBlock.block();
+            
+            results.blockedContacts++;
+          } catch (blockError) {
+            this.logger.error(`Erro ao bloquear contato ${contactId}:`, blockError);
+            results.errors++;
+          }
+        }
+        
+        // Constrói a mensagem de resposta
+        let responseMessage = `*Operação completa para ${contactName} (${phoneNumber}):*\n\n`;
+        responseMessage += `📊 *Resumo:*\n`;
+        responseMessage += `• Grupos encontrados: ${results.totalGroups}\n`;
+        responseMessage += `• Grupos deixados: ${results.leftGroups}\n`;
+        responseMessage += `• Contatos únicos: ${results.totalContacts}\n`;
+        responseMessage += `• Contatos bloqueados: ${results.blockedContacts}\n`;
+        responseMessage += `• Erros: ${results.errors}\n\n`;
+        
+        responseMessage += `*Detalhes dos grupos:*\n`;
+        for (const group of results.groupsInfo) {
+          const statusEmoji = group.status === 'Sucesso' ? '✅' : '❌';
+          responseMessage += `${statusEmoji} ${group.id} - ${group.name || 'Nome desconhecido'}\n`;
+        }
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: responseMessage
+        });
+      } catch (error) {
+        this.logger.error(`Erro ao processar blockTudoPessoa para ${phoneNumber}:`, error);
+        
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Erro ao processar operação: ${error.message}`
+        });
+      }
+    } catch (error) {
+      this.logger.error('Erro no comando blockTudoPessoa:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
 
 }
 

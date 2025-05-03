@@ -2003,3 +2003,67 @@ O bot deve calcular uma média de response time das mensagens e guardar junto no
 Caso o response time exceda 60 segundos, deve-se ativar uma restartBot com a justificativa: "O delay está elevado (32s), por isso o bot será reiniciado."
 
 Após reiniciar, o bot não deve ser reiniciado novamente pelo mesmo motivo dentro de 30 minutos.
+
+----
+
+# SuperAdmin
+
+## !sa-getMembros
+
+Lista o numero e nome (se possivel) de todos os membros do grupo, separado por admin e membros normais
+
+Ex.:
+
+Admins
+
+12345@c.us - Pessoa
+
+Membros
+
+67890@c.us - Pessoa
+
+## !sa-leaveGrupo
+
+leaveGroup
+
+Antes de sair, pega o id (123456@c.us) de todos os membros do grupo
+
+Na mensagem de retorno, enviar, separado por virgula duas linhas diferentes escrito
+
+Bloquear admins:
+
+```!sa-blockList 123456@c.us, 78901@c.us...```
+
+Bloquear demais membros:
+
+```!sa-blockList 98876@c.us, 54321c.us...```
+
+## !sa-blockList contato1, contato2,contato3..
+
+Similar ao !sa-block (block), mas bloqueia todos os contatos recebidos separado por vírgula.
+
+Responde status de bloqueio para cada um dos numeros como lista
+
+contato1: Bloqueado
+
+contado2: Erro
+
+## !sa-unblockList
+
+Mesmo que o anterior, mas para desbloquear todos da lista
+
+## !sa-listaGruposPessoa 123456@c.us
+
+Pega o contato da pessoa e usa a função Contact.getCommonGroups(), que retorna um array de IDs de grupo (12345@g.us)
+
+Gerar mensagem com a lista dos ids e pegar o group name na base de dados:
+
+12345@g.us - nomeGrupo
+
+67890@g.us - grupoDois
+
+## !sa-blockTudoPessoa 123456@c.us
+
+Une o listaGruposPessoa com a leaveGrupo e getMembros.
+
+Pega todos os grupos em comuns da pessoa, sai de todos eles e bloqueia todos os membros que estão nestes grupos.
