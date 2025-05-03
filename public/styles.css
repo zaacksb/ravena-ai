@@ -492,9 +492,10 @@ footer {
 
 /* Estilo para contador de mensagens por hora total */
 .total-msgs-counter {
-    display: inline-flex;
+    /*display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: center;*/
+    text-align: center;
     background-color: var(--medium-purple);
     color: white;
     padding: 10px 15px;

@@ -194,27 +194,14 @@ function renderBots(data) {
     });
     
     // Cria o contador de mensagens total
-    const refreshButton = document.getElementById('refreshButton');
+    const msgsCounterDiv = document.getElementById('msgsCounterDiv');
     
-    if (refreshButton) {
-        const refreshContainer = refreshButton.parentElement;
-        
-        // Remove o botão de refresh antigo
-        refreshButton.remove();
-        
+    if (msgsCounterDiv) {
         // Adiciona o contador de mensagens total
-        const totalMsgsCounter = document.createElement('div');
-        totalMsgsCounter.className = 'total-msgs-counter';
-        totalMsgsCounter.innerHTML = `
-            <span>Total de Mensagens/Hora:</span>
+        msgsCounterDiv.innerHTML = `
+            <span>Mensagens por Hora atual:</span>
             <span class="count">${totalMsgsHr} msgs/h</span>
         `;
-        
-        // Adiciona o evento de clique para atualizar
-        totalMsgsCounter.addEventListener('click', fetchHealthData);
-        
-        // Adiciona ao container
-        refreshContainer.appendChild(totalMsgsCounter);
     }
     
     // Renderiza os cards de bot
