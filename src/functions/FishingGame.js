@@ -834,6 +834,26 @@ async function fishCommand(bot, message, args, group) {
         const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
         
         if (rareFishImage) {
+          // Salva a imagem e registra o peixe lendário
+          const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
+          
+          // Inicializa o array de peixes lendários se não existir
+          if (!fishingData.legendaryFishes) {
+            fishingData.legendaryFishes = [];
+          }
+          
+          // Adiciona o peixe lendário à lista
+          fishingData.legendaryFishes.push({
+            fishName: caughtFishes[0].name,
+            weight: caughtFishes[0].weight,
+            userId: userId,
+            userName: userName,
+            groupId: groupId || null,
+            groupName: group ? group.name : "chat privado",
+            timestamp: Date.now(),
+            imageName: savedImageName
+          });
+        
           // Notifica o grupo de interação sobre o peixe raro
           if (bot.grupoInteracao) {
             const groupName = group ? group.name : "chat privado";
@@ -861,6 +881,16 @@ async function fishCommand(bot, message, args, group) {
             }
           });
         }
+      } catch (imageError) {
+        logger.error('Erro ao gerar ou enviar imagem de peixe raro:', imageError);
+      }
+    }
+    if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
+      try {
+        // Gera a imagem para o peixe raro
+        const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
+        
+
       } catch (imageError) {
         logger.error('Erro ao gerar ou enviar imagem de peixe raro:', imageError);
       }
@@ -1394,46 +1424,7 @@ async function saveRareFishImage(mediaContent, userId, fishName) {
 
 // Dentro do método fishCommand, na parte onde trata os peixes raros (linha ~721):
 // Se pescou um peixe raro, gera imagem e notifica grupo de interação
-if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
-  try {
-    // Gera a imagem para o peixe raro
-    const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
-    
-    if (rareFishImage) {
-      // Salva a imagem e registra o peixe lendário
-      const savedImageName = await saveRareFishImage(rareFishImage, userId, caughtFishes[0].name);
-      
-      // Inicializa o array de peixes lendários se não existir
-      if (!fishingData.legendaryFishes) {
-        fishingData.legendaryFishes = [];
-      }
-      
-      // Adiciona o peixe lendário à lista
-      fishingData.legendaryFishes.push({
-        fishName: caughtFishes[0].name,
-        weight: caughtFishes[0].weight,
-        userId: userId,
-        userName: userName,
-        groupId: groupId || null,
-        groupName: group ? group.name : "chat privado",
-        timestamp: Date.now(),
-        imageName: savedImageName
-      });
-      
-      // Notifica o grupo de interação sobre o peixe raro
-      if (bot.grupoInteracao) {
-        // [código existente...]
-      }
-      
-      // Envia a mensagem com a imagem
-      return new ReturnMessage({
-        // [código existente...]
-      });
-    }
-  } catch (imageError) {
-    logger.error('Erro ao gerar ou enviar imagem de peixe raro:', imageError);
-  }
-}
+
 
 /**
  * Mostra os peixes lendários que foram pescados
