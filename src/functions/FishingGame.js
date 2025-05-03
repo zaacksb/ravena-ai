@@ -14,7 +14,7 @@ const database = Database.getInstance();
 const MAX_FISH_PER_USER = 10;
 const MIN_FISH_WEIGHT = 1;
 const MAX_FISH_WEIGHT = 60; // Aumentado para 60kg
-const FISHING_COOLDOWN = 30; // Reduzido para 30 segundos
+const FISHING_COOLDOWN = 5;
 const MAX_BAITS = 10; // Máximo de iscas
 const BAIT_REGEN_TIME = 60 * 60; // 1 hora em segundos para regenerar isca
 
