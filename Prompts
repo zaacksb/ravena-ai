@@ -2067,3 +2067,11 @@ Gerar mensagem com a lista dos ids e pegar o group name na base de dados:
 Une o listaGruposPessoa com a leaveGrupo e getMembros.
 
 Pega todos os grupos em comuns da pessoa, sai de todos eles e bloqueia todos os membros que estão nestes grupos.
+
+As funçoes devem receber o nome de cadastro da base de dados (group.id) como argumento, e o bot deve buscar o groupID (12345@g.us) com base nisso.
+
+A função database.getGroup("nome") faz isso
+
+leaveGroup, getMembros
+
+Me envie um artefato completo do SuperAdmin.js, em 2 ou 3 partes para não perder código.

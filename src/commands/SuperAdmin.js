@@ -24,18 +24,19 @@ class SuperAdmin {
     
     // Mapeamento de comando para método
     this.commandMap = {
-      'joinGrupo': {'method': 'joinGroup'},
-      'addDonateNumero': {'method': 'addDonorNumber'},
-      'addDonateValor': {'method': 'updateDonationAmount'},
-      'mergeDonates': {'method': 'mergeDonors'},
-      'block': {'method': 'blockUser'},
-      'unblock': {'method': 'unblockUser'},
-      'leaveGrupo': {'method': 'leaveGroup'},
-      'foto': {'method': 'changeProfilePicture'},
-      'simular': {'method': 'simulateStreamEvent'},
-      'restart': {'method': 'restartBot'},
-      'addpeixe': {'method': 'Adiciona um tipo de peixe', },
-      'removepeixe': {'method': 'Remove um tipo de peixe', }
+      'joinGrupo': {'method': 'joinGroup', 'description': 'Entra em um grupo via link de convite'},
+      'addDonateNumero': {'method': 'addDonorNumber', 'description': 'Adiciona número de um doador'},
+      'addDonateValor': {'method': 'updateDonationAmount', 'description': 'Atualiza valor de doação'},
+      'mergeDonates': {'method': 'mergeDonors', 'description': 'Une dois doadores em um'},
+      'block': {'method': 'blockUser', 'description': 'Bloqueia um usuário'},
+      'unblock': {'method': 'unblockUser', 'description': 'Desbloqueia um usuário'},
+      'leaveGrupo': {'method': 'leaveGroup', 'description': 'Sai de um grupo com opção de bloquear membros'},
+      'foto': {'method': 'changeProfilePicture', 'description': 'Altera foto de perfil do bot'},
+      'simular': {'method': 'simulateStreamEvent', 'description': 'Simula evento de stream'},
+      'restart': {'method': 'restartBot', 'description': 'Reinicia o bot'},
+      'addpeixe': {'method': 'addFishTypeCommand', 'description': 'Adiciona um tipo de peixe'},
+      'removepeixe': {'method': 'removeFishTypeCommand', 'description': 'Remove um tipo de peixe'},
+      'getGroupInfo': {'method': 'getGroupInfo', 'description': 'Dump de dados de grupo por nome cadastro'},
       'getMembros': {'method': 'getMembros', 'description': 'Lista todos os membros do grupo separados por admin e membros normais'},
       'blockList': {'method': 'blockList', 'description': 'Bloqueia todos os contatos recebidos separados por vírgula'},
       'unblockList': {'method': 'unblockList', 'description': 'Desbloqueia todos os contatos recebidos separados por vírgula'},
@@ -50,7 +51,7 @@ class SuperAdmin {
    * @returns {string|null} - Nome do método ou null se não encontrado
    */
   getCommandMethod(command) {
-    return this.commandMap[command].method || null;
+    return this.commandMap[command]?.method || null;
   }
 
   /**
@@ -363,14 +364,14 @@ class SuperAdmin {
         
         return new ReturnMessage({
           chatId: chatId,
-          content: `✅ Contato ${JSON.stringify(contatoBloquear)} bloqueado com sucesso.`
+          content: `✅ Contato ${phoneNumber} bloqueado com sucesso.`
         });
       } catch (blockError) {
-        this.logger.error('Erro ao bloquear contato:', blockError, contatoBloquear);
+        this.logger.error('Erro ao bloquear contato:', blockError);
         
         return new ReturnMessage({
           chatId: chatId,
-          content: `❌ Erro ao bloquear contato: ${blockError.message}, ${JSON.stringify(contatoBloquear)}`
+          content: `❌ Erro ao bloquear contato: ${blockError.message}`
         });
       }
     } catch (error) {
@@ -383,6 +384,13 @@ class SuperAdmin {
     }
   }
 
+  /**
+   * Desbloqueia um usuário
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
   async unblockUser(bot, message, args) {
     try {
       const chatId = message.group || message.author;
@@ -411,20 +419,20 @@ class SuperAdmin {
       }
       
       try {
-        // Tenta bloquear o contato
+        // Tenta desbloquear o contato
         const contatoDesbloquear = await bot.client.getContactById(phoneNumber);
         await contatoDesbloquear.unblock();
         
         return new ReturnMessage({
           chatId: chatId,
-          content: `✅ Contato ${JSON.stringify(contatoDesbloquear)} desbloqueado com sucesso.`
+          content: `✅ Contato ${phoneNumber} desbloqueado com sucesso.`
         });
       } catch (unblockError) {
-        this.logger.error('Erro ao desbloquear contato:', unblockError, contatoDesbloquear);
+        this.logger.error('Erro ao desbloquear contato:', unblockError);
         
         return new ReturnMessage({
           chatId: chatId,
-          content: `❌ Erro ao desbloquear contato: ${unblockError.message}, ${JSON.stringify(contatoDesbloquear)}`
+          content: `❌ Erro ao desbloquear contato: ${unblockError.message}`
         });
       }
     } catch (error) {
@@ -832,7 +840,13 @@ class SuperAdmin {
    */
   async addFishTypeCommand(bot, message, args, group) {
     try {
-      // Este comando só deve ser disponível para administradores
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: message.group || message.author,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
       
       // Obtém ID do chat
       const chatId = message.group || message.author;
@@ -841,7 +855,7 @@ class SuperAdmin {
       if (args.length === 0) {
         return new ReturnMessage({
           chatId,
-          content: '⚠️ Por favor, forneça o nome do peixe a ser adicionado. Exemplo: !addpeixe Tilápia'
+          content: '⚠️ Por favor, forneça o nome do peixe a ser adicionado. Exemplo: !sa-addpeixe Tilápia'
         });
       }
       
@@ -849,7 +863,7 @@ class SuperAdmin {
       const fishName = args.join(' ');
       
       // Obtém variáveis personalizadas
-      const customVariables = await database.getCustomVariables();
+      const customVariables = await this.database.getCustomVariables();
       
       // Inicializa peixes se não existir
       if (!customVariables.peixes) {
@@ -868,14 +882,14 @@ class SuperAdmin {
       customVariables.peixes.push(fishName);
       
       // Salva as variáveis atualizadas
-      await database.saveCustomVariables(customVariables);
+      await this.database.saveCustomVariables(customVariables);
       
       return new ReturnMessage({
         chatId,
         content: `✅ Peixe "${fishName}" adicionado à lista com sucesso! A lista agora tem ${customVariables.peixes.length} tipos de peixes.`
       });
     } catch (error) {
-      logger.error('Erro ao adicionar tipo de peixe:', error);
+      this.logger.error('Erro ao adicionar tipo de peixe:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,
@@ -894,7 +908,13 @@ class SuperAdmin {
    */
   async removeFishTypeCommand(bot, message, args, group) {
     try {
-      // Este comando só deve ser disponível para administradores
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: message.group || message.author,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
       
       // Obtém ID do chat
       const chatId = message.group || message.author;
@@ -903,7 +923,7 @@ class SuperAdmin {
       if (args.length === 0) {
         return new ReturnMessage({
           chatId,
-          content: '⚠️ Por favor, forneça o nome do peixe a ser removido. Exemplo: !removepeixe Tilápia'
+          content: '⚠️ Por favor, forneça o nome do peixe a ser removido. Exemplo: !sa-removepeixe Tilápia'
         });
       }
       
@@ -911,7 +931,7 @@ class SuperAdmin {
       const fishName = args.join(' ');
       
       // Obtém variáveis personalizadas
-      const customVariables = await database.getCustomVariables();
+      const customVariables = await this.database.getCustomVariables();
       
       // Verifica se há peixes
       if (!customVariables.peixes || customVariables.peixes.length === 0) {
@@ -937,14 +957,14 @@ class SuperAdmin {
       customVariables.peixes.splice(index, 1);
       
       // Salva as variáveis atualizadas
-      await database.saveCustomVariables(customVariables);
+      await this.database.saveCustomVariables(customVariables);
       
       return new ReturnMessage({
         chatId,
         content: `✅ Peixe "${fishName}" removido da lista com sucesso! A lista agora tem ${customVariables.peixes.length} tipos de peixes.`
       });
     } catch (error) {
-      logger.error('Erro ao remover tipo de peixe:', error);
+      this.logger.error('Erro ao remover tipo de peixe:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,
@@ -1062,8 +1082,6 @@ class SuperAdmin {
       });
     }
   }
-
-
 
   /**
    * Bloqueia uma lista de contatos de uma vez
@@ -1532,6 +1550,113 @@ class SuperAdmin {
     }
   }
 
+  /**
+   * Exibe informações detalhadas de um grupo pelo nome de cadastro
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem com as informações do grupo
+   */
+  async getGroupInfo(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça o nome de cadastro do grupo. Exemplo: !sa-getGroupInfo nomeGrupo'
+        });
+      }
+      
+      // Obtém nome do grupo a partir dos argumentos
+      const groupName = args.join(' ').toLowerCase();
+      
+      // Busca o grupo no banco de dados
+      const groups = await this.database.getGroups();
+      const group = groups.find(g => g.name.toLowerCase() === groupName);
+      
+      if (!group) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: `❌ Grupo '${groupName}' não encontrado no banco de dados.`
+        });
+      }
+      
+      // Tenta obter informações do chat do grupo
+      let chatInfo = null;
+      try {
+        const chat = await bot.client.getChatById(group.id);
+        chatInfo = JSON.stringify(chat, null, 2);
+      } catch (chatError) {
+        this.logger.error(`Erro ao obter informações do chat ${group.id}:`, chatError);
+        chatInfo = `Erro ao obter informações do chat: ${chatError.message}`;
+      }
+      
+      // Formata os dados do grupo para exibição
+      const groupData = JSON.stringify(group, null, 2);
+      
+      // Informações resumidas do grupo
+      let responseMessage = `*Informações do Grupo: ${group.name}*\n\n`;
+      responseMessage += `*ID:* ${group.id}\n`;
+      responseMessage += `*Nome de Cadastro:* ${group.name}\n`;
+      responseMessage += `*Prefixo:* ${group.prefix || '!'}\n`;
+      responseMessage += `*Pausado:* ${group.paused ? 'Sim' : 'Não'}\n`;
+      responseMessage += `*Auto STT:* ${group.autoStt ? 'Ativado' : 'Desativado'}\n`;
+      
+      // Informações sobre filtros
+      if (group.filters) {
+        responseMessage += `\n*Filtros:*\n`;
+        responseMessage += `- *NSFW:* ${group.filters.nsfw ? 'Ativado' : 'Desativado'}\n`;
+        responseMessage += `- *Links:* ${group.filters.links ? 'Ativado' : 'Desativado'}\n`;
+        
+        if (group.filters.words && group.filters.words.length > 0) {
+          responseMessage += `- *Palavras:* ${group.filters.words.join(', ')}\n`;
+        }
+        
+        if (group.filters.people && group.filters.people.length > 0) {
+          responseMessage += `- *Pessoas:* ${group.filters.people.length} pessoas filtradas\n`;
+        }
+      }
+      
+      // Comandos personalizados
+      const commands = await this.database.getCustomCommands(group.id);
+      const activeCommands = commands.filter(cmd => cmd.active && !cmd.deleted);
+      responseMessage += `\n*Comandos Personalizados:* ${activeCommands.length}\n`;
+      
+      // Resposta completa com os dados em formato JSON
+      responseMessage += `\n*Detalhes completos do grupo serão enviados como mensagens separadas.*`;
+      
+      // Envia mensagem inicial
+      await bot.sendMessage(chatId, responseMessage);
+      
+      // Envia dados do banco de dados
+      await bot.sendMessage(chatId, `*Dados do Banco de Dados (group):*\n\n\`\`\`json\n${groupData}\n\`\`\``);
+      
+      // Envia informações do chat
+      await bot.sendMessage(chatId, `*Dados do Chat API (client.getChatById):*\n\n\`\`\`json\n${chatInfo}\n\`\`\``);
+      
+      return new ReturnMessage({
+        content: 'Informações enviadas com sucesso.',
+        chatId: chatId
+      });
+    } catch (error) {
+      this.logger.error('Erro no comando getGroupInfo:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: `❌ Erro ao processar comando: ${error.message}`
+      });
+    }
+  }
+  
 }
 
 module.exports = SuperAdmin;
