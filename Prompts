@@ -2068,3 +2068,37 @@ Também envia um JSON.stringify formatado do client.getChatById(groupId)
 ## Observação
 
 Me envie um artefato completo do SuperAdmin.js, em 2 ou 3 partes para não perder código.
+
+----
+
+# EventHandler
+
+processNonCommandMessage
+
+Mais um tipo de mensagem a ser processada:
+
+é imagem, gif ou vídeo
+
+não está atualmente usando g-manage para algum grupo
+
+Automaticamente faz um sticker (simples, como no !s)
+
+Implementar como o processAutoSTT no SpeechCommands, mas no arquivo Stickers.js
+
+## GreetingMessage
+
+Quando um usuário enviar algo no PV do bot, enviar uma mensagem de saudação, falando que é a ravena bot e que os comandos podem se consultados usando !cmd
+
+Gere o arquivo bot-greeting.txt com base nos outros txt enviados (mesmo palavreado, estilo e emojis).
+
+Fale que no pv basta encaminhar áudio par atranscrever ou imagem/video para que eu faça um sticker.
+
+Essa mensagem deve ser enviada no máximo 1 vez por semana para cada usuário.
+
+Você pode guardar um greeted-ids.json na database.databasePath com o id do usuario @c.us e o timestamp que foi recebido.
+
+Conteúdo da mensagem está em: path.join(database.databasePath, 'textos', 'bot-greeting.txt') eConte
+
+# CommandHandler
+
+Apenas reagir com  🆖 se o comando tiver prefixo. Grupos com prefixo vazio, não reagir com este emoji .

@@ -608,7 +608,9 @@ class CommandHandler {
         await this.executeCustomCommand(bot, message, customCommand, args, group);
         return;
       } else {
-        message.origin.react("🆖");
+        if (group.prefix && group.prefix !== '') {
+          message.origin.react("🆖");
+        }
       }
     }
     

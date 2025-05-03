@@ -119,6 +119,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Implementar !g-abrir e !g-fechar
 - [x] Implementar !g-setApelido numero Apelido
 - [x] !live atualizar titulo do grupo
+- [ ] Add !convite
 - [ ] Comando convite com argumento pro id do bot
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
 - [ ] Donates no convite
@@ -153,8 +154,10 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] !le mais de 1 lista
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
-- [ ] Ignorar mensagens grupo de invites
-- [ ] Bot não envia mensagem de RAEDY
+- [x] Ignorar mensagens grupo de invites
+- [ ] Bot não envia mensagem de READY
+- [ ] Ordem processamento comandos com nome que só muda o final (cmd, cmd1, cmd2..)
+- [ ] Fix SiPt
 
 
 ## ✅ TODO-Extras
@@ -164,8 +167,8 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
-- [x] Novo Jogo: Geoguesser
-- [x] Novo Jogo: Stop/Adedonha
+- [ ] Novo Jogo: Geoguesser
+- [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [x] Novo Jogo: Pesca
 - [x] Novo Jogo: Pinto

@@ -516,6 +516,67 @@ async function squareStickerCommand(bot, message, args, group, cropType) {
   }
 }
 
+/**
+ * Processa automaticamente imagens/vídeos enviados para o PV, convertendo-os em stickers
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Object} group - Dados do grupo (será null para mensagens privadas)
+ * @returns {Promise<boolean>} - Se a mensagem foi processada
+ */
+async function processAutoSticker(bot, message, group) {
+  try {
+    // Verifica se a mensagem é privada (não é de grupo)
+    if (message.group) {
+      return false;
+    }
+
+    // Verifica se o usuário está gerenciando algum grupo pelo PV
+    if (bot.eventHandler.commandHandler.privateManagement && 
+        bot.eventHandler.commandHandler.privateManagement[message.author]) {
+      // O usuário está gerenciando um grupo pelo PV, não criar sticker automaticamente
+      return false;
+    }
+    
+    // Pula se não for mídia de imagem, vídeo ou GIF
+    if (!['image', 'video', 'gif'].includes(message.type)) {
+      return false;
+    }
+    
+    const logger = require('../utils/Logger');
+    const stickerLogger = new logger('auto-sticker');
+    
+    stickerLogger.debug(`[processAutoSticker] Processando mídia automática para sticker no chat ${message.author}`);
+    
+    // Criar um nome para o sticker (pode ser o nome de quem enviou ou um padrão)
+    const stickerName = message.authorName || 'sticker';
+    
+    // Usar ReturnMessage para enviar o sticker
+    const ReturnMessage = require('../models/ReturnMessage');
+    const returnMessage = new ReturnMessage({
+      chatId: message.author,
+      content: message.content,
+      options: {
+        sendMediaAsSticker: true,
+        stickerAuthor: "ravena",
+        stickerName: stickerName,
+        quotedMessageId: message.origin.id._serialized
+      }
+    });
+    
+    // Envia o sticker
+    await bot.sendReturnMessages(returnMessage);
+    
+    stickerLogger.info(`[processAutoSticker] Sticker automático enviado para ${message.author}`);
+    
+    return true;
+  } catch (error) {
+    const logger = require('../utils/Logger');
+    const stickerLogger = new logger('auto-sticker');
+    stickerLogger.error('Erro no processamento automático de sticker:', error);
+    return false;
+  }
+}
+
 // Criar array de comandos usando a classe Command
 const commands = [
   new Command({
@@ -729,4 +790,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands };
+module.exports = { commands, processAutoSticker };

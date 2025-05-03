@@ -11,6 +11,7 @@ const MuNewsCommands = require('./functions/MuNewsCommands');
 const RankingMessages = require('./functions/RankingMessages');
 const fs = require('fs').promises;
 const path = require('path');
+const Stickers = require('./functions/Stickers');
 
 class EventHandler {
   constructor() {
@@ -21,6 +22,7 @@ class EventHandler {
     this.nsfwPredict = NSFWPredict.getInstance();
     this.adminUtils = AdminUtils.getInstance();
     this.rankingMessages = RankingMessages;
+    this.userGreetingManager = require('./utils/UserGreetingManager').getInstance();
     this.groups = {};
     this.loadGroups();
   }
@@ -132,6 +134,9 @@ class EventHandler {
         // Verifica se é uma mensagem de acompanhamento para um convite
         const isFollowUpHandled = await bot.inviteSystem.processFollowUpMessage(message);
         if (isFollowUpHandled) return;
+
+        // Processa saudação para novos usuários no PV
+        await this.userGreetingManager.processGreeting(bot, message);
       }
       
       // Obtém conteúdo de texto da mensagem (corpo ou legenda)
@@ -293,6 +298,11 @@ class EventHandler {
     // Verifica se é uma mensagem de voz para processamento automático de STT    
     const processed = await SpeechCommands.processAutoSTT(bot, message, group);
     if (processed) return;
+
+    if (!group) {
+      const stickerProcessed = await Stickers.processAutoSticker(bot, message, group);
+      if (stickerProcessed) return;
+    }
 
     if (group && message.type === 'text') {
       try {
