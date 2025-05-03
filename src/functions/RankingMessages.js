@@ -194,7 +194,7 @@ const commands = [
   new Command({
     name: 'faladores',
     description: 'Mostra o ranking de quem mais fala no grupo',
-    category: "geral",
+    category: "grupo",
     method: faladoresCommand
   })
 ];

@@ -31,7 +31,7 @@ async function pingCommand(bot, message, args, group) {
 
 async function grupaoCommand(bot, message, args, group){
   const chatId = message.group || message.author;
-  const grupao = await bot.client.getChatById(process.env.GRUPO_INTERACAO);
+  const grupao = await bot.client.getChatById(bot.grupoInteracao);
 
   try{
     await grupao.addParticipants([message.author]);
@@ -41,10 +41,49 @@ async function grupaoCommand(bot, message, args, group){
 
   return new ReturnMessage({
     chatId: chatId,
-    content: `Ok! Tentei de adicionar no grupão da ravena. Se não tiver sido adicionado, entre pelo link: ${process.env.LINK_GRUPO_INTERACAO}`
+    content: `Ok! Tentei de adicionar no grupão da ravena. Se não tiver sido adicionado, entre pelo link: ${bot.linkGrupao}`
   });
 
 }
+
+async function avisosCommand(bot, message, args, group){
+  const chatId = message.group || message.author;
+  const avisos = await bot.client.getChatById(bot.grupoAvisos);
+
+  try{
+    await avisos.addParticipants([message.author]);
+  } catch(e){
+    logger.error(`[avisosCommand] Não consegui add '${message.author}' no grupo de avisos (${bot.grupoAvisos})`);
+  }
+
+  return new ReturnMessage({
+    chatId: chatId,
+    content: `Ok! Tentei de adicionar no grupão da ravena. Se não tiver sido adicionado, entre pelo link: ${bot.linkAvisos}`
+  });
+}
+
+async function codigoCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+
+  try {
+    const codigoPath = path.join(process.cwd(), 'data', 'textos', 'codigo.txt');
+    const codigoContent = await fs.readFile(headerPath, 'utf8');
+
+    return new ReturnMessage({
+      chatId: chatId,
+      content: codigoContent.trim()
+    });
+
+  } catch (error) {
+    logger.warn('Erro ao ler cabeçalho do menu:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `🔗 *Github:* https://github.com/moothz/ravena-ai`
+    });
+  }
+
+}
+
 
 async function diferencasCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
@@ -57,6 +96,7 @@ Se tiver dúvidas, entre no *!grupao*
 Aqui vai as principais diferenças pra antiga:
 
 *No dia a dia:*
+- Os comandos genéricos não existem mais (vocês mesmos podem criar no grupo)
 - Os comandos de gerencia foram trocados por !g-xxx, envie !cmd-g para conhecê-los!
 - Todos os comandos precisam de prefixo agora, então quando criar um comando, não coloque o "!" na frente do nome do comando
 - O prefixo dos comandos pode ser alterado usando !g-setPrefixo
@@ -336,7 +376,7 @@ const commands = [
   new Command({
     name: 'apelido',
     description: 'Define seu apelido no grupo',
-    category: "geral",
+    category: "grupo",
     method: apelidoCommand
   }), 
 
@@ -350,13 +390,44 @@ const commands = [
   
   new Command({
     name: 'grupao',
-    description: 'Grupo de interação',
+    description: 'Grupo de interação ravenabot',
     category: "geral",
     reactions: {
       before: "👨‍👨‍👧‍👦"
     },
     method: grupaoCommand
+  }),
+  new Command({
+    name: 'avisos',
+    description: 'Grupo de avisos ravenabot',
+    category: "geral",
+    reactions: {
+      before: "📣"
+    },
+    method: avisosCommand
+  }),
+  new Command({
+    name: 'codigo',
+    description: 'Código da ravenabot',
+    category: "geral",
+    reactions: {
+      before: "💾"
+    },
+    method: codigoCommand
+  }),
+  new Command({
+    name: 'código',
+    description: 'Código da ravenabot',
+    category: "geral",
+    hidden: true,
+    reactions: {
+      before: "💾"
+    },
+    method: codigoCommand
   })
+
+  
+
 ];
 
 // Registra os comandos sendo exportados

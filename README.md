@@ -121,6 +121,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] !live atualizar titulo do grupo
 - [ ] Comando convite com argumento pro id do bot
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
+- [ ] Donates no convite
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter

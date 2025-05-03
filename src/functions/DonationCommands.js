@@ -10,42 +10,35 @@ const database = Database.getInstance();
 //logger.info('Módulo DonationCommands carregado');
 
 /**
- * Mostra informações de doação e link
- * @param {WhatsAppBot} bot - Instância do bot
- * @param {Object} message - Dados da mensagem
- * @param {Array} args - Argumentos do comando
- * @param {Object} group - Dados do grupo
- * @returns {Promise<ReturnMessage>} - ReturnMessage com informações de doação
+ * Lê o arquivo de cabeçalho dos donates
+ * @returns {Promise<string>} - Conteúdo do cabeçalho
  */
-async function showDonationInfo(bot, message, args, group) {
+async function readDonationHeader() {
   try {
-    const chatId = message.group || message.author;
-    
-    // Obtém link de doação da variável de ambiente
-    const donationLink = process.env.DONATION_LINK || 'https://tipa.ai/seunome';
-    
-    const donationMsg = 
-      `💖 *Apoie-nos com uma doação!* 💖\n\n` +
-      `Suas doações nos ajudam a manter e melhorar este bot.\n\n` +
-      `🔗 *Link de Doação:* ${donationLink}\n\n` +
-      `Use !donors ou !doadores para ver uma lista de doadores que já contribuíram. Obrigado!`;
-    
-    logger.debug('Informações de doação enviadas com sucesso');
-    
-    return new ReturnMessage({
-      chatId: chatId,
-      content: donationMsg
-    });
+    const headerPath = path.join(process.cwd(), 'data', 'textos', 'donate_header.txt');
+    const headerContent = await fs.readFile(headerPath, 'utf8');
+    return headerContent.trim();
   } catch (error) {
-    logger.error('Erro ao enviar informações de doação:', error);
-    const chatId = message.group || message.author;
-    
-    return new ReturnMessage({
-      chatId: chatId,
-      content: 'Erro ao recuperar informações de doação. Por favor, tente novamente.'
-    });
+    logger.warn('Erro ao ler cabeçalho do donate:', error);
+    return '💖 *Ajuda de custos _ravenabot_!* 🐦‍⬛\n\n';
   }
 }
+
+/**
+ * Lê o arquivo de rodapé dos donates
+ * @returns {Promise<string>} - Conteúdo do rodapé
+ */
+async function readDonationFooter() {
+  try {
+    const headerPath = path.join(process.cwd(), 'data', 'textos', 'donate_footer.txt');
+    const headerContent = await fs.readFile(headerPath, 'utf8');
+    return headerContent.trim();
+  } catch (error) {
+    logger.warn('Erro ao ler footer do donate:', error);
+    return '';
+  }
+}
+
 
 /**
  * Mostra status da meta de doação (se configurada)
@@ -148,17 +141,14 @@ async function showTopDonors(bot, message, args, group) {
     const donationLink = process.env.DONATION_LINK || 'https://tipa.ai/seunome';
 
     // Constrói mensagem
-    let donorsMsg = `💖 *Apoie-me com uma doação!* 💖\n\n` +
-      `Suas doações me ajudam a manter e melhorar este bot.\n\n` +
-      `🔗 *Link de Doação:* ${donationLink}\n\n` +
-      `🏆 *Doadores* 🏆\n\n`;
+    let donorsMsg = await readDonationHeader();
     
     topDonors.forEach((donor, index) => {
-      donorsMsg += `${index + 1}. ${donor.nome}: R$${donor.valor.toFixed(2)}\n`;
+      donorsMsg += `${index + 1}. *${donor.nome}*: R$${donor.valor.toFixed(2)}\n`;
     });
     
-    donorsMsg += `Obrigado a todos os nossos apoiadores! Total de doações: R$${totalAmount.toFixed(2)}\n\n`;
-    donorsMsg += `\nUse !donate ou !doar para nos apoiar também!`;
+    donorsMsg += await readDonationFooter();
+
     
     logger.debug('Lista de principais doadores enviada com sucesso');
     
@@ -185,16 +175,20 @@ const commands = [
     category: "geral",
     method: showTopDonors
   }),
-  
-  // new Command({
-  //   name: 'doadores',
-  //   description: 'Mostra principais doadores',
-  //   category: "geral",
-  //   method: showTopDonors
-  // })
+  new Command({
+    name: 'doadores',
+    description: 'Mostra informações de doação e link',
+    category: "geral",
+    method: showTopDonors
+  }),
+  new Command({
+    name: 'donate',
+    description: 'Mostra informações de doação e link',
+    category: "geral",
+    method: showTopDonors,
+    hidden: true
+  })
 ];
 
-// Registra os comandos sendo exportados
-//logger.debug(`Exportando ${commands.length} comandos:`, commands.map(cmd => cmd.name));
 
 module.exports = { commands };

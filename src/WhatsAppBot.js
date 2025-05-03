@@ -42,6 +42,8 @@ class WhatsAppBot {
     this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
     this.grupoAvisos = options.grupoAvisos || process.env.GRUPO_AVISOS;
     this.grupoInteracao = options.grupoInteracao || process.env.GRUPO_INTERACAO;
+    this.linkGrupao = options.linkGrupao || process.env.LINK_GRUPO_INTERACAO;
+    this.linkAvisos = options.linkAvisos || process.env.LINK_GRUPO_AVISOS;
 
     this.lastMessageReceived = Date.now();
 

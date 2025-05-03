@@ -537,7 +537,7 @@ const commands = [
   }),
   new Command({
     name: 'sbg',
-    description: 'Alias para comando stickerbg',
+    description: 'Envia sticker sem fundo',
     category: "midia",
     group: "stickerbg",
     needsMedia: true,
@@ -550,7 +550,7 @@ const commands = [
   }),
   new Command({
     name: 'rbg',
-    description: 'Alias para comando removebg',
+    description: 'Remove fundo de imagem e envia o PNG',
     category: "midia",
     group: "rremovebg",
     needsMedia: true,

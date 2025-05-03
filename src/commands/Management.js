@@ -20,11 +20,11 @@ class Management {
     this.commandMap = {
       'setName': {
         method: 'setGroupName',
-        description: 'Define um nome personalizado para o grupo'
+        description: 'ID/Nome do grupo (nome stickers, gerenciamento)'
       },
       'addCmd': {
         method: 'addCustomCommand',
-        description: 'Adiciona um comando personalizado (deve ser usado como resposta)'
+        description: 'Cria um comando personalizado'
       },
       'addCmdReply': {
         method: 'addCustomCommandReply',
@@ -44,23 +44,23 @@ class Management {
       },
       'setPrefixo': {
         method: 'setCustomPrefix',
-        description: 'Altera o prefixo de comando'
+        description: 'Altera o prefixo de comandos (padrão !)'
       },
       'setBemvindo': {
         method: 'setWelcomeMessage',
-        description: 'Define mensagem de boas-vindas para novos membros'
+        description: 'Mensagem quando alguém entra '
       },
       'setDespedida': {
         method: 'setFarewellMessage',
-        description: 'Define mensagem de despedida para membros que saem'
+        description: 'Mensagem quando alguém sai/é removido'
       },
       'cmdReact': {
         method: 'setReaction',
-        description: 'Define reação "depois" para um comando'
+        description: 'Reaçao pós-comando (apeas cmds do grupo)'
       },
       'cmdStartReact': {
         method: 'setStartReaction',
-        description: 'Define reação "antes" para um comando'
+        description: 'Reaçao pré-comando (apeas cmds do grupo)'
       },
       'autoStt': {
         method: 'toggleAutoStt',
@@ -68,43 +68,43 @@ class Management {
       },
       'info': {
         method: 'showGroupInfo',
-        description: 'Mostra informações detalhadas do grupo'
+        description: 'Mostra informações detalhadas do grupo (debug)'
       },
       'manage': {
         method: 'manageCommand',
-        description: 'Ativa gerenciamento do grupo pelo chat privado'
+        description: 'Ativa o gerenciamento do grupo pelo PV do bot (apenas g-xxx)'
       },
       'filtro-palavra': {
         method: 'filterWord',
-        description: 'Adiciona/remove palavra do filtro'
+        description: 'Apaga mensagens com a palavra/frase especificada'
       },
       'filtro-links': {
         method: 'filterLinks',
-        description: 'Ativa/desativa filtro de links'
+        description: 'Apaga mensagens com links'
       },
       'filtro-pessoa': {
         method: 'filterPerson',
-        description: 'Adiciona/remove número do filtro'
+        description: 'Apaga mensagens desta pessoa'
       },
       'filtro-nsfw': {
         method: 'filterNSFW',
-        description: 'Ativa/desativa filtro de conteúdo NSFW'
+        description: 'Apaga mensagens NSFW'
       },
       'apelido': {
         method: 'setUserNickname',
-        description: 'Define um apelido para o usuário no grupo'
+        description: 'Define seu apelido no grupo'
       },
       'ignorar': {
         method: 'ignoreUser',
-        description: 'Ignora mensagens de um usuário específico'
+        description: 'O bot irá ignorar as mensagens desta pessoa'
       },
       'mute': {
         method: 'muteCommand',
-        description: 'Silencia mensagens que começam com determinado texto'
+        description: 'Desativa comando com a palavra especificada'
       },
       'customAdmin': {
         method: 'customAdmin',
-        description: 'Gerencia administradores adicionais do grupo'
+        description: 'Adiciona pessoas como administradoras fixas do bot no grupo'
       },
       'pausar': {
         method: 'pauseGroup',
@@ -148,11 +148,11 @@ class Management {
       },
       'fechar': { 
         method: 'closeGroup',
-        description: 'Fecha o grupo para que apenas admins possam enviar mensagens' 
+        description: 'Fecha o grupo (apenas admins enviam msgs)' 
       },
       'abrir': { 
         method: 'openGroup',
-        description: 'Abre o grupo para que todos possam enviar mensagens' 
+        description: 'Abre o grupo (todos podem envar msgs)' 
       },
       'setApelido': { 
         method: 'setUserNicknameAdmin',
@@ -876,7 +876,7 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Não há mensagem de boas-vindas definida. Para definir, use:\n!g-setBoasvindas Bem-vindo ao grupo, {pessoa}!\nou responda a uma mensagem com !g-setBoasvindas'
+        content: 'Não há mensagem de boas-vindas definida. Para definir, use:\n!g-setBoasvindas Bem-vindo ao grupo {tituloGrupo} (id {nomeGrupo}), {pessoa}!\nou responda a uma mensagem com !g-setBoasvindas'
       });
     }
   }
@@ -4719,9 +4719,23 @@ async setWelcomeMessage(bot, message, args, group) {
         { name: "{cmd-!comando arg1 arg2}", description: "Executa outro comando (criando um alias)" }
       ];
       
+      // Lista de variáveis de Boas Vindas/despedidas
+      const welcomeVaribles = [
+        { name: "{pessoa}", description: "Nome(s) da(s) pessoa(s) adicionada(s) no grupo" },
+        { name: "{tituloGrupo}", description: "Título do grupo no whatsApp" },
+        { name: "{nomeGrupo}", description: "ID do grupo na ravena" }
+      ];
+
       // Constrói a mensagem de resposta
-      let response = `*📝 Variáveis Disponíveis para Comandos Personalizados*\n\n`;
+      let response = `*📝 Variáveis Disponíveis para Comandos Personalizados*\n\n> Quando você colocar {estas} {coisas} na resposta de um comando, o bot irár substituir por um texto conforme a tabela apresentada abaixo.\n\n`;
       
+      // Adiciona variáveis de boas vindas/despedida
+      response += `🚪 *Boas vindas/despedidas*:\n`;
+      for (const variable of welcomeVaribles) {
+        response += `• ${variable.name} - ${variable.description}\n`;
+      }
+      response += '\n';
+
       // Adiciona variáveis de sistema
       response += `⏱️ *Variáveis de Sistema*:\n`;
       for (const variable of systemVariables) {

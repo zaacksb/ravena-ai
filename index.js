@@ -34,6 +34,7 @@ async function main() {
       prefix: process.env.DEFAULT_PREFIX || '!',
       // Configurações de puppeteer
       puppeteerOptions: {
+        executablePath: chromePath || undefined,
         args: [
           '--no-sandbox', 
           '--disable-setuid-sandbox', 
@@ -50,7 +51,9 @@ async function main() {
       grupoLogs: process.env.GRUPO_LOGS,
       grupoInvites: process.env.GRUPO_INVITES,
       grupoAvisos: process.env.GRUPO_AVISOS,
-      grupoInteracao: process.env.GRUPO_INTERACAO
+      grupoInteracao: process.env.GRUPO_INTERACAO,
+      linkGrupao: process.env.LINK_GRUPO_INTERACAO,
+      linkAvisos: process.env.LINK_GRUPO_AVISOS
     });
     
     botInstances.push(ravenaTestes);
@@ -90,6 +93,40 @@ async function main() {
     process.exit(1);
   }
 }
+
+
+process.on('unhandledRejection', (reason, p) => {
+  console.warn("---- Rejection não tratada ");
+  let motivo = reason.toString() ?? reason ?? "";
+  console.error(p);
+  console.warn(reason,true);
+
+  if(motivo.toLowerCase().includes("reactions send error")){
+    errosReaction++;
+  }
+
+  if(motivo.toLowerCase().includes("closed") || motivo.toLowerCase().includes("session") || errosReaction > 10){
+    if(tenteiReinit){
+      console.warn(`[erro grave] Navegador fechou, reiniciando bot (erros reaction: ${errosReaction}.`,true,true);
+      terminateRavena();
+      client.destroy();
+      process.exit(99);
+    } else {
+      console.warn(`[erro grave] Muitos erros de reaction, tentando reinit.`);
+      errosReaction = 0;
+      tenteiReinit = true;
+      client.initialize();
+    }
+  }
+
+  console.warn("---- Fim ");
+}).on('uncaughtException', err => {
+  console.warn("---- Erro Não tratado ");
+  console.error(err);
+  console.warn(err,true);
+  console.warn('Uncaught Exception thrown',true);
+  console.warn("---- Fim ");
+});
 
 // Executa a função principal
 main().catch(console.error);

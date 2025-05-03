@@ -6,40 +6,10 @@ const fs = require('fs').promises;
 const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
-
+const { COMMAND_ORDER, CATEGORY_EMOJIS } = require('./MenuOrder')
 const logger = new Logger('menu-commands');
 const database = Database.getInstance();
 
-/**
- * Emojis para as categorias de comandos
- * A ordem das chaves define a ordem de apresentação das categorias
- */
-const CATEGORY_EMOJIS = {
-  "geral": "📃",
-  "grupo": "👥",
-  "utilidades": "🛠️",
-  "midia": "📱",
-  "ia": "🤖",
-  "downloaders": "📤",
-  "jogos": "🎮",
-  "cultura": "🍿",
-  "áudio": "🔈",
-  "tts": "🗣",
-  "busca": "🔎",
-  "listas": "📜",
-  "arquivos": "📂",
-  "general": "🖨️",
-  "diversao": "🎮",
-  "info": "ℹ️",
-  "imagens": "🖼️",
-  "resto": "❓",
-};
-
-/**
- * Ordem personalizada para comandos por nome
- * Os comandos não listados aparecem depois na ordem original
- */
-const COMMAND_ORDER = ["cmd","cmd-grupo","cmd-gerenciamento","cmd-g","doar","faladores","apelido","clima","news","apagar","atencao","ignorar","stt","traduzir","lembretes","lembrar","l-cancelar","s","sticker","sbg, stickerbg","removebg","distort","neon","oil","pixelate","sketch","ai","imagine","resumo","interagir","yt","sr","roletarussa","roletaranking","roll","d10","lol","valorant","wr","anime","imdb","volume","getaudio","getvoice","tts","tts-mulher","tts-homem","buscar","buscar-img","gif","wiki","lastfm","listas","lc","lct","ld","le","ls","lt","lr","pastas","p-enviar","p-criar","p-baixar","p-excluir","GERENCIAMENTOPROX","ajuda","info","setName","setPrefixo","addCmd","delCmd","enableCmd","disableCmd","cmdReact","cmdStartReact","addCmdReply","variaveis","setBemvindo","setDespedida","apelido","ignorar","mute","pausar","autoStt","setTempoRoleta","filtro-palavra","filtro-links","filtro-nsfw","filtro-pessoa","interagir","interagir-cd","interagir-chance","customAdmin","twitch-canal","twitch-mudarTitulo","twitch-usarIA","twitch-titulo-on","twitch-titulo-off","twitch-midia-on","twitch-midia-off","kick-canal","kick-mudarTitulo","kick-usarIA","kick-titulo-on","kick-titulo-off","kick-midia-on","kick-midia-off","youtube-canal","youtube-mudarTitulo","youtube-usarIA","youtube-titulo-on","youtube-titulo-off","youtube-midia-on","youtube-midia-off"];
 
 /**
  * Lê o arquivo de cabeçalho do menu
@@ -52,7 +22,7 @@ async function readMenuHeader() {
     return headerContent.trim();
   } catch (error) {
     logger.warn('Erro ao ler cabeçalho do menu:', error);
-    return '*Menu de Comandos do Ravenabot*';
+    return '';
   }
 }
 
@@ -246,9 +216,16 @@ async function sendCommandList(bot, message, args, group) {
     const prefix = group && group.prefix ? group.prefix : bot.prefix;
     
     // Constrói mensagem
-    let menuText = header + '\n\n';
+    let menuText = "🤖 *Comandos Ravenabot*🐦‍⬛\n";
+    if(!group){
+      menuText += `> _PV da *${bot.id}*_\n`;
+    } else {
+      menuText += `> _Grupo *${group.name}*_\n`;
+    }
+    menuText += header + '\n\n';
     
     // 1. Comandos Personalizados
+    // Muita poluição
     /*
     if (customCommands.length > 0) {
       menuText += `📋 *Exclusivos do grupo _${group.name}_:*\n`;
@@ -263,13 +240,8 @@ async function sendCommandList(bot, message, args, group) {
     }
     */
     
-    // 2. Comandos Fixos por categoria
-    if(!group){
-      menuText += '📌 *PV da _ravena_:*\n';
-    } else {
-      menuText += `> _Grupo *${group.name}*_`;
-    }
     
+    // 2. Comandos Fixos por categoria
     // Processa cada categoria na ordem definida em CATEGORY_EMOJIS
     for (const category in CATEGORY_EMOJIS) {
       const commands = categorizedCommands[category] || [];
