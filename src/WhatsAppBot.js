@@ -44,6 +44,9 @@ class WhatsAppBot {
     this.grupoInteracao = options.grupoInteracao || process.env.GRUPO_INTERACAO;
 
     this.lastMessageReceived = Date.now();
+
+    // Nova propriedade para controlar mensagens após inicialização
+    this.startupTime = Date.now();
     
     // Inicializa rastreador de relatórios de carga
     this.loadReport = new LoadReport(this);
@@ -72,6 +75,9 @@ class WhatsAppBot {
    */
   async initialize() {
     this.logger.info(`Inicializando instância de bot ${this.id}`);
+
+    // Atualiza o tempo de inicialização
+    this.startupTime = Date.now();
 
     // Cria cliente com dados de sessão
     this.client = new Client({
@@ -155,6 +161,15 @@ class WhatsAppBot {
 
   }
 
+    /**
+   * Verifica se uma mensagem está dentro do período inicial de descarte
+   * @returns {boolean} - True se a mensagem deve ser descartada
+   */
+  shouldDiscardMessage() {
+    const timeSinceStartup = Date.now() - this.startupTime;
+    return timeSinceStartup < 5000; // 5 segundos
+  }
+
   /**
    * Registra manipuladores de eventos para o cliente WhatsApp
    */
@@ -202,7 +217,40 @@ class WhatsAppBot {
 
     // Evento de mensagem
     this.client.on('message', async (message) => {
+      // Descarta mensagens nos primeiros 5 segundos após inicialização
+      if (this.shouldDiscardMessage()) {
+        this.logger.debug(`Descartando mensagem recebida durante período inicial de ${this.id}`);
+        return;
+      }
+
       this.lastMessageReceived = Date.now();
+
+      // Calcula tempo de resposta
+      const currentTimestamp = this.getCurrentTimestamp();
+      const messageTimestamp = message.timestamp;
+      const responseTime = Math.max(0, currentTimestamp - messageTimestamp); // Não permite valores negativos
+      
+      // Verifica se o tempo de resposta é muito alto e se precisamos reiniciar o bot
+      if (responseTime > 60) {
+        // Verifica se o bot não foi reiniciado recentemente pelo mesmo motivo
+        const currentTime = Math.floor(Date.now() / 1000);
+        const timeSinceLastRestart = currentTime - this.lastRestartForDelay;
+        
+        if (timeSinceLastRestart > 1800) { // 30 minutos
+          this.lastRestartForDelay = currentTime;
+          this.logger.warn(`Delay de resposta elevado (${responseTime}s), iniciando reinicialização automática`);
+          
+          // Inicia reinicialização em segundo plano
+          setTimeout(() => {
+            this.restartBot(`O delay está elevado (${responseTime}s), por isso o bot será reiniciado.`)
+              .catch(err => this.logger.error('Erro ao reiniciar bot por delay elevado:', err));
+          }, 100);
+          
+          return; // Não processa esta mensagem
+        } else {
+          this.logger.warn(`Delay de resposta elevado (${responseTime}s), mas o bot já foi reiniciado recentemente. Aguardando.`);
+        }
+      }
 
       try {
         // Verifica se a mensagem é de um grupo a ser ignorado
@@ -224,7 +272,7 @@ class WhatsAppBot {
         }
 
         // Formata mensagem para o manipulador de eventos
-        const formattedMessage = await this.formatMessage(message);
+        const formattedMessage = await this.formatMessage(message, responseTime);
         this.eventHandler.onMessage(this, formattedMessage);
       } catch (error) {
         this.logger.error('Erro ao processar mensagem:', error);
@@ -233,6 +281,12 @@ class WhatsAppBot {
 
     // Evento de reação
     this.client.on('message_reaction', async (reaction) => {
+      // Descarta reações nos primeiros 5 segundos após inicialização
+      if (this.shouldDiscardMessage()) {
+        this.logger.debug(`Descartando reação recebida durante período inicial de ${this.id}`);
+        return;
+      }
+
       try {
         // Processa apenas reações de outros usuários, não do próprio bot
         if (reaction.senderId !== this.client.info.wid._serialized) {
@@ -356,16 +410,17 @@ class WhatsAppBot {
   /**
    * Formata uma mensagem do WhatsApp para nosso formato padrão
    * @param {Object} message - A mensagem bruta do whatsapp-web.js
+   * @param {number} responseTime - Tempo de resposta em segundos
    * @returns {Promise<Object>} - Objeto de mensagem formatado
    */
-  async formatMessage(message) {
+  async formatMessage(message, responseTime) {
     try {
       const chat = await message.getChat();
       const sender = await message.getContact();
       const isGroup = chat.isGroup;
       
-      // Rastreia mensagem recebida
-      this.loadReport.trackReceivedMessage(isGroup);
+      // Rastreia mensagem recebida com tempo de resposta
+      this.loadReport.trackReceivedMessage(isGroup, responseTime);
       
       let type = 'text';
       let content = message.body;
@@ -389,7 +444,8 @@ class WhatsAppBot {
         type,
         content,
         caption,
-        origin: message
+        origin: message,
+        responseTime
       };
     } catch (error) {
       this.logger.error('Erro ao formatar mensagem:', error);

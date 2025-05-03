@@ -18,6 +18,10 @@ class LoadReport {
       receivedGroup: 0,
       sentPrivate: 0,
       sentGroup: 0,
+      // Novos campos para rastreamento de tempo de resposta
+      responseTimes: [], // Array para armazenar todos os tempos de resposta
+      totalResponseTime: 0, // Soma total para cálculo de média
+      maxResponseTime: 0, // Valor máximo de tempo de resposta
       timestamp: Date.now()
     };
     
@@ -28,12 +32,24 @@ class LoadReport {
   /**
    * Rastreia mensagem recebida
    * @param {boolean} isGroup - Se a mensagem foi em um grupo
+   * @param {number} responseTime - Tempo de resposta em segundos
    */
-  trackReceivedMessage(isGroup) {
+  trackReceivedMessage(isGroup, responseTime = 0) {
     if (isGroup) {
       this.stats.receivedGroup++;
     } else {
       this.stats.receivedPrivate++;
+    }
+    
+    // Rastreia tempo de resposta
+    if (responseTime > 0) {
+      this.stats.responseTimes.push(responseTime);
+      this.stats.totalResponseTime += responseTime;
+      
+      // Atualiza o tempo máximo de resposta se necessário
+      if (responseTime > this.stats.maxResponseTime) {
+        this.stats.maxResponseTime = responseTime;
+      }
     }
   }
 
@@ -55,6 +71,13 @@ class LoadReport {
   async generateReport() {
     try {
       const currentTime = Date.now();
+      
+      // Calcula média de tempo de resposta
+      const responseTimeCount = this.stats.responseTimes.length;
+      const avgResponseTime = responseTimeCount > 0 
+        ? this.stats.totalResponseTime / responseTimeCount 
+        : 0;
+      
       const report = {
         botId: this.bot.id,
         period: {
@@ -69,6 +92,12 @@ class LoadReport {
           sentGroup: this.stats.sentGroup,
           totalReceived: this.stats.receivedPrivate + this.stats.receivedGroup,
           totalSent: this.stats.sentPrivate + this.stats.sentGroup,
+        },
+        // Adiciona informações de tempo de resposta ao relatório
+        responseTime: {
+          average: avgResponseTime.toFixed(2), // Média em segundos, com 2 casas decimais
+          max: this.stats.maxResponseTime,     // Valor máximo em segundos
+          count: responseTimeCount             // Quantidade de medições
         },
         timestamp: currentTime // Adicionamos um timestamp para facilitar filtros
       };
@@ -93,8 +122,8 @@ class LoadReport {
         const dateString = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}`;
         const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
-        // Constrói string de status
-        const status = `${loadEmoji} ${dateString} ${timeString} | ${report.messages.messagesPerHour}msg/h | !cmd, !info | ravena.moothz.win`;
+        // Constrói string de status com informação de atraso médio
+        const status = `${loadEmoji} ${dateString} ${timeString} | ${report.messages.messagesPerHour}msg/h | delay: ${avgResponseTime.toFixed(1)}s | !cmd, !info | ravena.moothz.win`;
         
         // Atualiza status do bot
         if (this.bot.client && this.bot.isConnected) {
@@ -121,6 +150,9 @@ class LoadReport {
         receivedGroup: 0,
         sentPrivate: 0,
         sentGroup: 0,
+        responseTimes: [],
+        totalResponseTime: 0,
+        maxResponseTime: 0,
         timestamp: currentTime
       };
     } catch (error) {
@@ -142,7 +174,11 @@ class LoadReport {
            `📥 *Mensagens:*\n` +
            `- Mensagens/h: ${report.messages.messagesPerHour}\n`+
            `- Recebidas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)\n`+
-           `- Enviadas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)`;
+           `- Enviadas: ${report.messages.totalSent} (${report.messages.sentPrivate} pv/${report.messages.sentGroup} gp)\n\n`+
+           `⏱️ *Tempo de Resposta:*\n` +
+           `- Média: ${report.responseTime.average}s\n` +
+           `- Máximo: ${report.responseTime.max}s\n` +
+           `- Medições: ${report.responseTime.count}`;
   }
 
   /**

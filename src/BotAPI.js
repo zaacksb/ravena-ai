@@ -84,13 +84,23 @@ class BotAPI {
             const report = botReports[bot.id] || null;
             const messagesPerHour = report && report.messages ? 
               report.messages.messagesPerHour || 0 : 0;
+            
+            // Adiciona informações de tempo de resposta
+            const avgResponseTime = report && report.responseTime ? 
+              parseFloat(report.responseTime.average) || 0 : 0;
+            const maxResponseTime = report && report.responseTime ? 
+              report.responseTime.max || 0 : 0;
               
             return {
               id: bot.id,
               phoneNumber: bot.phoneNumber,
               connected: bot.isConnected,
               lastMessageReceived: bot.lastMessageReceived || null,
-              msgsHr: messagesPerHour
+              msgsHr: messagesPerHour,
+              responseTime: {
+                avg: avgResponseTime,
+                max: maxResponseTime
+              }
             };
           })
         });
@@ -105,7 +115,11 @@ class BotAPI {
             phoneNumber: bot.phoneNumber,
             connected: bot.isConnected,
             lastMessageReceived: bot.lastMessageReceived || null,
-            msgsHr: 0
+            msgsHr: 0,
+            responseTime: {
+              avg: 0,
+              max: 0
+            }
           }))
         });
       }
@@ -771,7 +785,7 @@ class BotAPI {
     });
   }
 
-  /**
+/**
    * Adiciona uma instância de bot à API
    * @param {WhatsAppBot} bot - A instância do bot a adicionar
    */

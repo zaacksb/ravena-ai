@@ -1979,3 +1979,27 @@ Você pode voltar daqui a 1 semana para refazermos sua avaliação.
 
 Criar também !pinto-ranking, com os maiores scores de pintos (score apenas) e !g-pinto-reset no management
 Cada usuário pode tentar gerar um tamanho apenas 1x por semana
+
+---
+
+#WhatsAppBot
+
+Descartar primeiras mensagens
+
+Quando o bot recém inicia, ele tenta processar mensagens que ficaram acumuladas.
+
+Para evitar isso, o evento de on("message") e on("message_reaction") deve desconsiderar todos os eventos recebidos dentro dos primeiros 5 segundos que o bot inicializou.
+
+# LoadReport: Reponse Time
+
+Usando a função getTimestamp do WhatsAppBot e o atributo message.timestamp, calcule a diferença de tempo entre a mensagem recebida e a hora atual.
+
+Num mundo perfeito, essa diferença seria 0 (a hora que a mensagem chegou para o bot é igual a hora do computador). O valor não pode ser negativo.
+
+A trackReceivedMessage deve receber um novo argumento: responseTime, que é a diferença entre o getTimestamp e a message.timestamp.
+
+O bot deve calcular uma média de response time das mensagens e guardar junto nos reports daqui pra frente.
+
+Caso o response time exceda 60 segundos, deve-se ativar uma restartBot com a justificativa: "O delay está elevado (32s), por isso o bot será reiniciado."
+
+Após reiniciar, o bot não deve ser reiniciado novamente pelo mesmo motivo dentro de 30 minutos.

@@ -47,6 +47,20 @@ function getMessageActivityClass(msgsHr) {
     return '';
 }
 
+// Função para classificar o tempo de resposta
+function getResponseTimeClass(seconds) {
+    if (seconds < 5) return 'response-normal';
+    if (seconds < 30) return 'response-warning';
+    return 'response-danger';
+}
+
+// Função para obter emoji baseado no tempo de resposta
+function getResponseTimeEmoji(seconds) {
+    if (seconds < 5) return '⚡';
+    if (seconds < 30) return '⏱️';
+    return '🐢';
+}
+
 // Função para formatar o tempo desde a última mensagem
 function formatTimeSince(minutes) {
     if (minutes === Infinity) return 'Nunca';
@@ -172,6 +186,38 @@ function renderBots(data) {
     // Atualiza os filtros de bots para os gráficos
     updateBotFilters(data.bots);
     
+    // Calcula o total de mensagens/hora de todos os bots
+    let totalMsgsHr = 0;
+    
+    data.bots.forEach(bot => {
+        totalMsgsHr += Math.round(bot.msgsHr || 0);
+    });
+    
+    // Cria o contador de mensagens total
+    const refreshButton = document.getElementById('refreshButton');
+    
+    if (refreshButton) {
+        const refreshContainer = refreshButton.parentElement;
+        
+        // Remove o botão de refresh antigo
+        refreshButton.remove();
+        
+        // Adiciona o contador de mensagens total
+        const totalMsgsCounter = document.createElement('div');
+        totalMsgsCounter.className = 'total-msgs-counter';
+        totalMsgsCounter.innerHTML = `
+            <span>Total de Mensagens/Hora:</span>
+            <span class="count">${totalMsgsHr} msgs/h</span>
+        `;
+        
+        // Adiciona o evento de clique para atualizar
+        totalMsgsCounter.addEventListener('click', fetchHealthData);
+        
+        // Adiciona ao container
+        refreshContainer.appendChild(totalMsgsCounter);
+    }
+    
+    // Renderiza os cards de bot
     data.bots.forEach(bot => {
         const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
         const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
@@ -180,6 +226,12 @@ function renderBots(data) {
         const whatsappUrl = formatWhatsAppUrl(phoneNumber);
         const msgsHr = Math.round(bot.msgsHr || 0);
         const msgActivityClass = getMessageActivityClass(msgsHr);
+        
+        // Processa informações de tempo de resposta
+        const avgResponseTime = bot.responseTime ? bot.responseTime.avg || 0 : 0;
+        const maxResponseTime = bot.responseTime ? bot.responseTime.max || 0 : 0;
+        const responseTimeClass = getResponseTimeClass(avgResponseTime);
+        const responseTimeEmoji = getResponseTimeEmoji(avgResponseTime);
         
         const botCard = document.createElement('div');
         botCard.className = 'bot-card';
@@ -212,11 +264,10 @@ function renderBots(data) {
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Última mensagem:</span>
-                    <span class="detail-value">${formatTimeSince(minutesSinceLastMessage)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Hora recebida:</span>
-                    <span class="detail-value">${formatTime(bot.lastMessageReceived)}</span>
+                    <span class="detail-value tooltip-container">
+                        ${formatTimeSince(minutesSinceLastMessage)}
+                        <span class="tooltip-text">Recebida em: ${formatTime(bot.lastMessageReceived)}</span>
+                    </span>
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Telefone:</span>
@@ -229,6 +280,16 @@ function renderBots(data) {
                         <span class="msgs-badge ${msgActivityClass}">
                             ${msgsHr === 0 ? '💤' : msgsHr > 100 ? '🔥' : msgsHr > 50 ? '📊' : '📝'}
                         </span>
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Delay médio:</span>
+                    <span class="detail-value-highlight tooltip-container">
+                        ${avgResponseTime.toFixed(1)}s
+                        <span class="response-badge ${responseTimeClass}">
+                            ${responseTimeEmoji}
+                        </span>
+                        <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
                     </span>
                 </div>
                 ${restartButtonHtml}
@@ -788,14 +849,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Configura o botão de atualização
     const refreshButton = document.getElementById('refreshButton');
-    refreshButton.addEventListener('click', fetchHealthData);
+    if (refreshButton) {
+        refreshButton.addEventListener('click', fetchHealthData);
+    }
     
     // Configura eventos do modal
     const cancelButton = document.getElementById('cancelRestart');
     const confirmButton = document.getElementById('confirmRestart');
     
-    cancelButton.addEventListener('click', closeRestartModal);
-    confirmButton.addEventListener('click', restartBot);
+    if (cancelButton && confirmButton) {
+        cancelButton.addEventListener('click', closeRestartModal);
+        confirmButton.addEventListener('click', restartBot);
+    }
     
     // Atualiza automaticamente a cada 30 segundos
     setInterval(fetchHealthData, 30000);
