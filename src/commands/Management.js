@@ -3633,7 +3633,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Get the string to mute (full argument string)
       const muteString = args.join(' ');
       
-      if(muteString < 3){
+      if(muteString.length < 3){
         return new ReturnMessage({
           chatId: group.id,
           content: `O *mute* precisa de pelo menos *3* caracteres (informado: '${muteString})'`
