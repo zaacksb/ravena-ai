@@ -792,9 +792,9 @@ class StreamSystem {
       let prompt = '';
       
       if (eventData.platform === 'twitch' || eventData.platform === 'kick') {
-        prompt = `O canal ${eventData.channelName} ficou online e está jogando ${eventData.game || 'um jogo'} com o título "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a participar da stream.`;
+        prompt = `O canal ${eventData.channelName} ficou online e está jogando ${eventData.game || 'um jogo'} com o título "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a participar da stream. Não use placeholders pois a mensagem será enviada da forma que você responder. A mensagem deve estar pronta para uso.`;
       } else if (eventData.platform === 'youtube') {
-        prompt = `O canal ${eventData.channelName} acabou de lançar um novo vídeo chamado "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a assistir o vídeo.`;
+        prompt = `O canal ${eventData.channelName} acabou de lançar um novo vídeo chamado "${eventData.title || ''}". Gere uma mensagem animada para convidar a galera do grupo a assistir o vídeo.  Não use placeholders pois a mensagem será enviada da forma que você responder. A mensagem deve estar pronta para uso.`;
       }
       
       if (this.debugNotificacoes && this.bot.grupoLogs) {
@@ -805,12 +805,7 @@ class StreamSystem {
       }
       
       // Obtém resposta da IA
-      const aiResponse = await this.llmService.getCompletion({
-        prompt: prompt,
-        provider: 'openrouter',
-        temperature: 0.7,
-        maxTokens: 200
-      });
+      const aiResponse = await this.llmService.getCompletion({prompt: prompt});
       
       // Cria mensagem de retorno com a resposta da IA
       if (aiResponse) {

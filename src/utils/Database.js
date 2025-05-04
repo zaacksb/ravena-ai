@@ -103,13 +103,13 @@ class Database {
     
     // Garantir que os dados sejam salvos quando o programa for encerrado
     process.on('SIGINT', () => {
-      this.logger.info('Encerrando, salvando dados...');
+      this.logger.info('Encerrando (int), salvando dados...');
       this.persistCachedData(true);
       process.exit(0);
     });
     
     process.on('SIGTERM', () => {
-      this.logger.info('Encerrando, salvando dados...');
+      this.logger.info('Encerrando (term), salvando dados...');
       this.persistCachedData(true);
       process.exit(0);
     });

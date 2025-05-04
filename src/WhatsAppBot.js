@@ -662,6 +662,7 @@ class WhatsAppBot {
       await this.client.destroy();
       this.client = null;
       this.isConnected = false;
+      await sleep(1000);
     }
   }
 

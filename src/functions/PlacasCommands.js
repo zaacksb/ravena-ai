@@ -291,7 +291,7 @@ async function getSiPtPlaca(placa, usuario) {
   const url = process.env.SIPT_URL || 'http://192.168.3.200:1936/getInfoPlaca';
   const headers = {
     'Content-Type': 'application/json',
-    'x-sipt-token': process.env.SIPT_TOKEN,
+    'x-sipt-token': process.env.SIPT_TOKEN, 
   };
 
   try {
