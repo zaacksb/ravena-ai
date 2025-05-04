@@ -149,15 +149,16 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Ignorar mensagens entre ravenas (grupos de adm)
 - [x] Quando exceder requests do Gemini, tentar outro modelo ou local
 - [x] Fix novo Database.js com politica mais robusta de backups e gravações
-- [ ] Fix: Comando g-roletaReset
+- [x] Ignorar mensagens grupo de invites
+- [x] Ordem processamento comandos com nome que só muda o final (cmd, cmd1, cmd2..)
+- [x] Fix SiPt
+- [x] Fix: Comando g-roletaReset
+- [ ] Fix: SIGINT/SIGTERM não estão chegando
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] !le mais de 1 lista
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
-- [x] Ignorar mensagens grupo de invites
 - [ ] Bot não envia mensagem de READY
-- [ ] Ordem processamento comandos com nome que só muda o final (cmd, cmd1, cmd2..)
-- [ ] Fix SiPt
 
 
 ## ✅ TODO-Extras
@@ -174,12 +175,12 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Novo Jogo: Pinto
 - [x] Novo Comando: Msgs anônimas
 - [ ] Novo Comando: busca no youtube
-- [ ] Downloader de SocialMedias (Insta, TikTok)
 - [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Melhor explicação da implementação do bot no README
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [ ] Gerar README.md atualizado
+- [ ] Downloader de SocialMedias (Insta, TikTok)
 
 ## 🔧 Instalação
 
