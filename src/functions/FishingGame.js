@@ -1,6 +1,7 @@
 // src/functions/FishingGame.js
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
@@ -215,12 +216,13 @@ setInterval(async () => {
 // Configura salvamento antes do fechamento do programa
 process.on('exit', () => {
   if (fishingDataBuffer !== null && hasUnsavedChanges) {
+
     // Usando writeFileSync pois estamos no evento 'exit'
     try {
-      if (!fs.existsSync(path.dirname(FISHING_DATA_PATH))) {
-        fs.mkdirSync(path.dirname(FISHING_DATA_PATH), { recursive: true });
+      if (!fsSync.existsSync(path.dirname(FISHING_DATA_PATH))) {
+        fsSync.mkdirSync(path.dirname(FISHING_DATA_PATH), { recursive: true });
       }
-      fs.writeFileSync(FISHING_DATA_PATH, JSON.stringify(fishingDataBuffer, null, 2));
+      fsSync.writeFileSync(FISHING_DATA_PATH, JSON.stringify(fishingDataBuffer, null, 2));
       logger.info('Dados de pesca salvos antes de encerrar');
     } catch (error) {
       logger.error('Erro ao salvar dados de pesca antes de encerrar:', error);
