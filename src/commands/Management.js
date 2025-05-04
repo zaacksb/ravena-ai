@@ -3633,32 +3633,39 @@ async setWelcomeMessage(bot, message, args, group) {
       // Get the string to mute (full argument string)
       const muteString = args.join(' ');
       
-      // Initialize mutedStrings array if it doesn't exist
-      if (!group.mutedStrings) {
-        group.mutedStrings = [];
-      }
-      
-      // Check if string is already in the list
-      const index = group.mutedStrings.indexOf(muteString);
-      
-      if (index !== -1) {
-        // Remove string from muted list
-        group.mutedStrings.splice(index, 1);
-        await this.database.saveGroup(group);
-        
+      if(muteString < 3){
         return new ReturnMessage({
           chatId: group.id,
-          content: `Mensagens começando com "${muteString}" não serão mais ignoradas.`
+          content: `O *mute* precisa de pelo menos *3* caracteres (informado: '${muteString})'`
         });
-      } else {
-        // Add string to muted list
-        group.mutedStrings.push(muteString);
-        await this.database.saveGroup(group);
+      } else {        
+        // Initialize mutedStringsgs array if it doesn't exist
+        if (!group.mutedStrings) {
+          group.mutedStrings = [];
+        }
         
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Mensagens começando com "${muteString}" serão ignoradas.`
-        });
+        // Check if string is already in the list
+        const index = group.mutedStrings.indexOf(muteString);
+        
+        if (index !== -1) {
+          // Remove string from muted list
+          group.mutedStrings.splice(index, 1);
+          await this.database.saveGroup(group);
+          
+          return new ReturnMessage({
+            chatId: group.id,
+            content: `Mensagens começando com "${muteString}" não serão mais ignoradas.`
+          });
+        } else {
+          // Add string to muted list
+          group.mutedStrings.push(muteString);
+          await this.database.saveGroup(group);
+          
+          return new ReturnMessage({
+            chatId: group.id,
+            content: `Mensagens começando com "${muteString}" serão ignoradas.`
+          });
+        }
       }
     } catch (error) {
       this.logger.error('Erro ao configurar mute:', error);
@@ -3867,9 +3874,9 @@ async setWelcomeMessage(bot, message, args, group) {
       // Obtém e valida o tempo
       let segundos = parseInt(args[0]);
       
-      // Limita o tempo máximo
-      if (segundos > 3600) {
-        segundos = 3600;
+      // Limita o tempo máximo (24hrs)
+      if (segundos > 86400) {
+        segundos = 86400;
       } else if (segundos < 10) {
         segundos = 10; // Mínimo de 10 segundos
       }

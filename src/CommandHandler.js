@@ -897,16 +897,26 @@ class CommandHandler {
    * @returns {Object|null} - O objeto de comando personalizado ou null
    */
   findCustomCommand(commandName, commands) {
-    const matchedCommand = commands.find(cmd => {
-      // Verifica se o comando começa com o nome fornecido
+    // Primeiro, procura uma correspondência exata
+    const exactMatch = commands.find(cmd => 
+      cmd.startsWith && cmd.startsWith.toLowerCase() === commandName.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      this.logger.debug(`Encontrada correspondência exata para comando '${commandName}'`);
+      return exactMatch;
+    }
+    
+    // Se não encontrar uma correspondência exata, procura uma correspondência parcial
+    const partialMatch = commands.find(cmd => {
       if (cmd.startsWith && commandName.toLowerCase().startsWith(cmd.startsWith.toLowerCase())) {
         return true;
       }
       return false;
     });
     
-    this.logger.debug(`Buscando comando personalizado '${commandName}': ${matchedCommand ? 'encontrado' : 'não encontrado'}`);
-    return matchedCommand || null;
+    this.logger.debug(`Buscando comando personalizado '${commandName}': ${partialMatch ? 'encontrado' : 'não encontrado'}`);
+    return partialMatch || null;
   }
 
   /**
