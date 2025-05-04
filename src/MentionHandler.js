@@ -77,12 +77,7 @@ class MentionHandler {
 
       // Obtém resposta do LLM
       try {
-        const response = await this.llmService.getCompletion({
-          prompt: prompt,
-          provider: 'openrouter', // Usa OpenRouter conforme especificado
-          temperature: 0.7,
-          maxTokens: 500
-        });
+        const response = await this.llmService.getCompletion({prompt: prompt});
         
         if (response) {
           // Registra a resposta

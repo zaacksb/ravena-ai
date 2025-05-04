@@ -329,7 +329,7 @@ const commands = [
     description: 'Gera uma mensagem interativa baseada na conversa',
     category: 'ia',
     reactions: {
-      trigger: "🦜"
+      trigger: "🦜",
       before: "⏳",
       after: "💬"
     },
