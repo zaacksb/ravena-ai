@@ -33,6 +33,7 @@ const COMMAND_ORDER = [
 	"cmd-gerenciamento",
 	"cmd-g",
 	"doar",
+	"convite",
 	"grupao",
 	"avisos",
 	"codigo",
