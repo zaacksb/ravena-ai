@@ -688,7 +688,9 @@ async function fishCommand(bot, message, args, group) {
     if (fishingCooldowns[userId] && now < fishingCooldowns[userId]) {
       // Só reage com emoji de relógio, sem mensagem
       try {
-        await message.origin.react("⏰");
+        setTimeout((mo) => {
+          mo.react("⏰");
+        }, 1000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de relógio:', reactError);
       }
@@ -699,7 +701,9 @@ async function fishCommand(bot, message, args, group) {
     if (fishingData.fishingData[userId].baits <= 0) {
       // Apenas reage com emoji de balde vazio, sem mensagem
       try {
-        await message.origin.react("🪣");
+        setTimeout((mo) => {
+          mo.react("🪣");
+        }, 1000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de balde:', reactError);
       }
