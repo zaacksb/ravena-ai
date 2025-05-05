@@ -129,6 +129,12 @@ class WhatsAppBot {
       }
     }
 
+    process.on('SIGINT', async () => {
+      this.logger.info(`[SIGINT] Encerrando...`);
+    });
+    process.on('SIGTERM', async () => {
+      this.logger.info(`[SIGTERM] Encerrando...`);
+    });
 
     
     return this;
@@ -655,14 +661,11 @@ class WhatsAppBot {
         this.logger.error('Erro ao enviar notificação de desligamento:', error);
       }
     }
-
-    await sleep(5000);
     
     if (this.client) {
       await this.client.destroy();
       this.client = null;
       this.isConnected = false;
-      await sleep(1000);
     }
   }
 
@@ -790,6 +793,7 @@ class WhatsAppBot {
   getCurrentTimestamp(){
     return Math.round(+new Date()/1000);
   }
+
 }
 
 module.exports = WhatsAppBot;

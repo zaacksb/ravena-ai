@@ -460,7 +460,7 @@ class CommandHandler {
    * @param {Array} args - Argumentos do comando
    * @param {Object} group - O objeto do grupo (se em grupo)
    */
-  async processCommand(bot, message, command, args, group) {
+  async processCommand(bot, message, command, args, group, skipCustom = false) {
     this.logger.debug(`Processando comando: ${command}, determinação de tipo`);
     
     // Definir o chatId de resposta - por padrão é o chatId original
@@ -601,7 +601,7 @@ class CommandHandler {
     }
     
     // Verifica se é um comando personalizado (apenas para mensagens de grupo)
-    if (group && this.customCommands[group.id]) {
+    if (group && this.customCommands[group.id] && !skipCustom) { // Quando é comando embutid ({cmd-xxx}), não roda personalizados, se não vira um loop
       const customCommand = this.findCustomCommand(command, this.customCommands[group.id]);
       if (customCommand) {
         this.logger.debug(`Identificado como comando personalizado: ${command} (${customCommand.startsWith})`);
@@ -1087,7 +1087,7 @@ class CommandHandler {
           const [embeddedCmd, ...embeddedArgs] = cmdText.trim().split(/\s+/);
           
           // Executamos o comando
-          await this.processCommand(bot, message, embeddedCmd, embeddedArgs, group);
+          await this.processCommand(bot, message, embeddedCmd, embeddedArgs, group, true);
           
           return null; // Não continua o processamento normal
         } catch (embeddedError) {
