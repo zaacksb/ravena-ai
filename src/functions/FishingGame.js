@@ -1,6 +1,7 @@
 // src/functions/FishingGame.js
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
@@ -13,10 +14,11 @@ const database = Database.getInstance();
 // Constantes do jogo
 const MAX_FISH_PER_USER = 10;
 const MIN_FISH_WEIGHT = 1;
-const MAX_FISH_WEIGHT = 60; // Aumentado para 60kg
+const MAX_FISH_WEIGHT = 100; // Aumentado para 100kg
+const DIFFICULTY_THRESHOLD = 60; // Peso a partir do qual a dificuldade aumenta
 const FISHING_COOLDOWN = 5;
-const MAX_BAITS = 10; // Máximo de iscas
-const BAIT_REGEN_TIME = 60 * 60; // 1 hora em segundos para regenerar isca
+const MAX_BAITS = 5; // Máximo de iscas reduzido para 5
+const BAIT_REGEN_TIME = 90 * 60; // 1 hora e 30 minutos em segundos para regenerar isca
 const SAVE_INTERVAL = 30 * 1000; // 30 segundos em milissegundos
 
 // Armazena os cooldowns de pesca
@@ -55,13 +57,13 @@ const UPGRADES = [
   { name: "Minhocão", chance: 0.05, emoji: "🪱", effect: "next_fish_bonus", minValue: 20, maxValue: 50 },
   { name: "Rede", chance: 0.05, emoji: "🕸️", effect: "double_catch" },
   { name: "Carretel", chance: 0.01, emoji: "🧵", effect: "weight_boost", value: 0.5, duration: 10 },
-  { name: "Pacote de Iscas", chance: 0.05, emoji: "🎁", effect: "extra_baits", minValue: 1, maxValue: 5 }
+  { name: "Pacote de Iscas", chance: 0.05, emoji: "🎁", effect: "extra_baits", minValue: 1, maxValue: 3 }
 ];
 
 // Downgrades para pesca
 const DOWNGRADES = [
   { name: "Mina Aquática", chance: 0.0001, emoji: "💣", effect: "clear_inventory" },
-  { name: "Tartaruga Gulosa", chance: 0.01, emoji: "🐢", effect: "remove_baits", minValue: 1, maxValue: 5 }
+  { name: "Tartaruga Gulosa", chance: 0.01, emoji: "🐢", effect: "remove_baits", minValue: 1, maxValue: 3 }
 ];
 
 // Caminho para o arquivo de dados de pesca
@@ -215,12 +217,13 @@ setInterval(async () => {
 // Configura salvamento antes do fechamento do programa
 process.on('exit', () => {
   if (fishingDataBuffer !== null && hasUnsavedChanges) {
+
     // Usando writeFileSync pois estamos no evento 'exit'
     try {
-      if (!fs.existsSync(path.dirname(FISHING_DATA_PATH))) {
-        fs.mkdirSync(path.dirname(FISHING_DATA_PATH), { recursive: true });
+      if (!fsSync.existsSync(path.dirname(FISHING_DATA_PATH))) {
+        fsSync.mkdirSync(path.dirname(FISHING_DATA_PATH), { recursive: true });
       }
-      fs.writeFileSync(FISHING_DATA_PATH, JSON.stringify(fishingDataBuffer, null, 2));
+      fsSync.writeFileSync(FISHING_DATA_PATH, JSON.stringify(fishingDataBuffer, null, 2));
       logger.info('Dados de pesca salvos antes de encerrar');
     } catch (error) {
       logger.error('Erro ao salvar dados de pesca antes de encerrar:', error);
@@ -238,7 +241,7 @@ process.on('exit', () => {
 });
 
 /**
- * Obtém peixe aleatório do array de peixes
+ * Obtém peixe aleatório do array de peixes com escala de dificuldade
  * @param {Array} fishArray - Array com nomes de peixes
  * @returns {Object} Peixe sorteado com peso
  */
@@ -274,8 +277,26 @@ function getRandomFish(fishArray) {
   const fishIndex = Math.floor(Math.random() * fishArray.length);
   const fishName = fishArray[fishIndex];
   
-  // Gera um peso aleatório entre MIN e MAX
-  const weight = parseFloat((Math.random() * (MAX_FISH_WEIGHT - MIN_FISH_WEIGHT) + MIN_FISH_WEIGHT).toFixed(2));
+  // Gera um peso aleatório com dificuldade progressiva
+  let weight;
+  
+  if (Math.random() < 0.8) {
+    // 80% de chance de pegar um peixe entre 1kg e DIFFICULTY_THRESHOLD (60kg)
+    weight = parseFloat((Math.random() * (DIFFICULTY_THRESHOLD - MIN_FISH_WEIGHT) + MIN_FISH_WEIGHT).toFixed(2));
+  } else {
+    // 20% de chance de entrar no sistema de dificuldade progressiva
+    // Quanto maior o peso, mais difícil de conseguir
+    // Usando uma distribuição exponencial invertida
+    const difficultyRange = MAX_FISH_WEIGHT - DIFFICULTY_THRESHOLD;
+    const randomValue = Math.random();
+    // Quanto menor o expoente, mais difícil é pegar peixes grandes
+    const exponent = 3; 
+    // Quanto maior o resultado de pow, mais perto do peso mínimo da faixa
+    const difficultyFactor = 1 - Math.pow(randomValue, exponent);
+    
+    // Aplica o fator de dificuldade para determinar o peso
+    weight = parseFloat((DIFFICULTY_THRESHOLD + (difficultyFactor * difficultyRange)).toFixed(2));
+  }
   
   return {
     name: fishName,
@@ -316,6 +337,55 @@ function regenerateBaits(userData) {
   }
   
   return userData;
+}
+
+/**
+ * Calcula o tempo até a próxima regeneração de isca
+ * @param {Object} userData - Dados do usuário
+ * @returns {Object} - Objeto com informações de tempo
+ */
+function getNextBaitRegenTime(userData) {
+  const now = Date.now();
+  const lastRegen = userData.lastBaitRegen || now;
+  const elapsedSeconds = Math.floor((now - lastRegen) / 1000);
+  const secondsUntilNextBait = BAIT_REGEN_TIME - (elapsedSeconds % BAIT_REGEN_TIME);
+  
+  // Calcula quando todas as iscas estarão regeneradas
+  const missingBaits = MAX_BAITS - userData.baits;
+  const secondsUntilAllBaits = secondsUntilNextBait + ((missingBaits - 1) * BAIT_REGEN_TIME);
+  
+  // Calcula os timestamps
+  const nextBaitTime = new Date(now + (secondsUntilNextBait * 1000));
+  const allBaitsTime = new Date(now + (secondsUntilAllBaits * 1000));
+  
+  return {
+    secondsUntilNextBait,
+    secondsUntilAllBaits,
+    nextBaitTime,
+    allBaitsTime
+  };
+}
+
+/**
+ * Formata tempo em segundos para string legível
+ * @param {number} seconds - Segundos para formatar
+ * @returns {string} - String formatada
+ */
+function formatTimeString(seconds) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  
+  let timeString = '';
+  if (hours > 0) {
+    timeString += `${hours}h `;
+  }
+  if (minutes > 0 || hours > 0) {
+    timeString += `${minutes}m `;
+  }
+  timeString += `${remainingSeconds}s`;
+  
+  return timeString;
 }
 
 /**
@@ -627,13 +697,13 @@ async function fishCommand(bot, message, args, group) {
     
     // Verifica se o usuário tem iscas
     if (fishingData.fishingData[userId].baits <= 0) {
-      return new ReturnMessage({
-        chatId,
-        content: `🎣 ${userName}, você não tem iscas para pescar. As iscas regeneram automaticamente (1 a cada hora), ou você pode encontrar pacotes de iscas enquanto pesca.`,
-        options: {
-          quotedMessageId: message.origin.id._serialized
-        }
-      });
+      // Apenas reage com emoji de balde vazio, sem mensagem
+      try {
+        await message.origin.react("🪣");
+      } catch (reactError) {
+        logger.error('Erro ao reagir com emoji de balde:', reactError);
+      }
+      return null;
     }
     
     // Inicializa os dados do grupo se for uma mensagem de grupo e não existirem
@@ -705,21 +775,34 @@ async function fishCommand(bot, message, args, group) {
         fishingData.groupData[groupId][userId].biggestFish = modifiedFish;
       }
       
-      // Adiciona o peixe à lista do usuário, mantendo apenas os MAX_FISH_PER_USER mais recentes
+      // Adiciona o peixe à lista do usuário
       fishingData.fishingData[userId].fishes.push(modifiedFish);
       caughtFishes.push(modifiedFish);
       
       // Atualiza o peso total do inventário
       fishingData.fishingData[userId].inventoryWeight = (fishingData.fishingData[userId].inventoryWeight || 0) + modifiedFish.weight;
       
-      // Remove peixes antigos se exceder o limite
+      // Remove o peixe mais leve se exceder o limite
       if (fishingData.fishingData[userId].fishes.length > MAX_FISH_PER_USER) {
-        // Se exceder o limite, remove o peixe mais antigo
-        const oldFish = fishingData.fishingData[userId].fishes.shift();
+        // Encontra o peixe mais leve no inventário
+        let lightestFishIndex = 0;
+        let lightestFishWeight = fishingData.fishingData[userId].fishes[0].weight;
+        
+        for (let j = 1; j < fishingData.fishingData[userId].fishes.length; j++) {
+          const currentFish = fishingData.fishingData[userId].fishes[j];
+          if (currentFish.weight < lightestFishWeight) {
+            lightestFishIndex = j;
+            lightestFishWeight = currentFish.weight;
+          }
+        }
+        
+        // Remove o peixe mais leve
+        const removedFish = fishingData.fishingData[userId].fishes.splice(lightestFishIndex, 1)[0];
+        
         // Ajusta o peso do inventário
-        fishingData.fishingData[userId].inventoryWeight -= oldFish.weight;
+        fishingData.fishingData[userId].inventoryWeight -= removedFish.weight;
       }
-      
+
       // Somente no primeiro peixe, verifica se obteve um item aleatório
       if (i === 0 && !modifiedFish.isRare) {
         randomItem = checkRandomItem();
@@ -809,12 +892,21 @@ async function fishCommand(bot, message, args, group) {
     }
     
     // Adiciona informações adicionais para peixes grandes
-    if (caughtFishes.length === 1 && caughtFishes[0].weight > 50) {
-      effectMessage = '\n\n🏆 *EXTRAORDINÁRIO!* Este é um peixe monumental!' + effectMessage;
-    } else if (caughtFishes.length === 1 && caughtFishes[0].weight > 40) {
-      effectMessage = '\n\n🏆 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
-    } else if (caughtFishes.length === 1 && caughtFishes[0].weight > 30) {
-      effectMessage = '\n\n👏 Impressionante! Que espécime magnífico!' + effectMessage;
+    if (caughtFishes.length === 1) {
+      const weight = caughtFishes[0].weight;
+      if (weight > 90) {
+        effectMessage = '\n\n🏆 *EXTRAORDINÁRIO!* Este é um peixe monumental, quase impossível de encontrar!' + effectMessage;
+      } else if (weight > 80) {
+        effectMessage = '\n\n🏆 *IMPRESSIONANTE!* Este é um peixe extraordinariamente raro!' + effectMessage;
+      } else if (weight > 70) {
+        effectMessage = '\n\n🏆 *FENOMENAL!* Um peixe deste tamanho é extremamente raro!' + effectMessage;
+      } else if (weight > 60) {
+        effectMessage = '\n\n🏆 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
+      } else if (weight > 50) {
+        effectMessage = '\n\n👏 Muito impressionante! Que espécime magnífico!' + effectMessage;
+      } else if (weight > 40) {
+        effectMessage = '\n\n👏 Um excelente exemplar!' + effectMessage;
+      }
     }
     
     // Adiciona informação sobre o maior peixe do usuário
@@ -826,7 +918,7 @@ async function fishCommand(bot, message, args, group) {
     
     // Adiciona as mensagens de efeito (itens, buffs, etc)
     fishMessage += effectMessage;
-    
+
     // Se pescou um peixe raro, gera imagem e notifica grupo de interação
     if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
       try {
@@ -881,16 +973,6 @@ async function fishCommand(bot, message, args, group) {
             }
           });
         }
-      } catch (imageError) {
-        logger.error('Erro ao gerar ou enviar imagem de peixe raro:', imageError);
-      }
-    }
-    if (caughtFishes.length === 1 && caughtFishes[0].isRare) {
-      try {
-        // Gera a imagem para o peixe raro
-        const rareFishImage = await generateRareFishImage(bot, userName, caughtFishes[0].name);
-        
-
       } catch (imageError) {
         logger.error('Erro ao gerar ou enviar imagem de peixe raro:', imageError);
       }
@@ -974,8 +1056,15 @@ async function myFishCommand(bot, message, args, group) {
       fishMessage += `Peso total atual: ${userData.inventoryWeight?.toFixed(2) || userData.totalWeight.toFixed(2)} kg\n`;
       fishMessage += `Maior peixe: ${userData.biggestFish.name} (${userData.biggestFish.weight.toFixed(2)} kg)\n`;
       fishMessage += `Inventário atual: ${fishes.length}/${MAX_FISH_PER_USER} peixes\n`;
-      fishMessage += `Iscas: ${userData.baits}/${MAX_BAITS} (regenera 1 a cada hora)\n`;
+      fishMessage += `Iscas: ${userData.baits}/${MAX_BAITS}\n`;
       
+      // Adiciona informações de regeneração de iscas
+      if (userData.baits < MAX_BAITS) {
+        const regenInfo = getNextBaitRegenTime(userData);
+        fishMessage += `Próxima isca em: ${formatTimeString(regenInfo.secondsUntilNextBait)}\n`;
+        fishMessage += `Todas as iscas em: ${formatTimeString(regenInfo.secondsUntilAllBaits)}\n`;
+      }
+
       // Adiciona buffs ativos
       if (userData.buffs && userData.buffs.length > 0) {
         fishMessage += `\n*Buffs Ativos*:\n`;
@@ -996,7 +1085,7 @@ async function myFishCommand(bot, message, args, group) {
       
       // Informa sobre o limite de inventário
       if (fishes.length >= MAX_FISH_PER_USER) {
-        fishMessage += `\n⚠️ Seu inventário está cheio! Ao pescar novamente, seu peixe mais antigo será liberado.`;
+        fishMessage += `\n⚠️ Seu inventário está cheio! Ao pescar novamente, seu peixe mais leve será liberado.`;
       }
     }
     
@@ -1219,6 +1308,40 @@ async function biggestFishCommand(bot, message, args, group) {
 }
 
 /**
+ * Salva imagem de peixe raro em disco
+ * @param {Object} mediaContent - Objeto MessageMedia
+ * @param {string} userId - ID do usuário
+ * @param {string} fishName - Nome do peixe
+ * @returns {Promise<string>} - Caminho onde a imagem foi salva
+ */
+async function saveRareFishImage(mediaContent, userId, fishName) {
+  try {
+    // Cria o diretório de mídia se não existir
+    const mediaDir = path.join(__dirname, '../../data/media');
+    try {
+      await fs.access(mediaDir);
+    } catch (error) {
+      await fs.mkdir(mediaDir, { recursive: true });
+    }
+
+    // Cria nome de arquivo único com timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `peixe_raro_${fishName.toLowerCase().replace(/\s+/g, '_')}_${userId.split('@')[0]}_${timestamp}.jpg`;
+    const filePath = path.join(mediaDir, fileName);
+
+    // Salva a imagem
+    const imageBuffer = Buffer.from(mediaContent.data, 'base64');
+    await fs.writeFile(filePath, imageBuffer);
+    
+    logger.info(`Imagem de peixe raro salva em: ${filePath}`);
+    return fileName;
+  } catch (error) {
+    logger.error('Erro ao salvar imagem de peixe raro:', error);
+    return null;
+  }
+}
+
+/**
  * Lista todos os tipos de peixes disponíveis
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
@@ -1250,7 +1373,7 @@ async function listFishTypesCommand(bot, message, args, group) {
         content: '❌ Ocorreu um erro ao buscar os tipos de peixes. Por favor, tente novamente.'
       });
     }
-    
+
     // Ordena alfabeticamente
     const sortedFishes = [...fishArray].sort();
     
@@ -1282,7 +1405,13 @@ async function listFishTypesCommand(bot, message, args, group) {
       fishMessage += `${fish.emoji} ${fish.name}: ${fish.weightBonus}kg extra (${chancePercent.toFixed(5)}% de chance)\n`;
     });
     
-    fishMessage += `\n*Itens Especiais*:`;
+    fishMessage += `\n*Sistema de Pesos*:\n`;
+    fishMessage += `• Peixes normais: 1-100kg\n`;
+    fishMessage += `• Até 60kg: chances iguais\n`;
+    fishMessage += `• Acima de 60kg: cada vez mais raro quanto maior o peso\n`;
+    fishMessage += `• Peixes de 80kg+ são extremamente raros!\n`;
+    
+    fishMessage += `\n*Iscas*:`;
     fishMessage += `\n🪱 Use !iscas para ver suas iscas`;
     
     return new ReturnMessage({
@@ -1335,16 +1464,12 @@ async function showBaitsCommand(bot, message, args, group) {
     // Regenera iscas
     fishingData.fishingData[userId] = regenerateBaits(fishingData.fishingData[userId]);
     
-    // Calcula tempo para a próxima isca
-    const now = Date.now();
-    const lastRegen = fishingData.fishingData[userId].lastBaitRegen || now;
-    const elapsedSeconds = Math.floor((now - lastRegen) / 1000);
-    const secondsUntilNextBait = BAIT_REGEN_TIME - (elapsedSeconds % BAIT_REGEN_TIME);
+    // Calcula tempo para regeneração
+    const regenInfo = getNextBaitRegenTime(fishingData.fishingData[userId]);
     
     // Formata o tempo
-    const minutes = Math.floor(secondsUntilNextBait / 60);
-    const seconds = secondsUntilNextBait % 60;
-    const timeFormatted = `${minutes}m ${seconds}s`;
+    const nextBaitTime = regenInfo.nextBaitTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const allBaitsTime = regenInfo.allBaitsTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
     // Salva os dados atualizados
     await saveFishingData(fishingData);
@@ -1360,14 +1485,17 @@ async function showBaitsCommand(bot, message, args, group) {
     
     // Adiciona mensagem sobre regeneração
     if (fishingData.fishingData[userId].baits < MAX_BAITS) {
-      baitMessage += `Próxima isca em: ${timeFormatted}\n`;
+      baitMessage += `Próxima isca em: ${formatTimeString(regenInfo.secondsUntilNextBait)} (${nextBaitTime})\n`;
+      if (fishingData.fishingData[userId].baits < MAX_BAITS - 1) {
+        baitMessage += `Todas as iscas em: ${formatTimeString(regenInfo.secondsUntilAllBaits)} (${allBaitsTime})\n`;
+      }
     } else {
       baitMessage += `Suas iscas estão no máximo!\n`;
     }
-    
+
     baitMessage += `\n*Sobre Iscas*:\n`;
     baitMessage += `• Você precisa de iscas para pescar\n`;
-    baitMessage += `• Regenera 1 isca a cada hora\n`;
+    baitMessage += `• Regenera 1 isca a cada ${Math.floor(BAIT_REGEN_TIME/60)} minutos (${Math.floor(BAIT_REGEN_TIME/60/60)} hora e ${Math.floor((BAIT_REGEN_TIME/60) % 60)} minutos)\n`;
     baitMessage += `• Máximo de ${MAX_BAITS} iscas\n`;
     baitMessage += `• Você pode encontrar pacotes de iscas enquanto pesca\n`;
     
@@ -1387,44 +1515,6 @@ async function showBaitsCommand(bot, message, args, group) {
     });
   }
 }
-
-/**
- * Salva imagem de peixe raro em disco
- * @param {Object} mediaContent - Objeto MessageMedia
- * @param {string} userId - ID do usuário
- * @param {string} fishName - Nome do peixe
- * @returns {Promise<string>} - Caminho onde a imagem foi salva
- */
-async function saveRareFishImage(mediaContent, userId, fishName) {
-  try {
-    // Cria o diretório de mídia se não existir
-    const mediaDir = path.join(__dirname, '../../data/media');
-    try {
-      await fs.access(mediaDir);
-    } catch (error) {
-      await fs.mkdir(mediaDir, { recursive: true });
-    }
-
-    // Cria nome de arquivo único com timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `peixe_raro_${fishName.toLowerCase().replace(/\s+/g, '_')}_${userId.split('@')[0]}_${timestamp}.jpg`;
-    const filePath = path.join(mediaDir, fileName);
-
-    // Salva a imagem
-    const imageBuffer = Buffer.from(mediaContent.data, 'base64');
-    await fs.writeFile(filePath, imageBuffer);
-    
-    logger.info(`Imagem de peixe raro salva em: ${filePath}`);
-    return fileName;
-  } catch (error) {
-    logger.error('Erro ao salvar imagem de peixe raro:', error);
-    return null;
-  }
-}
-
-// Dentro do método fishCommand, na parte onde trata os peixes raros (linha ~721):
-// Se pescou um peixe raro, gera imagem e notifica grupo de interação
-
 
 /**
  * Mostra os peixes lendários que foram pescados

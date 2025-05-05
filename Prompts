@@ -2153,3 +2153,24 @@ FishingGame.js
 
 		- [1%] Tartaruga Gulosa: Tira de 1 a 5 iscas do jogador
 
+====
+
+Edite o jogo para mudar o seguinte:
+
+Peso máximo de 0 a 100kg
+
+Mas com escala de dificuldade na geração do numero aleatório
+
+Até 60kg - chance igual para todos os numeros
+
+a partir de 60kg, chance vai diminuindo cada vez mais, de forma que seja muito mais dificil pegar um peixe 80kg do que um de 60kg
+
+Quando o inventário do jogador estiver cheio, jogar fora o peixe mais leve ao invés do peixe mais antigo
+
+Máximo 5 iscas e recarregam a cada 1 hora e meia agora
+
+No showBaitsCommand, mostrar a hora em que será recuperada a próxima isca e também a hora que o usuário terá 100% de suas iscas de volta
+
+Se o jogador tentar pescar sem iscas, apenas reaja com "🪣", sem necessidade de enviar a mensagem.
+
+Me envie o artefato completo editado do jogo, em várias partes para não perder código, já que ele sera uma resposta grande.
