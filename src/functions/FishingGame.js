@@ -961,7 +961,8 @@ async function fishCommand(bot, message, args, group) {
               }
             });
             
-            await bot.sendReturnMessages(notificationMessage);
+            const msgsEnviadas = await bot.sendReturnMessages(notificationMessage);
+            msgsEnviadas[0].pin(260000);
           }
           
           // Envia a mensagem com a imagem
