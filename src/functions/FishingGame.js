@@ -10,6 +10,7 @@ const sdModule = require('./StableDiffusionCommands');
 
 const logger = new Logger('fishing-game');
 const database = Database.getInstance();
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // Constantes do jogo
 const MAX_FISH_PER_USER = 10;
@@ -34,7 +35,7 @@ const RARE_FISH = [
   { name: "Megalodon", chance: 0.00001, weightBonus: 5000, emoji: "🦈" },
   { name: "Leviathan", chance: 0.00001, weightBonus: 5000, emoji: "🐉" },
   { name: "Baleia", chance: 0.00005, weightBonus: 1000, emoji: "🐋" },
-  { name: "Tubarão", chance: 0.0001, weightBonus: 500, emoji: "🦈" }
+  //{ name: "Tubarão", chance: 0.0001, weightBonus: 500, emoji: "🦈" }
 ];
 
 // Itens de lixo que podem ser pescados
@@ -243,32 +244,36 @@ process.on('exit', () => {
 /**
  * Obtém peixe aleatório do array de peixes com escala de dificuldade
  * @param {Array} fishArray - Array com nomes de peixes
+ * @param {boolean} isMultiCatch - Se é uma pescaria múltipla (rede)
  * @returns {Object} Peixe sorteado com peso
  */
-function getRandomFish(fishArray) {
+function getRandomFish(fishArray, isMultiCatch = false) {
   // Verifica se o array tem peixes
   if (!fishArray || !Array.isArray(fishArray) || fishArray.length === 0) {
     // Lista de peixes padrão caso não tenha
     fishArray = ["Aba-aba","Abrotea","Acará","Acari","Agulha","Anchova","Arenque","Arraia","Aruanã","Atum","Bacalhau","Badejo","Bagre","Baiacu","Barbo","Barracuda","Betta","Betara","Bicuda","Bótia","Black Bass","Bonito","Bota-velha","Budião","Baiacu-de-espinhos","Cachara","Cação","Caranha","Carapau","Carapeba","Tubarão","Carapicu","Cascudo","Cachorra","Clarias","Candiru","Carpa","Cavala","Cavalinha","Cavalo-marinho","Cherne","Celacanto","Ciliares","Cirurgião-patela","Congro","Corvina","Curimã","Curimbatá","Dunkerocampus dactyliophorus","Dojô","Dourada","Dourado","Enguia","Espadarte","Estriatos","Esturjão","Enchova","Frade-de-rabo-de-andorinha","Frade-vermelho","Garoupa","Guarajuba","Guaru","Hadoque","Jacundá","Jamanta","Jaú","Kipper","Lambari","Lampreia","Linguado","Limpa-vidro","Mandi","Manjuba","Marlim-branco","Martens-belo","Martens-do-mar","Martens-roxo","Matrinxã","Merluza","Mero","Miraguaia","Mapará","Moreia","Muçum","Mugil cephalus","Namorado","Neon","Neymar-cirurgião","Olhete","Olho-de-boi","Oscar","Pacu","Pampo","Papa-terra","Parati","Patinga","Pargo","Paru","Pavlaki Branco","Pavlaki-da-areia","Peixe-anjo","Peixe-agulha","Peixe-aranha","Peixe-arlequim","Peixe-bala","Peixe-borboleta","Peixe-bruxa","Peixe-cabra","Peixe-carvão","Peixe-cão","Peixe-cego-das-cavernas","Peixe-cirurgião","Peixe-cofre","Peixe-corda","Peixe-dentado","Peixe-dourado","Peixe-elefante","Peixe-escorpião","Peixe-espada","Peixe-esparadrapo","Peixe-faca","Peixe-farol","Peixe-folha","Peixe-frade","Peixe-galo","Peixe-gatilho","Peixe-gato","Peixe-gelo","Peixe-imperador","Peixe-lanterna","Peixe-leão","Peixe-lua","Peixe-machado","Peixe-mandarim","Peixe-martelo","Peixe-médico","Peixe-morcego","Peixe-mosquito","Peixe-nuvem","Peixe-palhaço","Peixe-palmito","Peixe-papagaio","Peixe-pedra","Peixe-pescador","Peixe-piloto","Peixe-porco","Peixe-rato","Peixe-rei","Peixe-remo","Peixe-royal-gramma","Peixe-sapo","Peixe-serra","Peixe-sol","Peixe-soldado","Peixe-tigre","Peixe-tripé","Peixe-trombeta","Peixe-unicórnio","Peixe-ventosa","Peixe-vermelho","Peixe-víbora","Peixe-voador","Peixe-zebra","Perca","Pescada","Piaba","Piapara","Piau","Pintado","Piracanjuba","Piraíba","Pirambóia","Piranha","Piraputanga","Pirarara","Pirarucu","Piratinga","Poraquê","Porquinho","Prejereba","Quimera","Raia","Rêmora","Robalo","Rodóstomo","Saicanga","Sarda","Sardinha","Sargocentron diadema","Salmão","Solha","Surubi","Tabarana","Tainha","Tambacu","Tambaqui","Tamboril","Tamuatá","Tilápia","Traíra","Tricolor","Truta","Tubarana","Tubarão","Tucunaré","Ubarana","Ubeba","Xaréu","Zigão-preto"];
   }
   
-  // Sorteia peixe raro com chances muito baixas
-  for (const rareFish of RARE_FISH) {
-    if (Math.random() < rareFish.chance) {
-      // Gera um peso aleatório base entre MIN e MAX
-      const baseWeight = parseFloat((Math.random() * (MAX_FISH_WEIGHT - MIN_FISH_WEIGHT) + MIN_FISH_WEIGHT).toFixed(2));
-      // Adiciona o bônus de peso do peixe raro
-      const totalWeight = baseWeight + rareFish.weightBonus;
-      
-      return {
-        name: rareFish.name,
-        weight: totalWeight,
-        timestamp: Date.now(),
-        isRare: true,
-        emoji: rareFish.emoji,
-        baseWeight: baseWeight,
-        bonusWeight: rareFish.weightBonus
-      };
+  // Se for pescaria múltipla, não permite peixes raros
+  if (!isMultiCatch) {
+    // Sorteia peixe raro com chances muito baixas
+    for (const rareFish of RARE_FISH) {
+      if (Math.random() < rareFish.chance) {
+        // Gera um peso aleatório base entre MIN e MAX
+        const baseWeight = parseFloat((Math.random() * (MAX_FISH_WEIGHT - MIN_FISH_WEIGHT) + MIN_FISH_WEIGHT).toFixed(2));
+        // Adiciona o bônus de peso do peixe raro
+        const totalWeight = baseWeight + rareFish.weightBonus;
+        
+        return {
+          name: rareFish.name,
+          weight: totalWeight,
+          timestamp: Date.now(),
+          isRare: true,
+          emoji: rareFish.emoji,
+          baseWeight: baseWeight,
+          bonusWeight: rareFish.weightBonus
+        };
+      }
     }
   }
   
@@ -596,7 +601,9 @@ async function generateRareFishImage(bot, userName, fishName) {
     
     // Chama o método do comando imagine
     const imagineCommand = sdModule.commands[0];
-    const result = await imagineCommand.method(bot, mockMessage, prompt.split(' '), null);
+    const mockGroup = {filters: {nsfw: false}};
+    
+    const result = await imagineCommand.method(bot, mockMessage, prompt.split(' '), mockGroup, true);
     
     if (result && result.content && result.content.mimetype) {
       return result.content;
@@ -1548,12 +1555,43 @@ async function legendaryFishCommand(bot, message, args, group) {
     // Ordena os peixes lendários por data (mais recente primeiro)
     const sortedLegendaryFishes = [...fishingData.legendaryFishes].sort((a, b) => b.timestamp - a.timestamp);
     
-    // Limita a 10 peixes para evitar spam
-    const legendaryToShow = sortedLegendaryFishes.slice(0, 10);
+    // Prepara a mensagem com a lista completa de todos os peixes lendários
+    let textMessage = '🏆 *REGISTRO DE PEIXES LENDÁRIOS*\n\n';
     
-    // Cria uma mensagem para cada peixe lendário
+    // Adiciona todos os peixes lendários na mensagem de texto
+    for (let i = 0; i < sortedLegendaryFishes.length; i++) {
+      const legendary = sortedLegendaryFishes[i];
+      
+      // Formata data para um formato legível
+      const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
+      
+      // Adiciona emoji especial para os 3 primeiros
+      const medal = i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : `${i+1}. `;
+      
+      textMessage += `${medal}*${legendary.fishName}* (${legendary.weight.toFixed(2)} kg)\n`;
+      textMessage += `   Pescador: ${legendary.userName}\n`;
+      textMessage += `   Local: ${legendary.groupName || 'desconhecido'}\n`;
+      textMessage += `   Data: ${date}\n\n`;
+    }
+    
+    // Adiciona mensagem sobre as imagens
+    if (sortedLegendaryFishes.length > 0) {
+      textMessage += `🖼️ *Mostrando imagens das ${Math.min(5, sortedLegendaryFishes.length)} lendas mais recentes...*`;
+    }
+    
+    // Mensagens a serem enviadas
     const messages = [];
     
+    // Adiciona a mensagem de texto inicial
+    messages.push(new ReturnMessage({
+      chatId,
+      content: textMessage
+    }));
+    
+    // Limita a 5 peixes para as imagens
+    const legendaryToShow = sortedLegendaryFishes.slice(0, 5);
+    
+    // Cria uma mensagem para cada peixe lendário (apenas os 5 mais recentes)
     for (const legendary of legendaryToShow) {
       try {
         let content;
@@ -1570,17 +1608,15 @@ async function legendaryFishCommand(bot, message, args, group) {
             
             // Prepara a legenda
             const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
-            options.caption = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName}\nData: ${date}`;
+            options.caption = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName || 'desconhecido'}\nData: ${date}`;
           } catch (imageError) {
-            // Imagem não existe, usa mensagem de texto
+            // Imagem não existe, pula para o próximo
             logger.error(`Imagem do peixe lendário não encontrada: ${imagePath}`, imageError);
-            const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
-            content = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName}\nData: ${date}\n\n_(Imagem não disponível)_`;
+            continue;
           }
         } else {
-          // Sem imagem, usa mensagem de texto
-          const date = new Date(legendary.timestamp).toLocaleDateString('pt-BR');
-          content = `🏆 *Peixe Lendário*\n\n*${legendary.fishName}* de ${legendary.weight.toFixed(2)} kg\nPescado por: ${legendary.userName}\nLocal: ${legendary.groupName}\nData: ${date}`;
+          // Sem imagem, pula para o próximo
+          continue;
         }
         
         // Adiciona a mensagem à lista
@@ -1597,11 +1633,8 @@ async function legendaryFishCommand(bot, message, args, group) {
       }
     }
     
-    if (messages.length === 0) {
-      return new ReturnMessage({
-        chatId,
-        content: '❌ Ocorreu um erro ao mostrar os peixes lendários.'
-      });
+    if (messages.length === 1) {
+      return messages[0]; // Retorna apenas a mensagem de texto se não houver imagens
     }
     
     return messages;
@@ -1614,6 +1647,232 @@ async function legendaryFishCommand(bot, message, args, group) {
     });
   }
 }
+
+
+/**
+ * Atualiza peixes raros após o bug
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async function updateRareFishesAfterBug(bot, message, args, group) {
+  try {
+    // Verifica se é administrador
+    const chatId = message.group || message.author;
+    
+    // Envia mensagem de processamento
+    await bot.sendReturnMessages(new ReturnMessage({
+      chatId: chatId,
+      content: '🔄 Iniciando verificação de peixes raros... Este processo pode demorar alguns minutos.'
+    }));
+    
+    // Obtém dados de pesca
+    const fishingData = await getFishingData();
+    
+    // Inicializa o array de peixes lendários se não existir
+    if (!fishingData.legendaryFishes) {
+      fishingData.legendaryFishes = [];
+    }
+    
+    // Lista para armazenar os peixes raros encontrados
+    const foundRareFishes = [];
+    
+    // Contadores para o relatório
+    let countAdded = 0;
+    let countProcessed = 0;
+    let countBiggestAdded = 0;
+    
+    // Para cada usuário, verificar seu biggestFish e seus peixes
+    for (const [userId, userData] of Object.entries(fishingData.fishingData)) {
+      const userName = userData.name || "Pescador";
+      
+      // 1. Verifica o biggestFish
+      if (userData.biggestFish && isRareFish(userData.biggestFish.name)) {
+        // Verifica se este peixe não está no array fishes
+        const fishExists = userData.fishes.some(fish => 
+          fish.name === userData.biggestFish.name && 
+          fish.weight === userData.biggestFish.weight
+        );
+        
+        if (!fishExists) {
+          // Adiciona o biggestFish ao array fishes
+          userData.fishes.push({...userData.biggestFish});
+          countBiggestAdded++;
+          
+          // Também adiciona à lista de encontrados para processamento
+          foundRareFishes.push({
+            userId,
+            userName,
+            fish: userData.biggestFish,
+            groupId: null, // Não sabemos o grupo original
+            groupName: "desconhecido"
+          });
+        }
+      }
+      
+      // 2. Verifica todos os peixes no array fishes
+      for (const fish of userData.fishes) {
+        if (isRareFish(fish.name) || (fish.isRare === true)) {
+          // Marca o peixe como raro se não estiver marcado
+          if (!fish.isRare) {
+            fish.isRare = true;
+            
+            // Adiciona emoji e outros campos que possa estar faltando
+            const rareFishData = RARE_FISH.find(rf => rf.name === fish.name);
+            if (rareFishData) {
+              fish.emoji = rareFishData.emoji || '🐠';
+              if (!fish.baseWeight && !fish.bonusWeight) {
+                fish.baseWeight = fish.weight - rareFishData.weightBonus;
+                fish.bonusWeight = rareFishData.weightBonus;
+              }
+            } else {
+              fish.emoji = '🐠';
+            }
+          }
+          
+          // Verifica se este peixe já está em legendaryFishes
+          const alreadyInLegendary = fishingData.legendaryFishes.some(lf => 
+            lf.userId === userId && 
+            lf.fishName === fish.name && 
+            lf.weight === fish.weight
+          );
+          
+          if (!alreadyInLegendary) {
+            // Adiciona à lista para processamento
+            foundRareFishes.push({
+              userId,
+              userName,
+              fish,
+              groupId: null, // Não sabemos o grupo original
+              groupName: "desconhecido"
+            });
+          }
+        }
+      }
+    }
+    
+    // Agora, processa todos os peixes raros encontrados
+    const updateMessage = `🔄 Encontrados ${foundRareFishes.length} peixes raros para processar...`;
+    await bot.sendReturnMessages(new ReturnMessage({
+      chatId: chatId,
+      content: updateMessage
+    }));
+    
+    for (const [index, rareFishData] of foundRareFishes.entries()) {
+      try {
+        // Gera a imagem para o peixe raro
+        const progress = `🔄 Processando peixe ${index + 1}/${foundRareFishes.length}: ${rareFishData.fish.name} (${rareFishData.userName})`;
+        if ((index + 1) % 5 === 0 || index === 0) {
+          await bot.sendReturnMessages(new ReturnMessage({
+            chatId: chatId,
+            content: progress
+          }));
+        }
+        
+        const rareFishImage = await generateRareFishImage(bot, rareFishData.userName, rareFishData.fish.name);
+        
+        if (rareFishImage) {
+          // Salva a imagem
+          const savedImageName = await saveRareFishImage(rareFishImage, rareFishData.userId, rareFishData.fish.name);
+          
+          // Adiciona o peixe lendário à lista
+          fishingData.legendaryFishes.push({
+            fishName: rareFishData.fish.name,
+            weight: rareFishData.fish.weight,
+            userId: rareFishData.userId,
+            userName: rareFishData.userName,
+            groupId: rareFishData.groupId,
+            groupName: rareFishData.groupName || "grupo desconhecido",
+            timestamp: rareFishData.fish.timestamp || Date.now(),
+            imageName: savedImageName
+          });
+          
+          countAdded++;
+
+          // Notifica o grupo com a imagem
+          if (bot.grupoInteracao) {
+            try {
+              const notificationMessage = new ReturnMessage({
+                chatId: rareFishData.groupId,
+                content: rareFishImage,
+                options: {
+                  caption: `🏆 [RECUPERADO] ${rareFishData.userName} capturou um(a) *${rareFishData.fish.name}* LENDÁRIO(A) de *${rareFishData.fish.weight.toFixed(2)} kg*!`
+                }
+              });
+              
+              try{
+                await bot.sendReturnMessages(notificationMessage);
+              } catch(e_{
+                logger.error("erro return bot num e do grupo");
+              })
+            } catch (notifyError) {
+              logger.error('Erro ao notificar grupo de interação:', notifyError);
+            }
+          }
+          
+          // // Notifica o grupo de interação sobre o peixe raro se disponível
+          // if (bot.grupoInteracao) {
+          //   try {
+          //     const notificationMessage = new ReturnMessage({
+          //       chatId: bot.grupoInteracao,
+          //       content: rareFishImage,
+          //       options: {
+          //         caption: `🏆 [RECUPERADO] ${rareFishData.userName} capturou um(a) *${rareFishData.fish.name}* LENDÁRIO(A) de *${rareFishData.fish.weight.toFixed(2)} kg*!`
+          //       }
+          //     });
+              
+          //     await bot.sendReturnMessages(notificationMessage);
+          //   } catch (notifyError) {
+          //     logger.error('Erro ao notificar grupo de interação:', notifyError);
+          //   }
+          // }
+
+        }
+        
+        countProcessed++;
+      } catch (processError) {
+        logger.error(`Erro ao processar peixe raro de ${rareFishData.userName}:`, processError);
+      }
+
+      await sleep(5000);
+    }
+    
+    // Salva os dados atualizados
+    await saveFishingData(fishingData);
+    
+    // Envia relatório final
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `✅ *Atualização de Peixes Raros Concluída*\n\n` +
+        `🔍 Peixes raros encontrados: ${foundRareFishes.length}\n` +
+        `🐠 Peixes processados com sucesso: ${countProcessed}\n` +
+        `🏆 Peixes adicionados à lista de lendários: ${countAdded}\n` +
+        `📊 Peixes adicionados do "biggestFish": ${countBiggestAdded}\n\n` +
+        `Os peixes raros foram recuperados e agora estão devidamente registrados!`
+    });
+  } catch (error) {
+    logger.error('Erro ao atualizar peixes raros:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: `❌ Ocorreu um erro ao atualizar os peixes raros: ${error.message}\n\nConsulte os logs para mais detalhes.`
+    });
+  }
+}
+
+/**
+ * Verifica se o nome do peixe corresponde a um peixe raro
+ * @param {string} fishName - Nome do peixe
+ * @returns {boolean} - True se for um peixe raro
+ */
+function isRareFish(fishName) {
+  if (!fishName) return false;
+  return RARE_FISH.some(rare => rare.name === fishName);
+}
+
+
 
 // Criar array de comandos usando a classe Command
 const commands = [
@@ -1716,6 +1975,19 @@ const commands = [
       error: "❌"
     },
     method: legendaryFishCommand
+  }),
+  new Command({
+    name: 'updateRareFishesAfterBug',
+    description: 'Atualiza peixes raros após o bug (apenas admin)',
+    category: "administração",
+    cooldown: 300, // 5 minutos de cooldown,
+    hidden: true,
+    reactions: {
+      before: "🔄",
+      after: "✅",
+      error: "❌"
+    },
+    method: updateRareFishesAfterBug
   })
 ];
 
