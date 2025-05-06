@@ -974,6 +974,21 @@ async function fishCommand(bot, message, args, group) {
             msgsEnviadas[0].pin(260000);
           }
           
+          if (bot.grupoAvisos) {
+            const groupName = group ? group.name : "chat privado";
+            const notificationMessage = new ReturnMessage({
+              chatId: bot.grupoAvisos,
+              content: rareFishImage,
+              options: {
+                caption: `🏆 ${userName} capturou um(a) *${caughtFishes[0].name}* LENDÁRIO(A) de *${caughtFishes[0].weight.toFixed(2)} kg* no grupo "${groupName}"!`
+              }
+            });
+            
+            const msgsEnviadas = await bot.sendReturnMessages(notificationMessage);
+            msgsEnviadas[0].pin(260000);
+          }
+          
+
           // Envia a mensagem com a imagem
           return new ReturnMessage({
             chatId,
@@ -1669,6 +1684,8 @@ async function updateRareFishesAfterBug(bot, message, args, group) {
       chatId: chatId,
       content: '🔄 Iniciando verificação de peixes raros... Este processo pode demorar alguns minutos.'
     }));
+
+    logger.info('🔄 Iniciando verificação de peixes raros... Este processo pode demorar alguns minutos.');
     
     // Obtém dados de pesca
     const fishingData = await getFishingData();
@@ -1757,6 +1774,7 @@ async function updateRareFishesAfterBug(bot, message, args, group) {
     
     // Agora, processa todos os peixes raros encontrados
     const updateMessage = `🔄 Encontrados ${foundRareFishes.length} peixes raros para processar...`;
+    logger.info(updateMessage);
     await bot.sendReturnMessages(new ReturnMessage({
       chatId: chatId,
       content: updateMessage
@@ -1766,6 +1784,7 @@ async function updateRareFishesAfterBug(bot, message, args, group) {
       try {
         // Gera a imagem para o peixe raro
         const progress = `🔄 Processando peixe ${index + 1}/${foundRareFishes.length}: ${rareFishData.fish.name} (${rareFishData.userName})`;
+        logger.info(progress);
         if ((index + 1) % 5 === 0 || index === 0) {
           await bot.sendReturnMessages(new ReturnMessage({
             chatId: chatId,
@@ -1794,24 +1813,23 @@ async function updateRareFishesAfterBug(bot, message, args, group) {
           countAdded++;
 
           // Notifica o grupo com a imagem
-          if (bot.grupoInteracao) {
-            try {
-              const notificationMessage = new ReturnMessage({
-                chatId: rareFishData.groupId,
-                content: rareFishImage,
-                options: {
-                  caption: `🏆 [RECUPERADO] ${rareFishData.userName} capturou um(a) *${rareFishData.fish.name}* LENDÁRIO(A) de *${rareFishData.fish.weight.toFixed(2)} kg*!`
-                }
-              });
-              
-              try{
-                await bot.sendReturnMessages(notificationMessage);
-              } catch(e_{
-                logger.error("erro return bot num e do grupo");
-              })
-            } catch (notifyError) {
-              logger.error('Erro ao notificar grupo de interação:', notifyError);
+
+          try {
+            const notificationMessage = new ReturnMessage({
+              chatId: rareFishData.groupId,
+              content: rareFishImage,
+              options: {
+                caption: `🏆 [Atrasado] ${rareFishData.userName} capturou um(a) *${rareFishData.fish.name}* LENDÁRIO(A) de *${rareFishData.fish.weight.toFixed(2)} kg*!`
+              }
+            });
+            
+            try{
+              await bot.sendReturnMessages(notificationMessage);
+            } catch(e){
+              logger.error("erro return bot num e do grupo");
             }
+          } catch (notifyError) {
+            logger.error('Erro ao notificar grupo de interação:', notifyError);
           }
           
           // // Notifica o grupo de interação sobre o peixe raro se disponível
@@ -1977,19 +1995,6 @@ const commands = [
       error: "❌"
     },
     method: legendaryFishCommand
-  }),
-  new Command({
-    name: 'updateRareFishesAfterBug',
-    description: 'Atualiza peixes raros após o bug (apenas admin)',
-    category: "administração",
-    cooldown: 300, // 5 minutos de cooldown,
-    hidden: true,
-    reactions: {
-      before: "🔄",
-      after: "✅",
-      error: "❌"
-    },
-    method: updateRareFishesAfterBug
   })
 ];
 
