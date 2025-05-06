@@ -899,13 +899,13 @@ async function fishCommand(bot, message, args, group) {
     if (caughtFishes.length === 1) {
       const weight = caughtFishes[0].weight;
       if (weight > 90) {
-        effectMessage = '\n\n🏆 *EXTRAORDINÁRIO!* Este é um peixe monumental, quase impossível de encontrar!' + effectMessage;
+        effectMessage = '\n\n👏 *EXTRAORDINÁRIO!* Este é um peixe monumental, quase impossível de encontrar!' + effectMessage;
       } else if (weight > 80) {
-        effectMessage = '\n\n🏆 *IMPRESSIONANTE!* Este é um peixe extraordinariamente raro!' + effectMessage;
+        effectMessage = '\n\n👏 *IMPRESSIONANTE!* Este é um peixe extraordinariamente raro!' + effectMessage;
       } else if (weight > 70) {
-        effectMessage = '\n\n🏆 *FENOMENAL!* Um peixe deste tamanho é extremamente raro!' + effectMessage;
+        effectMessage = '\n\n👏 *FENOMENAL!* Um peixe deste tamanho é extremamente raro!' + effectMessage;
       } else if (weight > 60) {
-        effectMessage = '\n\n🏆 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
+        effectMessage = '\n\n👏 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
       } else if (weight > 50) {
         effectMessage = '\n\n👏 Muito impressionante! Que espécime magnífico!' + effectMessage;
       } else if (weight > 40) {
