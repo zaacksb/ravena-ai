@@ -92,41 +92,69 @@ async function main() {
     logger.error('Erro no processo principal:', error);
     process.exit(1);
   }
+
+  // Manipula encerramento do programa - modificar para esta versão:
+  process.on('SIGINT', async () => {
+    logger.info('Desligando bots e servidor API (SIGINT)...');
+    
+    // Força a persistência de dados do banco de dados
+    await Database.getInstance().forcePersist();
+    
+    // Para o servidor API primeiro
+    await botAPI.stop();
+    
+    // Destrói todas as instâncias de bot com timeout
+    const promises = [];
+    for (const bot of botInstances) {
+      promises.push(
+        // Adiciona um timeout para garantir que o processo não fique preso indefinidamente
+        Promise.race([
+          bot.destroy(),
+          new Promise(resolve => setTimeout(() => {
+            logger.warn(`Timeout ao destruir bot ${bot.id}`);
+            resolve();
+          }, 5000))
+        ])
+      );
+    }
+    
+    await Promise.all(promises);
+    logger.info('Todos os bots destruídos com sucesso. Encerrando...');
+    
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    logger.info('Desligando bots e servidor API (SIGTERM)...');
+    
+    // Força a persistência de dados do banco de dados
+    await Database.getInstance().forcePersist();
+    
+    // Para o servidor API primeiro
+    await botAPI.stop();
+    
+    // Destrói todas as instâncias de bot com timeout
+    const promises = [];
+    for (const bot of botInstances) {
+      promises.push(
+        // Adiciona um timeout para garantir que o processo não fique preso indefinidamente
+        Promise.race([
+          bot.destroy(),
+          new Promise(resolve => setTimeout(() => {
+            logger.warn(`Timeout ao destruir bot ${bot.id}`);
+            resolve();
+          }, 5000))
+        ])
+      );
+    }
+    
+    await Promise.all(promises);
+    logger.info('Todos os bots destruídos com sucesso. Encerrando...');
+    
+    process.exit(0);
+  });
 }
 
-
-process.on('unhandledRejection', (reason, p) => {
-  console.warn("---- Rejection não tratada ");
-  let motivo = reason.toString() ?? reason ?? "";
-  console.error(p);
-  console.warn(reason,true);
-
-  if(motivo.toLowerCase().includes("reactions send error")){
-    errosReaction++;
-  }
-
-  if(motivo.toLowerCase().includes("closed") || motivo.toLowerCase().includes("session") || errosReaction > 10){
-    if(tenteiReinit){
-      console.warn(`[erro grave] Navegador fechou, reiniciando bot (erros reaction: ${errosReaction}.`,true,true);
-      terminateRavena();
-      client.destroy();
-      process.exit(99);
-    } else {
-      console.warn(`[erro grave] Muitos erros de reaction, tentando reinit.`);
-      errosReaction = 0;
-      tenteiReinit = true;
-      client.initialize();
-    }
-  }
-
-  console.warn("---- Fim ");
-}).on('uncaughtException', err => {
-  console.warn("---- Erro Não tratado ");
-  console.error(err);
-  console.warn(err,true);
-  console.warn('Uncaught Exception thrown',true);
-  console.warn("---- Fim ");
-});
 
 // Executa a função principal
 main().catch(console.error);
