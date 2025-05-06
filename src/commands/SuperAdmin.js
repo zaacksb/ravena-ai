@@ -39,6 +39,7 @@ class SuperAdmin {
       'getGroupInfo': {'method': 'getGroupInfo', 'description': 'Dump de dados de grupo por nome cadastro'},
       'getMembros': {'method': 'getMembros', 'description': 'Lista todos os membros do grupo separados por admin e membros normais'},
       'blockList': {'method': 'blockList', 'description': 'Bloqueia todos os contatos recebidos separados por vírgula'},
+      'blockTudoList': {'method': 'blockTudoList', 'description': 'Sai de todos os grupos em comum com uma lista de pessoas e bloqueia todos os membros'},
       'unblockList': {'method': 'unblockList', 'description': 'Desbloqueia todos os contatos recebidos separados por vírgula'},
       'listaGruposPessoa': {'method': 'listaGruposPessoa', 'description': 'Lista todos os grupos em comum com uma pessoa'},
       'blockTudoPessoa': {'method': 'blockTudoPessoa', 'description': 'Sai de todos os grupos em comum com uma pessoa e bloqueia todos os membros'}
@@ -323,6 +324,51 @@ class SuperAdmin {
     }
   }
 
+  async removeFromSpecialGroups(bot, phoneNumber, specialGroups = []) {
+    const results = {
+      successes: 0,
+      failures: 0,
+      details: []
+    };
+    
+    for (const groupId of specialGroups) {
+      try {
+        const chat = await bot.client.getChatById(groupId);
+        
+        // Verifica se o contato está no grupo
+        const isInGroup = chat.participants.some(p => p.id._serialized === phoneNumber);
+        
+        if (isInGroup) {
+          // Remove a pessoa do grupo
+          await chat.removeParticipants([phoneNumber]);
+          results.successes++;
+          results.details.push({
+            groupId,
+            groupName: chat.name,
+            status: 'success'
+          });
+        } else {
+          results.details.push({
+            groupId,
+            groupName: chat.name,
+            status: 'not_present'
+          });
+        }
+      } catch (error) {
+        this.logger.error(`Erro ao remover ${phoneNumber} do grupo especial ${groupId}:`, error);
+        results.failures++;
+        results.details.push({
+          groupId,
+          error: error.message,
+          status: 'error'
+        });
+      }
+    }
+    
+    return results;
+  }
+
+
   /**
    * Bloqueia um usuário
    * @param {WhatsAppBot} bot - Instância do bot
@@ -357,14 +403,30 @@ class SuperAdmin {
         phoneNumber = `${phoneNumber}@c.us`;
       }
       
+      // Grupos especiais que não devem ser deixados, apenas remover a pessoa
+      const specialGroups = [];
+      
+      // Adicionar grupos especiais se estiverem definidos
+      if (bot.grupoInteracao) specialGroups.push(bot.grupoInteracao);
+      if (bot.grupoAvisos) specialGroups.push(bot.grupoAvisos);
+      
       try {
+        // Tenta remover o contato de grupos especiais primeiro
+        if (specialGroups.length > 0) {
+          const removeResults = await this.removeFromSpecialGroups(bot, phoneNumber, specialGroups);
+          this.logger.info(`Resultados da remoção de grupos especiais: ${JSON.stringify(removeResults)}`);
+        }
+        
         // Tenta bloquear o contato
         const contatoBloquear = await bot.client.getContactById(phoneNumber);
         await contatoBloquear.block();
         
+        // Cria a resposta
+        let responseMessage = `✅ Contato ${phoneNumber} bloqueado com sucesso.`;
+        
         return new ReturnMessage({
           chatId: chatId,
-          content: `✅ Contato ${phoneNumber} bloqueado com sucesso.`
+          content: responseMessage
         });
       } catch (blockError) {
         this.logger.error('Erro ao bloquear contato:', blockError);
@@ -1121,8 +1183,16 @@ class SuperAdmin {
         });
       }
       
+      // Grupos especiais que não devem ser deixados, apenas remover a pessoa
+      const specialGroups = [];
+      
+      // Adicionar grupos especiais se estiverem definidos
+      if (bot.grupoInteracao) specialGroups.push(bot.grupoInteracao);
+      if (bot.grupoAvisos) specialGroups.push(bot.grupoAvisos);
+      
       // Resultados do bloqueio
       const results = [];
+      const specialGroupResults = {};
       
       // Processa cada contato
       for (const contactItem of contactsList) {
@@ -1143,6 +1213,12 @@ class SuperAdmin {
         }
         
         try {
+          // Tenta remover o contato de grupos especiais primeiro
+          if (specialGroups.length > 0) {
+            const removeResults = await this.removeFromSpecialGroups(bot, phoneNumber, specialGroups);
+            specialGroupResults[phoneNumber] = removeResults;
+          }
+          
           // Tenta bloquear o contato
           const contact = await bot.client.getContactById(phoneNumber);
           await contact.block();
@@ -1174,6 +1250,14 @@ class SuperAdmin {
       for (const result of results) {
         const statusEmoji = result.status === 'Bloqueado' ? '✅' : '❌';
         responseMessage += `${statusEmoji} ${result.id}: ${result.status}\n`;
+        
+        // Adiciona informações sobre remoção de grupos especiais se disponível
+        if (specialGroupResults[result.id]) {
+          const sgr = specialGroupResults[result.id];
+          if (sgr.successes > 0) {
+            responseMessage += `  └ Removido de ${sgr.successes} grupos especiais\n`;
+          }
+        }
       }
       
       return new ReturnMessage({
@@ -1182,6 +1266,314 @@ class SuperAdmin {
       });
     } catch (error) {
       this.logger.error('Erro no comando blockList:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
+  }
+
+  async blockTudoList(bot, message, args) {
+    try {
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      // Obtém o texto completo de argumentos e divide por vírgulas
+      const contactsText = args.join(' ');
+      if (!contactsText.trim()) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça uma lista de contatos separados por vírgula. Exemplo: !sa-blockTudoList 5511999999999, 5511888888888'
+        });
+      }
+      
+      // Divide a lista de contatos por vírgula
+      const contactsList = contactsText.split(',').map(contact => contact.trim());
+      
+      if (contactsList.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Nenhum contato válido encontrado na lista.'
+        });
+      }
+      
+      // Grupos especiais que não devem ser deixados, apenas remover a pessoa
+      const specialGroups = [];
+      
+      // Adicionar grupos especiais se estiverem definidos
+      if (bot.grupoInteracao) specialGroups.push(bot.grupoInteracao);
+      if (bot.grupoAvisos) specialGroups.push(bot.grupoAvisos);
+      
+      this.logger.info(`Grupos especiais configurados: ${specialGroups.join(', ')}`);
+      
+      // Resultados da operação para cada contato
+      const contactResults = [];
+      
+      // Conjunto para armazenar todos os contatos únicos de todos os grupos
+      const allContactsSet = new Set();
+      
+      // Conjunto para armazenar todos os grupos processados
+      const processedGroups = new Set();
+      
+      // Processa cada contato na lista
+      for (const contactItem of contactsList) {
+        // Processa o número para formato padrão
+        let phoneNumber = contactItem.replace(/\D/g, '');
+        
+        // Se o número estiver vazio, pula para o próximo
+        if (!phoneNumber) {
+          contactResults.push({ 
+            phoneNumber: contactItem, 
+            status: 'Erro', 
+            message: 'Número inválido',
+            groups: [],
+            totalGroups: 0
+          });
+          continue;
+        }
+        
+        // Se o número não tiver o formato @c.us, adicione
+        if (!phoneNumber.includes('@')) {
+          phoneNumber = `${phoneNumber}@c.us`;
+        } else {
+          phoneNumber = contactItem;
+        }
+        
+        try {
+          // Obtém o contato
+          const contact = await bot.client.getContactById(phoneNumber);
+          const contactName = contact.pushname || contact.name || phoneNumber;
+          
+          // Obtém grupos em comum
+          const commonGroups = await contact.getCommonGroups();
+          
+          if (!commonGroups || commonGroups.length === 0) {
+            contactResults.push({
+              phoneNumber,
+              contactName,
+              status: 'Sem grupos',
+              message: 'Nenhum grupo em comum encontrado',
+              groups: [],
+              totalGroups: 0
+            });
+            continue;
+          }
+          
+          // Resultados para este contato
+          const results = {
+            phoneNumber,
+            contactName,
+            totalGroups: commonGroups.length,
+            leftGroups: 0,
+            specialGroups: 0,
+            errors: 0,
+            status: 'Processado',
+            groups: []
+          };
+          
+          // Processa cada grupo
+          for (const groupId of commonGroups) {
+            try {
+              // Se já processamos este grupo, pula
+              if (processedGroups.has(groupId)) {
+                this.logger.debug(`Grupo ${groupId} já foi processado anteriormente, pulando.`);
+                results.groups.push({
+                  id: groupId,
+                  status: 'Já processado'
+                });
+                continue;
+              }
+              
+              // Obtém o chat do grupo
+              const chat = await bot.client.getChatById(groupId);
+              const groupName = chat.name || groupId;
+              
+              // Verifica se é um grupo especial
+              const isSpecialGroup = specialGroups.includes(groupId);
+              
+              if (isSpecialGroup) {
+                this.logger.info(`Grupo especial detectado: ${groupId} (${groupName}). Removendo o contato.`);
+                results.specialGroups++;
+                
+                try {
+                  // Verifica se o contato está no grupo
+                  const isInGroup = chat.participants.some(p => p.id._serialized === phoneNumber);
+                  
+                  if (isInGroup) {
+                    // Remove apenas a pessoa do grupo
+                    await chat.removeParticipants([phoneNumber]);
+                    
+                    results.groups.push({
+                      id: groupId,
+                      name: groupName,
+                      status: 'Especial',
+                      action: 'Removido'
+                    });
+                  } else {
+                    results.groups.push({
+                      id: groupId,
+                      name: groupName,
+                      status: 'Especial',
+                      action: 'Não presente'
+                    });
+                  }
+                } catch (removeError) {
+                  this.logger.error(`Erro ao remover contato do grupo especial ${groupId}:`, removeError);
+                  
+                  results.errors++;
+                  results.groups.push({
+                    id: groupId,
+                    name: groupName,
+                    status: 'Erro',
+                    action: 'Remover',
+                    error: removeError.message
+                  });
+                }
+              } else {
+                // Para grupos normais, obtém participantes e sai do grupo
+                const participants = chat.participants || [];
+                
+                // Adiciona ID de cada participante ao conjunto global e marca o grupo como processado
+                if (!processedGroups.has(groupId)) {
+                  participants.forEach(participant => {
+                    // Não adicione os contatos da lista sendo processada
+                    const participantId = participant.id._serialized;
+                    if (!contactsList.includes(participantId) && !contactsList.includes(participantId.replace('@c.us', ''))) {
+                      allContactsSet.add(participantId);
+                    }
+                  });
+                  
+                  // Marca o grupo como processado
+                  processedGroups.add(groupId);
+                  
+                  // Envia mensagem de despedida (opcional)
+                  //await bot.sendMessage(groupId, '👋 Saindo deste grupo por comando administrativo. Até mais!');
+                  
+                  // Sai do grupo
+                  await bot.client.leaveGroup(groupId);
+                  
+                  results.leftGroups++;
+                  results.groups.push({
+                    id: groupId,
+                    name: groupName,
+                    status: 'Sucesso',
+                    action: 'Saiu',
+                    members: participants.length
+                  });
+                } else {
+                  results.groups.push({
+                    id: groupId,
+                    name: groupName,
+                    status: 'Já processado'
+                  });
+                }
+              }
+            } catch (groupError) {
+              this.logger.error(`Erro ao processar grupo ${groupId}:`, groupError);
+              
+              results.errors++;
+              results.groups.push({
+                id: groupId,
+                status: 'Erro',
+                error: groupError.message
+              });
+            }
+          }
+          
+          // Adiciona os resultados deste contato
+          contactResults.push(results);
+          
+          // Tenta bloquear este contato
+          try {
+            await contact.block();
+            this.logger.info(`Contato ${phoneNumber} bloqueado.`);
+          } catch (blockError) {
+            this.logger.error(`Erro ao bloquear contato ${phoneNumber}:`, blockError);
+            results.status = 'Erro ao bloquear';
+            results.error = blockError.message;
+          }
+        } catch (contactError) {
+          this.logger.error(`Erro ao processar contato ${phoneNumber}:`, contactError);
+          
+          contactResults.push({
+            phoneNumber,
+            status: 'Erro',
+            message: contactError.message,
+            groups: [],
+            totalGroups: 0
+          });
+        }
+      }
+      
+      // Converte o conjunto para array para facilitar o processamento
+      const allContacts = Array.from(allContactsSet);
+      
+      // Bloqueia todos os contatos coletados dos grupos
+      let blockedCount = 0;
+      let blockErrors = 0;
+      
+      for (const contactId of allContacts) {
+        try {
+          // Verifica se não é o próprio usuário ou um dos contatos da lista
+          if (contactId === message.author || contactsList.includes(contactId) || contactsList.includes(contactId.replace('@c.us', ''))) {
+            continue;
+          }
+          
+          // Tenta bloquear o contato
+          const contactToBlock = await bot.client.getContactById(contactId);
+          await contactToBlock.block();
+          
+          blockedCount++;
+        } catch (blockError) {
+          this.logger.error(`Erro ao bloquear contato ${contactId}:`, blockError);
+          blockErrors++;
+        }
+      }
+      
+      // Constrói a mensagem de resposta
+      let responseMessage = `*Operação de Bloqueio em Massa Concluída*\n\n`;
+      responseMessage += `📊 *Resumo Geral:*\n`;
+      responseMessage += `• Contatos processados: ${contactResults.length}\n`;
+      responseMessage += `• Grupos únicos processados: ${processedGroups.size}\n`;
+      responseMessage += `• Contatos únicos encontrados: ${allContacts.length}\n`;
+      responseMessage += `• Contatos bloqueados: ${blockedCount}\n`;
+      responseMessage += `• Erros de bloqueio: ${blockErrors}\n\n`;
+      
+      // Adiciona detalhes para cada contato processado
+      responseMessage += `*Detalhes por Contato:*\n`;
+      for (const result of contactResults) {
+        const statusEmoji = result.status === 'Processado' ? '✅' : 
+                             result.status === 'Sem grupos' ? '⚠️' : '❌';
+        
+        responseMessage += `${statusEmoji} *${result.contactName || result.phoneNumber}*: `;
+        
+        if (result.status === 'Processado') {
+          responseMessage += `${result.totalGroups} grupos (${result.leftGroups} saídos, ${result.specialGroups} especiais)\n`;
+        } else {
+          responseMessage += `${result.status} - ${result.message || ''}\n`;
+        }
+      }
+      
+      // Se a mensagem for muito longa, truncar e adicionar nota
+      if (responseMessage.length > 4000) {
+        responseMessage = responseMessage.substring(0, 4000);
+        responseMessage += '\n... (mensagem truncada devido ao tamanho)';
+      }
+      
+      return new ReturnMessage({
+        chatId: chatId,
+        content: responseMessage
+      });
+    } catch (error) {
+      this.logger.error('Erro no comando blockTudoList:', error);
       
       return new ReturnMessage({
         chatId: message.group || message.author,
@@ -1476,22 +1868,35 @@ class SuperAdmin {
             const isSpecialGroup = specialGroups.includes(groupId);
             
             if (isSpecialGroup) {
-              this.logger.info(`Grupo especial detectado: ${groupId} (${groupName}). Apenas removendo o contato.`);
+              this.logger.info(`Grupo especial detectado: ${groupId} (${groupName}). Removendo o contato.`);
               results.specialGroups++;
               
               try {
-                // Remove apenas a pessoa do grupo
-                await chat.removeParticipants([phoneNumber]);
+                // Verifica se o contato está no grupo
+                const isInGroup = chat.participants.some(p => p.id._serialized === phoneNumber);
                 
-                results.groupsInfo.push({
-                  id: groupId,
-                  name: groupName,
-                  status: 'Especial',
-                  action: 'Removido',
-                  members: chat.participants.length
-                });
-                
-                //await bot.sendMessage(groupId, `👤 Contato ${contactName} removido do grupo por comando administrativo.`);
+                if (isInGroup) {
+                  // Remove apenas a pessoa do grupo
+                  await chat.removeParticipants([phoneNumber]);
+                  
+                  results.groupsInfo.push({
+                    id: groupId,
+                    name: groupName,
+                    status: 'Especial',
+                    action: 'Removido',
+                    members: chat.participants.length
+                  });
+                  
+                  //await bot.sendMessage(groupId, `👤 Contato ${contactName} removido do grupo por comando administrativo.`);
+                } else {
+                  results.groupsInfo.push({
+                    id: groupId,
+                    name: groupName,
+                    status: 'Especial',
+                    action: 'Não presente',
+                    members: chat.participants.length
+                  });
+                }
               } catch (removeError) {
                 this.logger.error(`Erro ao remover contato do grupo especial ${groupId}:`, removeError);
                 
@@ -1588,7 +1993,25 @@ class SuperAdmin {
           else if (group.status === 'Especial') statusEmoji = '⭐';
           else statusEmoji = '❌';
           
-          responseMessage += `${statusEmoji} ${group.id} - ${group.name || 'Nome desconhecido'} (${group.action || group.status})\n`;
+          // Melhoria na exibição dos detalhes do grupo
+          const groupName = group.name || 'Nome desconhecido';
+          
+          // Verifica se o ID é um objeto e exibe adequadamente
+          let groupId;
+          if (typeof group.id === 'object') {
+            groupId = group.id?._serialized || JSON.stringify(group.id);
+          } else {
+            groupId = group.id;
+          }
+          
+          responseMessage += `${statusEmoji} ${groupId} - ${groupName} (${group.action || group.status})`;
+          
+          // Adicionar detalhes do erro se houver
+          if (group.error) {
+            responseMessage += `: ${group.error}`;
+          }
+          
+          responseMessage += '\n';
         }
         
         return new ReturnMessage({
@@ -1612,6 +2035,7 @@ class SuperAdmin {
       });
     }
   }
+
 
   /**
    * Exibe informações detalhadas de um grupo pelo nome de cadastro

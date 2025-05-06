@@ -7,7 +7,8 @@ class UserGreetingManager {
   constructor() {
     this.logger = new Logger('user-greeting');
     this.database = Database.getInstance();
-    this.greetedUsers = {};
+    // Modificar a estrutura para armazenar por bot
+    this.greetedUsers = {}; // { userId: { botId1: timestamp1, botId2: timestamp2, ... } }
     this.greetedUsersPath = path.join(this.database.databasePath, 'greeted-ids.json');
     this.greetingTextPath = path.join(this.database.databasePath, 'textos', 'bot-greeting.txt');
     
@@ -38,6 +39,7 @@ class UserGreetingManager {
     }
   }
   
+  
   /**
    * Salva a lista de usuários saudados no arquivo
    */
@@ -55,16 +57,21 @@ class UserGreetingManager {
   }
   
   /**
-   * Verifica se um usuário já foi saudado recentemente
+   * Verifica se um usuário já foi saudado recentemente por um bot específico
    * @param {string} userId - ID do usuário
-   * @returns {boolean} - True se o usuário já foi saudado recentemente
+   * @param {string} botId - ID do bot
+   * @returns {boolean} - True se o usuário já foi saudado recentemente por este bot
    */
-  wasGreetedRecently(userId) {
+  wasGreetedRecently(userId, botId) {
     if (!this.greetedUsers[userId]) {
       return false;
     }
     
-    const lastGreeted = this.greetedUsers[userId];
+    if (!this.greetedUsers[userId][botId]) {
+      return false;
+    }
+    
+    const lastGreeted = this.greetedUsers[userId][botId];
     const now = Date.now();
     const oneWeekMs = 7 * 24 * 60 * 60 * 1000; // Uma semana em milissegundos
     
@@ -72,13 +79,20 @@ class UserGreetingManager {
   }
   
   /**
-   * Marca um usuário como saudado
+   * Marca um usuário como saudado por um bot específico
    * @param {string} userId - ID do usuário
+   * @param {string} botId - ID do bot
    */
-  async markAsGreeted(userId) {
-    this.greetedUsers[userId] = Date.now();
+  async markAsGreeted(userId, botId) {
+    if (!this.greetedUsers[userId]) {
+      this.greetedUsers[userId] = {};
+    }
+    
+    this.greetedUsers[userId][botId] = Date.now();
     await this.saveGreetedUsers();
   }
+  
+  
   
   /**
    * Lê o texto de saudação do arquivo
@@ -125,13 +139,14 @@ class UserGreetingManager {
       }
       
       const userId = message.author;
+      const botId = bot.id;
       
-      // Verificar se o usuário já foi saudado recentemente
-      if (this.wasGreetedRecently(userId)) {
-        this.logger.debug(`Usuário ${userId} já foi saudado recentemente`);
+      // Verificar se o usuário já foi saudado recentemente por este bot
+      if (this.wasGreetedRecently(userId, botId)) {
+        this.logger.debug(`Usuário ${userId} já foi saudado recentemente pelo bot ${botId}`);
         return false;
       } else {
-        this.logger.debug(`Usuário ${userId} será saudado!`);
+        this.logger.debug(`Usuário ${userId} será saudado pelo bot ${botId}!`);
       }
       
       // Obter o texto de saudação
@@ -140,10 +155,10 @@ class UserGreetingManager {
       // Enviar a saudação
       await bot.sendMessage(userId, greetingText);
       
-      // Marcar o usuário como saudado
-      await this.markAsGreeted(userId);
+      // Marcar o usuário como saudado por este bot
+      await this.markAsGreeted(userId, botId);
       
-      this.logger.info(`Saudação enviada para ${userId}`);
+      this.logger.info(`Saudação enviada para ${userId} pelo bot ${botId}`);
       return true;
     } catch (error) {
       this.logger.error('Erro ao processar saudação:', error);
@@ -151,6 +166,7 @@ class UserGreetingManager {
     }
   }
 }
+
 
 // Instância única
 let instance = null;

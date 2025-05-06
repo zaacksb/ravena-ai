@@ -651,17 +651,13 @@ class CommandHandler {
         this.logger.error('Erro ao aplicar reação "antes":', reactError);
       }
       
-      
       // Comandos de gerenciamento regulares requerem um grupo
       if (!group) {
         this.logger.warn(`Comando de gerenciamento ${command} tentado em chat privado`);
         
         const returnMessage = new ReturnMessage({
           chatId: responseChatId,
-          content: 'Comandos de gerenciamento só podem ser usados em grupos. Se você deseja administrar seu grupo aqui no PV do bot, me envie:\n!g-manage [nomeDoGrupo]\n\n- Você pode enviar "!g-manage" dentro do grupo caso não souber o nome\n- O nome do grupo pode ser alterado utilizando o comando "!g-setName [novoNome]"',
-          reactions: {
-            after: this.defaultReactions.after
-          }
+          content: 'Comandos de gerenciamento só podem ser usados em grupos. Use !g-manage [nomeDoGrupo] para gerenciar um grupo a partir do chat privado.'
         });
         await bot.sendReturnMessages(returnMessage);
         
@@ -693,7 +689,16 @@ class CommandHandler {
       const methodName = this.management.getCommandMethod(managementCommand);
       if (methodName && typeof this.management[methodName] === 'function') {
         this.logger.debug(`Executando método de gerenciamento: ${methodName}`);
-        const managementResponse = await this.management[methodName](bot, message, args, group, this.privateManagement);
+        
+        // Importante: Criar uma cópia da mensagem para não afetar a original
+        const messageClone = JSON.parse(JSON.stringify(message));
+        
+        // Força o grupo para o comando
+        if (message.managementResponseChatId) {
+          messageClone.group = group.id; // Importante: garante que o grupo correto seja usado
+        }
+        
+        const managementResponse = await this.management[methodName](bot, messageClone, args, group, this.privateManagement);
         
         // Se a resposta for ReturnMessage ou array de ReturnMessage, modifica chatId se necessário
         if (managementResponse) {
@@ -744,6 +749,7 @@ class CommandHandler {
       await bot.sendReturnMessages(returnMessage);
     }
   }
+
 
   /**
    * Executa um comando fixo
