@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class UserGreetingManager {
   constructor() {
@@ -159,6 +160,7 @@ class UserGreetingManager {
       await this.markAsGreeted(userId, botId);
       
       this.logger.info(`Saudação enviada para ${userId} pelo bot ${botId}`);
+      await sleep(3000);
       return true;
     } catch (error) {
       this.logger.error('Erro ao processar saudação:', error);

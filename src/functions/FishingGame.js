@@ -577,6 +577,7 @@ function applyBuffs(userData, fish) {
 async function generateRareFishImage(bot, userName, fishName) {
   try {
     const prompt = `${userName} fishing an epic enormous fish named '${fishName}' using only a wooden fishing rod`;
+    logger.info(`[generateRareFishImage] ${prompt}`)
     
     // Verifica se o módulo StableDiffusionCommands está disponível
     try {
@@ -697,7 +698,7 @@ async function fishCommand(bot, message, args, group) {
       try {
         setTimeout((mo) => {
           mo.react("⏰");
-        }, 1000, message.origin);
+        }, 2000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de relógio:', reactError);
       }
@@ -710,7 +711,7 @@ async function fishCommand(bot, message, args, group) {
       try {
         setTimeout((mo) => {
           mo.react("🪣");
-        }, 1000, message.origin);
+        }, 3000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de balde:', reactError);
       }
@@ -870,6 +871,7 @@ async function fishCommand(bot, message, args, group) {
     
     // Se tiver mais de um peixe, formata mensagem para múltiplos peixes
     let fishMessage;
+
     if (caughtFishes.length > 1) {
       const fishDetails = caughtFishes.map(fish => `*${fish.name}* (_${fish.weight.toFixed(2)} kg_)`).join(" e ");
       fishMessage = `🎣 ${userName} pescou ${fishDetails}!`;
@@ -906,13 +908,13 @@ async function fishCommand(bot, message, args, group) {
     if (caughtFishes.length === 1) {
       const weight = caughtFishes[0].weight;
       if (weight > 90) {
-        effectMessage = '\n\n🏆 *EXTRAORDINÁRIO!* Este é um peixe monumental, quase impossível de encontrar!' + effectMessage;
+        effectMessage = '\n\n👏 *EXTRAORDINÁRIO!* Este é um peixe monumental, quase impossível de encontrar!' + effectMessage;
       } else if (weight > 80) {
-        effectMessage = '\n\n🏆 *IMPRESSIONANTE!* Este é um peixe extraordinariamente raro!' + effectMessage;
+        effectMessage = '\n\n👏 *IMPRESSIONANTE!* Este é um peixe extraordinariamente raro!' + effectMessage;
       } else if (weight > 70) {
-        effectMessage = '\n\n🏆 *FENOMENAL!* Um peixe deste tamanho é extremamente raro!' + effectMessage;
+        effectMessage = '\n\n👏 *FENOMENAL!* Um peixe deste tamanho é extremamente raro!' + effectMessage;
       } else if (weight > 60) {
-        effectMessage = '\n\n🏆 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
+        effectMessage = '\n\n👏 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
       } else if (weight > 50) {
         effectMessage = '\n\n👏 Muito impressionante! Que espécime magnífico!' + effectMessage;
       } else if (weight > 40) {

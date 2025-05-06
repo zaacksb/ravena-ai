@@ -25,6 +25,15 @@ const DEFAULT_PARAMS = {
 };
 
 
+/**
+ * Gera uma imagem usando a API do Stable Diffusion
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
+ */
+
 async function generateImage(bot, message, args, group, skipNotify = false) {
   const chatId = message.group || message.author;
   const returnMessages = [];

@@ -138,7 +138,7 @@ class EventHandler {
       }
       
       // Processa saudação para novos usuários no PV
-      await this.userGreetingManager.processGreeting(bot, message);
+      this.userGreetingManager.processGreeting(bot, message);
       
       // Obtém conteúdo de texto da mensagem (corpo ou legenda)
       const textContent = message.type === 'text' ? message.content : message.caption;

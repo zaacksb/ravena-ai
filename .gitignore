@@ -169,3 +169,5 @@ data/anon-msgs.json
 data/smd_cookies.txt
 data/smd-cache.json
 data/greeted-ids.json
+/.wwebjs_auth_
+/.wwebjs_cache_
