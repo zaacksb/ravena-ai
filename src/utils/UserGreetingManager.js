@@ -16,6 +16,29 @@ class UserGreetingManager {
     this.loadGreetedUsers();
   }
   
+  /**
+   * Carrega a lista de usuários já saudados do arquivo
+   */
+  async loadGreetedUsers() {
+    try {
+      try {
+        const data = await fs.readFile(this.greetedUsersPath, 'utf8');
+        this.greetedUsers = JSON.parse(data);
+        this.logger.info(`Carregados ${Object.keys(this.greetedUsers).length} usuários já saudados`);
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          this.logger.error('Erro ao carregar usuários saudados:', error);
+        } else {
+          this.logger.info('Arquivo de usuários saudados não encontrado, iniciando com lista vazia');
+        }
+        this.greetedUsers = {};
+      }
+    } catch (error) {
+      this.logger.error('Erro ao inicializar usuários saudados:', error);
+      this.greetedUsers = {};
+    }
+  }
+  
   
   /**
    * Salva a lista de usuários saudados no arquivo
