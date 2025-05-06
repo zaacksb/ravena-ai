@@ -690,7 +690,7 @@ async function fishCommand(bot, message, args, group) {
       try {
         setTimeout((mo) => {
           mo.react("⏰");
-        }, 1000, message.origin);
+        }, 2000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de relógio:', reactError);
       }
@@ -703,7 +703,7 @@ async function fishCommand(bot, message, args, group) {
       try {
         setTimeout((mo) => {
           mo.react("🪣");
-        }, 1000, message.origin);
+        }, 3000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de balde:', reactError);
       }
