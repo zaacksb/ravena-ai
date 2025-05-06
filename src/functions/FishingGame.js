@@ -572,6 +572,7 @@ function applyBuffs(userData, fish) {
 async function generateRareFishImage(bot, userName, fishName) {
   try {
     const prompt = `${userName} fishing an epic enormous fish named '${fishName}' using only a wooden fishing rod`;
+    logger.info(`[generateRareFishImage] ${prompt}`)
     
     // Verifica se o módulo StableDiffusionCommands está disponível
     try {
@@ -596,7 +597,9 @@ async function generateRareFishImage(bot, userName, fishName) {
     
     // Chama o método do comando imagine
     const imagineCommand = sdModule.commands[0];
-    const result = await imagineCommand.method(bot, mockMessage, prompt.split(' '), null);
+    const mockGroup = {filters: {nsfw: false}};
+    
+    const result = await imagineCommand.method(bot, mockMessage, prompt.split(' '), mockGroup, true);
     
     if (result && result.content && result.content.mimetype) {
       return result.content;
@@ -863,6 +866,7 @@ async function fishCommand(bot, message, args, group) {
     
     // Se tiver mais de um peixe, formata mensagem para múltiplos peixes
     let fishMessage;
+
     if (caughtFishes.length > 1) {
       const fishDetails = caughtFishes.map(fish => `*${fish.name}* (_${fish.weight.toFixed(2)} kg_)`).join(" e ");
       fishMessage = `🎣 ${userName} pescou ${fishDetails}!`;

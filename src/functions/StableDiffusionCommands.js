@@ -32,7 +32,7 @@ const DEFAULT_PARAMS = {
  * @param {Object} group - Dados do grupo
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
-async function generateImage(bot, message, args, group) {
+async function generateImage(bot, message, args, group, skipNotify = false) {
   const chatId = message.group || message.author;
   const returnMessages = [];
   
@@ -54,11 +54,13 @@ async function generateImage(bot, message, args, group) {
   logger.info(`Gerando imagem com prompt: ${prompt}`);
   
   try {
-    // Envia mensagem de processamento
-    await bot.sendReturnMessages(new ReturnMessage({
-      chatId: chatId,
-      content: '🖼️ Gerando imagem, isso pode levar alguns segundos...'
-    }));
+    if(!skipNotify){
+      // Envia mensagem de processamento
+      await bot.sendReturnMessages(new ReturnMessage({
+        chatId: chatId,
+        content: '🖼️ Gerando imagem, isso pode levar alguns segundos...'
+      }));
+    }
     
     // Inicia cronômetro para medir tempo de geração
     const startTime = Date.now();
