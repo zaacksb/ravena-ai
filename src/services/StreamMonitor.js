@@ -92,6 +92,17 @@ class StreamMonitor extends EventEmitter {
   }
 
   /**
+   * Save the current state to the database
+   * @private
+   */
+  _saveDatabase() {
+    fs.writeFileSync(this.monitoringDbPath, JSON.stringify({
+      channels: this.channels,
+      lastKnownStatuses: this.streamStatuses
+    }, null, 2));
+  }
+
+  /**
    * Start monitoring all channels
    */
   startMonitoring() {
