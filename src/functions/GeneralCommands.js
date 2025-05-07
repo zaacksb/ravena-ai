@@ -94,20 +94,39 @@ async function conviteCommand(bot, message, args, group) {
     const headerConvite = await fs.readFile(invitesHeaderPath, 'utf8');
     const invitesFooterPath = path.join(database.databasePath, 'textos', 'invites_footer.txt');
     const footerConvite = await fs.readFile(invitesFooterPath, 'utf8');
+    const invitesPosPath = path.join(database.databasePath, 'textos', 'invites_pos.txt');
+    const posConvite = await fs.readFile(invitesPosPath, 'utf8');
 
-    return new ReturnMessage({
-      chatId: chatId,
-      content: `${headerConvite}${footerConvite}`
-    });
+
+    return [
+      new ReturnMessage({
+        chatId: chatId,
+        content: `${headerConvite}${footerConvite}`
+      }),
+      new ReturnMessage({
+        chatId: chatId,
+        content: posConvite, 
+        delay: 1000
+      })
+    ];
   } catch (error) {
     logger.warn('Erro ao ler invites_xxx.txt:', error);
-    return new ReturnMessage({
+    return [
+
+    new ReturnMessage({
       chatId: chatId,
       content: `🐦‍⬛ Então você quer a *ravenabot* no seu grupo?
 Pra começar, me envie o *LINK*, apenas o _LINK_ do seu grupo.
 Se você enviar um convite tradicional, não vai adiantar de nada, pois não consigo aceitar por aqui.
 Após o link, siga as instruções do bot, enviando uma mensagem explicando o motivo de querer o bot no seu grupo.`
-    });
+    }),
+    new ReturnMessage({
+      chatId: chatId,
+      content: posConvite, 
+      delay: 1000
+    })    
+
+    ];
   }
 }
 

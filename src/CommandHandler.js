@@ -697,6 +697,8 @@ class CommandHandler {
         if (message.managementResponseChatId) {
           messageClone.group = group.id; // Importante: garante que o grupo correto seja usado
         }
+
+        messageClone.origin = message.origin; // Aqui precisa, obrigatoriamente, ser a referência, não cópia
         
         const managementResponse = await this.management[methodName](bot, messageClone, args, group, this.privateManagement);
         

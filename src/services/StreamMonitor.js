@@ -5,7 +5,7 @@ const EventEmitter = require('events');
 const { parse } = require('node-html-parser');
 const Database = require('../utils/Database');
 const Logger = require('../utils/Logger');
-
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class StreamMonitor extends EventEmitter {
   constructor(channels = []) {
@@ -55,7 +55,7 @@ class StreamMonitor extends EventEmitter {
         this.channels = data.channels || [];
         this.streamStatuses = data.lastKnownStatuses || {};
       } catch (error) {
-        console.error('Error reading monitoring database:', error);
+        this.logger.error('Error reading monitoring database:', error);
         // Create a new file if the existing one is corrupted
         fs.writeFileSync(this.monitoringDbPath, JSON.stringify({
           channels: [],
@@ -126,7 +126,7 @@ class StreamMonitor extends EventEmitter {
    */
   subscribe(channelName, source) {
     if (!['twitch', 'kick', 'youtube'].includes(source.toLowerCase())) {
-      console.error(`Invalid source: ${source}. Must be 'twitch', 'kick', or 'youtube'`);
+      this.logger.error(`Invalid source: ${source}. Must be 'twitch', 'kick', or 'youtube'`);
       return false;
     }
 
@@ -240,7 +240,7 @@ class StreamMonitor extends EventEmitter {
           return this.twitchToken;
         }
       } catch (err) {
-        console.log(err);
+        this.logger.log(err);
         // File doesn't exist or can't be read/parsed - we'll get a new token
         this.logger.debug('No valid token file found, requesting new Twitch token');
       }
@@ -288,8 +288,8 @@ class StreamMonitor extends EventEmitter {
    * Poll Twitch channels for status updates
    * @private
    */
-  async _pollTwitchChannels() {
-    const twitchChannels = this.channels.filter(c => c.source.toLowerCase() === 'twitch');
+  async _pollTwitchChannels(customChannels = null) {
+    const twitchChannels = customChannels ?? this.channels.filter(c => c.source.toLowerCase() === 'twitch');
     if (twitchChannels.length === 0) return;
     
     // Ensure we have a valid token
@@ -300,11 +300,18 @@ class StreamMonitor extends EventEmitter {
     
     // Split channels into batches of 100 (Twitch API limit)
     const channelBatches = [];
-    for (let i = 0; i < twitchChannels.length; i += 100) {
-      channelBatches.push(twitchChannels.slice(i, i + 100));
+    for (let i = 0; i < twitchChannels.length; i += 75) {
+      channelBatches.push(twitchChannels.slice(i, i + 75));
     }
     
+    const totalBatches = channelBatches.length;
+    this.logger.info(`[__pollTwitchChannels][${customChannels ? 'Retry' : ''}] Polling ${twitchChannels.length} twitch channels in ${totalBatches} batches.`);
+
+    let bAt = 0;
+    const failedBatches = [];
     for (const batch of channelBatches) {
+      bAt += 1;
+      this.logger.info(`[_pollTwitchChannels][${bAt}/${totalBatches}] Polling ${batch.length} channels...`);
       try {
         // First get user IDs from login names
         const userResponse = await axios.get(
@@ -395,8 +402,20 @@ class StreamMonitor extends EventEmitter {
         if (error.response && error.response.status === 401) {
           await this._refreshTwitchToken();
         } else {
-          console.error('Error polling Twitch channels:', error.message);
+          this.logger.error('Error polling Twitch channels:', error.message);
+          failedBatches.push(batch);
         }
+      }
+
+      await sleep(5000);
+    }
+
+    if(failedBatches.length > 0){
+      if(customChannels){
+        this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches while retrying, skipping.`);
+      } else {
+        this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches, trying again.`);
+        _pollTwitchChannels(failedBatches.flat(1));
       }
     }
     
@@ -459,7 +478,7 @@ class StreamMonitor extends EventEmitter {
           });
         }
       } catch (error) {
-        console.error(`Error polling Kick channel ${channel.name}:`, error.message);
+        this.logger.error(`Error polling Kick channel ${channel.name}:`, error.message);
       }
     }
     
@@ -497,7 +516,7 @@ class StreamMonitor extends EventEmitter {
             }
           } catch (error) {
             // If we can't resolve, just continue with the name
-            console.error(`Error resolving YouTube channel ID for ${channel.name}:`, error.message);
+            this.logger.error(`Error resolving YouTube channel ID for ${channel.name}:`, error.message);
           }
         }
         
@@ -611,7 +630,7 @@ class StreamMonitor extends EventEmitter {
                 });
               }
             } catch (error) {
-              console.error(`Error checking YouTube live status for ${channel.name}:`, error.message);
+              this.logger.error(`Error checking YouTube live status for ${channel.name}:`, error.message);
             }
           }
         }
@@ -659,7 +678,7 @@ class StreamMonitor extends EventEmitter {
             this.logger.error(`Erro ao notificar grupos sobre canal não encontrado: ${channel.name}`, notificationError);
           }
         } else {
-          console.error(`Erro ao monitorar canal do YouTube ${channel.name}:`, error.message);
+          this.logger.error(`Erro ao monitorar canal do YouTube ${channel.name}:`, error.message);
         }
       }
     }

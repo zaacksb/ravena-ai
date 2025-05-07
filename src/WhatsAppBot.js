@@ -94,7 +94,7 @@ class WhatsAppBot {
     await this.client.initialize();
       
     this.logger.info(`Bot ${this.id} inicializado`);
-
+    await sleep(5000);
     try {
       this.blockedContacts = await this.client.getBlockedContacts();
       this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
@@ -110,7 +110,6 @@ class WhatsAppBot {
 
     // Envia notificação de inicialização para o grupo de logs
     if (this.grupoLogs && this.isConnected) {
-      await sleep(10000);
       try {
         const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString("pt-BR")}`;
         await this.sendMessage(this.grupoLogs, startMessage);

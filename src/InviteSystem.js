@@ -1,5 +1,7 @@
 const Logger = require('./utils/Logger');
 const Database = require('./utils/Database');
+const path = require('path');
+const fs = require('fs').promises;
 
 /**
  * Gerencia o sistema de convites para o bot
@@ -147,8 +149,10 @@ class InviteSystem {
       });
       
       // Envia notificação para o usuário
-      await this.bot.sendMessage(authorId, 
-        "Obrigado! Seu convite foi recebido e será analisado em breve.");
+      const invitesPosPath = path.join(this.database.databasePath, 'textos', 'invites_pos.txt');
+      const posConvite = await fs.readFile(invitesPosPath, 'utf8');
+
+      await this.bot.sendMessage(authorId, "Obrigado! Seu convite foi recebido e será analisado.\n"+posConvite);
       
       // Envia notificações para o grupoInvites se configurado
       if (this.bot.grupoInvites) {
