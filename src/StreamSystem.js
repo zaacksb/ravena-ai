@@ -21,7 +21,7 @@ class StreamSystem {
     this.bot = bot;
     this.logger = new Logger(`stream-system-${bot.id}`);
     this.llmService = new LLMService({});
-    this.streamMonitor = null;
+    this.streamMonitor = null; // Não cria uma nova instância aqui
     this.dataPath = path.join(__dirname, '../data');
     this.mediaPath = path.join(this.dataPath, 'media');
   }
@@ -31,10 +31,10 @@ class StreamSystem {
    */
   async initialize() {
     try {
-      this.logger.info('Inicializando sistema de monitoramento de streams');
+      this.logger.info(`[Bot ${this.bot.id}] Inicializando sistema de monitoramento de streams`);
       
-      // Cria o StreamMonitor
-      this.streamMonitor = new StreamMonitor();
+      // Obtém a instância compartilhada do StreamMonitor usando o padrão Singleton
+      this.streamMonitor = StreamMonitor.getInstance();
       
       // Registra manipuladores de eventos
       this.registerEventHandlers();
@@ -42,22 +42,26 @@ class StreamSystem {
       // Carrega canais para monitorar
       await this.loadChannelsToMonitor();
       
-      // Inicia o monitoramento
-      this.streamMonitor.startMonitoring();
+      // Inicia o monitoramento (apenas se ainda não estiver ativo)
+      if (!this.streamMonitor.isMonitoring) {
+        this.streamMonitor.startMonitoring();
+      } else {
+        this.logger.info(`[Bot ${this.bot.id}] Monitoramento de streams já está ativo, usando instância existente`);
+      }
       
       // Disponibiliza o streamMonitor para o bot
       this.bot.streamMonitor = this.streamMonitor;
       
-      this.logger.info('Sistema de monitoramento de streams inicializado com sucesso');
+      this.logger.info(`[Bot ${this.bot.id}] Sistema de monitoramento de streams inicializado com sucesso`);
       
       // Envia mensagem de depuração se habilitado
       if (this.debugNotificacoes && this.bot.grupoLogs) {
-        this.bot.sendMessage(this.bot.grupoLogs, `🔍 Sistema de monitoramento de streams inicializado (debug ativado)`);
+        this.bot.sendMessage(this.bot.grupoLogs, `🔍 Sistema de monitoramento de streams inicializado (usando instância compartilhada)`);
       }
       
       return true;
     } catch (error) {
-      this.logger.error('Erro ao inicializar sistema de monitoramento de streams:', error);
+      this.logger.error(`[Bot ${this.bot.id}] Erro ao inicializar sistema de monitoramento de streams:`, error);
       return false;
     }
   }
@@ -66,10 +70,12 @@ class StreamSystem {
    * Registra manipuladores de eventos
    */
   registerEventHandlers() {
+    const botId = this.bot.id; // Identificador para logs
+    
     // Evento de stream online
     this.streamMonitor.on('streamOnline', async (data) => {
       try {
-        this.logger.info(`Evento de stream online: ${data.platform}/${data.channelName}`);
+        this.logger.info(`[Bot ${botId}] Evento de stream online: ${data.platform}/${data.channelName}`);
         
         // Envia mensagem de depuração para o grupo de logs se configurado
         if (this.debugNotificacoes && this.bot.grupoLogs) {
@@ -81,14 +87,14 @@ class StreamSystem {
         
         await this.handleStreamOnline(data);
       } catch (error) {
-        this.logger.error('Erro ao processar evento de stream online:', error);
+        this.logger.error(`[Bot ${botId}] Erro ao processar evento de stream online:`, error);
       }
     });
     
     // Evento de stream offline
     this.streamMonitor.on('streamOffline', async (data) => {
       try {
-        this.logger.info(`Evento de stream offline: ${data.platform}/${data.channelName}`);
+        this.logger.info(`[Bot ${botId}] Evento de stream offline: ${data.platform}/${data.channelName}`);
         
         // Envia mensagem de depuração para o grupo de logs se configurado
         if (this.debugNotificacoes && this.bot.grupoLogs) {
@@ -100,14 +106,14 @@ class StreamSystem {
         
         await this.handleStreamOffline(data);
       } catch (error) {
-        this.logger.error('Erro ao processar evento de stream offline:', error);
+        this.logger.error(`[Bot ${botId}] Erro ao processar evento de stream offline:`, error);
       }
     });
     
     // Evento de novo vídeo
     this.streamMonitor.on('newVideo', async (data) => {
       try {
-        this.logger.info(`Evento de novo vídeo: ${data.platform}/${data.channelName}`);
+        this.logger.info(`[Bot ${botId}] Evento de novo vídeo: ${data.platform}/${data.channelName}`);
         
         // Envia mensagem de depuração para o grupo de logs se configurado
         if (this.debugNotificacoes && this.bot.grupoLogs) {
@@ -119,14 +125,14 @@ class StreamSystem {
         
         await this.handleNewVideo(data);
       } catch (error) {
-        this.logger.error('Erro ao processar evento de novo vídeo:', error);
+        this.logger.error(`[Bot ${botId}] Erro ao processar evento de novo vídeo:`, error);
       }
     });
 
     // Evento de canal não encontrado
     this.streamMonitor.on('channelNotFound', async (data) => {
       try {
-        this.logger.info(`Evento de canal não encontrado: ${data.platform}/${data.channelName}`);
+        this.logger.info(`[Bot ${botId}] Evento de canal não encontrado: ${data.platform}/${data.channelName}`);
         
         // Envia mensagem de depuração para o grupo de logs se configurado
         if (this.debugNotificacoes && this.bot.grupoLogs) {
@@ -144,7 +150,7 @@ class StreamSystem {
           );
         }
       } catch (error) {
-        this.logger.error('Erro ao processar evento de canal não encontrado:', error);
+        this.logger.error(`[Bot ${botId}] Erro ao processar evento de canal não encontrado:`, error);
       }
     });
   }
@@ -897,19 +903,22 @@ class StreamSystem {
 
   /**
    * Destrói o sistema de monitoramento
+   * Obs: Não para o monitoramento, apenas remove a referência local
    */
   destroy() {
-    if (this.streamMonitor) {
-      this.streamMonitor.stopMonitoring();
-      this.streamMonitor = null;
-      
-      if (this.debugNotificacoes && this.bot.grupoLogs) {
-        this.bot.sendMessage(
-          this.bot.grupoLogs, 
-          `🛑 [DEBUG] Sistema de monitoramento de streams destruído`
-        );
-      }
+    // Como o StreamMonitor é compartilhado, não devemos parar o monitoramento
+    // apenas remover nossa referência e logs
+    this.logger.info(`[Bot ${this.bot.id}] Destruindo referência ao sistema de monitoramento de streams`);
+    
+    if (this.debugNotificacoes && this.bot.grupoLogs) {
+      this.bot.sendMessage(
+        this.bot.grupoLogs, 
+        `🛑 [DEBUG] Referência ao sistema de monitoramento de streams destruída (o monitoramento compartilhado continua ativo)`
+      );
     }
+    
+    // Removemos apenas a referência local
+    this.streamMonitor = null;
   }
 }
 

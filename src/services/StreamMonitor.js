@@ -8,7 +8,27 @@ const Logger = require('../utils/Logger');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class StreamMonitor extends EventEmitter {
+  // Propriedade estática para armazenar a instância única
+  static instance = null;
+  
+  /**
+   * Obtém a instância singleton do StreamMonitor
+   * @param {Array} [channels=[]] - Canais iniciais para monitorar (usado apenas na primeira instanciação)
+   * @returns {StreamMonitor} A instância única do StreamMonitor
+   */
+  static getInstance(channels = []) {
+    if (!StreamMonitor.instance) {
+      StreamMonitor.instance = new StreamMonitor(channels);
+    }
+    return StreamMonitor.instance;
+  }
+
   constructor(channels = []) {
+    // Se já existir uma instância, retorna ela
+    if (StreamMonitor.instance) {
+      return StreamMonitor.instance;
+    }
+    
     super();
     this.database = Database.getInstance();
     this.monitoringDbPath = path.join(this.database.databasePath, "monitoramento.json");
@@ -25,11 +45,14 @@ class StreamMonitor extends EventEmitter {
       youtube: null
     };
     
+    // Flag para verificar se o monitoramento está ativo
+    this.isMonitoring = false;
+    
     // Initialize database file if it doesn't exist
     this._initDatabase();
 
     this.logger = new Logger('stream-monitor');
-    this.logger.info('Service StreamMonitor carregado');
+    this.logger.info('Service StreamMonitor carregado (modo singleton)');
     
     // Subscribe to initial channels if provided
     if (channels.length > 0) {
@@ -37,6 +60,9 @@ class StreamMonitor extends EventEmitter {
         this.subscribe(channel.name, channel.source);
       });
     }
+    
+    // Define esta instância como a instância singleton
+    StreamMonitor.instance = this;
   }
 
   /**
@@ -66,20 +92,15 @@ class StreamMonitor extends EventEmitter {
   }
 
   /**
-   * Save the current state to the database
-   * @private
-   */
-  _saveDatabase() {
-    fs.writeFileSync(this.monitoringDbPath, JSON.stringify({
-      channels: this.channels,
-      lastKnownStatuses: this.streamStatuses
-    }, null, 2));
-  }
-
-  /**
    * Start monitoring all channels
    */
   startMonitoring() {
+    // Evita iniciar o monitoramento várias vezes
+    if (this.isMonitoring) {
+      this.logger.info('O monitoramento de streams já está ativo (ignorando chamada duplicada)');
+      return;
+    }
+    
     // Stop any existing polling
     this.stopMonitoring();
     
@@ -92,6 +113,9 @@ class StreamMonitor extends EventEmitter {
     this._pollTwitchChannels();
     this._pollKickChannels();
     this._pollYoutubeChannels();
+    
+    this.isMonitoring = true;
+    this.logger.info('Monitoramento de streams iniciado');
   }
 
   /**
@@ -104,6 +128,9 @@ class StreamMonitor extends EventEmitter {
         this.pollingTimers[platform] = null;
       }
     });
+    
+    this.isMonitoring = false;
+    this.logger.info('Monitoramento de streams interrompido');
   }
 
   /**
