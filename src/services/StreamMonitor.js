@@ -442,7 +442,7 @@ class StreamMonitor extends EventEmitter {
         this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches while retrying, skipping.`);
       } else {
         this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches, trying again.`);
-        _pollTwitchChannels(failedBatches.flat(1));
+        this._pollTwitchChannels(failedBatches.flat(1));
       }
     }
     
