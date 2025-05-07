@@ -345,6 +345,10 @@ class EventHandler {
     
     const textContent = message.type === 'text' ? message.content : message.caption;
     
+    if(textContent.includes("g-filtro")){
+      return false; // Não filtrar comandos de filtro
+    }
+
     const filters = group.filters;
     
     // Verifica filtro de palavras
