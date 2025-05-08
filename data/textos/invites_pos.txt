@@ -1,3 +1,8 @@
-⚠️ Estamos com um número altíssimo de mensagens nos 3 números da ravena (chegando próximo as 20 mil mensagens por hora), isto causa delays nas respostas e travamento dos zap (o whatsapp simplesmente para de receber mensagens).
+⚠️ A _ravena DDD 99_ foi banida novamente e *não irá voltar*.
+Quem tiver a ela no grupo, não precisa remover por enquanto, isso me ajuda a reorganizar os grupos com outro número do bot.
 
-Por este motivo, *não estou aceitando muitos convites*. Ainda estou estudando a possibilidade de criar um novo número da ravena, para voltar a ter 4, mas dá bastante trabalho pra manter.
+Assim que uma ravena nova entrar no teu grupo, pode remover a DDD 99 sem problemas.
+
+> Obs.: Estamos com um número altíssimo de mensagens (chegando próximo as 20 mil por hora), isto causa delays nas respostas e travamento dos zap (o whatsapp simplesmente para de receber mensagens).
+> Por este motivo, *nem todos os grupos terão os convites reaceitos*.
+> Ainda estou estudando a possibilidade de criar novos números da ravena, para voltar a ter 4, mas dá bastante trabalho pra manter todos, coisa que não tenho tempo, infelizmente.
