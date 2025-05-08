@@ -831,12 +831,14 @@ async function fishCommand(bot, message, args, group) {
             fishingData.fishingData[userId].totalCatches--;
             fishingData.fishingData[userId].totalWeight -= modifiedFish.weight;
             fishingData.fishingData[userId].inventoryWeight -= modifiedFish.weight;
-            
+
             if (groupId) {
               fishingData.groupData[groupId][userId].totalCatches--;
               fishingData.groupData[groupId][userId].totalWeight -= modifiedFish.weight;
             }
-            
+
+            buffResult.buffMessages = [];
+
             break; // Sai do loop, não pesca mais peixes
           }
         }
