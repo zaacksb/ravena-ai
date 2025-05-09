@@ -23,7 +23,7 @@ async function pingCommand(bot, message, args, group) {
   
   return new ReturnMessage({
     chatId: chatId,
-    content: `Pong! 🏓 _(${delayMsg})_`,
+    content: `Pong! 🏓 _(${delayMsg}s)_`,
     options: {
       quotedMessageId: message.origin.id._serialized
     }
