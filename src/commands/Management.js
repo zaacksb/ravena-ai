@@ -5328,163 +5328,96 @@ async setWelcomeMessage(bot, message, args, group) {
     }
   }
 
-  /**
-   * Reseta o ranking do jogo de pesca para um grupo ou globalmente
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async resetPescaRanking(bot, message, args, group) {
-    try {
-      // Verifica se está em um grupo
-      if (!message.group) {
-        return new ReturnMessage({
-          chatId: message.author,
-          content: 'Este comando só pode ser usado em grupos.'
-        });
-      }
-      
-      const groupId = message.group;
-      
-      // Obtém variáveis customizadas
-      const customVariables = await this.database.getCustomVariables();
-      
-      // Verifica se existe ranking de pesca
-      if (!customVariables.fishing) {
-        return new ReturnMessage({
-          chatId: groupId,
-          content: '🎣 Não há dados de pescaria para resetar.'
-        });
-      }
-
-      // Verifica o tipo de reset
-      const isGlobal = args.length > 0 && args[0].toLowerCase() === 'global';
-      
-      if (isGlobal) {
-        // Verifica se o usuário é um super admin (adicione sua própria lógica aqui)
-        const isSuperAdmin = await this.isSuperAdmin(message.author);
-        if (!isSuperAdmin) {
-          return new ReturnMessage({
-            chatId: groupId,
-            content: '⚠️ Apenas super administradores podem resetar o ranking global de pescaria.'
-          });
-        }
-        
-        // Armazena o backup antes de resetar
-        const backupData = JSON.stringify(customVariables.fishing);
-        
-        // Registra o backup no histórico
-        if (!customVariables.fishingRankingHistory) {
-          customVariables.fishingRankingHistory = [];
-        }
-        
-        customVariables.fishingRankingHistory.push({
-          type: 'global',
-          timestamp: Date.now(),
-          data: backupData
-        });
-        
-        // Limita o histórico a 5 entradas
-        if (customVariables.fishingRankingHistory.length > 5) {
-          customVariables.fishingRankingHistory = customVariables.fishingRankingHistory.slice(-5);
-        }
-        
-        // Reseta os dados de pescaria
-        customVariables.fishing = {};
-        
-        // Salva as variáveis atualizadas
-        await this.database.saveCustomVariables(customVariables);
-        
-        return new ReturnMessage({
-          chatId: groupId,
-          content: '🎣 O ranking global de pescaria foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.'
-        });
-      } else {
-        // Reset apenas para este grupo
-        
-        // Primeiro, identifica todos os usuários que têm dados neste grupo
-        const affectedUsers = [];
-        
-        for (const [userId, userData] of Object.entries(customVariables.fishing)) {
-          // Se o usuário tem peixes neste grupo, vamos resetar
-          const hasFishInGroup = userData.groupData && userData.groupData[groupId];
-          
-          if (hasFishInGroup) {
-            affectedUsers.push(userId);
-          }
-        }
-        
-        if (affectedUsers.length === 0) {
-          return new ReturnMessage({
-            chatId: groupId,
-            content: '🎣 Não há dados de pescaria para este grupo específico.'
-          });
-        }
-        
-        // Armazena o backup antes de resetar
-        const groupData = {};
-        for (const userId of affectedUsers) {
-          if (customVariables.fishing[userId].groupData && customVariables.fishing[userId].groupData[groupId]) {
-            groupData[userId] = customVariables.fishing[userId].groupData[groupId];
-          }
-        }
-        
-        const backupData = JSON.stringify(groupData);
-        
-        // Registra o backup no histórico
-        if (!customVariables.fishingRankingHistory) {
-          customVariables.fishingRankingHistory = [];
-        }
-        
-        customVariables.fishingRankingHistory.push({
-          type: 'group',
-          groupId,
-          timestamp: Date.now(),
-          data: backupData
-        });
-        
-        // Limita o histórico a 5 entradas por grupo
-        const groupHistories = customVariables.fishingRankingHistory.filter(h => h.type === 'group' && h.groupId === groupId);
-        if (groupHistories.length > 5) {
-          // Remove os históricos mais antigos
-          const toRemove = groupHistories.length - 5;
-          let removed = 0;
-          
-          customVariables.fishingRankingHistory = customVariables.fishingRankingHistory.filter(h => {
-            if (h.type === 'group' && h.groupId === groupId && removed < toRemove) {
-              removed++;
-              return false;
-            }
-            return true;
-          });
-        }
-        
-        // Reseta os dados de pescaria deste grupo
-        for (const userId of affectedUsers) {
-          if (customVariables.fishing[userId].groupData) {
-            delete customVariables.fishing[userId].groupData[groupId];
-          }
-        }
-        
-        // Salva as variáveis atualizadas
-        await this.database.saveCustomVariables(customVariables);
-        
-        return new ReturnMessage({
-          chatId: groupId,
-          content: `🎣 O ranking de pescaria para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
-        });
-      }
-    } catch (error) {
-      this.logger.error('Erro ao resetar ranking de pescaria:', error);
-      
+/**
+ * Reseta o ranking do jogo de pesca para um grupo
+ * @param {WhatsAppBot} bot - Instância do bot
+ * @param {Object} message - Dados da mensagem
+ * @param {Array} args - Argumentos do comando
+ * @param {Object} group - Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async resetPescaRanking(bot, message, args, group) {
+  try {
+    // Verifica se está em um grupo
+    if (!message.group) {
       return new ReturnMessage({
-        chatId: message.group || message.author,
-        content: 'Erro ao resetar ranking de pescaria. Por favor, tente novamente.'
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
       });
     }
+    
+    const groupId = message.group;
+    
+    // Carrega dados de pesca do arquivo JSON
+    const FISHING_DATA_PATH = path.join(__dirname, '../../data/fishing.json');
+    let fishingData;
+    
+    try {
+      const data = await fs.readFile(FISHING_DATA_PATH, 'utf8');
+      fishingData = JSON.parse(data);
+    } catch (error) {
+      return new ReturnMessage({
+        chatId: groupId,
+        content: '🎣 Não há dados de pescaria para resetar.'
+      });
+    }
+
+    // Verifica se há dados do grupo
+    if (!fishingData.groupData || !fishingData.groupData[groupId]) {
+      return new ReturnMessage({
+        chatId: groupId,
+        content: '🎣 Não há dados de pescaria para este grupo específico.'
+      });
+    }
+
+    // Faz backup dos dados antes de resetar
+    const backupData = JSON.stringify(fishingData.groupData[groupId]);
+
+    // Cria estrutura de histórico se não existir
+    if (!fishingData.rankingHistory) {
+      fishingData.rankingHistory = [];
+    }
+
+    // Adiciona backup ao histórico
+    fishingData.rankingHistory.push({
+      type: 'group',
+      groupId,
+      timestamp: Date.now(),
+      data: backupData
+    });
+
+    // Limita histórico a 5 entradas por grupo
+    fishingData.rankingHistory = fishingData.rankingHistory.filter(h => 
+      h.groupId !== groupId || 
+      h.timestamp > Date.now() - (30 * 24 * 60 * 60 * 1000) // mantém últimos 30 dias
+    ).slice(-5);
+
+    // Reseta dados do grupo
+    delete fishingData.groupData[groupId];
+
+    // Reseta dados individuais dos jogadores para este grupo
+    for (const userId in fishingData.fishingData) {
+      if (fishingData.fishingData[userId].groupData) {
+        delete fishingData.fishingData[userId].groupData[groupId];
+      }
+    }
+
+    // Salva os dados atualizados
+    await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(fishingData, null, 2));
+
+    return new ReturnMessage({
+      chatId: groupId,
+      content: `🎣 O ranking de pescaria para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+    });
+  } catch (error) {
+    this.logger.error('Erro ao resetar ranking de pescaria:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao resetar ranking de pescaria. Por favor, tente novamente.'
+    });
   }
+}
 
   /**
    * Verifica se o usuário é um super admin

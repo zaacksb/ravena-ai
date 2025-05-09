@@ -155,6 +155,8 @@ async function saveToFile(data) {
     const tempPath = `${FISHING_DATA_PATH}.temp`;
     await fs.writeFile(tempPath, JSON.stringify(data, null, 2));
     
+    logger.info(`[saveToFile] ${tempPath}`);
+
     // Renomeia o arquivo temporário para o arquivo final
     // Isso reduz o risco de corrupção durante a gravação
     try {
@@ -162,6 +164,8 @@ async function saveToFile(data) {
     } catch (err) {
       // Arquivo pode não existir, ignoramos o erro
     }
+
+    logger.info(`[saveToFile] Rename: ${tempPath} => FISHING_DATA_PATH`);
     await fs.rename(tempPath, FISHING_DATA_PATH);
     
     // Atualiza o tempo da última gravação
@@ -237,7 +241,6 @@ process.on('exit', () => {
   process.on(signal, async () => {
     logger.info(`Recebido sinal ${signal}, salvando dados de pesca...`);
     await forceSave();
-    process.exit(0);
   });
 });
 
@@ -761,8 +764,10 @@ async function fishCommand(bot, message, args, group) {
       fishingData.fishingData[userId].buffs = buffResult.buffs;
       
       // Adiciona mensagens de buffs ao effectMessage
+      let buffResultMsg = "xxxxxxxx";
       if (buffResult.buffMessages && buffResult.buffMessages.length > 0) {
-        effectMessage += '\n\n' + buffResult.buffMessages.join('\n');
+        buffResultMsg = '\n\n' + buffResult.buffMessages.join('\n');
+        effectMessage += buffResultMsg;
       }
       
       // Atualiza estatísticas do usuário
@@ -837,6 +842,7 @@ async function fishCommand(bot, message, args, group) {
               fishingData.groupData[groupId][userId].totalWeight -= modifiedFish.weight;
             }
             
+            effectMessage = effectMessage.replace(buffResultMsg, ""); // remove msg do buff se pegou lixo
             break; // Sai do loop, não pesca mais peixes
           }
         }

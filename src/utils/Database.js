@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const Logger = require('./Logger');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Classe Singleton Database para lidar com persistência baseada em JSON
@@ -55,6 +56,8 @@ class Database {
     
     // Flag para rastrear o backup mais recente
     this.lastScheduledBackup = this.getLastScheduledBackupTime();
+
+    this.botInstances = [];
   }
 
   /**
@@ -66,6 +69,11 @@ class Database {
       Database.instance = new Database();
     }
     return Database.instance;
+  }
+
+  registerBotInstance(bot){
+    this.logger.info(`[registerBotInstance] Registed: ${bot.id}`);
+    this.botInstances.push(bot);
   }
 
   /**
@@ -104,14 +112,21 @@ class Database {
     // Garantir que os dados sejam salvos quando o programa for encerrado
     process.on('SIGINT', () => {
       this.logger.info('Encerrando (int), salvando dados...');
+      for(let bI of this.botInstances){
+        this.logger.info(`[SIGINT] Destruindo bot '${bI.id}'`);
+        bI.destroy();
+      }
+
       this.persistCachedData(true);
-      process.exit(0);
     });
     
     process.on('SIGTERM', () => {
       this.logger.info('Encerrando (term), salvando dados...');
+      for(let bI of this.botInstances){
+        this.logger.info(`[SIGTERM] Destruindo bot '${bI.id}'`);
+        bI.destroy();
+      }
       this.persistCachedData(true);
-      process.exit(0);
     });
   }
 

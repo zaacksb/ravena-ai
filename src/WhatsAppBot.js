@@ -78,6 +78,8 @@ class WhatsAppBot {
   async initialize() {
     this.logger.info(`Inicializando instância de bot ${this.id}`);
 
+    this.database.registerBotInstance(this);
+
     // Atualiza o tempo de inicialização
     this.startupTime = Date.now();
 
@@ -127,13 +129,6 @@ class WhatsAppBot {
         this.logger.error('Erro ao enviar notificação de inicialização:', error);
       }
     }
-
-    process.on('SIGINT', async () => {
-      this.logger.info(`[SIGINT] Encerrando...`);
-    });
-    process.on('SIGTERM', async () => {
-      this.logger.info(`[SIGTERM] Encerrando...`);
-    });
 
     
     return this;
@@ -634,6 +629,12 @@ class WhatsAppBot {
   async destroy() {
     this.logger.info(`Destruindo instância de bot ${this.id}`);
     
+    if (this.client) {
+      await this.client.destroy();
+      this.client = null;
+      this.isConnected = false;
+    }
+    
     // Limpa loadReport
     if (this.loadReport) {
       this.loadReport.destroy();
@@ -651,21 +652,16 @@ class WhatsAppBot {
       this.streamMonitor = null;
     }
     
-    // Envia notificação de desligamento para o grupo de logs
-    if (this.grupoLogs && this.isConnected) {
-      try {
-        const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString("pt-BR")}`;
-        await this.sendMessage(this.grupoLogs, shutdownMessage);
-      } catch (error) {
-        this.logger.error('Erro ao enviar notificação de desligamento:', error);
-      }
-    }
+    // // Envia notificação de desligamento para o grupo de logs
+    // if (this.grupoLogs && this.isConnected) {
+    //   try {
+    //     const shutdownMessage = `🔌 Bot ${this.id} desligando em ${new Date().toLocaleString("pt-BR")}`;
+    //     await this.sendMessage(this.grupoLogs, shutdownMessage);
+    //   } catch (error) {
+    //     this.logger.error('Erro ao enviar notificação de desligamento:', error);
+    //   }
+    // }
     
-    if (this.client) {
-      await this.client.destroy();
-      this.client = null;
-      this.isConnected = false;
-    }
   }
 
   /**

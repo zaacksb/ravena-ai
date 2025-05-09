@@ -171,3 +171,4 @@ data/smd-cache.json
 data/greeted-ids.json
 /.wwebjs_auth_
 /.wwebjs_cache_
+nssm-service.bat
