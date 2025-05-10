@@ -119,7 +119,8 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Implementar !g-abrir e !g-fechar
 - [x] Implementar !g-setApelido numero Apelido
 - [x] !live atualizar titulo do grupo
-- [ ] Add !convite
+- [x] Add !convite
+- [ ] Add !info
 - [ ] Comando convite com argumento pro id do bot
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
 - [ ] Donates no convite
@@ -153,12 +154,12 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Ordem processamento comandos com nome que só muda o final (cmd, cmd1, cmd2..)
 - [x] Fix SiPt
 - [x] Fix: Comando g-roletaReset
-- [ ] Fix: SIGINT/SIGTERM não estão chegando
+- [x] Bot não envia mensagem de READY
+- [x] !le mais de 1 lista _([valeu, bernardo!](https://github.com/moothz/ravena-ai/pull/3))_
+- [ ] Fix: SIGINT/SIGTERM não estão chegando/sendo executados
 - [ ] Bot tentando notificar sem estar nos grupos
-- [ ] !le mais de 1 lista
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
-- [ ] Bot não envia mensagem de READY
 
 
 ## ✅ TODO-Extras
@@ -168,11 +169,11 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
+- [x] Novo Jogo: Pesca
+- [x] Novo Jogo: Pinto
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
-- [x] Novo Jogo: Pesca
-- [x] Novo Jogo: Pinto
 - [x] Novo Comando: Msgs anônimas
 - [ ] Novo Comando: busca no youtube
 - [x] Nova função Streams: Alterar imagem do grupo quando fica on/off

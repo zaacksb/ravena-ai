@@ -682,6 +682,8 @@ class StreamSystem {
    */
   async createEventNotification(groupId, mediaItem, eventData, channelConfig, mentions = []) {
     try {
+
+      this.logger.info(`[createEventNotification][${groupId}][${mediaItem}] ${JSON.stringify(eventData)}`);
       // Trata diferentes tipos de mídia
       if (mediaItem.type === 'text') {
         // Processa variáveis no texto
@@ -699,7 +701,8 @@ class StreamSystem {
         }
         
         // Cria a mensagem de retorno com opções de menções, se disponíveis
-        if (channelConfig.useThumbnail && eventData.thumbnail) {
+        if (channelConfig.useThumbnail && eventData.thumbnail && eventData.thumbnail?.includes("https")) {
+          this.logger.info(`[createEventNotification] Thumbnail: ${eventData.thumbnail}`);
           const media = await this.bot.createMediaFromURL(eventData.thumbnail);
 
           return new ReturnMessage({

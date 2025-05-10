@@ -765,7 +765,8 @@ class SuperAdmin {
         } else {
           const stats = await fs.stat(mediaPath);
           if (stats.isFile()) {
-            eventData.thumbnail = `data:image/jpeg;base64,simulado`;
+            //eventData.thumbnail = `data:image/jpeg;base64,simulado`;
+            eventData.thumbnail = `https://cdn.m7g.twitch.tv/ba46b4e5e395b11efd34/assets/uploads/generic-email-header-1.jpg?w=1200&h=630&fm=jpg&auto=format`;
           }
         }
       } catch (error) {

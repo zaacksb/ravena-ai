@@ -71,11 +71,11 @@ class LLMService {
         }
       );
 
-      this.logger.debug('Resposta recebida da API OpenRouter', {
-        status: response.status,
-        data: response.data,
-        contentLength: JSON.stringify(response.data).length
-      });
+      // this.logger.debug('Resposta recebida da API OpenRouter', {
+      //   status: response.status,
+      //   data: response.data,
+      //   contentLength: JSON.stringify(response.data).length
+      // });
 
       return response.data;
     } catch (error) {
@@ -129,10 +129,10 @@ class LLMService {
         }
       );
 
-      this.logger.debug('Resposta recebida da API Gemini', {
-        status: response.status,
-        contentLength: JSON.stringify(response.data).length
-      });
+      // this.logger.debug('Resposta recebida da API Gemini', {
+      //   status: response.status,
+      //   contentLength: JSON.stringify(response.data).length
+      // });
 
       return response.data;
     } catch (error) {
@@ -187,10 +187,10 @@ class LLMService {
         }
       );
 
-      this.logger.debug('Resposta recebida da API Deepseek', {
-        status: response.status,
-        contentLength: JSON.stringify(response.data).length
-      });
+      // this.logger.debug('Resposta recebida da API Deepseek', {
+      //   status: response.status,
+      //   contentLength: JSON.stringify(response.data).length
+      // });
 
       return response.data;
     } catch (error) {
@@ -249,10 +249,10 @@ class LLMService {
         }
       );
 
-      this.logger.debug(`Resposta recebida da API ${options.useLocal ? 'LM Studio Local' : 'OpenAI'}`, {
-        status: response.status,
-        contentLength: JSON.stringify(response.data).length
-      });
+      // this.logger.debug(`Resposta recebida da API ${options.useLocal ? 'LM Studio Local' : 'OpenAI'}`, {
+      //   status: response.status,
+      //   contentLength: JSON.stringify(response.data).length
+      // });
 
       return response.data;
     } catch (error) {

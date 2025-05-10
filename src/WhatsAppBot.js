@@ -89,47 +89,12 @@ class WhatsAppBot {
       puppeteer: this.puppeteerOptions
     });
 
+
     // Registra manipuladores de eventos
     this.registerEventHandlers();
 
     // Inicializa cliente
     await this.client.initialize();
-      
-    this.logger.info(`Bot ${this.id} inicializado`);
-    await sleep(5000);
-    try {
-      this.blockedContacts = await this.client.getBlockedContacts();
-      this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
-
-      if (this.isConnected && this.otherBots.length > 0) {
-        this.prepareOtherBotsBlockList();
-      }
-    } catch (error) {
-      this.logger.error('Erro ao carregar contatos bloqueados:', error);
-      this.blockedContacts = [];
-    }
-
-
-    // Envia notificação de inicialização para o grupo de logs
-    if (this.grupoLogs && this.isConnected) {
-      try {
-        const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString("pt-BR")}`;
-        await this.sendMessage(this.grupoLogs, startMessage);
-      } catch (error) {
-        this.logger.error('Erro ao enviar notificação de inicialização:', error);
-      }
-    }
-
-    if (this.grupoAvisos && this.isConnected) {
-      try {
-        const startMessage = `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* tá _on_! (${new Date().toLocaleString("pt-BR")})`;
-        this.logger.debug(`Enviando startMessage no grupoAvisos: `, startMessage, this.grupoAvisos);
-        await this.sendMessage(this.grupoAvisos, startMessage);
-      } catch (error) {
-        this.logger.error('Erro ao enviar notificação de inicialização:', error);
-      }
-    }
-
     
     return this;
   }
@@ -186,12 +151,48 @@ class WhatsAppBot {
     // Evento de pronto
     this.client.on('ready', async () => {
       this.isConnected = true;
-      this.logger.info('Cliente está pronto');
+      this.logger.info(`[${this.id}] Conectado no whats.`);
       this.eventHandler.onConnected(this);
+
+       
+      try {
+        this.blockedContacts = await this.client.getBlockedContacts();
+        this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
+
+        if (this.isConnected && this.otherBots.length > 0) {
+          this.prepareOtherBotsBlockList();
+        }
+      } catch (error) {
+        this.logger.error('Erro ao carregar contatos bloqueados:', error);
+        this.blockedContacts = [];
+      }
+
+
+      // Envia notificação de inicialização para o grupo de logs
+      if (this.grupoLogs && this.isConnected) {
+        try {
+          const startMessage = `🤖 Bot ${this.id} inicializado com sucesso em ${new Date().toLocaleString("pt-BR")}`;
+          await this.sendMessage(this.grupoLogs, startMessage);
+        } catch (error) {
+          this.logger.error('Erro ao enviar notificação de inicialização:', error);
+        }
+      }
+
+      if (this.grupoAvisos && this.isConnected) {
+        try {
+          const startMessage = `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* tá _on_! (${new Date().toLocaleString("pt-BR")})`;
+          this.logger.debug(`Enviando startMessage no grupoAvisos: `, startMessage, this.grupoAvisos);
+          await this.sendMessage(this.grupoAvisos, startMessage);
+        } catch (error) {
+          this.logger.error('Erro ao enviar notificação de inicialização:', error);
+        }
+      }
 
       if (this.otherBots && this.otherBots.length > 0) {
         this.prepareOtherBotsBlockList();
       }
+
+
 
       // Inicializa o sistema de streaming agora que estamos conectados
       this.streamSystem = new StreamSystem(this);
@@ -542,12 +543,6 @@ class WhatsAppBot {
         // Apply reactions if specified
         if (message.reactions && result) {
           try {
-            // if (message.reactions.after) {
-            //   setTimeout((rsl,rct) =>{
-            //     rsl.react(rct);
-            //   }, 1000, result, message.reactions.after); // removido pq faz reagir na imagem enviada...
-            // }
-
             // Store message ID for potential future reactions
             if (message.metadata) {
               message.metadata.messageId = result.id._serialized;
@@ -640,17 +635,17 @@ class WhatsAppBot {
       this.loadReport.destroy();
     }
     
-    // Limpa sistema de convites
-    if (this.inviteSystem) {
-      this.inviteSystem.destroy();
-    }
+    // // Limpa sistema de convites
+    // if (this.inviteSystem) {
+    //   this.inviteSystem.destroy();
+    // }
 
-    // Limpa StreamSystem
-    if (this.streamSystem) {
-      this.streamSystem.destroy();
-      this.streamSystem = null;
-      this.streamMonitor = null;
-    }
+    // // Limpa StreamSystem
+    // if (this.streamSystem) {
+    //   this.streamSystem.destroy();
+    //   this.streamSystem = null;
+    //   this.streamMonitor = null;
+    // }
     
     // // Envia notificação de desligamento para o grupo de logs
     // if (this.grupoLogs && this.isConnected) {

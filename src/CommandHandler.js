@@ -404,7 +404,7 @@ class CommandHandler {
       const [command, ...args] = commandText.trim().split(/\s+/);
 
 
-      this.logger.debug(`Processando comando: ${command}, args: ${args.join(', ')}`);
+      //this.logger.debug(`Processando comando: ${command}, args: ${args.join(', ')}`);
       
       // Verifica se é um comando de super admin (começa com 'sa-')
       if (command.startsWith('sa-')) {
@@ -461,15 +461,16 @@ class CommandHandler {
    * @param {Object} group - O objeto do grupo (se em grupo)
    */
   async processCommand(bot, message, command, args, group, skipCustom = false) {
-    this.logger.debug(`Processando comando: ${command}, determinação de tipo`);
+    //this.logger.debug(`Processando comando: ${command}, determinação de tipo`);
     
     // Definir o chatId de resposta - por padrão é o chatId original
     let replyToChat = message.group || message.author;
     let isManagingFromPrivate = false;
-    
+    const gidDebug = group?.name ?? 'pv';
+
     // Verifica se é um comando de gerenciamento
     if (command.startsWith('g-')) {
-      this.logger.debug(`Identificado como comando de gerenciamento: ${command}`);
+      this.logger.debug(`[${gidDebug}][${message.author}/${message.authorName}] Comando de gerenciamento: '${command}' '${args.join(" ")}'`);
 
       // Verifica se é gerenciamento de grupo via PV
       if (!message.group) {
@@ -588,14 +589,14 @@ class CommandHandler {
     
     // Verifica se o grupo está pausado (para outros tipos de comandos)
     if (group && group.paused) {
-      this.logger.info(`Ignorando comando em grupo pausado: ${command}`);
+      this.logger.info(`[${gidDebug}][${message.author}/${message.authorName}] Ignorando comando em grupo pausado (${command})`);
       return;
     }
     
     // Verifica se é um comando fixo
     const fixedCommand = this.fixedCommands.getCommand(command);
     if (fixedCommand) {
-      this.logger.debug(`Identificado como comando fixo: ${command}`);
+      this.logger.debug(`[${gidDebug}][${message.author}/${message.authorName}] Comando fixo '${command}' '${args.join(" ")}'`);
       await this.executeFixedCommand(bot, message, fixedCommand, args, group);
       return;
     }
@@ -604,7 +605,7 @@ class CommandHandler {
     if (group && this.customCommands[group.id] && !skipCustom) { // Quando é comando embutid ({cmd-xxx}), não roda personalizados, se não vira um loop
       const customCommand = this.findCustomCommand(command, this.customCommands[group.id]);
       if (customCommand) {
-        this.logger.debug(`Identificado como comando personalizado: ${command} (${customCommand.startsWith})`);
+        this.logger.debug(`[${gidDebug}][${message.author}/${message.authorName}] Comando custom (${customCommand.startsWith}) '${command}' '${args.join(" ")}'`);
         await this.executeCustomCommand(bot, message, customCommand, args, group);
         return;
       } else {
@@ -615,7 +616,7 @@ class CommandHandler {
     }
     
     // Nenhum comando encontrado
-    this.logger.info(`Comando desconhecido: ${command}`);
+    this.logger.debug(`[${gidDebug}][${message.author}/${message.authorName}] Comando desconhecido: '${command}' '${args.join(" ")}'`);
     
     // Se em um grupo, podemos querer notificar sobre comando desconhecido (opcional)
     if (group && process.env.NOTIFY_UNKNOWN_COMMANDS === 'true') {
@@ -637,8 +638,8 @@ class CommandHandler {
    */
   async processManagementCommand(bot, message, command, args, group) {
     try {
-      this.logger.debug(`Processando comando de gerenciamento: ${command}, args: ${args.join(', ')}`);
-      
+      const gidDebug = group?.name ?? 'pv';
+     
       // Determina o chatId correto para a resposta
       // Se estamos gerenciando via PV, a resposta deve ir para o PV
       const responseChatId = message.managementResponseChatId || message.group || message.author;
@@ -763,7 +764,7 @@ class CommandHandler {
    */
   async executeFixedCommand(bot, message, command, args, group) {
     try {
-      this.logger.info(`Executando comando fixo: ${command.name}, args: ${args.join(', ')}`);
+      //this.logger.info(`Executando comando fixo: ${command.name}, args: ${args.join(', ')}`);
       
       // Verifica se o comando requer mensagem citada
       if (command.needsQuotedMsg) {
@@ -864,7 +865,7 @@ class CommandHandler {
           }
         }
         
-        this.logger.debug(`Comando ${command.name} executado com sucesso, enviando after reaction`);
+        //this.logger.debug(`Comando ${command.name} executado com sucesso, enviando after reaction`);
 
         // Reage com emoji "depois" (específico do comando ou padrão)
         if(command.reactions?.after){
@@ -923,7 +924,7 @@ class CommandHandler {
       return false;
     });
     
-    this.logger.debug(`Buscando comando personalizado '${commandName}': ${partialMatch ? 'encontrado' : 'não encontrado'}`);
+    //this.logger.debug(`Buscando comando personalizado '${commandName}': ${partialMatch ? 'encontrado' : 'não encontrado'}`);
     return partialMatch || null;
   }
 
@@ -937,7 +938,7 @@ class CommandHandler {
    */
   async executeCustomCommand(bot, message, command, args, group) {
     try {
-      this.logger.info(`Executando comando personalizado: ${command.startsWith}`);
+      //this.logger.info(`Executando comando personalizado: ${command.startsWith}`);
           
       // Obtém as respostas
       const responses = command.responses || [];
