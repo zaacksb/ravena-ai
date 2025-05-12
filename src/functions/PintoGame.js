@@ -19,59 +19,100 @@ const MAX_GIRTH = 20.0;
 const MAX_SCORE = 1000;
 const COOLDOWN_DAYS = 7; // 7 dias de cooldown
 
+// Variáveis para o sistema de cache e salvamento periódico  
+let dadosCache = null;  
+let ultimoSalvamento = 0;  
+const INTERVALO_SALVAMENTO = 5 * 60 * 1000; // 5 minutos em millisegundos  
+let modificacoesNaoSalvas = false;
+
 // Caminho para o arquivo de dados do jogo
 const PINTO_DATA_PATH = path.join(__dirname, '../../data/pinto.json');
 
-/**
- * Obtém os dados do jogo do arquivo JSON dedicado
- * @returns {Promise<Object>} Dados do jogo
- */
-async function getPintoGameData() {
-  try {
-    // Verifica se o arquivo existe
-    try {
-      await fs.access(PINTO_DATA_PATH);
-    } catch (error) {
-      // Se o arquivo não existir, cria um novo com estrutura padrão
-      const defaultData = {
-        groups: {},
-        history: []
-      };
-      await fs.writeFile(PINTO_DATA_PATH, JSON.stringify(defaultData, null, 2));
-      return defaultData;
-    }
-
-    // Lê o arquivo
-    const data = await fs.readFile(PINTO_DATA_PATH, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    logger.error('Erro ao ler dados do jogo:', error);
-    // Retorna objeto padrão em caso de erro
-    return {
-      groups: {},
-      history: []
-    };
-  }
-}
-
-/**
- * Salva os dados do jogo no arquivo JSON dedicado
- * @param {Object} gameData Dados do jogo a serem salvos
- * @returns {Promise<boolean>} Status de sucesso
- */
-async function savePintoGameData(gameData) {
-  try {
-    // Garante que o diretório exista
-    const dir = path.dirname(PINTO_DATA_PATH);
-    await fs.mkdir(dir, { recursive: true });
-
-    // Salva os dados
-    await fs.writeFile(PINTO_DATA_PATH, JSON.stringify(gameData, null, 2));
-    return true;
-  } catch (error) {
-    logger.error('Erro ao salvar dados do jogo:', error);
-    return false;
-  }
+/**  
+ * Obtém os dados do jogo do arquivo JSON dedicado  
+ * @returns {Promise<Object>} Dados do jogo  
+ */  
+async function getPintoGameData() {  
+  try {  
+    // Return cached data if available  
+    if (dadosCache !== null) {  
+      return dadosCache;  
+    }  
+  
+    // Verifica se o arquivo existe  
+    try {  
+      await fs.access(PINTO_DATA_PATH);  
+    } catch (error) {  
+      // Se o arquivo não existir, cria um novo com estrutura padrão  
+      const defaultData = {  
+        groups: {},  
+        history: []  
+      };  
+        
+      // Garante que o diretório exista  
+      const dir = path.dirname(PINTO_DATA_PATH);  
+      await fs.mkdir(dir, { recursive: true });  
+        
+      await fs.writeFile(PINTO_DATA_PATH, JSON.stringify(defaultData, null, 2));  
+        
+      // Update cache and last save time  
+      dadosCache = defaultData;  
+      ultimoSalvamento = Date.now();  
+        
+      return defaultData;  
+    }  
+  
+    // Lê o arquivo  
+    const data = await fs.readFile(PINTO_DATA_PATH, 'utf8');  
+    const parsedData = JSON.parse(data);  
+      
+    // Update cache and last save time  
+    dadosCache = parsedData;  
+    ultimoSalvamento = Date.now();  
+      
+    return parsedData;  
+  } catch (error) {  
+    logger.error('Erro ao ler dados do jogo:', error);  
+    // Retorna objeto padrão em caso de erro  
+    return {  
+      groups: {},  
+      history: []  
+    };  
+  }  
+}  
+  
+/**  
+ * Salva os dados do jogo no arquivo JSON dedicado  
+ * @param {Object} gameData Dados do jogo a serem salvos  
+ * @param {boolean} forceSave Força o salvamento mesmo que não tenha passado o intervalo  
+ * @returns {Promise<boolean>} Status de sucesso  
+ */  
+async function savePintoGameData(gameData, forceSave = false) {  
+  try {  
+    // Update cache  
+    dadosCache = gameData;  
+    modificacoesNaoSalvas = true;  
+      
+    // Only save to disk if forced or if enough time has passed since last save  
+    const agora = Date.now();  
+    if (forceSave || (agora - ultimoSalvamento) > INTERVALO_SALVAMENTO) {  
+      // Garante que o diretório exista  
+      const dir = path.dirname(PINTO_DATA_PATH);  
+      await fs.mkdir(dir, { recursive: true });  
+  
+      // Salva os dados  
+      await fs.writeFile(PINTO_DATA_PATH, JSON.stringify(gameData, null, 2));  
+        
+      ultimoSalvamento = agora;  
+      modificacoesNaoSalvas = false;  
+      logger.info('Dados do jogo pinto salvos em disco');  
+    }  
+      
+    return true;  
+  } catch (error) {  
+    logger.error('Erro ao salvar dados do jogo:', error);  
+    return false;  
+  }  
 }
 
 /**
@@ -385,6 +426,117 @@ async function pintoRankingCommand(bot, message, args, group) {
   }
 }
 
+/**  
+ * Reseta os dados do jogo Pinto para um grupo específico  
+ * @param {WhatsAppBot} bot - Instância do bot  
+ * @param {Object} message - Dados da mensagem  
+ * @param {Array} args - Argumentos do comando  
+ * @param {Object} group - Dados do grupo  
+ * @returns {Promise<ReturnMessage[]>} Array de mensagens de retorno  
+ */  
+async function pintoResetCommand(bot, message, args, group) {  
+  try {  
+    // Verifica se está em um grupo  
+    if (!message.group) {  
+      return [new ReturnMessage({  
+        chatId: message.author,  
+        content: 'O reset do jogo só pode ser executado em grupos.'  
+      })];  
+    }  
+      
+    const groupId = message.group;  
+    const userId = message.author;  
+      
+    // Verifica se o usuário é admin  
+    const isAdmin = await bot.isUserAdminInGroup(userId, groupId);  
+    if (!isAdmin) {  
+      return [new ReturnMessage({  
+        chatId: groupId,  
+        content: '⛔ Apenas administradores podem resetar os dados do jogo.',  
+        options: {  
+          quotedMessageId: message.origin.id._serialized  
+        }  
+      })];  
+    }  
+      
+    // Carrega dados do jogo  
+    let gameData = await getPintoGameData();  
+      
+    // Verifica se há dados para este grupo  
+    if (!gameData.groups[groupId] || Object.keys(gameData.groups[groupId]).length === 0) {  
+      return [new ReturnMessage({  
+        chatId: groupId,  
+        content: '⚠️ Não há dados do jogo para este grupo.',  
+        options: {  
+          quotedMessageId: message.origin.id._serialized  
+        }  
+      })];  
+    }  
+      
+    // Obtém o ranking atual antes de resetar  
+    const rankingMessage = await pintoRankingCommand(bot, message, args, group);  
+      
+    // Faz backup dos dados atuais  
+    const dadosAntigos = JSON.parse(JSON.stringify(gameData.groups[groupId]));  
+    const numJogadores = Object.keys(dadosAntigos).length;  
+      
+    // Reseta os dados do grupo  
+    gameData.groups[groupId] = {};  
+      
+    // Salva os dados (forçando salvamento imediato)  
+    await savePintoGameData(gameData, true);  
+      
+    // Retorna mensagens  
+    return [  
+      rankingMessage,  
+      new ReturnMessage({  
+        chatId: groupId,  
+        content: `🔄 *Dados do Jogo Pinto Resetados*\n\nForam removidos dados de ${numJogadores} jogadores deste grupo.\n\nO ranking acima mostra como estava antes do reset.`,  
+        options: {  
+          quotedMessageId: message.origin.id._serialized  
+        }  
+      })  
+    ];  
+  } catch (error) {  
+    logger.error('Erro ao resetar dados do jogo:', error);  
+      
+    return [new ReturnMessage({  
+      chatId: message.group || message.author,  
+      content: 'Erro ao resetar dados do jogo. Por favor, tente novamente.'  
+    })];  
+  }  
+}
+
+// Adiciona um intervalo para salvar periodicamente os dados modificados  
+setInterval(async () => {  
+  try {  
+    // Só processa se houver dados em cache e modificações não salvas  
+    if (dadosCache !== null && modificacoesNaoSalvas) {  
+      const agora = Date.now();  
+      if ((agora - ultimoSalvamento) > INTERVALO_SALVAMENTO) {  
+        logger.info('Salvando dados do jogo pinto periodicamente...');  
+        await savePintoGameData(dadosCache, true);  
+      }  
+    }  
+  } catch (error) {  
+    logger.error('Erro ao salvar dados do jogo periodicamente:', error);  
+  }  
+}, 60000); // Verifica a cada minuto  
+  
+// Adicione um handler para salvar dados antes de encerrar o processo  
+process.on('SIGINT', async () => {  
+  try {  
+    if (dadosCache !== null && modificacoesNaoSalvas) {  
+      logger.info('Salvando dados do jogo pinto antes de encerrar...');  
+      await savePintoGameData(dadosCache, true);  
+    }  
+  } catch (error) {  
+    logger.error('Erro ao salvar dados do jogo durante encerramento:', error);  
+  } finally {  
+    process.exit(0);  
+  }  
+});
+
 // Criar array de comandos usando a classe Command
 const commands = [
   new Command({
@@ -410,7 +562,20 @@ const commands = [
       error: "❌"
     },
     method: pintoRankingCommand
+  }),  
+    
+  new Command({  
+    name: 'pinto-reset',  
+    description: 'Reseta os dados do jogo para este grupo',  
+    category: "jogos",  
+    adminOnly: true,  
+    cooldown: 60,  
+    reactions: {  
+      after: "🔄",  
+      error: "❌"  
+    },  
+    method: pintoResetCommand  
   })
 ];
 
-module.exports = { commands };
+module.exports = { commands, getPintoGameData, savePintoGameData };
