@@ -774,6 +774,16 @@ class CommandHandler {
           return; // Ignora o comando silenciosamente
         }
       }
+
+      // Apenas para adminsitradores
+      if (cmd.adminOnly) {  
+        const chat = await message.origin.getChat();
+        const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
+        if (!isAdmin) {  
+          this.logger.debug(`Comando ${command.name} requer administrador, mas o usuário não é`);
+          return;
+        }  
+      }
       
       // Verifica se o comando requer mídia
       if (command.needsMedia) {

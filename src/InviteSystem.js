@@ -160,17 +160,54 @@ class InviteSystem {
           const inviteInfo = await this.bot.client.getInviteInfo(inviteCode);
           console.log(inviteInfo);
 
-          // Envia primeira mensagem com informações do usuário e motivo
-          const infoMessage = 
-            `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
-            `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
-            `👤 *De:* ${userName} (${authorId})\n\n` +
-            `💬 *Motivo:*\n${reason}`;
+          // Verifica se o autor está na lista de doadores
+          let isDonator = false;
+          let infoMessage = "";
+          
+          try {
+            // Obtém todas as doações
+            const donations = await this.database.getDonations();
+            
+            if (donations && donations.length > 0) {
+              // Remove caracteres especiais e espaços do número do autor para comparação
+              const cleanAuthorId = authorId.replace(/[^0-9]/g, "");
+              
+              // Verifica se o autor está na lista de doadores
+              isDonator = donations.some(donation => {
+                // Se o doador tem um número de telefone
+                if (donation.numero) {
+                  // Remove caracteres especiais e espaços do número do doador
+                  const cleanDonorNumber = donation.numero.replace(/[^0-9]/g, "");
+                  return cleanDonorNumber.includes(cleanAuthorId) || cleanAuthorId.includes(cleanDonorNumber);
+                }
+                return false;
+              });
+            }
+          } catch (donationError) {
+            this.logger.error('Erro ao verificar se o autor é doador:', donationError);
+          }
+          
+          // Constrói a mensagem de informações, adicionando emojis de dinheiro se for doador
+          if (isDonator) {
+            infoMessage = 
+              `💸💸💸💸\n` +
+              `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
+              `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
+              `👤 *De:* ${userName} (${authorId}) 💰\n\n` +
+              `💬 *Motivo:*\n${reason}\n` +
+              `💸💸💸💸\n`;
+          } else {
+            infoMessage = 
+              `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
+              `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
+              `👤 *De:* ${userName} (${authorId})\n\n` +
+              `💬 *Motivo:*\n${reason}`;
+          }
           
           await this.bot.sendMessage(this.bot.grupoInvites, infoMessage);
           
-          // Envia segunda mensagm com comando para aceitar
-          const commandMessage =  `!sa-joinGrupo ${inviteCode} ${authorId} ${userName}`;
+          // Envia segunda mensagem com comando para aceitar
+          const commandMessage = `!sa-joinGrupo ${inviteCode} ${authorId} ${userName}`;
           
           await this.bot.sendMessage(this.bot.grupoInvites, commandMessage);
         } catch (error) {
@@ -196,7 +233,7 @@ class InviteSystem {
       this.logger.error('Erro ao tratar solicitação de convite:', error);
     }
   }
-  
+    
   /**
    * Limpa recursos
    */

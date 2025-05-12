@@ -120,10 +120,13 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Implementar !g-setApelido numero Apelido
 - [x] !live atualizar titulo do grupo
 - [x] Add !convite
-- [ ] Add !info
-- [ ] Comando convite com argumento pro id do bot
+- [x] Marcar com link no {mention}
+- [x] Criar antigo {membroRandom}
+- [x] Donates no convite
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
-- [ ] Donates no convite
+- [ ] Comando convite com argumento pro id do bot
+- [ ] Add !info
+- [ ] Add alguns checks do modelo Command direto no executeFixedCommand (isAdmin, etc.)
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -160,6 +163,9 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
+- [ ] Fix reset do ranking de pesca
+- [ ] Parse nome do canal da twitch: Remover on/off e https://twit...
+- [ ] !g-info colocar tudo da twitch, titulo, etc.
 
 
 ## ✅ TODO-Extras

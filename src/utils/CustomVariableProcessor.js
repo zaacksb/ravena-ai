@@ -292,34 +292,142 @@ class CustomVariableProcessor {
     // Variável {mention} - nome da pessoa mencionada ou um membro aleatório se não houver menção
     if (context.message && context.message.origin) {
       try {
-        let mentionName = null;
+        // Quando for um mention, usar @1234567 ao invés do nome
+        /* Ordem de pegar mention:
+        1. Pessoa marcada na mensagem (mentionedIds)
+        2. Mensagem em quote
+        3. Membro random do grupo
+        */
         
-        // Tenta obter a mensagem citada
-        const quotedMsg = await context.message.origin.getQuotedMessage().catch(() => null);
+        // Rastreia menções já usadas para não repetir a mesma pessoa
+        const usedMentions = [];
         
-        if (quotedMsg) {
-          // Usa o contato da mensagem citada
-          const quotedContact = await quotedMsg.getContact() ?? false;
-          if (quotedContact) {
-            mentionName = quotedContact.pushname || quotedContact.name || "Usuário";
-          }
-        } else if (context.bot && context.message.group) {
-          // Se não há mensagem citada, seleciona um membro aleatório
-          const randomMember = await this.getRandomGroupMember(context.bot, context.message.group);
-          if (randomMember) {
-            mentionName = randomMember.pushname || randomMember.name || "Usuário";
+        // Função para substituir cada ocorrência de {mention} com uma pessoa diferente
+        const replaceMention = async () => {
+          let mentionId = null;
+          let mentionName = null;
+          
+          // 1. Primeiro, verifica se há pessoas mencionadas na mensagem original
+          if (context.message.mentionedIds && context.message.mentionedIds.length > 0) {
+            // Filtra para usar apenas menções que ainda não foram usadas
+            const availableMentions = context.message.mentionedIds.filter(id => !usedMentions.includes(id));
             
-            // Adiciona à lista de menções para notificação
-            if (context.options && context.options.mentions) {
-              context.options.mentions.push(randomMember.id._serialized);
-            } else if (context.options) {
-              context.options.mentions = [randomMember.id._serialized];
+            if (availableMentions.length > 0) {
+              // Seleciona uma menção aleatória das disponíveis
+              const randomIndex = Math.floor(Math.random() * availableMentions.length);
+              mentionId = availableMentions[randomIndex];
+              
+              try {
+                // Obtém informações do contato mencionado
+                const contact = await context.bot.client.getContactById(mentionId);
+                mentionName = `@${contact.number || contact.id.user}`;
+              } catch (err) {
+                this.logger.error('Erro ao obter contato mencionado:', err);
+                mentionName = `@${mentionId.split('@')[0]}`;
+              }
+              
+              // Marca esta menção como usada
+              usedMentions.push(mentionId);
+              return { mentionId, mentionName };
             }
           }
-        }
+          
+          // 2. Se não há menções ou todas já foram usadas, tenta usar a mensagem citada
+          const quotedMsg = await context.message.origin.getQuotedMessage().catch(() => null);
+          
+          if (quotedMsg && !usedMentions.includes(quotedMsg.author)) {
+            // Usa o contato da mensagem citada
+            try {
+              const quotedContact = await quotedMsg.getContact();
+              if (quotedContact) {
+                mentionId = quotedContact.id._serialized;
+                mentionName = `@${quotedContact.number || quotedContact.id.user}`;
+                
+                // Marca esta menção como usada
+                usedMentions.push(mentionId);
+                return { mentionId, mentionName };
+              }
+            } catch (err) {
+              this.logger.error('Erro ao obter contato da mensagem citada:', err);
+            }
+          }
+          
+          // 3. Se não há mensagem citada ou já foi usada, seleciona um membro aleatório
+          if (context.bot && context.message.group) {
+            try {
+              // Obtém membros que ainda não foram usados
+              const chat = await context.bot.client.getChatById(context.message.group);
+              if (chat && chat.isGroup) {
+                // Filtra participantes para excluir o próprio bot e menções já usadas
+                const filteredParticipants = chat.participants.filter(
+                  p => p.id._serialized !== context.bot.client.info.wid._serialized && 
+                      !usedMentions.includes(p.id._serialized)
+                );
+                
+                if (filteredParticipants.length > 0) {
+                  // Seleciona um participante aleatório
+                  const randomIndex = Math.floor(Math.random() * filteredParticipants.length);
+                  const randomParticipant = filteredParticipants[randomIndex];
+                  
+                  mentionId = randomParticipant.id._serialized;
+                  
+                  // Obtém o objeto de contato
+                  const contact = await context.bot.client.getContactById(mentionId);
+                  mentionName = `@${contact.number || contact.id.user}`;
+                  
+                  // Marca esta menção como usada
+                  usedMentions.push(mentionId);
+                  return { mentionId, mentionName };
+                } else if (chat.participants.length > 1) {
+                  // Se todos já foram usados, reseta e usa qualquer um exceto o bot
+                  const nonBotParticipants = chat.participants.filter(
+                    p => p.id._serialized !== context.bot.client.info.wid._serialized
+                  );
+                  
+                  if (nonBotParticipants.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * nonBotParticipants.length);
+                    const randomParticipant = nonBotParticipants[randomIndex];
+                    
+                    mentionId = randomParticipant.id._serialized;
+                    
+                    // Obtém o objeto de contato
+                    const contact = await context.bot.client.getContactById(mentionId);
+                    mentionName = `@${contact.number || contact.id.user}`;
+                    
+                    return { mentionId, mentionName };
+                  }
+                }
+              }
+            } catch (err) {
+              this.logger.error('Erro ao obter membro aleatório do grupo:', err);
+            }
+          }
+          
+          // Fallback se nada funcionar
+          return { mentionId: null, mentionName: "Usuário" };
+        };
         
-        if (mentionName) {
-          text = text.replace(/{mention}/g, mentionName);
+        // Conta quantas ocorrências de {mention} existem no texto
+        const mentionMatches = text.match(/{mention}/g);
+        if (mentionMatches) {
+          // Para cada ocorrência, substitui por uma menção diferente
+          for (let i = 0; i < mentionMatches.length; i++) {
+            const { mentionId, mentionName } = await replaceMention();
+            
+            // Substitui apenas a primeira ocorrência restante
+            text = text.replace(/{mention}/, mentionName);
+            
+            // Adiciona à lista de menções para notificação
+            if (mentionId) {
+              if (context.options && context.options.mentions) {
+                if (!context.options.mentions.includes(mentionId)) {
+                  context.options.mentions.push(mentionId);
+                }
+              } else if (context.options) {
+                context.options.mentions = [mentionId];
+              }
+            }
+          }
         }
       } catch (error) {
         this.logger.error('Erro ao processar variável {mention}:', error);
@@ -338,7 +446,7 @@ class CustomVariableProcessor {
           try {
             // Obtém informações do contato
             const contact = await context.bot.client.getContactById(userIdToMention);
-            const contactName = contact.pushname || contact.name || userIdToMention;
+            const contactName = contact.number || contact.pushname || contact.name || userIdToMention;
             
             // Adiciona à lista de menções para notificação
             if (context.options && context.options.mentions) {

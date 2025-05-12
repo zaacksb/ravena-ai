@@ -2174,3 +2174,35 @@ No showBaitsCommand, mostrar a hora em que será recuperada a próxima isca e ta
 Se o jogador tentar pescar sem iscas, apenas reaja com "🪣", sem necessidade de enviar a mensagem.
 
 Me envie o artefato completo editado do jogo, em várias partes para não perder código, já que ele sera uma resposta grande.
+
+-----
+
+# InviteSystem + Donations integration
+When receiving an invite, check if the author's number is in the donations database.
+Example on how to read the donations is provided in DonationCommands.js and donations.example.json
+Remove special characters and spaces to do a more precise and inclusive search, leave only numbers.
+If the sending user number is found, add 💸 other moneys emojis to the begining and end of the invite message
+
+# CustomVariableProcessor
+
+## {mention} variable
+Besides putting the user number in the mention, also create a mention string in this format to replace {mention} text: "@contact.number"
+So that the mentioned person name is clickable in the whatsapp message.
+
+Do not replace all variables with the same value, each {mention} should fetch a new person to mention in this priority/order:
+  1. Quoted people in the context.message (mentionedIds property)
+  2. Quoted message author, if any
+  3. Random members of the group
+
+
+# CommandHandler
+
+## executeFixedCommand
+This already has checks for some of the Command object property, like needsMedia and exclusive
+Implement checks for ther other missing properties like adminOnly.
+
+# FishingGame
+
+## New command, admin only: !pesca-reset
+
+Resets the fishing data for this group.

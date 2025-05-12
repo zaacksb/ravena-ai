@@ -118,18 +118,18 @@ class Management {
         method: 'resetRoletaRanking',
         description: 'Apaga os dados do ranking atuais da roleta russa'
       },
-      'pesca-reset': {
-        method: 'resetPescaRanking',
-        description: 'Reseta o ranking do jogo de pesca'
-      },
-      'geo-reset': {
-        method: 'resetGeoguesserRanking',
-        description: 'Reseta o ranking do jogo Geoguesser'
-      },
-      'stop-reset': {
-        method: 'resetStopGameRanking',
-        description: 'Reseta o ranking do jogo Stop/Adedona'
-      },
+      // 'pesca-reset': {
+      //   method: 'resetPescaRanking',
+      //   description: 'Reseta o ranking do jogo de pesca'
+      // },
+      // 'geo-reset': {
+      //   method: 'resetGeoguesserRanking',
+      //   description: 'Reseta o ranking do jogo Geoguesser'
+      // },
+      // 'stop-reset': {
+      //   method: 'resetStopGameRanking',
+      //   description: 'Reseta o ranking do jogo Stop/Adedona'
+      // },
       'pinto-reset': {
         method: 'resetPintoRanking',
         description: 'Reseta o ranking do jogo Pinto'
@@ -5393,21 +5393,14 @@ async resetPescaRanking(bot, message, args, group) {
     ).slice(-5);
 
     // Reseta dados do grupo
-    delete fishingData.groupData[groupId];
-
-    // Reseta dados individuais dos jogadores para este grupo
-    for (const userId in fishingData.fishingData) {
-      if (fishingData.fishingData[userId].groupData) {
-        delete fishingData.fishingData[userId].groupData[groupId];
-      }
-    }
+    fishingData.groupData[groupId] = {};
 
     // Salva os dados atualizados
     await fs.writeFile(FISHING_DATA_PATH, JSON.stringify(fishingData, null, 2));
 
     return new ReturnMessage({
       chatId: groupId,
-      content: `🎣 O ranking de pescaria para este grupo foi resetado com sucesso!\n\nUm backup do ranking anterior foi salvo.`
+      content: `🎣 O ranking de pescaria para este grupo foi resetado com sucesso!`
     });
   } catch (error) {
     this.logger.error('Erro ao resetar ranking de pescaria:', error);

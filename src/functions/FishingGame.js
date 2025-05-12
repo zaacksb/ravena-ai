@@ -250,11 +250,11 @@ process.on('exit', () => {
  * @param {boolean} isMultiCatch - Se é uma pescaria múltipla (rede)
  * @returns {Object} Peixe sorteado com peso
  */
-function getRandomFish(fishArray, isMultiCatch = false) {
+async function getRandomFish(fishArray, isMultiCatch = false) {
   // Verifica se o array tem peixes
   if (!fishArray || !Array.isArray(fishArray) || fishArray.length === 0) {
-    // Lista de peixes padrão caso não tenha
-    fishArray = ["Aba-aba","Abrotea","Acará","Acari","Agulha","Anchova","Arenque","Arraia","Aruanã","Atum","Bacalhau","Badejo","Bagre","Baiacu","Barbo","Barracuda","Betta","Betara","Bicuda","Bótia","Black Bass","Bonito","Bota-velha","Budião","Baiacu-de-espinhos","Cachara","Cação","Caranha","Carapau","Carapeba","Tubarão","Carapicu","Cascudo","Cachorra","Clarias","Candiru","Carpa","Cavala","Cavalinha","Cavalo-marinho","Cherne","Celacanto","Ciliares","Cirurgião-patela","Congro","Corvina","Curimã","Curimbatá","Dunkerocampus dactyliophorus","Dojô","Dourada","Dourado","Enguia","Espadarte","Estriatos","Esturjão","Enchova","Frade-de-rabo-de-andorinha","Frade-vermelho","Garoupa","Guarajuba","Guaru","Hadoque","Jacundá","Jamanta","Jaú","Kipper","Lambari","Lampreia","Linguado","Limpa-vidro","Mandi","Manjuba","Marlim-branco","Martens-belo","Martens-do-mar","Martens-roxo","Matrinxã","Merluza","Mero","Miraguaia","Mapará","Moreia","Muçum","Mugil cephalus","Namorado","Neon","Neymar-cirurgião","Olhete","Olho-de-boi","Oscar","Pacu","Pampo","Papa-terra","Parati","Patinga","Pargo","Paru","Pavlaki Branco","Pavlaki-da-areia","Peixe-anjo","Peixe-agulha","Peixe-aranha","Peixe-arlequim","Peixe-bala","Peixe-borboleta","Peixe-bruxa","Peixe-cabra","Peixe-carvão","Peixe-cão","Peixe-cego-das-cavernas","Peixe-cirurgião","Peixe-cofre","Peixe-corda","Peixe-dentado","Peixe-dourado","Peixe-elefante","Peixe-escorpião","Peixe-espada","Peixe-esparadrapo","Peixe-faca","Peixe-farol","Peixe-folha","Peixe-frade","Peixe-galo","Peixe-gatilho","Peixe-gato","Peixe-gelo","Peixe-imperador","Peixe-lanterna","Peixe-leão","Peixe-lua","Peixe-machado","Peixe-mandarim","Peixe-martelo","Peixe-médico","Peixe-morcego","Peixe-mosquito","Peixe-nuvem","Peixe-palhaço","Peixe-palmito","Peixe-papagaio","Peixe-pedra","Peixe-pescador","Peixe-piloto","Peixe-porco","Peixe-rato","Peixe-rei","Peixe-remo","Peixe-royal-gramma","Peixe-sapo","Peixe-serra","Peixe-sol","Peixe-soldado","Peixe-tigre","Peixe-tripé","Peixe-trombeta","Peixe-unicórnio","Peixe-ventosa","Peixe-vermelho","Peixe-víbora","Peixe-voador","Peixe-zebra","Perca","Pescada","Piaba","Piapara","Piau","Pintado","Piracanjuba","Piraíba","Pirambóia","Piranha","Piraputanga","Pirarara","Pirarucu","Piratinga","Poraquê","Porquinho","Prejereba","Quimera","Raia","Rêmora","Robalo","Rodóstomo","Saicanga","Sarda","Sardinha","Sargocentron diadema","Salmão","Solha","Surubi","Tabarana","Tainha","Tambacu","Tambaqui","Tamboril","Tamuatá","Tilápia","Traíra","Tricolor","Truta","Tubarana","Tubarão","Tucunaré","Ubarana","Ubeba","Xaréu","Zigão-preto"];
+    const customVariables = await database.getCustomVariables();
+    fishArray = customVariables.peixes ?? ["Lambari", "Traira"];
   }
   
   // Se for pescaria múltipla, não permite peixes raros
@@ -1682,7 +1682,6 @@ async function legendaryFishCommand(bot, message, args, group) {
  */
 async function updateRareFishesAfterBug(bot, message, args, group) {
   try {
-    // Verifica se é administrador
     const chatId = message.group || message.author;
     
     // Envia mensagem de processamento
@@ -1898,6 +1897,83 @@ function isRareFish(fishName) {
   return RARE_FISH.some(rare => rare.name === fishName);
 }
 
+/**  
+ * Reseta os dados de pesca para o grupo atual  
+ * @param {WhatsAppBot} bot - Instância do bot  
+ * @param {Object} message - Dados da mensagem  
+ * @param {Array} args - Argumentos do comando  
+ * @param {Object} group - Dados do grupo  
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno  
+ */  
+async function resetFishingDataCommand(bot, message, args, group) {  
+  try {  
+    // Verifica se é um grupo  
+    if (!message.group) {  
+      return new ReturnMessage({  
+        chatId: message.author,  
+        content: "❌ Este comando só pode ser usado em grupos.",  
+        options: {  
+          quotedMessageId: message.origin.id._serialized  
+        }  
+      });  
+    }  
+  
+    // Verifica se o usuário é admin  
+    const isAdmin = await bot.adminUtils.isAdmin(message.author, group, null, bot.client);  
+    if (!isAdmin) {  
+      return new ReturnMessage({  
+        chatId: message.group || message.author,  
+        content: "❌ Este comando só pode ser usado por administradores do grupo.",  
+        options: {  
+          quotedMessageId: message.origin.id._serialized  
+        }  
+      });  
+    }  
+  
+    // Obtém dados de pesca  
+    const fishingData = await getFishingData();  
+      
+    // Verifica se há dados para este grupo  
+    if (!fishingData.groupData || !fishingData.groupData[message.group]) {  
+      return new ReturnMessage({  
+        chatId: message.group,  
+        content: "ℹ️ Não há dados de pesca para este grupo.",  
+        options: {  
+          quotedMessageId: message.origin.id._serialized  
+        }  
+      });  
+    }  
+  
+    // Faz backup dos dados antes de resetar  
+    const backupData = { ...fishingData.groupData[message.group] };  
+    const numPlayers = Object.keys(backupData).length;  
+      
+    // Reseta os dados do grupo  
+    fishingData.groupData[message.group] = {};  
+      
+    // Salva os dados atualizados  
+    await saveFishingData(fishingData);  
+      
+    return new ReturnMessage({  
+      chatId: message.group,  
+      content: `✅ Dados de pesca resetados com sucesso!\n\n${numPlayers} jogadores tiveram seus dados de pesca neste grupo apagados.`,  
+      options: {  
+        quotedMessageId: message.origin.id._serialized  
+      }  
+    });  
+  } catch (error) {  
+    logger.error('Erro ao resetar dados de pesca:', error);  
+      
+    return new ReturnMessage({  
+      chatId: message.group || message.author,  
+      content: '❌ Ocorreu um erro ao resetar os dados de pesca. Por favor, tente novamente.',  
+      options: {  
+        quotedMessageId: message.origin.id._serialized  
+      }  
+    });  
+  }  
+}
+
 
 
 // Criar array de comandos usando a classe Command
@@ -2001,6 +2077,19 @@ const commands = [
       error: "❌"
     },
     method: legendaryFishCommand
+  }),
+  new Command({  
+    name: 'pesca-reset',  
+    description: 'Reseta os dados de pesca para o grupo atual',  
+    category: "jogos",  
+    adminOnly: true,  
+    cooldown: 10,  
+    reactions: {  
+      before: "⏳",  
+      after: "✅",  
+      error: "❌"  
+    },  
+    method: resetFishingDataCommand  
   })
 ];
 
