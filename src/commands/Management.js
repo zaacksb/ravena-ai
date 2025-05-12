@@ -5279,7 +5279,7 @@ async setWelcomeMessage(bot, message, args, group) {
     const managementLink = `${process.env.BOT_DOMAIN}/manage/${token}`;  
   
     return new ReturnMessage({   
-        chatId: group.id,
+        chatId: message.author,
         content: `Link para gerenciamento do grupo criado com sucesso!\n\nAcesse: ${managementLink}\n\nEste link é válido até ${formattedExpiration}.`   
     });  
   }  
