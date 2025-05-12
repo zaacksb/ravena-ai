@@ -234,7 +234,7 @@ class WhatsAppBot {
       const responseTime = Math.max(0, currentTimestamp - messageTimestamp); // Não permite valores negativos
       
       // Verifica se o tempo de resposta é muito alto e se precisamos reiniciar o bot
-      if (responseTime > 60) {
+      if (responseTime > 60 && false) { // Desativado reiniciar por delay
         // Verifica se o bot não foi reiniciado recentemente pelo mesmo motivo
         const currentTime = Math.floor(Date.now() / 1000);
         const timeSinceLastRestart = currentTime - this.lastRestartForDelay;

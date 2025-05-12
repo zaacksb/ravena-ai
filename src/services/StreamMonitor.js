@@ -250,6 +250,11 @@ class StreamMonitor extends EventEmitter {
     return this.channels;
   }
 
+  logErrorToFile(filename, error){
+    const logErrorFile = path.join(this.database.databasePath, filename);
+    fs.writeFileSync(logErrorFile, error, 'utf8');
+  }
+
    /**
    * Refresh the Twitch API token or load existing token if still valid
    * @private
@@ -441,6 +446,8 @@ class StreamMonitor extends EventEmitter {
           await this._refreshTwitchToken();
         } else {
           this.logger.error('Error polling Twitch channels:', error.message);
+          logErrorToFile(`twitch-batch${bAt}-error.json`, error);
+          logErrorToFile(`twitch-batch${bAt}-errors.json`, JSON.stringify(error, null, "\t"));
           failedBatches.push(batch);
         }
       }
