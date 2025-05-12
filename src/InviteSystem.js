@@ -197,14 +197,14 @@ class InviteSystem {
               `💸💸 R$${donateValue} 💸💸\n` +
               `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
               `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
-              `👤 *De:* ${userName} (${authorId}) 💰\n\n` +
+              `👤 *De:* ${userName} (${authorId.split("@")[0]}) 💰\n\n` +
               `💬 *Motivo:*\n${reason}\n` +
               `💸💸💸💸\n`;
           } else {
             infoMessage = 
               `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
               `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
-              `👤 *De:* ${userName} (${authorId})\n\n` +
+              `👤 *De:* ${userName} (${authorId.split("@")[0]})\n\n` +
               `💬 *Motivo:*\n${reason}`;
           }
           
