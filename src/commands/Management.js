@@ -4,7 +4,6 @@ const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const NSFWPredict = require('../utils/NSFWPredict');
 const ReturnMessage = require('../models/ReturnMessage');
-const { inicializarGrupo, carregarDadosRoleta, salvarDadosRoleta } = require('../functions/RoletaRussaCommands.js');
 
 /**
  * Manipula comandos de gerenciamento para grupos
@@ -34,14 +33,6 @@ class Management {
         method: 'deleteCustomCommand',
         description: 'Exclui um comando personalizado'
       },
-      'enableCmd': {
-        method: 'enableCustomCommand',
-        description: 'Habilita um comando desabilitado'
-      },
-      'disableCmd': {
-        method: 'disableCustomCommand',
-        description: 'Desabilita um comando'
-      },
       'setPrefixo': {
         method: 'setCustomPrefix',
         description: 'Altera o prefixo de comandos (padrão !)'
@@ -54,13 +45,33 @@ class Management {
         method: 'setFarewellMessage',
         description: 'Mensagem quando alguém sai/é removido'
       },
-      'cmdReact': {
+      'cmd-enable': {
+        method: 'enableCustomCommand',
+        description: 'Habilita um comando desabilitado'
+      },
+      'cmd-disable': {
+        method: 'disableCustomCommand',
+        description: 'Desabilita um comando'
+      },
+      'cmd-react': {
         method: 'setReaction',
         description: 'Reaçao pós-comando (apeas cmds do grupo)'
       },
-      'cmdStartReact': {
+      'cmd-startReact': {
         method: 'setStartReaction',
         description: 'Reaçao pré-comando (apeas cmds do grupo)'
+      },
+      'cmd-setAdm': {
+        method: 'setCmdAdmin',
+        description: 'Define que apenas admins podem usar um comando'
+      },
+      'cmd-setHoras': {
+        method: 'setCmdAllowedHours',
+        description: 'Define horários permitidos para um comando'
+      },
+      'cmd-setDias': {
+        method: 'setCmdAllowedDays',
+        description: 'Define dias permitidos para um comando'
       },
       'autoStt': {
         method: 'toggleAutoStt',
@@ -110,10 +121,6 @@ class Management {
         method: 'pauseGroup',
         description: 'Pausa/retoma a atividade do bot no grupo'
       },
-      'setTempoRoleta': {
-        method: 'definirTempoRoleta',
-        description: 'Define tempo de timeout da roleta russa'
-      },
       'interagir': {
         method: 'toggleInteraction',
         description: 'Ativa/desativa interações automáticas do bot'
@@ -137,18 +144,6 @@ class Management {
       'setApelido': { 
         method: 'setUserNicknameAdmin',
         description: 'Define um apelido para um usuário específico' 
-      },
-      'cmd-setAdm': {
-        method: 'setCmdAdmin',
-        description: 'Define que apenas admins podem usar um comando'
-      },
-      'cmd-setHoras': {
-        method: 'setCmdAllowedHours',
-        description: 'Define horários permitidos para um comando'
-      },
-      'cmd-setDias': {
-        method: 'setCmdAllowedDays',
-        description: 'Define dias permitidos para um comando'
       },
       'twitch-canal': {
         method: 'toggleTwitchChannel',
@@ -655,7 +650,7 @@ class Management {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça o comando personalizado a ser habilitado. Exemplo: !g-enableCmd saudação'
+        content: 'Por favor, forneça o comando personalizado a ser habilitado. Exemplo: !g-cmd-enable saudação'
       });
     }
     
@@ -710,7 +705,7 @@ class Management {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça o comando personalizado a ser desabilitado. Exemplo: !g-disableCmd saudação'
+        content: 'Por favor, forneça o comando personalizado a ser desabilitado. Exemplo: !g-cmd-disable saudação'
       });
     }
     
@@ -1651,7 +1646,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (args.length < 2) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-setReact sticker 🎯'
+        content: 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-cmd-react sticker 🎯'
       });
     }
     
@@ -1714,7 +1709,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (args.length < 2) {
       return new ReturnMessage({
         chatId: group.id,
-        content: 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-setStartReact sticker 🎯'
+        content: 'Por favor, forneça um nome de comando e emoji. Exemplo: !g-cmd-startReact sticker 🎯'
       });
     }
     
@@ -1897,6 +1892,8 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
+    args = args.filter(a => !["on", "off"].includes(a.toLowerCase()));
+
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: group.id,
@@ -1904,7 +1901,7 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
-    const channelName = args[0].toLowerCase();
+    const channelName = args[0].replace("https://www.twitch.tv/", "").toLowerCase();
     
     // Get current channels
     const channels = this.getChannelConfig(group, 'twitch');
@@ -3785,84 +3782,6 @@ async setWelcomeMessage(bot, message, args, group) {
       return new ReturnMessage({
         chatId: message.group || message.author,
         content: 'Erro ao processar comando. Por favor, tente novamente.'
-      });
-    }
-  }
-
-  /**
-   * Define tempo de timeout da roleta russa (comando de administrador)
-   * @param {WhatsAppBot} bot Instância do bot
-   * @param {Object} message Dados da mensagem
-   * @param {Array} args Argumentos do comando
-   * @param {Object} group Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async definirTempoRoleta(bot, message, args, group) {
-    try {
-      // Verifica se está em um grupo
-      if (!message.group) {
-        return new ReturnMessage({
-          chatId: message.author,
-          content: 'Este comando só pode ser usado em grupos.'
-        });
-      }
-      
-      const groupId = message.group;
-      
-      // Verifica se há argumento de tempo
-      if (args.length === 0 || isNaN(parseInt(args[0]))) {
-        return new ReturnMessage({
-          chatId: groupId,
-          content: 'Por favor, forneça um tempo em segundos. Exemplo: !g-setTempoRoleta 300'
-        });
-      }
-      
-      // Obtém e valida o tempo
-      let segundos = parseInt(args[0]);
-      
-      // Limita o tempo máximo (24hrs)
-      if (segundos > 86400) {
-        segundos = 86400;
-      } else if (segundos < 10) {
-        segundos = 10; // Mínimo de 10 segundos
-      }
-      
-      // Carrega dados da roleta
-      let dados = await carregarDadosRoleta();
-      
-      // Inicializa dados do grupo se necessário
-      dados = inicializarGrupo(dados, groupId);
-      
-      // Atualiza tempo de timeout
-      dados.grupos[groupId].tempoTimeout = segundos;
-      
-      // Salva dados
-      await salvarDadosRoleta(dados);
-      
-      // Formata tempo para exibição
-      const minutos = Math.floor(segundos / 60);
-      const segundosRestantes = segundos % 60;
-      let tempoFormatado = '';
-      
-      if (minutos > 0) {
-        tempoFormatado += `${minutos} minuto(s)`;
-        if (segundosRestantes > 0) {
-          tempoFormatado += ` e ${segundosRestantes} segundo(s)`;
-        }
-      } else {
-        tempoFormatado = `${segundos} segundo(s)`;
-      }
-      
-      return new ReturnMessage({
-        chatId: groupId,
-        content: `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
-      });
-    } catch (error) {
-      this.logger.error('Erro ao definir tempo de roleta:', error);
-      
-      return new ReturnMessage({
-        chatId: message.group || message.author,
-        content: 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.'
       });
     }
   }

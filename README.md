@@ -123,10 +123,14 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Marcar com link no {mention}
 - [x] Criar antigo {membroRandom}
 - [x] Donates no convite
+- [x] Management updates:
+    - [x] adminOnly pra customCommands
+    - [x] Não permitir mudar fixedCommands
+    - [x] Coisas dos jogos, no código dos jogos
+- [x] Add alguns checks do modelo Command direto no executeFixedCommand (isAdmin, etc.)
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
 - [ ] Comando convite com argumento pro id do bot
 - [ ] Add !info
-- [ ] Add alguns checks do modelo Command direto no executeFixedCommand (isAdmin, etc.)
 
 ## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
@@ -159,13 +163,13 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 - [x] Fix: Comando g-roletaReset
 - [x] Bot não envia mensagem de READY
 - [x] !le mais de 1 lista _([valeu, bernardo!](https://github.com/moothz/ravena-ai/pull/3))_
+- [x] !g-info colocar tudo da twitch, titulo, etc.
+- [x] Parse nome do canal da twitch: Remover on/off e https://twit...
 - [ ] Fix: SIGINT/SIGTERM não estão chegando/sendo executados
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
 - [ ] Fix reset do ranking de pesca
-- [ ] Parse nome do canal da twitch: Remover on/off e https://twit...
-- [ ] !g-info colocar tudo da twitch, titulo, etc.
 
 
 ## ✅ TODO-Extras

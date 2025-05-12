@@ -494,6 +494,96 @@ async function resetarRoletaRussa(bot, message, args, group) {
   }  
 }
 
+/**
+ * Define tempo de timeout da roleta russa (comando de administrador)
+ * @param {WhatsAppBot} bot Instância do bot
+ * @param {Object} message Dados da mensagem
+ * @param {Array} args Argumentos do comando
+ * @param {Object} group Dados do grupo
+ * @returns {Promise<ReturnMessage>} Mensagem de retorno
+ */
+async function definirTempoRoleta(bot, message, args, group) {
+  try {
+    // Verifica se está em um grupo
+    if (!message.group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    const groupId = message.group;
+    
+    // Verifica se o usuário é admin
+    const isAdmin = await bot.isUserAdminInGroup(message.author, groupId);
+    if (!isAdmin) {
+      return new ReturnMessage({
+        chatId: groupId,
+        content: '⛔ Apenas administradores podem definir o tempo da roleta russa.',
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        }
+      });
+    }
+    
+    // Verifica se há argumento de tempo
+    if (args.length === 0 || isNaN(parseInt(args[0]))) {
+      return new ReturnMessage({
+        chatId: groupId,
+        content: 'Por favor, forneça um tempo em segundos (mínimo 10, máximo 259200, 72 horas). Exemplo: !roleta-tempo 300'
+      });
+    }
+    
+    // Obtém e valida o tempo
+    let segundos = parseInt(args[0]);
+    
+    // Limita o tempo máximo (72hrs)
+    if (segundos > 259200*3) {
+      segundos = 259200;
+    } else if (segundos < 10) {
+      segundos = 10; // Mínimo de 10 segundos
+    }
+    
+    // Carrega dados da roleta
+    let dados = await carregarDadosRoleta();
+    
+    // Inicializa dados do grupo se necessário
+    dados = inicializarGrupo(dados, groupId);
+    
+    // Atualiza tempo de timeout
+    dados.grupos[groupId].tempoTimeout = segundos;
+    
+    // Salva dados
+    await salvarDadosRoleta(dados);
+    
+    // Formata tempo para exibição
+    const minutos = Math.floor(segundos / 60);
+    const segundosRestantes = segundos % 60;
+    let tempoFormatado = '';
+    
+    if (minutos > 0) {
+      tempoFormatado += `${minutos} minuto(s)`;
+      if (segundosRestantes > 0) {
+        tempoFormatado += ` e ${segundosRestantes} segundo(s)`;
+      }
+    } else {
+      tempoFormatado = `${segundos} segundo(s)`;
+    }
+    
+    return new ReturnMessage({
+      chatId: groupId,
+      content: `⏱️ Tempo de "morte" na roleta russa definido para ${tempoFormatado}.`
+    });
+  } catch (error) {
+    logger.error('Erro ao definir tempo de roleta:', error);
+    
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao definir tempo da roleta russa. Por favor, tente novamente.'
+    });
+  }
+}
+
 // Verifica o status de timeout dos jogadores periodicamente
 setInterval(async () => {  
   try {  
@@ -599,6 +689,18 @@ const commands = [
       error: "❌"  
     },  
     method: resetarRoletaRussa  
+  }),
+  new Command({
+    name: 'roleta-tempo',
+    description: 'Define o tempo de timeout da roleta russa',
+    category: "jogos",
+    adminOnly: true,
+    cooldown: 10,
+    reactions: {
+      after: "⏱️",
+      error: "❌"
+    },
+    method: definirTempoRoleta
   })
 ];
 

@@ -147,7 +147,6 @@ const commands = [
     description: 'Busca informações sobre um anime no MyAnimeList',
     category: "cultura",
     reactions: {
-      trigger: "🗾",
       before: "⏳",
       after: "🗾"
     },
