@@ -138,6 +138,10 @@ class Management {
         method: 'setUserNicknameAdmin',
         description: 'Define um apelido para um usuário específico' 
       },
+      'cmd-setAdm': {
+        method: 'setCmdAdmin',
+        description: 'Define que apenas admins podem usar um comando'
+      },
       'cmd-setHoras': {
         method: 'setCmdAllowedHours',
         description: 'Define horários permitidos para um comando'
@@ -423,6 +427,7 @@ class Management {
     const customCommand = {
       startsWith: commandTrigger,
       responses: [responseContent],
+      adminOnly: false,
       sendAllResponses: false,
       mentions: [],
       cooldown: 0,
@@ -1653,26 +1658,7 @@ async setWelcomeMessage(bot, message, args, group) {
     const commandName = args[0].toLowerCase();
     const emoji = args[1];
     
-    // Verifica se é um comando fixo
-    const fixedCommand = bot.eventHandler.commandHandler.fixedCommands.getCommand(commandName);
-    if (fixedCommand) {
-      // Atualiza reação do comando fixo
-      if (!fixedCommand.reactions) {
-        fixedCommand.reactions = {
-          before: "⏳",
-          after: emoji,
-          error: "❌"
-        };
-      } else {
-        fixedCommand.reactions.after = emoji;
-      }
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Definida reação 'depois' de '${commandName}' para ${emoji}`
-      });
-    }
-    
+
     // Verifica se é um comando personalizado
     const customCommands = await this.database.getCustomCommands(group.id);
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
@@ -1734,26 +1720,6 @@ async setWelcomeMessage(bot, message, args, group) {
     
     const commandName = args[0].toLowerCase();
     const emoji = args[1];
-    
-    // Verifica se é um comando fixo
-    const fixedCommand = bot.eventHandler.commandHandler.fixedCommands.getCommand(commandName);
-    if (fixedCommand) {
-      // Atualiza reação do comando fixo
-      if (!fixedCommand.reactions) {
-        fixedCommand.reactions = {
-          before: emoji,
-          after: "✅",
-          error: "❌"
-        };
-      } else {
-        fixedCommand.reactions.before = emoji;
-      }
-      
-      return new ReturnMessage({
-        chatId: group.id,
-        content: `Definida reação 'antes' de '${commandName}' para ${emoji}`
-      });
-    }
     
     // Verifica se é um comando personalizado
     const customCommands = await this.database.getCustomCommands(group.id);
@@ -4847,6 +4813,64 @@ async setWelcomeMessage(bot, message, args, group) {
     return this.setStreamGroupPhoto(bot, message, args, group, 'youtube');
   }
   
+
+  /**
+   * Define horários permitidos para um comando personalizado
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setCmdAdmin(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (args.length < 1) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça um nome de comando. Exemplo: !g-cmd-setAdm comando'
+      });
+    }
+    
+    const commandName = args[0].toLowerCase();
+    const emoji = args[1];
+        
+    // Verifica se é um comando personalizado
+    const customCommands = await this.database.getCustomCommands(group.id);
+    const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
+    
+    if (customCommand) {
+      if (!customCommand.adminOnly) {
+        customCommand.adminOnly = true;
+      } else {
+        customCommand.adminOnly = false;
+      }
+      
+      // Atualiza o comando
+      await this.database.updateCustomCommand(group.id, customCommand);
+      
+      // Limpa cache de comandos para garantir que o comando atualizado seja carregado
+      this.database.clearCache(`commands:${group.id}`);
+
+      // Recarrega comandos
+      await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Definido '${commandName}' para ${customCommand.adminOnly ? "apenas administradores" : "sem restrição de adm"}`
+      });
+    }
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando '${commandName}' não encontrado.`
+    });
+  }
   /**
    * Define horários permitidos para um comando personalizado
    * @param {WhatsAppBot} bot - Instância do bot

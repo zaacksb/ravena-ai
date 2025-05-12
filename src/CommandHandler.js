@@ -956,6 +956,28 @@ class CommandHandler {
         this.logger.warn(`Comando ${command.startsWith} não tem respostas`);
         return;
       }
+
+      // Apenas para adminsitradores
+      if (command.adminOnly) {  
+        const chat = await message.origin.getChat();
+        const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
+        if (!isUserAdmin) {  
+          this.logger.debug(`Comando ${command.name} requer administrador, mas o usuário não é`);
+
+          try {
+            await message.origin.react("⛔️");
+          } catch (reactError) {
+            this.logger.error('Erro ao aplicar reação "indisponível":', reactError);
+          }
+          
+          const returnMessage = new ReturnMessage({
+            chatId: message.group,
+            content: `o comando *${command.startsWith}* só pode ser usado por _administradores_.`
+          });
+
+          return;
+        }  
+      }
       
       if (command.allowedTimes && !this.checkAllowedTimes(command)) {
         this.logger.debug(`Comando ${command.startsWith} não está disponível neste horário/dia`);
@@ -969,7 +991,7 @@ class CommandHandler {
         
         const returnMessage = new ReturnMessage({
           chatId: message.group,
-          content: `O comando ${command.startsWith} só está disponível ${this.formatAllowedTimes(command)}.`
+          content: `o comando *${command.startsWith}* só está disponível ${this.formatAllowedTimes(command)}.`
         });
         
         await bot.sendReturnMessages(returnMessage);
@@ -998,7 +1020,7 @@ class CommandHandler {
       command.count = (command.count || 0) + 1;
       command.lastUsed = Date.now();
       await this.database.updateCustomCommand(group.id, command);
-      this.logger.debug(`Atualizadas estatísticas de uso para o comando ${command.startsWith}, contagem: ${command.count}`);
+      this.logger.debug(`Atualizadas estatísticas de uso para o comando *${command.startsWith}*, contagem: ${command.count}`);
       
       // Reage à mensagem se especificado (esta é a reação específica do comando)
       if (command.react) {
@@ -1014,7 +1036,7 @@ class CommandHandler {
 
       // Envia todas as respostas ou seleciona uma aleatória
       if (command.sendAllResponses) {
-        this.logger.debug(`Enviando todas as ${responses.length} respostas para o comando ${command.startsWith}`);
+        this.logger.debug(`Enviando todas as ${responses.length} respostas para o comando *${command.startsWith}*`);
         const returnMessages = [];
         
         for (const response of responses) {
@@ -1030,7 +1052,7 @@ class CommandHandler {
         }
       } else {
         const randomIndex = Math.floor(Math.random() * responses.length);
-        this.logger.debug(`Enviando resposta aleatória (${randomIndex + 1}/${responses.length}) para o comando ${command.startsWith}`);
+        this.logger.debug(`Enviando resposta aleatória (${randomIndex + 1}/${responses.length}) para o comando *${command.startsWith}*`);
         
         const returnMessage = await this.processCustomCommandResponse(bot, message, responses[randomIndex], command, group);
         if (returnMessage) {
@@ -1190,7 +1212,7 @@ class CommandHandler {
         }
       } else {
         // Resposta de texto
-        this.logger.debug(`Enviando resposta de texto para o comando ${command.startsWith}`);
+        this.logger.debug(`Enviando resposta de texto para o comando *${command.startsWith}*`);
         
         return new ReturnMessage({
           chatId: message.group,
