@@ -3,6 +3,9 @@ const bodyParser = require('body-parser');
 const Logger = require('./utils/Logger');
 const Database = require('./utils/Database');
 const path = require('path');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+const fs = require('fs').promises;
 
 /**
  * Servidor API para o bot WhatsApp
@@ -17,6 +20,7 @@ class BotAPI {
   constructor(options = {}) {
     this.port = options.port || process.env.API_PORT || 5000;
     this.bots = options.bots || [];
+    this.eventHandler = options.eventHandler || false;
     this.logger = new Logger('bot-api');
     this.database = Database.getInstance();
     this.app = express();
@@ -38,16 +42,33 @@ class BotAPI {
     // Configura middlewares
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-    this.app.use(express.static(path.join(__dirname, '../public')));
     
     // Configura rotas
     this.setupRoutes();
+
+    this.app.use(express.static(path.join(__dirname, '../public')));
     
     // Carrega dados analíticos em cache ao iniciar
     this.updateAnalyticsCache();
     
     // Configura atualização periódica do cache (a cada 10 minutos)
     this.cacheUpdateInterval = setInterval(() => this.updateAnalyticsCache(), this.analyticsCache.cacheTime);
+  }
+
+
+  // Helper function to read tokens
+  async readWebManagementToken(token) {
+      const dbPath = path.join(__dirname, '../data/webmanagement.json');
+      
+      try {
+          const data = await fs.readFile(dbPath, 'utf8');
+          const webManagement = JSON.parse(data);
+          
+          return webManagement.find(item => item.token === token);
+      } catch (error) {
+          this.logger.error('Error reading webmanagement.json:', error);
+          return null;
+      }
   }
 
   /**
@@ -338,6 +359,315 @@ class BotAPI {
           message: 'Erro interno do servidor'
         });
       }
+    });
+
+    // Serve management page
+    this.app.get('/manage/:token', (req, res) => {  
+      const { token } = req.params;  
+        const filePath = path.join(__dirname, '../public/management.html');  
+        this.logger.info(`[management] => '${token}'`);  
+        res.sendFile(filePath);  
+    });
+
+    // Validate token endpoint
+    this.app.get('/api/validate-token', async (req, res) => {
+        const token = req.query.token;
+        
+        if (!token) {
+            return res.status(400).json({ valid: false, message: 'Token not provided' });
+        }
+        
+        try {
+            const webManagementData = await this.readWebManagementToken(token);
+            
+            if (!webManagementData) {
+                return res.status(401).json({ valid: false, message: 'Invalid token' });
+            }
+            
+            // Check expiration
+            const expiresAt = new Date(webManagementData.expiresAt);
+            const now = new Date();
+            
+            if (now > expiresAt) {
+                return res.status(401).json({ valid: false, message: 'Token expired' });
+            }
+            
+            return res.json({
+                valid: true,
+                requestNumber: webManagementData.requestNumber,
+                authorName: webManagementData.authorName,
+                groupId: webManagementData.groupId,
+                groupName: webManagementData.groupName,
+                expiresAt: webManagementData.expiresAt
+            });
+        } catch (error) {
+            this.logger.error('Error validating token:', error);
+            return res.status(500).json({ valid: false, message: 'Server error' });
+        }
+    });
+
+    // Get group data endpoint
+    this.app.get('/api/group', async (req, res) => {  
+        const { id, token } = req.query;  
+          
+        if (!id || !token) {  
+            return res.status(400).json({ message: 'Missing required parameters' });  
+        }  
+          
+        try {  
+            const webManagementData = await this.readWebManagementToken(token);  
+              
+            if (!webManagementData || webManagementData.groupId !== id) {  
+                return res.status(401).json({ message: 'Unauthorized' });  
+            }  
+              
+            if (new Date() > new Date(webManagementData.expiresAt)) {  
+                return res.status(401).json({ message: 'Token expired' });  
+            }  
+              
+            // Get database instance  
+            const groupData = await this.database.getGroup(id);  
+              
+            if (!groupData) {  
+                return res.status(404).json({ message: 'Group not found' });  
+            }  
+            
+            this.logger.info(`[management][${token}][${id}] Group ${groupData.name}`);
+            return res.json(groupData);  
+        } catch (error) {  
+            this.logger.error('Error getting group data:', error);  
+            return res.status(500).json({ message: 'Server error' });  
+        }  
+    });
+
+    // Update the group data endpoint to use the correct methods
+    this.app.post('/api/update-group', async (req, res) => {
+        const { token, groupId, changes } = req.body;
+        
+        if (!token || !groupId || !changes) {
+            return res.status(400).json({ success: false, message: 'Missing required parameters' });
+        }
+        
+        try {
+            const webManagementData = await this.readWebManagementToken(token);
+            
+            if (!webManagementData || webManagementData.groupId !== groupId) {
+                return res.status(401).json({ success: false, message: 'Unauthorized' });
+            }
+            
+            if (new Date() > new Date(webManagementData.expiresAt)) {
+                return res.status(401).json({ success: false, message: 'Token expired' });
+            }
+            
+            // Get database instance - assuming it's exported from a central location          
+            const groupData = await this.database.getGroup(groupId);
+            
+            if (!groupData) {
+                return res.status(404).json({ success: false, message: 'Group not found' });
+            }
+            
+            this.logger.info(`[management][${token}][${groupId}] UPDATED Group data:\n${JSON.stringify(changes, null, 2)}`);
+
+            // Apply changes
+            Object.entries(changes).forEach(([key, value]) => {
+                groupData[key] = value;
+            });
+            
+            // Add update timestamp
+            groupData.lastUpdated = new Date().toISOString();
+            
+            // Save the updated group
+            await this.database.saveGroup(groupData);
+            
+            // Signal bots to reload the group config
+            const fs = require('fs').promises;
+            const path = require('path');
+            const updatesPath = path.join(__dirname, '../data/group_updates.json');
+            let updates = {};
+            
+            try {
+                const updatesData = await fs.readFile(updatesPath, 'utf8');
+                updates = JSON.parse(updatesData);
+            } catch (error) {
+                // File might not exist, continue with empty object
+            }
+            
+            updates[groupId] = {
+                timestamp: groupData.lastUpdated,
+                updatedBy: 'webmanagement'
+            };
+            
+            await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2), 'utf8');
+
+            this.eventHandler.loadGroups(); // Recarrega os grupos em memória
+            
+            return res.json({ success: true });
+        } catch (error) {
+            this.logger.error('Error updating group:', error);
+            return res.status(500).json({ success: false, message: 'Server error' });
+        }
+    });
+
+    // Upload media endpoint
+    this.app.post('/api/upload-media', upload.single('file'), async (req, res) => {  
+        const { token, groupId, type, name } = req.body;  
+        const file = req.file;  
+          
+        if (!token || !groupId || !type || !name || !file) {  
+            return res.status(400).json({ success: false, message: 'Missing required parameters' });  
+        }  
+          
+        try {  
+            const webManagementData = await this.readWebManagementToken(token);  
+              
+            if (!webManagementData || webManagementData.groupId !== groupId) {  
+                return res.status(401).json({ success: false, message: 'Unauthorized' });  
+            }  
+              
+            if (new Date() > new Date(webManagementData.expiresAt)) {  
+                return res.status(401).json({ success: false, message: 'Token expired' });  
+            }  
+              
+            // Get database instance              
+            const groupData = await this.database.getGroup(groupId);  
+              
+            if (!groupData) {  
+                return res.status(404).json({ success: false, message: 'Group not found' });  
+            }  
+              
+            // Save file  
+            const fileName = `${Date.now()}-${file.originalname}`;  
+            const mediaPath = path.join(this.database.databasePath, "media");  
+              
+            await fs.mkdir(mediaPath, { recursive: true }).catch(() => {});  
+              
+            const filePath = path.join(mediaPath, fileName);  
+            await fs.copyFile(file.path, filePath);  
+              
+            // Update group data  
+            if (!groupData[type]) {  
+                groupData[type] = {};  
+            }  
+              
+            groupData[type][name] = {  
+                file: fileName,  
+                uploadedAt: new Date().toISOString(),  
+                uploadedBy: webManagementData.requestNumber  
+            };  
+              
+            // Add update timestamp  
+            groupData.lastUpdated = new Date().toISOString();  
+              
+            // Save the updated group  
+            await this.database.saveGroup(groupData);  
+              
+            // Signal bots to reload the group config  
+            const updatesPath = path.join(__dirname, '../data/group_updates.json');  
+            let updates = {};  
+              
+            try {  
+                const updatesData = await fs.readFile(updatesPath, 'utf8');  
+                updates = JSON.parse(updatesData);  
+            } catch (error) {  
+                // File might not exist, continue with empty object  
+            }  
+              
+            updates[groupId] = {  
+                timestamp: groupData.lastUpdated,  
+                updatedBy: 'webmanagement'  
+            };  
+
+            this.logger.info(`[management][${token}][${groupId}] Media '${type}' uplodaded: ${fileName}`);
+
+            await fs.writeFile(updatesPath, JSON.stringify(updates, null, 2), 'utf8');  
+              
+            return res.json({ success: true, fileName});  
+        } catch (error) {  
+            this.logger.error('Error uploading media:', error);  
+            return res.status(500).json({ success: false, message: 'Server error' });  
+        } finally {  
+            // Remove temp file  
+            if (req.file) {  
+                fs.unlink(req.file.path).catch(error => {  
+                    this.logger.error('Error removing temp file:', error);  
+                });  
+            }  
+        }  
+    });
+
+
+    // Serve media files
+    this.app.get('/media/:platform/:channel/:event/:type', async (req, res) => {  
+        const { platform, channel, event, type } = req.params;  
+        const token = req.query.token;  
+          
+        if (!token) {  
+            return res.status(400).send('Token not provided');  
+        }  
+          
+        try {  
+            const webManagementData = await this.readWebManagementToken(token);  
+              
+            if (!webManagementData) {  
+                return res.status(401).send('Unauthorized');  
+            }  
+              
+            if (new Date() > new Date(webManagementData.expiresAt)) {  
+                return res.status(401).send('Token expired');  
+            }  
+              
+            // Get database instance                 
+            const groupData = await this.database.getGroup(webManagementData.groupId);  
+              
+            if (!groupData || !groupData[platform]) {  
+                return res.status(404).send('Platform not set');  
+            }  
+            
+            const allPlatformData = groupData[platform].find(plt => plt.channel == channel);
+            if(!allPlatformData){
+              return res.status(404).send('Channel not set');  
+            }
+
+            let mediaFound = allPlatformData.onConfig?.media?.find(m => m.type == type);
+            if(event == "off"){
+              mediaFound = allPlatformData.offConfig?.media.find(m => m.type == type);
+            }
+
+            if(!mediaFound){
+              return res.status(404).send(`${type}@${event} not found`); 
+            }
+
+            this.logger.info(mediaFound);
+
+            const fileName = mediaFound.content;  
+            const filePath = path.join(this.database.databasePath, "media", fileName);  
+            this.logger.info(filePath);
+              
+            // Verify file exists  
+            await fs.access(filePath).catch(() => {  
+                return res.status(404).send('File not found');  
+            });  
+              
+            // Set content type  
+            const ext = path.extname(fileName).toLowerCase();  
+            let contentType = 'application/octet-stream';  
+              
+            switch (ext) {  
+                case '.jpg':  
+                case '.jpeg': contentType = 'image/jpeg'; break;  
+                case '.png': contentType = 'image/png'; break;  
+                case '.gif': contentType = 'image/gif'; break;  
+                case '.mp4': contentType = 'video/mp4'; break;  
+                case '.mp3': contentType = 'audio/mpeg'; break;  
+                case '.wav': contentType = 'audio/wav'; break;  
+            }  
+              
+            res.setHeader('Content-Type', contentType);  
+            res.sendFile(filePath);  
+        } catch (error) {  
+            this.logger.error('Error serving media:', error);  
+            return res.status(500).send('Server error');  
+        }  
     });
   }
   

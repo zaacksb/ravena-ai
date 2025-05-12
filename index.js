@@ -66,7 +66,8 @@ async function main() {
     // Inicializa servidor da API
     const botAPI = new BotAPI({
       port: process.env.API_PORT || 5000,
-      bots: botInstances
+      bots: botInstances,
+      eventHandler: eventHandler
     });
     
     // Inicia servidor da API

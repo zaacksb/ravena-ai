@@ -2205,4 +2205,107 @@ Implement checks for ther other missing properties like adminOnly.
 
 ## New command, admin only: !pesca-reset
 
+How to check if admin:
+const isAdmin = await bot.isAdminUser(message.author);
+if (!isAdmin) {
+  return new ReturnMessage({
+    chatId: message.group || message.author,
+    content: "❌ Este comando só pode ser usado por administradores do bot."
+  });
+}
+
 Resets the fishing data for this group.
+
+
+-------
+
+# BotAPI
+
+## WebManagement for groups.json
+I provided groups.example.json to check the possible properties values.
+
+Implementation steps:
+1. Create command in Management.js: !g-painel
+Generate a token valid for .env.MANAGEMENT_TOKEN_DURATION (minutes)
+
+This will provide a link defined by .env.BOT_DOMAIN?manage=token like:
+https://example.com/manage/token
+
+Return message to the user telling them to acess the link and that it is available until "12/05/2025 15:00" formatted time
+
+2. Register this token on a database file like data/webmanagement.json, create a new entry with info: Number request, author named, group name, time of request, time of expiration
+
+3. Implement the /manage endpoint that receives this token, checking if it's valid and gathering data from the data/webmanagement.json
+Follow the same design colors and style of the existing index file (provided file for public folder)
+Create management.html for the template, management.js and management.css
+
+Send all files as artifacts.
+
+4. Implement additional needed endpoints for receiving update data and saving them
+
+Tips: The instances of the bots will be running, so modifying the file directly isn't a good a idea.
+Either create a method in Management.js that receives this data from the API to be processed and stored or use the same database acess as this file.
+
+
+## The Layout:
+Header: Show person name, number, group name that is being managed and session expiration time (tooltip: remaining time)
+Body: Form like editor for all the JSON properties.
+- booleans should be checkboxes
+- Arrays for the filters: datalist with create and delete button
+- twitch, kick and youtube: Separated section that can create links to view the data in case they are files. Upload option for files (max size 5Mb). Show all possible media types, saying "none" if they don't exist, with a button + to add it
+- nicks: do not show @c.us, but make sure that the data is correctly added to the database with the @c.us
+- Data not editable: createdAt, addedBy, removedBy
+- Tooltips to help user identify what they are editing (labels)
+
+Save button with confirm dialog modal, stating what data will be updated (modified fields)
+
+
+----
+
+Management API Frontend Overhaul
+Edit BotAPI.js if necessary.
+Edit the frontend files management.html, management.js and management.css to implement the changes:
+
+
+## Apperance
+Color Palette: #23066d, #b7b7c5, #3e0ea7,#04a9f0, #05060d, #47486c, #25224f
+Dark background
+Global monopace font: Roboto
+
+## Features
+
+## Configurações gerais
+Show ID and creatin date on the same line
+Limit "name" input to 30 characters
+
+
+### "Configuração de Streams" block
+For each channel configured in twitch, kick and youtube create a "media-section", since each channel will have it's own media configuration.
+This will require using custom IDs for the elements, or another property to represent the channel name
+Display a list of all possible medias:
+	- 💬 Text: Text input, multiline
+	- 🖼 Image: Link to media (if set), otherwise, upload button
+	- 🔉 Sound: Same as image
+	- 📼 Video: Same as image
+	- 🩻 Sticker: Same as image
+
+"Restaurar Padrões" button instead of the "adicionar midia": Function to set the properties to the default values:
+{
+  channel: channelName,
+  onConfig: media: [{type: "text",content: defaultText}],
+  offConfig: {
+    "media": []
+  },
+  changeTitleOnEvent: true,
+  useThumbnail: true,
+  useAI: false
+}
+
+Default text for twitch and kick: `⚠️ ATENÇÃO!⚠️\n\n🌟 *${channelName}* ✨ está *online* streamando *{jogo}*!\n_{titulo}_\n\nhttps://${platform}.tv/${channelName}`
+Default text for youtube: `*⚠️ Vídeo novo! ⚠️*\n\n*{author}:* *{title}* \n{link}`
+
+## Confirmation modal
+Instead of the raw json of the modifications, show it formatted as HTML for better clarity
+Show the raw json in a multiarea text just for debug
+
+

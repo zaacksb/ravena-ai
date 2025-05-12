@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Gerenciamento de Grupos - RavenaBot</title>
+    <link rel="stylesheet" href="/management.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.css">
+</head>
+<body>
+    <div class="container">
+    <header class="header">
+    <div class="header-content">
+    <div class="logo">
+    <img src="bot-logo.png">
+    <h1>RavenaBot - Painel de Gerenciamento</h1>
+    </div>
+    <div class="user-info">
+    <div id="user-details">
+    <p><strong>Usuário:</strong> <span id="user-name">Carregando...</span></p>
+    <p><strong>Número:</strong> <span id="user-number">Carregando...</span></p>
+    <p><strong>Grupo:</strong> <span id="group-name">Carregando...</span></p>
+    </div>
+    <div id="session-info" title="Tempo restante da sessão">
+    <i class="fas fa-clock"></i>
+    <span id="expiration-time">Carregando...</span>
+    </div>
+    </div>
+    </div>
+    </header>
+
+    <main class="main-content">
+    <div id="loading-container">
+    <div class="loading-spinner"></div>
+    <p>Carregando dados do grupo...</p>
+    </div>
+
+    <div id="error-container" class="hidden">
+    <div class="error-icon">
+    <i class="fas fa-exclamation-triangle"></i>
+    </div>
+    <h2>Erro ao carregar os dados</h2>
+    <p id="error-message">Mensagem de erro aqui.</p>
+    <button id="retry-button" class="btn btn-primary">Tentar novamente</button>
+    </div>
+
+    <div id="group-form-container" class="hidden">
+    <h2>Configurações do Grupo</h2>
+    
+    <form id="group-form">
+    <div class="form-section">
+    <h3>Configurações Gerais</h3>
+    
+    <div class="id-date-container">
+        <div class="form-group">
+            <label for="group-id" title="ID do grupo (não editável)">ID do Grupo:</label>
+            <input type="text" id="group-id" disabled>
+        </div>
+        
+        <div class="form-group">
+            <label for="group-created-at" title="Data de criação do grupo (não editável)">Criado em:</label>
+            <input type="text" id="group-created-at" disabled>
+        </div>
+    </div>
+    
+    <div class="form-group">
+    <label for="group-name-input" title="Nome do grupo">Nome:</label>
+    <input type="text" id="group-name-input" maxlength="30">
+    </div>
+    
+    <div class="form-group">
+    <label for="group-greet-message" title="Mensagem de boas-vindas para novos membros">Mensagem de Boas-vindas:</label>
+    <textarea id="group-greet-message" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+    <label for="group-farewell-message" title="Mensagem de despedidas pra quem sai/é removido do grupo">Mensagem de Despedidas:</label>
+    <textarea id="group-farewell-message" rows="3"></textarea>
+    </div>
+
+    </div>
+    
+    <div class="form-section">
+    <h3>Configurações de Recursos</h3>
+    
+    <div class="form-group checkbox-group">
+    <input type="checkbox" id="group-isActive">
+    <label for="group-isActive" title="Grupo ativo">Bot Ativo no Grupo</label>
+    </div>
+
+    
+    <div class="form-group checkbox-group">
+    <input type="checkbox" id="group-autoTranscribe">
+    <label for="group-autoTranscribe" title="Transcreve áudios automaticamente">Auto Transcrição</label>
+    </div>
+    </div>
+    
+    <div class="form-section">
+    <h3>Filtros de Mensagens</h3>
+    <div class="form-group checkbox-group">
+    <input type="checkbox" id="group-isNSFW">
+    <label for="group-isNSFW" title="O bot tenta identificar imagens e stickers NSFW e apaga automático">Apagar conteúdo NSFW</label>
+    </div>
+
+    <div class="form-group checkbox-group">
+    <input type="checkbox" id="group-deleteLinks">
+    <label for="group-deleteLinks" title="O bot apaga mensagens que tiverem links">Apagar Links</label>
+    </div>
+
+    <div class="form-group">
+    <label for="text-filter-input" title="Apaga mensagens com estas palavras/frases">Filtros de Texto:</label>
+    <div class="input-with-button">
+    <input type="text" id="text-filter-input" list="text-filters-datalist" placeholder="Adicionar filtro de texto...">
+    <datalist id="text-filters-datalist"></datalist>
+    <button type="button" id="add-text-filter" class="btn btn-add">
+    <i class="fas fa-plus"></i>
+    </button>
+    </div>
+    <div id="text-filters-container" class="tags-container"></div>
+    </div>
+
+    
+
+    <div class="form-group">
+    <label for="people-filter-input" title="Apaga mensagens das pessoas filtradas">Filtros de Pessoas:</label>
+    <div class="input-with-button">
+    <input type="text" id="people-filter-input" list="people-filters-datalist" placeholder="Adicionar filtro de pessoa...">
+    <datalist id="people-filters-datalist"></datalist>
+    <button type="button" id="add-people-filter" class="btn btn-add">
+    <i class="fas fa-plus"></i>
+    </button>
+    </div>
+    <div id="people-filters-container" class="tags-container"></div>
+    </div>
+
+
+
+
+    </div>
+    
+    <div class="form-section">
+    <h3>Nicks (Apelidos)</h3>
+    
+    <div id="nicks-container">
+    <!-- Nick entries will be added dynamically here -->
+    <div class="nick-entry form-group">
+    <input type="text" class="nick-input" placeholder="Número (ex: 55119999)">
+    <input type="text" class="nick-value" placeholder="Nome">
+    <button type="button" class="btn btn-remove nick-remove">
+    <i class="fas fa-times"></i>
+    </button>
+    </div>
+    </div>
+    
+    <button type="button" id="add-nick" class="btn btn-secondary">
+    <i class="fas fa-plus"></i> Adicionar Nick
+    </button>
+    </div>
+    
+    <div class="form-section">
+    <h3>Configuração de Streams</h3>
+    
+    <div class="media-section" id="twitch-section">
+    <h4>Twitch</h4>
+    <div id="twitch-container" class="media-container">
+    <!-- Media items will be added dynamically here -->
+    </div>
+    </div>
+    
+    <div class="media-section" id="youtube-section">
+    <h4>YouTube</h4>
+    <div id="youtube-container" class="media-container">
+    <!-- Media items will be added dynamically here -->
+    </div>
+    </div>
+    
+    <div class="media-section" id="kick-section">
+    <h4>Kick</h4>
+    <div id="kick-container" class="media-container">
+    <!-- Media items will be added dynamically here -->
+    </div>
+    </div>
+    </div>
+    
+    <div class="form-actions">
+    <button type="button" id="save-button" class="btn btn-primary">Salvar Alterações</button>
+    </div>
+    </form>
+    </div>
+    </main>
+
+    <footer class="footer">
+    <p>&copy; 2025 RavenaBot - Todos os direitos reservados</p>
+    </footer>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal hidden">
+    <div class="modal-content">
+    <div class="modal-header">
+    <h2>Confirmar Alterações</h2>
+    <span class="close-modal">&times;</span>
+    </div>
+    <div class="modal-body">
+    <p>As seguintes alterações serão aplicadas:</p>
+    <div class="changes-formatted" id="changes-formatted"></div>
+    <p>JSON para debug:</p>
+    <div class="changes-raw" id="changes-raw"></div>
+    </div>
+    <div class="modal-footer">
+    <button id="cancel-changes" class="btn btn-secondary">Cancelar</button>
+    <button id="confirm-changes" class="btn btn-primary">Confirmar</button>
+    </div>
+    </div>
+    </div>
+
+    <!-- Media Upload Modal -->
+    <div id="media-upload-modal" class="modal hidden">
+    <div class="modal-content">
+    <div class="modal-header">
+    <h2>Adicionar Mídia</h2>
+    <span class="close-modal">&times;</span>
+    </div>
+    <div class="modal-body">
+    <div class="form-group">
+    <label for="media-platform">Plataforma:</label>
+    <select id="media-platform">
+    <option value="twitch">Twitch</option>
+    <option value="youtube">YouTube</option>
+    <option value="kick">Kick</option>
+    </select>
+    </div>
+    <div class="form-group">
+    <label for="media-channel">Canal:</label>
+    <input type="text" id="media-channel" placeholder="Nome do canal">
+    </div>
+    <div class="form-group">
+    <label for="media-type">Tipo de Mídia:</label>
+    <select id="media-type">
+    <option value="text">💬 Texto</option>
+    <option value="image">🖼 Imagem</option>
+    <option value="sound">🔉 Som</option>
+    <option value="video">📼 Vídeo</option>
+    <option value="sticker">🩻 Sticker</option>
+    </select>
+    </div>
+    <div class="form-group" id="text-content-group">
+    <label for="text-content">Conteúdo:</label>
+    <textarea id="text-content" rows="4"></textarea>
+    </div>
+    <div class="form-group hidden" id="media-file-group">
+    <label for="media-file">Arquivo (max 5MB):</label>
+    <input type="file" id="media-file" accept="image/*,video/*,audio/*">
+    <div id="media-preview-container" class="hidden">
+    <img id="media-preview" class="media-preview">
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="media-event">Evento:</label>
+    <select id="media-event">
+    <option value="on">Online/Novo Vídeo</option>
+    <option value="off">Offline</option>
+    </select>
+    </div>
+    </div>
+    <div class="modal-footer">
+    <button id="cancel-media" class="btn btn-secondary">Cancelar</button>
+    <button id="add-media" class="btn btn-primary">Adicionar</button>
+    </div>
+    </div>
+    </div>
+
+    <!-- Restore Defaults Confirmation Modal -->
+    <div id="restore-defaults-modal" class="modal hidden">
+    <div class="modal-content">
+    <div class="modal-header">
+    <h2>Restaurar Padrões</h2>
+    <span class="close-modal">&times;</span>
+    </div>
+    <div class="modal-body">
+    <p>Tem certeza que deseja restaurar as configurações padrão para este canal?</p>
+    <p>Isso irá substituir todas as configurações atuais.</p>
+    </div>
+    <div class="modal-footer">
+    <button id="cancel-restore" class="btn btn-secondary">Cancelar</button>
+    <button id="confirm-restore" class="btn btn-primary">Restaurar</button>
+    </div>
+    </div>
+    </div>
+
+    <script src="/management.js"></script>
+</body>
+</html>

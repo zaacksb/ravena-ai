@@ -173,3 +173,5 @@ data/greeted-ids.json
 /.wwebjs_cache_
 nssm-service.bat
 last-message-received.json
+data/group_updates.json
+data/webmanagement.json

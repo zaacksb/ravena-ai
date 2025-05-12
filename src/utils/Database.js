@@ -722,8 +722,6 @@ class Database {
         this.logger.debug(`[saveGroup] Novo grupo adicionado ao array`);
       }
       
-      // Atualiza cache com uma cópia profunda para evitar referências
-      this.cache.groups = JSON.parse(JSON.stringify(groups));
       
       // Marca como modificado
       this.dirtyFlags.groups = true;

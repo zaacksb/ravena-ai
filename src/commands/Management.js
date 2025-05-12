@@ -248,7 +248,11 @@ class Management {
       'variaveis': {
         method: 'listVariables',
         description: 'Lista todas as variáveis disponíveis para comandos personalizados'
-      }
+      },
+      'painel': {
+        method: 'generatePainelCommand',
+        description: 'Gera um link para gerenciar o bot via web'
+      },
     };
   }
 
@@ -5245,6 +5249,72 @@ async setWelcomeMessage(bot, message, args, group) {
   async toggleYoutubeMentions(bot, message, args, group) {
     return this.toggleStreamMentions(bot, message, args, group, 'youtube');
   }
+
+  async generatePainelCommand(bot, message, args, group) {
+    // Generate token  
+    const token = this.generateRandomToken(32);  
+    const now = new Date();  
+    const expirationMinutes = parseInt(process.env.MANAGEMENT_TOKEN_DURATION || "30");  
+    const expiration = new Date(now.getTime() + expirationMinutes * 60000);  
+      
+    // Format for display  
+    const formattedExpiration = expiration.toLocaleDateString('pt-BR', {  
+        day: '2-digit', month: '2-digit', year: 'numeric',  
+        hour: '2-digit', minute: '2-digit'  
+    });  
+  
+
+    // Save token data  
+    const webManagementData = {  
+        token,  
+        requestNumber: message.author,  
+        authorName: message.authorName || "Unknown",  
+        groupName: group.name,  
+        groupId: group.id,  
+        createdAt: now.toISOString(),  
+        expiresAt: expiration.toISOString()  
+    };  
+  
+    await this.saveWebManagementToken(webManagementData);  
+    const managementLink = `${process.env.BOT_DOMAIN}/manage/${token}`;  
+  
+    return new ReturnMessage({   
+        chatId: group.id,
+        content: `Link para gerenciamento do grupo criado com sucesso!\n\nAcesse: ${managementLink}\n\nEste link é válido até ${formattedExpiration}.`   
+    });  
+  }  
+  
+  generateRandomToken(length) {  
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';  
+      let result = '';  
+      for (let i = 0; i < length; i++) {  
+          result += characters.charAt(Math.floor(Math.random() * characters.length));  
+      }  
+      return result;  
+  }  
+  
+  async saveWebManagementToken(tokenData) {  
+      const fs = require('fs').promises;  
+      const path = require('path');  
+        
+      const dbPath = path.join(this.database.databasePath, 'webmanagement.json');  
+        
+      // Create directory if needed  
+      await fs.mkdir(path.dirname(dbPath), { recursive: true }).catch(() => {});  
+        
+      // Read existing data or create new  
+      let webManagement = [];  
+      try {  
+          const data = await fs.readFile(dbPath, 'utf8');  
+          webManagement = JSON.parse(data);  
+      } catch (error) {  
+          // File doesn't exist, start with empty array  
+      }  
+        
+      webManagement.push(tokenData);  
+      await fs.writeFile(dbPath, JSON.stringify(webManagement, null, 2), 'utf8');  
+  }  
+    
 }
 
 module.exports = Management;
