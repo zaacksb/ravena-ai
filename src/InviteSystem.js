@@ -163,6 +163,7 @@ class InviteSystem {
           // Verifica se o autor está na lista de doadores
           let isDonator = false;
           let infoMessage = "";
+          let donateValue = 0;
           
           try {
             // Obtém todas as doações
@@ -178,7 +179,10 @@ class InviteSystem {
                 if (donation.numero) {
                   // Remove caracteres especiais e espaços do número do doador
                   const cleanDonorNumber = donation.numero.replace(/[^0-9]/g, "");
-                  return cleanDonorNumber.includes(cleanAuthorId) || cleanAuthorId.includes(cleanDonorNumber);
+                  if(cleanDonorNumber.includes(cleanAuthorId) || cleanAuthorId.includes(cleanDonorNumber)){
+                    donateValue = donation.valor;
+                    return true;
+                  }
                 }
                 return false;
               });
@@ -190,7 +194,7 @@ class InviteSystem {
           // Constrói a mensagem de informações, adicionando emojis de dinheiro se for doador
           if (isDonator) {
             infoMessage = 
-              `💸💸💸💸\n` +
+              `💸💸 R$${donateValue} 💸💸\n` +
               `📩 *Nova Solicitação de Convite de Grupo*\n\n` +
               `🔗 *Link*: chat.whatsapp.com/${inviteCode}\n`+
               `👤 *De:* ${userName} (${authorId}) 💰\n\n` +

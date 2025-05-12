@@ -776,10 +776,10 @@ class CommandHandler {
       }
 
       // Apenas para adminsitradores
-      if (cmd.adminOnly) {  
+      if (command.adminOnly) {  
         const chat = await message.origin.getChat();
         const isUserAdmin = await this.adminUtils.isAdmin(message.author, group, chat, bot.client);
-        if (!isAdmin) {  
+        if (!isUserAdmin) {  
           this.logger.debug(`Comando ${command.name} requer administrador, mas o usuário não é`);
           return;
         }  
