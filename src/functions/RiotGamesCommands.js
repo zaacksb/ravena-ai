@@ -234,7 +234,7 @@ async function getWildRiftPlayerData(gameName, tagLine) {
       mastery: simulatedMasteryData
     };
   } catch (error) {
-    logger.error(`Error fetching Wild Rift data for ${gameName}#${tagLine}:`, error);
+    logger.error(`Error fetching Wild Rift data for ${gameName}#${tagLine}:`);
     throw new Error(`Não foi possível encontrar o jogador de Wild Rift "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
   }
 }
@@ -327,7 +327,7 @@ async function getValorantPlayerData(gameName, tagLine) {
       agents: simulatedAgentData
     };
   } catch (error) {
-    logger.error(`Error fetching Valorant data for ${gameName}#${tagLine}:`, error);
+    logger.error(`Error fetching Valorant data for ${gameName}#${tagLine}:`);
     throw new Error(`Não foi possível encontrar o jogador de Valorant "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
   }
 }
@@ -426,7 +426,7 @@ async function handleLolCommand(bot, message, args, group) {
     });
     
   } catch (error) {
-    logger.error('Erro ao executar comando lol:', error);
+    logger.error('Erro ao executar comando lol:');
     return new ReturnMessage({
       chatId: chatId,
       content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o invocador.'}`
@@ -485,7 +485,7 @@ async function handleWRCommand(bot, message, args, group) {
     });
     
   } catch (error) {
-    logger.error('Erro ao executar comando wr:', error);
+    logger.error('Erro ao executar comando wr:');
     return new ReturnMessage({
       chatId: chatId,
       content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o jogador.'}`
@@ -544,7 +544,7 @@ async function handleValorantCommand(bot, message, args, group) {
     });
     
   } catch (error) {
-    logger.error('Erro ao executar comando valorant:', error);
+    logger.error('Erro ao executar comando valorant:');
     return new ReturnMessage({
       chatId: chatId,
       content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o jogador.'}`

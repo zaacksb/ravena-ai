@@ -248,7 +248,7 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     
     return returnMessage;
   } catch (error) {
-    logger.error('Erro na conversão de texto para voz:', error);
+    logger.error('Erro na conversão de texto para voz:');
     const chatId = message.group || message.author;
     
     return new ReturnMessage({
@@ -430,7 +430,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     // Cria um array com a mensagem de processamento e a mensagem de resultado
     return returnMessage;
   } catch (error) {
-    logger.error('Erro na conversão de voz para texto:', error);
+    logger.error('Erro na conversão de voz para texto:');
     const chatId = message.group || message.author;
     
     return new ReturnMessage({
@@ -541,7 +541,7 @@ async function processAutoSTT(bot, message, group) {
     
     return true;
   } catch (error) {
-    logger.error('Erro no auto-STT:', error);
+    logger.error('Erro no auto-STT:');
     return false;
   }
 }

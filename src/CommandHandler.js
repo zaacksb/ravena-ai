@@ -68,7 +68,7 @@ class CommandHandler {
       
       this.logger.info('Todos os comandos carregados com sucesso');
     } catch (error) {
-      this.logger.error('Erro ao carregar comandos:', error);
+      this.logger.error('Erro ao carregar comandos:', error.message ?? "xxx");
     }
   }
 
@@ -90,7 +90,7 @@ class CommandHandler {
         //this.logger.debug(`Nenhum comando personalizado encontrado para o grupo ${groupId}`);
       }
     } catch (error) {
-      this.logger.error(`Erro ao carregar comandos personalizados para o grupo ${groupId}:`, error);
+      this.logger.error(`Erro ao carregar comandos personalizados para o grupo ${groupId}:`, error.message ?? "xxx");
       this.customCommands[groupId] = [];
     }
   }
@@ -107,14 +107,14 @@ class CommandHandler {
         this.logger.info(`Cooldowns carregados: ${Object.keys(this.cooldowns).length} grupos`);
       } catch (error) {
         if (error.code !== 'ENOENT') {
-          this.logger.error('Erro ao carregar cooldowns:', error);
+          this.logger.error('Erro ao carregar cooldowns:', error.message ?? "xxx");
         } else {
           this.logger.info('Arquivo de cooldowns não encontrado, iniciando com cooldowns vazios');
         }
         this.cooldowns = {};
       }
     } catch (error) {
-      this.logger.error('Erro ao inicializar cooldowns:', error);
+      this.logger.error('Erro ao inicializar cooldowns:', error.message ?? "xxx");
       this.cooldowns = {};
     }
   }
@@ -138,7 +138,7 @@ class CommandHandler {
       this.cooldownsLastSaved = Date.now();
       this.logger.debug('Cooldowns salvos com sucesso');
     } catch (error) {
-      this.logger.error('Erro ao salvar cooldowns:', error);
+      this.logger.error('Erro ao salvar cooldowns:', error.message ?? "xxx");
     }
   }
 
@@ -235,7 +235,7 @@ class CommandHandler {
     // Salva cooldowns a cada minuto
     if (Date.now() - this.cooldownsLastSaved > 60000) {
       this.saveCooldowns().catch(error => {
-        this.logger.error('Erro ao salvar cooldowns:', error);
+        this.logger.error('Erro ao salvar cooldowns:', error.message ?? "xxx");
       });
     }
   }
@@ -271,7 +271,7 @@ class CommandHandler {
         this.cooldownMessages[cooldownMsgKey] = now;
       }
     } catch (error) {
-      this.logger.error('Erro ao enviar mensagem de cooldown:', error);
+      this.logger.error('Erro ao enviar mensagem de cooldown:', error.message ?? "xxx");
     }
   }
 
@@ -386,7 +386,7 @@ class CommandHandler {
   delayedReaction(msg, emoji, delay){
     setTimeout((m,e) => {
       m.react(e).catch(reactError => {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError);
+        this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
       });
     }, delay, msg, emoji);
   }
@@ -443,12 +443,12 @@ class CommandHandler {
     
       // Processa comando normalmente
       this.processCommand(bot, message, command, args, group).catch(error => {
-        this.logger.error('Erro em processCommand:', error);
+        this.logger.error('Erro em processCommand:', error.message ?? "xxx");
       });
       
       // Nota: Não esperamos processCommand para evitar bloquear a thread de eventos
     } catch (error) {
-      this.logger.error('Erro ao manipular comando:', error);
+      this.logger.error('Erro ao manipular comando:', error.message ?? "xxx");
     }
   }
 
@@ -649,7 +649,7 @@ class CommandHandler {
         // Usa emoji de reação padrão
         await message.origin.react(this.defaultReactions.before);
       } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "antes":', reactError);
+        this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
       }
       
       // Comandos de gerenciamento regulares requerem um grupo
@@ -735,11 +735,11 @@ class CommandHandler {
       try {
         await message.origin.react(this.defaultReactions.after);
       } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "depois":', reactError);
+        this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");;
       }
       
     } catch (error) {
-      this.logger.error('Erro ao processar comando de gerenciamento:', error);
+      this.logger.error('Erro ao processar comando de gerenciamento:', error.message ?? "xxx");
       
       const responseChatId = message.managementResponseChatId || message.group || message.author;
       const returnMessage = new ReturnMessage({
@@ -818,7 +818,7 @@ class CommandHandler {
         try {
           await message.origin.react("🕒");
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "indisponível":', reactError);
+          this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");;
         }
         
         const chatId = message.group || message.author;
@@ -846,7 +846,7 @@ class CommandHandler {
         try {
           await message.origin.react(command.reactions?.before);
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "antes":', reactError);
+          this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
         }
       }
       
@@ -889,11 +889,11 @@ class CommandHandler {
         try {
           await message.origin.react(afterEmoji);
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "depois":', reactError);
+          this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");;
         }
       }
     } catch (error) {
-      this.logger.error(`Erro ao executar comando fixo ${command.name}:`, error);
+      this.logger.error(`Erro ao executar comando fixo ${command.name}:`, error.message ?? "xxx");
       
       const chatId = message.group || message.author;
       const errorEmoji = command.reactions?.error || this.defaultReactions.error;
@@ -967,7 +967,7 @@ class CommandHandler {
           try {
             await message.origin.react("⛔️");
           } catch (reactError) {
-            this.logger.error('Erro ao aplicar reação "indisponível":', reactError);
+            this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");;
           }
           
           const returnMessage = new ReturnMessage({
@@ -986,7 +986,7 @@ class CommandHandler {
         try {
           await message.origin.react("🕒");
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "indisponível":', reactError);
+          this.logger.error('Erro ao aplicar reação "indisponível":', reactError.message ?? "xxx");;
         }
         
         const returnMessage = new ReturnMessage({
@@ -1012,7 +1012,7 @@ class CommandHandler {
         try {
           await message.origin.react(command.reactions?.before);
         } catch (reactError) {
-          this.logger.error('Erro ao aplicar reação "antes":', reactError);
+          this.logger.error('Erro ao aplicar reação "antes":', reactError.message ?? "xxx");;
         }
       }
       
@@ -1028,7 +1028,7 @@ class CommandHandler {
           this.logger.debug(`Reagindo à mensagem com: ${command.react}`);
           await message.origin.react(command.react);
         } catch (error) {
-          this.logger.error('Erro ao reagir à mensagem:', error);
+          this.logger.error('Erro ao reagir à mensagem:', error.message ?? "xxx");
         }
       }
       
@@ -1068,11 +1068,11 @@ class CommandHandler {
           await message.origin.react(afterEmoji);
         }
       } catch (reactError) {
-        this.logger.error('Erro ao aplicar reação "depois":', reactError);
+        this.logger.error('Erro ao aplicar reação "depois":', reactError.message ?? "xxx");;
       }
       
     } catch (error) {
-      this.logger.error(`Erro ao executar comando personalizado ${command.startsWith}:`, error);
+      this.logger.error(`Erro ao executar comando personalizado ${command.startsWith}:`, error.message ?? "xxx");
       
       const errorEmoji = command.reactions?.error || "❌";
       const returnMessage = new ReturnMessage({
@@ -1203,7 +1203,7 @@ class CommandHandler {
             }
           });
         } catch (error) {
-          this.logger.error(`Erro ao enviar resposta de mídia (${mediaPath}):`, error);
+          this.logger.error(`Erro ao enviar resposta de mídia (${mediaPath}):`, error.message ?? "xxx");
           
           return new ReturnMessage({
             chatId: message.group,
@@ -1223,7 +1223,7 @@ class CommandHandler {
         });
       }
     } catch (error) {
-      this.logger.error('Erro ao processar resposta de comando personalizado:', error);
+      this.logger.error('Erro ao processar resposta de comando personalizado:', error.message ?? "xxx");
       return null;
     }
   }
@@ -1294,7 +1294,7 @@ class CommandHandler {
           this.logger.debug(`Encontrado comando auto-acionado: ${command.startsWith}`);
           // Executa o comando, mas não espera para evitar bloqueio
           this.executeCustomCommand(bot, message, command, [], group).catch(error => {
-            this.logger.error(`Erro no comando auto-acionado ${command.startsWith}:`, error);
+            this.logger.error(`Erro no comando auto-acionado ${command.startsWith}:`, error.message ?? "xxx");
           });
           break; // Executa apenas o primeiro comando correspondente
         }
@@ -1302,7 +1302,7 @@ class CommandHandler {
       
       //this.logger.debug(`Verificação de comando auto-acionado concluída para o grupo ${group.id}`);
     } catch (error) {
-      this.logger.error('Erro ao verificar comandos auto-acionados:', error);
+      this.logger.error('Erro ao verificar comandos auto-acionados:', error.message ?? "xxx");
     }
   }
   
