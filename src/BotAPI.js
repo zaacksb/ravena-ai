@@ -264,9 +264,11 @@ class BotAPI {
         }
         
         // Extrai detalhes da doação
-        const nome = req.body.payload.tip.name || "Alguém";
+        let nome = req.body.payload.tip.name || "Alguém";
         const valor = parseFloat(req.body.payload.tip.amount) || 0;
         const msg = req.body.payload.tip.message || "";
+
+        nome = nome.trim();
         
         if (valor <= 0) {
           this.logger.warn(`Valor de doação inválido: ${valor}`);
@@ -597,6 +599,19 @@ class BotAPI {
 
 
     // Serve media files
+    this.app.get('/qrcode/:botId', async (req, res) => {
+      const { botId } = req.params;    
+      const filePath = path.join(this.database.databasePath, `qrcode_${botId}.png`);
+
+      await fs.access(filePath).catch(() => {  
+          return res.status(404).send(`QRCode para '${botId}' não disponível.`);  
+      });  
+                
+      res.setHeader("Content-Type", "image/png");  
+      res.sendFile(filePath); 
+    });
+
+
     this.app.get('/media/:platform/:channel/:event/:type', async (req, res) => {  
         const { platform, channel, event, type } = req.params;  
         const token = req.query.token;  

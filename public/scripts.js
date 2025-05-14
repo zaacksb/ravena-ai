@@ -223,15 +223,20 @@ function renderBots(data) {
         const botCard = document.createElement('div');
         botCard.className = 'bot-card';
         
-        let restartButtonHtml = '';
+        let buttonsHtml = '';
         if (isAdminMode) {
-            restartButtonHtml = `
+            buttonsHtml = `
                 <div class="detail-item" style="margin-top: 15px; justify-content: center;">
-                    <button class="restart-button" data-bot-id="${bot.id}">
+                    <button class="admin-button" id="restart-button" data-bot-id="${bot.id}">
                         🔄 Reiniciar Bot
+                    </button>
+
+                    <button class="admin-button" id="qr-button" data-bot-id="${bot.id}">
+                        🔳 QRCode
                     </button>
                 </div>
             `;
+
         }
         
         botCard.innerHTML = `
@@ -279,7 +284,7 @@ function renderBots(data) {
                         <span class="tooltip-text">Delay máximo: ${maxResponseTime}s</span>
                     </span>
                 </div>
-                ${restartButtonHtml}
+                ${buttonsHtml}
             </div>
         `;
         
@@ -289,11 +294,19 @@ function renderBots(data) {
         if (isAdminMode) {
             const restartButton = botCard.querySelector('.restart-button');
             restartButton.addEventListener('click', () => openRestartModal(bot.id));
+            const qrButton = botCard.querySelector('.qr-button');
+            qrButton.addEventListener('click', () => openQRModal(bot.id));
+
         }
     });
 }
 
 // Função para abrir modal de reinicialização
+
+function openQRModal(botId){
+    window.open(`/qrcode/${botId}`,"_new");
+}
+
 function openRestartModal(botId) {
     const modal = document.getElementById('restartModal');
     const modalBotId = document.getElementById('modalBotId');

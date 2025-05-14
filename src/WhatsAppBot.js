@@ -1,5 +1,6 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const qrimg = require('qr-image');
 const Database = require('./utils/Database');
 const Logger = require('./utils/Logger');
 const path = require('path');
@@ -143,7 +144,11 @@ class WhatsAppBot {
   registerEventHandlers() {
     // Evento de QR Code
     this.client.on('qr', (qr) => {
-      this.logger.info(`QR Code recebido, escaneie para autenticar a '${this.id}'`);
+      const qrCodeLocal = path.join(this.database.databasePath, `qrcode_${this.id}.png`);
+      let qr_png = qrimg.image(qr, { type: 'png' });
+      qr_png.pipe(fs.createWriteStream(qrCodeLocal));
+
+      this.logger.info(`QR Code recebido, escaneie para autenticar a '${this.id}'\n\t-> ${qrCodeLocal}`);
       qrcode.generate(qr, { small: true });
       this.logger.info(`------------ qrcode '${this.id}' -----------`);
     });

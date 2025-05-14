@@ -145,7 +145,8 @@ async function showTopDonors(bot, message, args, group) {
     let donorsMsg = await readDonationHeader();
     
     topDonors.forEach((donor, index) => {
-      donorsMsg += `${index + 1}. *${donor.nome}*: R$${donor.valor.toFixed(2)}\n`;
+      let emjNumero = (donor.numero?.length > 5) ? "" : " ❗️";
+      donorsMsg += `${index + 1}. *${donor.nome}*: R$${donor.valor.toFixed(2)}${emjNumero}\n`;
     });
     
     donorsMsg += await readDonationFooter();

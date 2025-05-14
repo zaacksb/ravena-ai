@@ -709,7 +709,7 @@ class StreamMonitor extends EventEmitter {
         }
       } catch (error) {
         // Verifica se é um erro 404 (canal não encontrado)
-        if (error.response && error.response.status === 404) {
+        if (false && error.response && error.response.status === 404) {
           this.logger.warn(`Canal do YouTube não encontrado: '${channel.name}'. Removendo do monitoramento.`);
           
           // Remove o canal do monitoramento
