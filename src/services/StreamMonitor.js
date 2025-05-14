@@ -570,7 +570,12 @@ class StreamMonitor extends EventEmitter {
    */
    async getYtChannelID(channel){
     const channelsIdCachePath = path.join(this.database.databasePath, "yt-channelsID-cache.json");
-    const channelsIdCache = JSON.parse(await fs.readFileSync(channelsIdCachePath, 'utf8')) ?? {};
+
+    if (!fs.existsSync(channelsIdCachePath)) {
+      fs.writeFileSync(channelsIdCachePath, "{}");
+    }
+
+    const channelsIdCache = JSON.parse(fs.readFileSync(channelsIdCachePath, 'utf8')) ?? {};
     
     if(channelsIdCache[channel]){
       this.logger.debug(`[getYtChannelID][cache] ${channel} => ${channelsIdCache[channel]}`);
@@ -586,16 +591,14 @@ class StreamMonitor extends EventEmitter {
         let exID = this.extractChannelID(resolveResponse.data);
 
         if(exID){
-          this.logger.debug(`[getYtChannelID] Extraido ID do canal '${channel}': ${channelId}`);
+          this.logger.debug(`[getYtChannelID] Extraido ID do canal '${channel}': ${exID}`);
           channelsIdCache[channel] = exID;
-          fs.writeFileSync(channelsIdCachePath, channelsIdCache, 'utf8');
+          fs.writeFileSync(channelsIdCachePath, JSON.stringify(channelsIdCache, null, "\t"), 'utf8');
           return exID;
         }
 
       } catch (error) {
-        // If we can't resolve, just continue with the name
         this.logger.error(`[getYtChannelID] Error tentando buscar YouTube channel ID para '${chUrl}':`, error.message);
-        return null;
       }
     }
 
@@ -613,7 +616,7 @@ class StreamMonitor extends EventEmitter {
         
         // If it's not a channel ID format, try to resolve it
         if (!channelId.startsWith('UC')) {
-          this.logger.debug(`[getYtChannelID] ${channelId} não é ID, vou tentar buscar: ${chUrl}`);
+          this.logger.debug(`[getYtChannelID] ${channelId} não é ID, vou tentar buscar`);
           channelId = await this.getYtChannelID(channelId) ?? channelId;
         }
 
