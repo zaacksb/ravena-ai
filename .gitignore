@@ -175,3 +175,16 @@ nssm-service.bat
 last-message-received.json
 data/group_updates.json
 data/webmanagement.json
+data/twitch-batch1-errors.json
+data/twitch-batch2-errors.json
+data/twitch-batch3-errors.json
+data/twitch-batch4-errors.json
+data/twitch-batch5-errors.json
+data/twitch-batch6-errors.json
+data/twitch-batch7-errors.json
+data/twitch-batch8-errors.json
+data/twitch-batch9-errors.json
+data/twitch-batch10-errors.json
+data/twitch-batch11-errors.json
+data/twitch-batch12-errors.json
+
