@@ -251,8 +251,12 @@ class StreamMonitor extends EventEmitter {
   }
 
   logErrorToFile(filename, error){
-    const logErrorFile = path.join(this.database.databasePath, filename);
-    fs.writeFileSync(logErrorFile, error, 'utf8');
+    try{
+      const logErrorFile = path.join(this.database.databasePath, filename);
+      fs.writeFileSync(logErrorFile, error, 'utf8');
+    } catch(e){
+      this.logger.error(`[logErrorFile] Erro gravando log em arquivo`, e.message);
+    }
   }
 
    /**
@@ -445,14 +449,14 @@ class StreamMonitor extends EventEmitter {
         if (error.response && error.response.status === 401) {
           await this._refreshTwitchToken();
         } else {
-          this.logger.error('Error polling Twitch channels:', error.message);
-          logErrorToFile(`twitch-batch${bAt}-error.json`, error);
-          logErrorToFile(`twitch-batch${bAt}-errors.json`, JSON.stringify(error, null, "\t"));
           failedBatches.push(batch);
+          this.logger.error('Error polling Twitch channels, adding to failed batch:', error.message);
+          this.logErrorToFile(`twitch-batch${bAt}-error.json`, error);
+          this.logErrorToFile(`twitch-batch${bAt}-errors.json`, JSON.stringify(error, null, "\t"));
         }
       }
 
-      await sleep(5000);
+      await sleep(3000);
     }
 
     if(failedBatches.length > 0){
@@ -564,6 +568,40 @@ class StreamMonitor extends EventEmitter {
    * Poll YouTube channels for status updates and new videos
    * @private
    */
+   async getYtChannelID(channel){
+    const channelsIdCachePath = path.join(this.database.databasePath, "yt-channelsID-cache.json");
+    const channelsIdCache = JSON.parse(await fs.readFileSync(channelsIdCachePath, 'utf8')) ?? {};
+    
+    if(channelsIdCache[channel]){
+      this.logger.debug(`[getYtChannelID][cache] ${channel} => ${channelsIdCache[channel]}`);
+      return channelsIdCache[channel];
+    }
+
+    const chUrls = [`https://www.youtube.com/c/${channel}`, `https://www.youtube.com/@${channel}`];
+    for(let chUrl of chUrls){
+      try {
+        this.logger.debug(`[getYtChannelID] Tentando: ${chUrl}`);
+        const resolveResponse = await axios.get(chUrl);
+        
+        let exID = this.extractChannelID(resolveResponse.data);
+
+        if(exID){
+          this.logger.debug(`[getYtChannelID] Extraido ID do canal '${channel}': ${channelId}`);
+          channelsIdCache[channel] = exID;
+          fs.writeFileSync(channelsIdCachePath, channelsIdCache, 'utf8');
+          return exID;
+        }
+
+      } catch (error) {
+        // If we can't resolve, just continue with the name
+        this.logger.error(`[getYtChannelID] Error tentando buscar YouTube channel ID para '${chUrl}':`, error.message);
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   async _pollYoutubeChannels() {
     const youtubeChannels = this.channels.filter(c => c.source.toLowerCase() === 'youtube');
     if (youtubeChannels.length === 0) return;
@@ -575,20 +613,8 @@ class StreamMonitor extends EventEmitter {
         
         // If it's not a channel ID format, try to resolve it
         if (!channelId.startsWith('UC')) {
-          const chUrls = [`https://www.youtube.com/c/${channel.name}`, `https://www.youtube.com/@${channel.name}`];
-          for(let chUrl of chUrls){
-            try {
-              this.logger.debug(`[_pollYoutubeChannels] ${channelId} não é ID, vou tentar buscar: ${chUrl}`);
-              const resolveResponse = await axios.get(chUrl);
-              
-              channelId = this.extractChannelID(resolveResponse.data) ?? channel.name;
-              this.logger.debug(`[_pollYoutubeChannels] Extraido ID do canal '${channel.name}': ${channelId}`);
-
-            } catch (error) {
-              // If we can't resolve, just continue with the name
-              this.logger.error(`[_pollYoutubeChannels] Error tentando buscar YouTube channel ID para '${chUrl}':`, error.message);
-            }
-          }
+          this.logger.debug(`[getYtChannelID] ${channelId} não é ID, vou tentar buscar: ${chUrl}`);
+          channelId = await this.getYtChannelID(channelId) ?? channelId;
         }
 
         this.logger.debug(`[_pollYoutubeChannels] Buscando videos para o channelID: ${channelId}`);
