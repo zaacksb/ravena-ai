@@ -39,6 +39,7 @@ class WhatsAppBot {
     this.otherBots = options.otherBots || [];
     
     // Novas propriedades para notificações de grupos da comunidade
+    this.ignorePV = options.ignorePV || false;
     this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
     this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
     this.grupoAvisos = options.grupoAvisos || process.env.GRUPO_AVISOS;
@@ -230,7 +231,7 @@ class WhatsAppBot {
         this.logger.debug(`Descartando mensagem recebida durante período inicial de ${this.id}`);
         return;
       }
-
+      
       this.lastMessageReceived = Date.now();
 
       // Calcula tempo de resposta

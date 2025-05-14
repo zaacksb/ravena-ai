@@ -592,6 +592,11 @@ class CommandHandler {
       this.logger.info(`[${gidDebug}][${message.author}/${message.authorName}] Ignorando comando em grupo pausado (${command})`);
       return;
     }
+
+    // Verifica se o bot deve ignorar mensagens no PV
+    if(bot.ignorePV && message.group === null){ // Recebeu mensagem no PV
+      return;
+    }
     
     // Verifica se é um comando fixo
     const fixedCommand = this.fixedCommands.getCommand(command);
