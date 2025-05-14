@@ -449,6 +449,11 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
  */
 async function processAutoSTT(bot, message, group) {
   try {
+
+    if(!message.group && bot.ignorePV){
+       return false;
+    }
+    
     const idChat = message.group ?? message.author;
     // Pula se não for mensagem de voz/áudio
     if (message.type !== 'voice' && message.type !== 'audio') {

@@ -300,7 +300,7 @@ class EventHandler {
     const processed = await SpeechCommands.processAutoSTT(bot, message, group);
     if (processed) return;
 
-    if (!group) {
+    if (!group && !bot.ignorePV) {
       const stickerProcessed = await Stickers.processAutoSticker(bot, message, group);
       if (stickerProcessed) return;
     }
