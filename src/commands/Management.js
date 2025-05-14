@@ -209,6 +209,10 @@ class Management {
         method: 'toggleKickAI',
         description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
       },
+      'kick-usarThumbnail': {
+        method: 'toggleKickThumbnail',
+        description: 'Ativa/desativa o envio da thumbnail da stream junto com o texto'
+      },
       'kick-marcar': {
         method: 'toggleKickMentions',
         description: 'Ativa/desativa menção a todos os membros nas notificações de canal do Kick'
@@ -240,6 +244,10 @@ class Management {
       'youtube-usarIA': {
         method: 'toggleYoutubeAI',
         description: 'Ativa/desativa uso de IA para gerar mensagens de notificação'
+      },
+      'youtube-usarThumbnail': {
+        method: 'toggleYoutubeThumbnail',
+        description: 'Ativa/desativa o envio da thumbnail da stream junto com o texto'
       },
       'youtube-marcar': {
         method: 'toggleYoutubeMentions',
@@ -2496,8 +2504,95 @@ async setWelcomeMessage(bot, message, args, group) {
       chatId: group.id,
       content: `O bot agora ${status} junto a thumbnail da stream do canal ${channelName}.\n\n` 
     });
-    
   }
+  async toggleKickThumbnail(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Validate and get channel name
+    const channelName = await this.validateChannelName(bot, message, args, group, 'kick');
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, 'kick', channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal da Kick não configurado: ${channelName}. Use !g-kick-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Toggle the setting
+    if(!channelConfig.useThumbnail){
+      channelConfig.useThumbnail = true;
+    } else {
+      channelConfig.useThumbnail = false;
+    }
+    
+    await this.database.saveGroup(group);
+    
+    const status = channelConfig.useThumbnail ? 'irá enviar' : 'não irá enviar';
+    
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `O bot agora ${status} junto a thumbnail da stream do canal ${channelName}.\n\n` 
+    });
+  }
+  async toggleYoutubeThumbnail(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Validate and get channel name
+    const channelName = await this.validateChannelName(bot, message, args, group, 'youtube');
+    
+    // If validateChannelName returned a ReturnMessage, return it
+    if (channelName instanceof ReturnMessage) {
+      return channelName;
+    }
+    
+    // Find the channel configuration
+    const channelConfig = this.findChannelConfig(group, 'youtube', channelName);
+    
+    if (!channelConfig) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Canal do Youtube não configurado: ${channelName}. Use !g-youtube-canal ${channelName} para configurar.`
+      });
+    }
+    
+    // Toggle the setting
+    if(!channelConfig.useThumbnail){
+      channelConfig.useThumbnail = true;
+    } else {
+      channelConfig.useThumbnail = false;
+    }
+    
+    await this.database.saveGroup(group);
+    
+    const status = channelConfig.useThumbnail ? 'irá enviar' : 'não irá enviar';
+    
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `O bot agora ${status} junto a thumbnail da stream/video do canal ${channelName}.\n\n` 
+    });
+  }
+
+
   /**
    * Toggles AI generated messages for stream events
    * @param {WhatsAppBot} bot - The bot instance
@@ -3191,7 +3286,8 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
-    const channelName = args[0].includes("/") ? args[0].split("/").at(-1) : args[0];
+    let channelName = args[0].includes("/") ? args[0].split("/").at(-1) : args[0];
+    channelName = channelName.replace("@", "");
 
     // Get current channels
     const channels = this.getChannelConfig(group, 'youtube');
@@ -3223,8 +3319,9 @@ async setWelcomeMessage(bot, message, args, group) {
         offConfig: {
           media: []
         },
-        changeTitleOnEvent: true,
-        useAI: false
+        changeTitleOnEvent: false,
+        useAI: false,
+        useThumbnail: true
       };
       
       channels.push(newChannel);

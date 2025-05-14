@@ -530,6 +530,36 @@ class StreamMonitor extends EventEmitter {
     this._saveDatabase();
   }
 
+  extractChannelID(html) {
+    // Regular expression to match YouTube channel URLs
+    const regex = /youtube\.com\/channel\/(UC[\w-]+)/g;
+    
+    // Find all matches
+    const matches = [...html.matchAll(regex)];
+    
+    // Extract channel IDs
+    const channelIDs = matches.map(match => match[1]);
+    
+    // Count occurrences of each channel ID
+    const counts = {};
+    channelIDs.forEach(id => {
+      counts[id] = (counts[id] || 0) + 1;
+    });
+    
+    // Find the ID with the highest count
+    let mostFrequentID = null;
+    let highestCount = 0;
+    
+    for (const [id, count] of Object.entries(counts)) {
+      if (count > highestCount) {
+        highestCount = count;
+        mostFrequentID = id;
+      }
+    }
+    
+    return mostFrequentID;
+  }
+
   /**
    * Poll YouTube channels for status updates and new videos
    * @private
@@ -545,29 +575,21 @@ class StreamMonitor extends EventEmitter {
         
         // If it's not a channel ID format, try to resolve it
         if (!channelId.startsWith('UC')) {
-          try {
-            const chUrl = `https://www.youtube.com/c/${channel.name}`;
-            this.logger.debug(`[_pollYoutubeChannels] ${channelId} não é ID, vou tentar buscar: ${chUrl}`);
-            const resolveResponse = await axios.get(chUrl);
-            const html = resolveResponse.data;
-            const root = parse(html);
-            this.logger.debug(html);
-            const metaTag = root.querySelector('meta[itemprop="channelId"]');
-            if (metaTag) {
-              channelId = metaTag.getAttribute('content');
-            } else {
-              // Try alternative method - find in page source
-              const match = html.match(/"channelId":"([^"]+)"/);
-              if (match && match[1]) {
-                channelId = match[1];
-              }
+          const chUrls = [`https://www.youtube.com/c/${channel.name}`, `https://www.youtube.com/@${channel.name}`];
+          for(let chUrl of chUrls){
+            try {
+              this.logger.debug(`[_pollYoutubeChannels] ${channelId} não é ID, vou tentar buscar: ${chUrl}`);
+              const resolveResponse = await axios.get(chUrl);
+              
+              channelId = this.extractChannelID(resolveResponse.data) ?? channel.name;
+              this.logger.debug(`[_pollYoutubeChannels] Extraido ID do canal '${channel.name}': ${channelId}`);
+
+            } catch (error) {
+              // If we can't resolve, just continue with the name
+              this.logger.error(`[_pollYoutubeChannels] Error tentando buscar YouTube channel ID para '${chUrl}':`, error.message);
             }
-          } catch (error) {
-            // If we can't resolve, just continue with the name
-            this.logger.error(`[_pollYoutubeChannels] Error tentando buscar YouTube channel ID '${channel.name}':`, error.message);
           }
         }
-
 
         this.logger.debug(`[_pollYoutubeChannels] Buscando videos para o channelID: ${channelId}`);
         

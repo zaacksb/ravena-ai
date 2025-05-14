@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addChannelBtn.type = 'button';
         addChannelBtn.id = `add-${platform}-channel`;
         addChannelBtn.className = 'btn btn-secondary';
-        addChannelBtn.innerHTML = `<i class="fas fa-plus"></i> Adicionar Canal 'Twitch'`;
+        addChannelBtn.innerHTML = `<i class="fas fa-plus"></i> Adicionar Canal '${platform}'`;
         
         container.appendChild(addChannelBtn);
         
@@ -476,8 +476,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create default text content based on platform
         let defaultText = '';
         
+        let changeTitle = true/
         if (platform === 'youtube') {
             defaultText = `*⚠️ Vídeo novo! ⚠️*\n\n*{author}:* *{title}* \n{link}`;
+            changeTitle = false;
         } else {
             defaultText = `⚠️ ATENÇÃO!⚠️\n\n🌟 *${channelName}* ✨ está *online* streamando *{jogo}*!\n_{titulo}_\n\nhttps://${platform}.tv/${channelName}`;
         }
@@ -493,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
             offConfig: {
                 media: []
             },
-            changeTitleOnEvent: true,
+            changeTitleOnEvent: changeTitle,
             useThumbnail: true,
             useAI: false
         };
