@@ -492,7 +492,7 @@ function applyItemEffect(userData, item) {
           break;
           
         case 'extra_baits':
-          userData.baits = Math.min(userData.baits + item.value, MAX_BAITS);
+          userData.baits = userData.baits + item.value;
           effectMessage = `\n\n${item.emoji} Você encontrou um ${item.name}! +${item.value} iscas adicionadas (${userData.baits}/${MAX_BAITS}).`;
           break;
       }

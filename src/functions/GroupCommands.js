@@ -297,6 +297,36 @@ const commands = [
     method: mentionAllMembers
   }),
   new Command({
+    name: 'atenção',
+    cooldown: 300,
+    description: 'Menciona todos os membros do grupo',
+    category: 'grupo',
+    group: "attention",
+    adminOnly: true,
+    hidden: true,
+    reactions: {
+      trigger: "📢", 
+      before: "📢",
+      after: "✅"
+    },
+    method: mentionAllMembers
+  }),
+  new Command({
+    name: 'atençao',
+    cooldown: 300,
+    description: 'Menciona todos os membros do grupo',
+    category: 'grupo',
+    group: "attention",
+    adminOnly: true,
+    hidden: true,
+    reactions: {
+      trigger: "📢", 
+      before: "📢",
+      after: "✅"
+    },
+    method: mentionAllMembers
+  }),
+  new Command({
     name: 'galera',
     cooldown: 300,
     description: 'Menciona todos os membros do grupo',
