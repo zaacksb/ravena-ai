@@ -546,9 +546,12 @@ class StreamMonitor extends EventEmitter {
         // If it's not a channel ID format, try to resolve it
         if (!channelId.startsWith('UC')) {
           try {
-            const resolveResponse = await axios.get(`https://www.youtube.com/c/${channel.name}`);
+            const chUrl = `https://www.youtube.com/c/${channel.name}`;
+            this.logger.debug(`[_pollYoutubeChannels] ${channelId} não é ID, vou tentar buscar: ${chUrl}`);
+            const resolveResponse = await axios.get(chUrl);
             const html = resolveResponse.data;
             const root = parse(html);
+            this.logger.debug(html);
             const metaTag = root.querySelector('meta[itemprop="channelId"]');
             if (metaTag) {
               channelId = metaTag.getAttribute('content');
@@ -561,9 +564,12 @@ class StreamMonitor extends EventEmitter {
             }
           } catch (error) {
             // If we can't resolve, just continue with the name
-            this.logger.error(`Error resolving YouTube channel ID for ${channel.name}:`, error.message);
+            this.logger.error(`[_pollYoutubeChannels] Error tentando buscar YouTube channel ID '${channel.name}':`, error.message);
           }
         }
+
+
+        this.logger.debug(`[_pollYoutubeChannels] Buscando videos para o channelID: ${channelId}`);
         
         // Get channel info and latest videos using RSS feed
         const response = await axios.get(
@@ -682,7 +688,7 @@ class StreamMonitor extends EventEmitter {
       } catch (error) {
         // Verifica se é um erro 404 (canal não encontrado)
         if (error.response && error.response.status === 404) {
-          this.logger.warn(`Canal do YouTube não encontrado: ${channel.name}. Removendo do monitoramento.`);
+          this.logger.warn(`Canal do YouTube não encontrado: '${channel.name}'. Removendo do monitoramento.`);
           
           // Remove o canal do monitoramento
           this.unsubscribe(channel.name, 'youtube');

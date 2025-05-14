@@ -3191,8 +3191,8 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
-    const channelName = args[0];
-    
+    const channelName = args[0].includes("/") ? args[0].split("/").at(-1) : args[0];
+
     // Get current channels
     const channels = this.getChannelConfig(group, 'youtube');
     
