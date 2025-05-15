@@ -97,18 +97,21 @@ async function conviteCommand(bot, message, args, group) {
     const invitesPosPath = path.join(database.databasePath, 'textos', 'invites_pos.txt');
     const posConvite = await fs.readFile(invitesPosPath, 'utf8');
 
-
-    return [
+    const todas = [
       new ReturnMessage({
         chatId: chatId,
-        content: `${headerConvite}${footerConvite}`
-      }),
-      new ReturnMessage({
+        content: `${headerConvite}${footerConvite}\n\n${bot.rndString()}`
+    })];
+
+    if(posConvite.length > 5){
+      todas.push(new ReturnMessage({
         chatId: chatId,
         content: posConvite, 
         delay: 1000
-      })
-    ];
+      })) 
+    }
+
+    return todas;
   } catch (error) {
     logger.warn('Erro ao ler invites_xxx.txt:', error);
     return [

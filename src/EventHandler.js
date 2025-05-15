@@ -128,13 +128,14 @@ class EventHandler {
       // Verifica links de convite em chats privados
       if (!message.group) {
         // Verifica se é uma mensagem de link de convite
-        const isInviteHandled = await bot.inviteSystem.processMessage(message);
-        if (isInviteHandled) return;
-        
-        // Verifica se é uma mensagem de acompanhamento para um convite
-        const isFollowUpHandled = await bot.inviteSystem.processFollowUpMessage(message);
-        if (isFollowUpHandled) return;
-
+        if(!bot.ignoreInvites){
+          const isInviteHandled = await bot.inviteSystem.processMessage(message);
+          if (isInviteHandled) return;
+          
+          // Verifica se é uma mensagem de acompanhamento para um convite
+          const isFollowUpHandled = await bot.inviteSystem.processFollowUpMessage(message);
+          if (isFollowUpHandled) return;
+        }
       }
       
       // Processa saudação para novos usuários no PV

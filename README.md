@@ -344,21 +344,6 @@ Começam com `!g-` e são usados para configurar o bot e o grupo:
 - `!g-filtro-nsfw`: Ativa/desativa filtro de conteúdo NSFW
 - `!g-pausar`: Pausa/retoma todas as atividades do bot no grupo
 
-### 4. Comandos de SuperAdmin
-
-Começam com `!sa-` e são comandos com privilégios especiais que só podem ser executados pelo número principal administrador do bot ou por números definidos como SuperAdmin:
-
-- `!sa-join <grupo>`: Faz o bot entrar em um grupo via link de convite
-- `!sa-block <número>`: Bloqueia um número em todos os grupos
-- `!sa-unblock <número>`: Desbloqueia um número previamente bloqueado
-- `!sa-status`: Mostra informações de status sobre o bot
-- `!sa-broadcast <mensagem>`: Envia uma mensagem para todos os grupos
-- `!sa-restart`: Reinicia o bot
-- `!sa-update`: Atualiza o código do bot a partir do repositório
-- `!sa-eval <código>`: Executa código JavaScript (perigoso, apenas para debugging)
-
-Estes comandos são de uso restrito e servem para funções administrativas globais, afetando o bot como um todo, ao contrário dos comandos de gerenciamento que atuam apenas no contexto de um grupo específico.
-
 
 ## 🧩 Criando Novos Comandos
 

@@ -510,6 +510,28 @@ const commands = [
       return await sendCommandList(bot, message, args, group);
     }
   }),
+
+
+  new Command({
+    name: 'ajuda',
+    category: "geral",
+    group: "menu",
+    hidden: true,
+    description: 'Mostra todos os comandos disponíveis',
+    method: async (bot, message, args, group) => {
+      return await sendCommandList(bot, message, args, group);
+    }
+  }),
+  new Command({
+    name: 'info',
+    category: "geral",
+    group: "menu",
+    hidden: true,
+    description: 'Mostra todos os comandos disponíveis',
+    method: async (bot, message, args, group) => {
+      return await sendCommandList(bot, message, args, group);
+    }
+  }),
   new Command({
     name: 'cmd-gerenciamento',
     description: 'Mostra comandos de gerenciamento do grupo',

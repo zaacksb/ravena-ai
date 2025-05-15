@@ -40,12 +40,14 @@ class WhatsAppBot {
     
     // Novas propriedades para notificações de grupos da comunidade
     this.ignorePV = options.ignorePV || false;
+    this.ignoreInvites = options.ignoreInvites || false;
     this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
     this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
     this.grupoAvisos = options.grupoAvisos || process.env.GRUPO_AVISOS;
     this.grupoInteracao = options.grupoInteracao || process.env.GRUPO_INTERACAO;
     this.linkGrupao = options.linkGrupao || process.env.LINK_GRUPO_INTERACAO;
     this.linkAvisos = options.linkAvisos || process.env.LINK_GRUPO_AVISOS;
+    this.userAgent = options.userAgent ||  process.env.USER_AGENT || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0";
 
     this.lastMessageReceived = Date.now();
 
@@ -88,7 +90,8 @@ class WhatsAppBot {
     // Cria cliente com dados de sessão
     this.client = new Client({
       authStrategy: new LocalAuth({ clientId: this.id }),
-      puppeteer: this.puppeteerOptions
+      puppeteer: this.puppeteerOptions,
+      userAgent: this.userAgent
     });
 
 
@@ -101,6 +104,10 @@ class WhatsAppBot {
     return this;
   }
 
+  rndString(){
+    return (Math.random() + 1).toString(36).substring(7);
+  }
+  
   /**
    * Prepara a lista de IDs de outros bots para serem ignorados
   */
