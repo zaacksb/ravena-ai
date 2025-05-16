@@ -276,10 +276,10 @@ class BotAPI {
         }
         
         // Adiciona doação ao banco de dados
-        await this.database.addDonation(nome, valor);
+        const donationTotal = await this.database.addDonation(nome, valor);
         
         // Notifica grupos sobre a doação
-        await this.notifyGroupsAboutDonation(nome, valor, msg);
+        await this.notifyGroupsAboutDonation(nome, valor, msg, donationTotal);
         
         res.send('ok');
       } catch (error) {
@@ -1010,22 +1010,26 @@ class BotAPI {
    * @param {number} amount - Valor da doação
    * @param {string} message - Mensagem da doação
    */
-  async notifyGroupsAboutDonation(name, amount, message) {
+  async notifyGroupsAboutDonation(name, amount, message, donationTotal = 0) {
     try {
       // Prepara a mensagem de notificação
+      const totalMsg = (donationTotal > 0) ? `> _${name}_ já doou um total de R$${donationTotal.toFixed(2)}\n\n` : "";
+
       const donationMsg = 
         `💸 Recebemos um DONATE no tipa.ai! 🥳\n\n` +
         `*MUITO obrigado* pelos R$${amount.toFixed(2)}, ${name}! 🥰\n` +
         `Compartilho aqui com todos sua mensagem:\n` +
-        `💬 ${message}\n\n` +
+        `💬 ${message}\n\n${totalMsg}` +
         `\`\`\`!doar ou !donate pra conhecer os outros apoiadores e doar também\`\`\``;
       
       // Calcula tempo extra de fixação com base no valor da doação (300 segundos por 1 unidade de moeda)
       const extraPinTime = Math.floor(amount * 300);
       const pinDuration = 600 + extraPinTime; // Base de 10 minutos + tempo extra
       
-      // Envia para todos os bots e grupos configurados
-      for (const bot of this.bots) {
+      // Apenas um dos bots devem enviar msg sobre donate
+      const bot = this.bots[3];
+
+      //for (const bot of this.bots) {
         // Primeiro notifica o grupo de logs
         if (bot.grupoLogs) {
           try {
@@ -1051,7 +1055,7 @@ class BotAPI {
           } catch (error) {
             this.logger.error(`Erro ao enviar notificação de doação para grupoAvisos (${bot.grupoAvisos}):`, error);
           }
-        }
+        //}
         
         // Notifica o grupo de interação
         if (bot.grupoInteracao) {

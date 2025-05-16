@@ -194,13 +194,13 @@ async function aiCommand(bot, message, args, group) {
   logger.debug(`Comando ai com pergunta: ${question}`);
   
   // Primeiro, envia uma mensagem indicando que está processando
-  bot.sendReturnMessages(new ReturnMessage({
-    chatId: chatId,
-    content: `🔍 Processando: "${question}"...`,
-    options: {
-      quotedMessageId: message.origin.id._serialized
-    }
-  }))
+  // bot.sendReturnMessages(new ReturnMessage({
+  //   chatId: chatId,
+  //   content: `🔍 Processando: "${question}"...`,
+  //   options: {
+  //     quotedMessageId: message.origin.id._serialized
+  //   }
+  // }))
   
   // Obtém resposta da IA
   try {

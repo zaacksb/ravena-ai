@@ -174,9 +174,13 @@ class StreamSystem {
         // Adiciona canais Twitch
         if (group.twitch && Array.isArray(group.twitch)) {
           for (const channel of group.twitch) {
-            if (!subscribedChannels.twitch.includes(channel.channel)) {
-              this.streamMonitor.subscribe(channel.channel, 'twitch');
-              subscribedChannels.twitch.push(channel.channel);
+            if(!channel.channel.startsWith("xxx_") && !channel.channel.includes("twitch")){
+              if (!subscribedChannels.twitch.includes(channel.channel)) {
+                this.streamMonitor.subscribe(channel.channel, 'twitch');
+                subscribedChannels.twitch.push(channel.channel);
+              }
+            } else {
+              this.logger.info(`[loadChannelsToMonitor][${group.name}] ${channel.channel} ignorado por nome estranho`);
             }
           }
         }

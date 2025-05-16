@@ -40,6 +40,7 @@ class WhatsAppBot {
     
     // Novas propriedades para notificações de grupos da comunidade
     this.ignorePV = options.ignorePV || false;
+    this.whitelist = options.whitelistPV || [];
     this.ignoreInvites = options.ignoreInvites || false;
     this.grupoLogs = options.grupoLogs || process.env.GRUPO_LOGS;
     this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
@@ -94,6 +95,14 @@ class WhatsAppBot {
       userAgent: this.userAgent
     });
 
+    // Coloca doadores na whitelist do PV
+    const donations = await this.database.getDonations();
+    for(let don of donations){
+      if(don.numero && don.numero?.length > 5){
+        this.whitelist.push(don.numero.replace(/\D/g, ''));
+      }
+    }
+    this.logger(`[whitelist][${this.id}] ${this.whitelist.length} números na whitelist do PV.`);
 
     // Registra manipuladores de eventos
     this.registerEventHandlers();
@@ -102,6 +111,11 @@ class WhatsAppBot {
     await this.client.initialize();
     
     return this;
+  }
+
+  notInWhitelist(author){
+    const cleanAuthor = author.replace(/\D/g, '');
+    return !(this.whitelist.includes(cleanAuthor))
   }
 
   rndString(){
@@ -436,7 +450,7 @@ class WhatsAppBot {
       const isGroup = chat.isGroup;
       
       // Rastreia mensagem recebida com tempo de resposta
-      this.loadReport.trackReceivedMessage(isGroup, responseTime);
+      this.loadReport.trackReceivedMessage(isGroup, responseTime, message.from);
       
       let type = 'text';
       let content = message.body;

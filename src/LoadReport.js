@@ -18,7 +18,7 @@ class LoadReport {
       receivedGroup: 0,
       sentPrivate: 0,
       sentGroup: 0,
-      // Novos campos para rastreamento de tempo de resposta
+      groups: {},
       responseTimes: [], // Array para armazenar todos os tempos de resposta
       totalResponseTime: 0, // Soma total para cálculo de média
       maxResponseTime: 0, // Valor máximo de tempo de resposta
@@ -34,9 +34,16 @@ class LoadReport {
    * @param {boolean} isGroup - Se a mensagem foi em um grupo
    * @param {number} responseTime - Tempo de resposta em segundos
    */
-  trackReceivedMessage(isGroup, responseTime = 0) {
+  trackReceivedMessage(isGroup, responseTime = 0, msgFrom = "123@c.us") {
     if (isGroup) {
       this.stats.receivedGroup++;
+
+      if(!this.stats.groups[msgFrom]){
+        this.stats.groups[msgFrom] = 1;
+      } else {
+        this.stats.groups[msgFrom]++;
+      }
+
     } else {
       this.stats.receivedPrivate++;
     }
@@ -77,6 +84,8 @@ class LoadReport {
       const avgResponseTime = responseTimeCount > 0 
         ? this.stats.totalResponseTime / responseTimeCount 
         : 0;
+
+      this.logger.debug(`[generateReport] ${this.stats}`);
       
       const report = {
         botId: this.bot.id,
@@ -99,6 +108,8 @@ class LoadReport {
           max: this.stats.maxResponseTime,     // Valor máximo em segundos
           count: responseTimeCount             // Quantidade de medições
         },
+        // Adiciona informações por grupo
+        groups: this.stats.groups ?? {},
         timestamp: currentTime // Adicionamos um timestamp para facilitar filtros
       };
       report.messages.messagesPerHour = Math.floor((report.messages.totalReceived + report.messages.totalSent) / (report.duration / 3600));
@@ -138,7 +149,8 @@ class LoadReport {
       if (this.bot.grupoLogs) {
         try {
           const reportMessage = this.formatReportMessage(report);
-          await this.bot.sendMessage(this.bot.grupoLogs, reportMessage);
+          this.logger.info(reportMessage);
+          //await this.bot.sendMessage(this.bot.grupoLogs, reportMessage);
         } catch (error) {
           this.logger.error('Erro ao enviar relatório de carga para o grupo de logs:', error);
         }
@@ -150,6 +162,7 @@ class LoadReport {
         receivedGroup: 0,
         sentPrivate: 0,
         sentGroup: 0,
+        groups: {},
         responseTimes: [],
         totalResponseTime: 0,
         maxResponseTime: 0,
@@ -201,7 +214,7 @@ class LoadReport {
       // Salva no banco de dados
       await this.database.saveLoadReports(reports);
       
-      this.logger.debug('Relatório de carga salvo com sucesso');
+      this.logger.debug('Relatório de carga salvo com sucesso: ', report);
     } catch (error) {
       this.logger.error('Erro ao salvar relatório de carga:', error);
     }

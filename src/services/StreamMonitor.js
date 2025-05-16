@@ -331,12 +331,20 @@ class StreamMonitor extends EventEmitter {
     }
   }
 
+  shuffle (array){ 
+    for (let i = array.length - 1; i > 0; i--) { 
+      const j = Math.floor(Math.random() * (i + 1)); 
+      [array[i], array[j]] = [array[j], array[i]]; 
+    } 
+    return array; 
+  }
+
   /**
    * Poll Twitch channels for status updates
    * @private
    */
   async _pollTwitchChannels(customChannels = null) {
-    const twitchChannels = customChannels ?? this.channels.filter(c => c.source.toLowerCase() === 'twitch');
+    const twitchChannels = this.shuffle(customChannels ?? this.channels.filter(c => c.source.toLowerCase() === 'twitch'));
     if (twitchChannels.length === 0) return;
     
     // Ensure we have a valid token

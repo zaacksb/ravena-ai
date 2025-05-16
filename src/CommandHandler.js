@@ -594,8 +594,12 @@ class CommandHandler {
     }
 
     // Verifica se o bot deve ignorar mensagens no PV
-    if(bot.ignorePV && message.group === null){ // Recebeu mensagem no PV
-      return;
+    let ignorePV = bot.ignorePV && bot.notInWhitelist(message.author);
+
+    if(ignorePV && message.group === null){ // Recebeu mensagem no PV
+      if(bot.whitelistPV){
+
+      }
     }
     
     // Verifica se é um comando fixo
