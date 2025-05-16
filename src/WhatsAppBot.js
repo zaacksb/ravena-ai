@@ -102,7 +102,7 @@ class WhatsAppBot {
         this.whitelist.push(don.numero.replace(/\D/g, ''));
       }
     }
-    this.logger(`[whitelist][${this.id}] ${this.whitelist.length} números na whitelist do PV.`);
+    this.logger.info(`[whitelist][${this.id}] ${this.whitelist.length} números na whitelist do PV.`);
 
     // Registra manipuladores de eventos
     this.registerEventHandlers();
