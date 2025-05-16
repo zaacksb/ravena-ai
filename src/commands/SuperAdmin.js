@@ -146,6 +146,19 @@ class SuperAdmin {
     }
   }
 
+  formatPhoneNumber(phone) {
+    // Ensure only digits
+    const digits = phone.replace(/\D/g, '');
+
+    // Match and format
+    const match = digits.match(/^(\d{2})(\d{2})(\d{5})(\d{4})$/);
+    if (!match) return 'Invalid number';
+
+    const [, country, area, part1, part2] = match;
+    return `+${country} (${area}) ${part1}-${part2}`;
+  }
+
+
   /**
    * Adiciona ou atualiza o número de WhatsApp de um doador
    * @param {WhatsAppBot} bot - Instância do bot
@@ -187,10 +200,31 @@ class SuperAdmin {
       const success = await this.database.updateDonorNumber(donorName, numero);
       
       if (success) {
-        return new ReturnMessage({
-          chatId: chatId,
-          content: `✅ Número ${numero} adicionado com sucesso ao doador ${donorName}`
-        });
+        // Pega contato do doador e envia junto pra poder add
+        let cttDonate = await bot.client.getContactById(numero+"@c.us");
+
+        if(!cttDonate){
+          cttDonate.name = `${donorName} apoiador ravenabot`;
+          cttDonate.pushname = `${donorName} apoiador ravenabot`;
+          cttDonate.shortname = `${donorName}`;
+        } else {
+          // Se não conseguir pegar, tenta enviar vCARD (ainda bugado)
+          cttDonate = 'BEGIN:VCARD\n' +
+          'VERSION:3.0\n' +
+          `FN:${donorName} apoiador ravenabot\n` +
+          `TEL;type=CELL;type=VOICE;waid=${numero}:${this.formatPhoneNumber(numero)}\n` +
+          'END:VCARD';
+        }
+        return [
+          new ReturnMessage({
+            chatId: chatId,
+            content: `✅ Número ${numero} adicionado com sucesso ao doador ${donorName}\n\n${numero}\n${donorName} apoiador ravenabot`
+          }),
+          new ReturnMessage({
+            chatId: chatId,
+            content: cttDonate
+          })
+        ];
       } else {
         return new ReturnMessage({
           chatId: chatId,
