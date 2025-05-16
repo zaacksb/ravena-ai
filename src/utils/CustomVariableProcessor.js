@@ -310,18 +310,19 @@ class CustomVariableProcessor {
           let mentionName = null;
           
           // 1. Primeiro, verifica se há pessoas mencionadas na mensagem original
-          if (context.message.mentionedIds && context.message.mentionedIds.length > 0) {
+          if (context.message.origin.mentionedIds && context.message.origin.mentionedIds.length > 0) {
             // Filtra para usar apenas menções que ainda não foram usadas
-            const availableMentions = context.message.mentionedIds.filter(id => !usedMentions.includes(id));
-            
+            const availableMentions = context.message.origin.mentionedIds.filter(id => !usedMentions.includes(id));
+            this.logger.debug(`[processContextVariables][availableMentions] `,availableMentions);
             if (availableMentions.length > 0) {
               // Seleciona uma menção aleatória das disponíveis
               const randomIndex = Math.floor(Math.random() * availableMentions.length);
               mentionId = availableMentions[randomIndex];
               
+              let mentionContact = undefined;
               try {
                 // Obtém informações do contato mencionado
-                const mentionContact = await context.bot.client.getContactById(mentionId);
+                mentionContact = await context.bot.client.getContactById(mentionId);
                 mentionName = `@${mentionContact.number || mentionContact.id.user}`;
               } catch (err) {
                 this.logger.error('Erro ao obter contato mencionado:', err);
