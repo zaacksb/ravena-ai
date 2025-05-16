@@ -1,4 +1,4 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const { Client, Contact, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrimg = require('qr-image');
 const Database = require('./utils/Database');
@@ -809,6 +809,95 @@ class WhatsAppBot {
 
   getCurrentTimestamp(){
     return Math.round(+new Date()/1000);
+  }
+
+  /**
+   * Creates or retrieves a Contact object
+   * @param {string} phoneNumber - Phone number of the contact
+   * @param {string} name - Name of the contact
+   * @param {string} surname - Surname of the contact
+   * @returns {Promise<Contact>} - Contact object with all required properties and methods
+   */
+  async createContact(phoneNumber, name, surname) {
+    try {    
+      // Format the phone number to ensure it has the correct format for WhatsApp
+      const formattedNumber = phoneNumber.endsWith('@c.us') 
+        ? phoneNumber 
+        : `${phoneNumber.replace(/\D/g, '')}@c.us`;
+      
+      // Try to get the contact from WhatsApp
+      try {
+        const contact = await this.client.getContactById(formattedNumber);
+        if (contact) {
+          this.logger.debug(`Retrieved existing contact: ${formattedNumber}`);
+          return contact;
+        }
+      } catch (error) {
+        this.logger.debug(`Contact not found, creating mock: ${formattedNumber}`);
+      }
+      
+      // Create a full name from the provided name and surname
+      const fullName = `${name} ${surname}`.trim();
+      
+      // Create a contact data object that matches the expected structure
+      const contactData = {
+        id: {
+          server: 'c.us',
+          user: phoneNumber.replace(/\D/g, ''),
+          _serialized: formattedNumber
+        },
+        name: fullName,
+        shortName: name,
+        pushname: name,
+        number: phoneNumber.replace(/\D/g, '')
+      };
+      
+      // Create a new Contact instance
+      const mockContact = new Contact(this.client, contactData);
+      
+      // Override methods that would normally interact with WhatsApp
+      mockContact.getAbout = async () => {
+        this.logger.debug(`Mock getAbout called for ${formattedNumber}`);
+        return `About for ${fullName}`;
+      };
+      
+      mockContact.getChat = async () => {
+        this.logger.debug(`Mock getChat called for ${formattedNumber}`);
+        try {
+          return await this.client.getChatById(formattedNumber);
+        } catch (error) {
+          // If we can't get a real chat, we'll need to create a mock Chat
+          // This is more complex and might require importing the Chat class
+          // For now, we'll return a basic object
+          return {
+            id: { _serialized: formattedNumber },
+            name: fullName,
+            isGroup: false,
+            timestamp: Date.now()
+          };
+        }
+      };
+      
+      mockContact.getCommonGroups = async () => {
+        this.logger.debug(`Mock getCommonGroups called for ${formattedNumber}`);
+        return [];
+      };
+      
+      // Set additional properties
+      mockContact.isUser = true;
+      mockContact.isWAContact = true;
+      mockContact.isMyContact = false;
+      mockContact.isGroup = false;
+      mockContact.isBusiness = false;
+      mockContact.isEnterprise = false;
+      mockContact.isMe = false;
+      mockContact.isBlocked = false;
+      
+      return mockContact;
+    } catch (error) {
+      this.logger.error(`Error creating contact for ${phoneNumber}:`, error);
+      throw error;
+    }
   }
 
 }

@@ -201,24 +201,16 @@ class SuperAdmin {
       
       if (success) {
         // Pega contato do doador e envia junto pra poder add
-        let cttDonate = await bot.client.getContactById(numero+"@c.us");
+        const cttDonate = await bot.createContact(numero);
 
         if(!cttDonate){
-          cttDonate.name = `${donorName} apoiador ravenabot`;
-          cttDonate.pushname = `${donorName} apoiador ravenabot`;
-          cttDonate.shortname = `${donorName}`;
-        } else {
-          // Se não conseguir pegar, tenta enviar vCARD (ainda bugado)
-          cttDonate = 'BEGIN:VCARD\n' +
-          'VERSION:3.0\n' +
-          `FN:${donorName} apoiador ravenabot\n` +
-          `TEL;type=CELL;type=VOICE;waid=${numero}:${this.formatPhoneNumber(numero)}\n` +
-          'END:VCARD';
+          cttDonate = `${donorName} apoiador ravenabot`;
         }
+        
         return [
           new ReturnMessage({
             chatId: chatId,
-            content: `✅ Número ${numero} adicionado com sucesso ao doador ${donorName}\n\n${numero}\n${donorName} apoiador ravenabot`
+            content: `✅ Número ${numero} adicionado com sucesso ao doador ${donorName}`
           }),
           new ReturnMessage({
             chatId: chatId,
