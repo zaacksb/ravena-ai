@@ -41,7 +41,7 @@ class StreamSystem {
       this.registerEventHandlers();
       
       // Carrega canais para monitorar
-      await this.loadChannelsToMonitor(true);
+      await this.loadChannelsToMonitor(false);
       
       // Inicia o monitoramento (apenas se ainda não estiver ativo)
       if (!this.streamMonitor.isMonitoring) {

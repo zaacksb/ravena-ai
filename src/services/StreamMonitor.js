@@ -398,12 +398,50 @@ class StreamMonitor extends EventEmitter {
                  userResponse.data.data.length > 0;
         } catch (retryError) {
           this.logger.error(`Error checking if Twitch channel exists (retry): ${channelName}`, retryError.message);
-          return false;
+          return true;
         }
       }
       
       this.logger.error(`Error checking if Twitch channel exists: ${channelName}`, error.message);
-      return false;
+      return true;
+    }
+  }
+
+  async cleanupChannelList(channelsObj){
+    try {
+      channels = channelsObj.map(ch => ch.name);
+      this.logger.info(`[cleanupChannelList] Algum dos canais desta lista pode estar com erro, verificando todos: `, channels);
+      const groups = await this.database.getGroups();
+
+      // Processa cada grupo
+      for (const group of groups) {
+        // Adiciona canais Twitch
+        if (group.twitch && Array.isArray(group.twitch)) {
+          if(channels.include(group.twitch.channel)){
+            // Array para armazenar canais a serem removidos
+            const channelsToRemove = [];
+            
+            for (const channel of group.twitch) {
+              const channelExists = await this.twitchChannelExists(channel.channel);
+              
+              if (!channelExists) {
+                this.logger.info(`[cleanupChannelList] Canal Twitch não encontrado: ${channel.channel} - Removendo do grupo ${group.id} (${group.name || 'sem nome'})`);
+                channelsToRemove.push(channel.channel.toLowerCase());
+                continue;
+              }
+              await sleep(1000);
+            }
+            
+            if (channelsToRemove.length > 0) {
+              group.twitch = group.twitch.filter(c => !channelsToRemove.includes(c.channel.toLowerCase()));
+              await this.bot.database.saveGroup(group);
+              this.logger.info(`[cleanupChannelList] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error('[cleanupChannelList] Erro ao fazer limpeza dos canais:', error);
     }
   }
 
@@ -537,7 +575,8 @@ class StreamMonitor extends EventEmitter {
 
     if(failedBatches.length > 0){
       if(customChannels){
-        this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches while retrying, skipping.`);
+        this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches while retrying, checking channels.`);
+        this.cleanupChannelList(customChannels);
       } else {
         this.logger.warn(`[_pollTwitchChannels] Error polling ${failedBatches.length} batches, trying again.`);
         this._pollTwitchChannels(failedBatches.flat(1));
