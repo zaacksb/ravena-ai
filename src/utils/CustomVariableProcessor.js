@@ -24,6 +24,8 @@ class CustomVariableProcessor {
    */
   async process(text, context) {
     if (!text) return '';
+
+    this.logger.debug(`[CustomVariableProcessor][process] ${text} <=> ${Object.keys(context)}`);
     
     try {
       // Verifica se é uma variável de comando
@@ -319,8 +321,8 @@ class CustomVariableProcessor {
               
               try {
                 // Obtém informações do contato mencionado
-                const contact = await context.bot.client.getContactById(mentionId);
-                mentionName = `@${contact.number || contact.id.user}`;
+                const mentionContact = await context.bot.client.getContactById(mentionId);
+                mentionName = `@${mentionContact.number || mentionContact.id.user}`;
               } catch (err) {
                 this.logger.error('Erro ao obter contato mencionado:', err);
                 mentionName = `@${mentionId.split('@')[0]}`;
@@ -328,7 +330,7 @@ class CustomVariableProcessor {
               
               // Marca esta menção como usada
               usedMentions.push(mentionId);
-              return { mentionId, mentionName };
+              return { mentionId, mentionName, mentionContact };
             }
           }
           
@@ -338,14 +340,14 @@ class CustomVariableProcessor {
           if (quotedMsg && !usedMentions.includes(quotedMsg.author)) {
             // Usa o contato da mensagem citada
             try {
-              const quotedContact = await quotedMsg.getContact();
-              if (quotedContact) {
-                mentionId = quotedContact.id._serialized;
-                mentionName = `@${quotedContact.number || quotedContact.id.user}`;
+              const mentionContact = await quotedMsg.getContact();
+              if (mentionContact) {
+                mentionId = mentionContact.id._serialized;
+                mentionName = `@${mentionContact.number || mentionContact.id.user}`;
                 
                 // Marca esta menção como usada
                 usedMentions.push(mentionId);
-                return { mentionId, mentionName };
+                return { mentionId, mentionName, mentionContact };
               }
             } catch (err) {
               this.logger.error('Erro ao obter contato da mensagem citada:', err);
@@ -372,12 +374,12 @@ class CustomVariableProcessor {
                   mentionId = randomParticipant.id._serialized;
                   
                   // Obtém o objeto de contato
-                  const contact = await context.bot.client.getContactById(mentionId);
-                  mentionName = `@${contact.number || contact.id.user}`;
+                  const mentionContact = await context.bot.client.getContactById(mentionId);
+                  mentionName = `@${mentionContact.number || mentionContact.id.user}`;
                   
                   // Marca esta menção como usada
                   usedMentions.push(mentionId);
-                  return { mentionId, mentionName };
+                  return { mentionId, mentionName, mentionContact };
                 } else if (chat.participants.length > 1) {
                   // Se todos já foram usados, reseta e usa qualquer um exceto o bot
                   const nonBotParticipants = chat.participants.filter(
@@ -391,10 +393,10 @@ class CustomVariableProcessor {
                     mentionId = randomParticipant.id._serialized;
                     
                     // Obtém o objeto de contato
-                    const contact = await context.bot.client.getContactById(mentionId);
-                    mentionName = `@${contact.number || contact.id.user}`;
+                    const mentionContact = await context.bot.client.getContactById(mentionId);
+                    mentionName = `@${mentionContact.number || mentionContact.id.user}`;
                     
-                    return { mentionId, mentionName };
+                    return { mentionId, mentionName, mentionContact };
                   }
                 }
               }
@@ -404,7 +406,7 @@ class CustomVariableProcessor {
           }
           
           // Fallback se nada funcionar
-          return { mentionId: null, mentionName: "Usuário" };
+          return { mentionId: null, mentionName: "Usuário", mentionContact: null };
         };
         
         // Conta quantas ocorrências de {mention} existem no texto
@@ -412,14 +414,15 @@ class CustomVariableProcessor {
         if (mentionMatches) {
           // Para cada ocorrência, substitui por uma menção diferente
           for (let i = 0; i < mentionMatches.length; i++) {
-            const { mentionId, mentionName } = await replaceMention();
+            const { mentionId, mentionName, mentionContact } = await replaceMention();
             
             // Substitui apenas a primeira ocorrência restante
             text = text.replace(/{mention}/, mentionName);
             
             // Adiciona à lista de menções para notificação
             if (mentionId) {
-              if (context.options && context.options.mentions) {
+              this.logger.debug(`[processContextVariables] Mention: ${mentionId}, ${mentionName}, `, mentionContact);
+              if (context.options && context.options.mentions){
                 if (!context.options.mentions.includes(mentionId)) {
                   context.options.mentions.push(mentionId);
                 }

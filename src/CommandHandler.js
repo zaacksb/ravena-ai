@@ -136,7 +136,7 @@ class CommandHandler {
       
       await fs.writeFile(cooldownsPath, JSON.stringify(this.cooldowns, null, 2));
       this.cooldownsLastSaved = Date.now();
-      this.logger.debug('Cooldowns salvos com sucesso');
+      //this.logger.debug('Cooldowns salvos com sucesso');
     } catch (error) {
       this.logger.error('Erro ao salvar cooldowns:', error.message ?? "xxx");
     }
@@ -1109,12 +1109,16 @@ class CommandHandler {
       this.logger.debug(`Processando resposta para comando ${command.startsWith}: ${responseText.substring(0, 50)}${responseText.length > 50 ? '...' : ''}`);
       
       // Processa variáveis na resposta
+      let options = {};
       let processedResponse = await this.variableProcessor.process(responseText, {
         message,
         group,
         command,
+        options,
         bot  // Incluindo o bot no contexto para processar variáveis de arquivo
       });
+
+      this.logger.debug(`Processada resposta: '${processedResponse}', options ${JSON.stringify(options)}`);
       
       // NOVA FUNCIONALIDADE: Verifica se a resposta é um comando embutido
       if (processedResponse && typeof processedResponse === 'object' && processedResponse.type === 'embedded-command') {
@@ -1147,7 +1151,8 @@ class CommandHandler {
             chatId: message.group,
             content: `Erro ao executar comando embutido: ${processedResponse.command}`,
             options: {
-              quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+              quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+              ...options
             }
           });
         }
@@ -1166,7 +1171,8 @@ class CommandHandler {
             content: mediaItem.media,
             options: {
               caption: mediaItem.caption,
-              quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+              quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+              ...options
             },
             delay: i * 1000 // Adiciona delay de 1 segundo entre mensagens
           }));
@@ -1183,7 +1189,8 @@ class CommandHandler {
           chatId: message.group,
           content: processedResponse,
           options: {
-            quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+            quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+            ...options
           }
         });
       }
@@ -1208,7 +1215,8 @@ class CommandHandler {
             options: {
               caption: caption || undefined,
               sendMediaAsSticker: mediaType === 'sticker',
-              quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+              quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+              ...options
             }
           });
         } catch (error) {
@@ -1227,7 +1235,8 @@ class CommandHandler {
           chatId: message.group,
           content: processedResponse,
           options: {
-            quotedMessageId: command.reply ? message.origin.id._serialized : undefined
+            quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+            ...options
           }
         });
       }

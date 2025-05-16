@@ -220,7 +220,7 @@ footer {
     padding: 50px;
 }
 
-.admin-button {
+.restart-button, .qr-button {
     background-color: var(--medium-gray);
     color: white;
     border: none;
@@ -231,7 +231,7 @@ footer {
     transition: background-color 0.3s;
 }
 
-.admin-button:hover {
+.admin-button:hover .qr-button:hover {
     background-color: var(--bright-blue);
 }
 

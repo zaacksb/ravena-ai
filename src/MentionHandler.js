@@ -68,13 +68,6 @@ class MentionHandler {
 
       this.logger.info(`Processando prompt para LLM: "${prompt}"`);
 
-      // Envia indicador de digitação
-      try {
-        await bot.client.sendPresenceUpdate('composing', message.group || message.author);
-      } catch (error) {
-        this.logger.error('Erro ao enviar indicador de digitação:', error);
-      }
-
       // Obtém resposta do LLM
       try {
         const response = await this.llmService.getCompletion({prompt: prompt});

@@ -409,7 +409,7 @@ class StreamMonitor extends EventEmitter {
 
   async cleanupChannelList(channelsObj){
     try {
-      channels = channelsObj.map(ch => ch.name);
+      let channels = channelsObj.map(ch => ch.name);
       this.logger.info(`[cleanupChannelList] Algum dos canais desta lista pode estar com erro, verificando todos: `, channels);
       const groups = await this.database.getGroups();
 
@@ -417,7 +417,7 @@ class StreamMonitor extends EventEmitter {
       for (const group of groups) {
         // Adiciona canais Twitch
         if (group.twitch && Array.isArray(group.twitch)) {
-          if(channels.include(group.twitch.channel)){
+          if(channels.includes(group.twitch.channel)){
             // Array para armazenar canais a serem removidos
             const channelsToRemove = [];
             
@@ -437,6 +437,14 @@ class StreamMonitor extends EventEmitter {
               await this.bot.database.saveGroup(group);
               this.logger.info(`[cleanupChannelList] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
             }
+          } else {
+            // Apenas da unsubscribe se já removeram do grupo
+            const channelExists = await this.twitchChannelExists(channel.channel);
+            if (!channelExists) {
+              const resUnsub = this.unsubscribe(channel.channel, 'twitch');
+              this.logger.info(`[cleanupChannelList] Canal Twitch não encontrado: ${channel.channel} - Apenas unsubscribe ${resUnsub}`);
+            }
+
           }
         }
       }
@@ -565,7 +573,6 @@ class StreamMonitor extends EventEmitter {
         } else {
           failedBatches.push(batch);
           this.logger.error('Error polling Twitch channels, adding to failed batch:', error.message);
-          this.logErrorToFile(`twitch-batch${bAt}-error.json`, error);
           this.logErrorToFile(`twitch-batch${bAt}-errors.json`, JSON.stringify(error, null, "\t"));
         }
       }

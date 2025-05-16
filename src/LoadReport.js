@@ -85,7 +85,7 @@ class LoadReport {
         ? this.stats.totalResponseTime / responseTimeCount 
         : 0;
 
-      this.logger.debug(`[generateReport] ${this.stats}`);
+      //this.logger.debug(`[generateReport] ${JSON.striginfy(this.stats)}`);
       
       const report = {
         botId: this.bot.id,
@@ -214,7 +214,7 @@ class LoadReport {
       // Salva no banco de dados
       await this.database.saveLoadReports(reports);
       
-      this.logger.debug('Relatório de carga salvo com sucesso: ', report);
+      this.logger.debug('Relatório de carga salvo com sucesso');
     } catch (error) {
       this.logger.error('Erro ao salvar relatório de carga:', error);
     }

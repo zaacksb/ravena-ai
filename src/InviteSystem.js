@@ -184,7 +184,7 @@ class InviteSystem {
                 if (donation.numero) {
                   // Remove caracteres especiais e espaços do número do doador
                   const cleanDonorNumber = donation.numero.replace(/[^0-9]/g, "");
-                  this.logger.debug(`[donate-invite] ${cleanDonorNumber} vs ${cleanAuthorId} =  ${cleanDonorNumber.includes(cleanAuthorId)} || ${ cleanAuthorId.includes(cleanDonorNumber)}`);
+                  //this.logger.debug(`[donate-invite] ${cleanDonorNumber} vs ${cleanAuthorId} =  ${cleanDonorNumber.includes(cleanAuthorId)} || ${ cleanAuthorId.includes(cleanDonorNumber)}`);
                   if(cleanDonorNumber.length > 10){
                     if(cleanDonorNumber.includes(cleanAuthorId) || cleanAuthorId.includes(cleanDonorNumber)){
                       donateValue = donation.valor;

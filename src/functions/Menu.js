@@ -57,7 +57,7 @@ function groupCommandsByCategory(commands) {
     categories[category].push(cmd);
   }
   
-  console.log(Object.keys(categories));
+  //console.log(Object.keys(categories));
   return categories;
 }
 

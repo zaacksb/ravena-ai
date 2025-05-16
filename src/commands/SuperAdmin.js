@@ -207,6 +207,8 @@ class SuperAdmin {
           cttDonate = `${donorName} apoiador ravenabot`;
         }
         
+        this.logger.debug("[cttDonate]", cttDonate);
+
         return [
           new ReturnMessage({
             chatId: chatId,

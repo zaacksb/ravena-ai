@@ -227,11 +227,11 @@ function renderBots(data) {
         if (isAdminMode) {
             buttonsHtml = `
                 <div class="detail-item" style="margin-top: 15px; justify-content: center;">
-                    <button class="admin-button" id="restart-button" data-bot-id="${bot.id}">
+                    <button class="restart-button" id="restart-button" data-bot-id="${bot.id}">
                         🔄 Reiniciar Bot
                     </button>
 
-                    <button class="admin-button" id="qr-button" data-bot-id="${bot.id}">
+                    <button class="qr-button" id="qr-button" data-bot-id="${bot.id}">
                         🔳 QRCode
                     </button>
                 </div>
