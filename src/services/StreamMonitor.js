@@ -340,6 +340,74 @@ class StreamMonitor extends EventEmitter {
   }
 
   /**
+   * Verifica se um canal da Twitch existe
+   * @param {string} channelName - Nome do canal a verificar
+   * @returns {Promise<boolean>} - True se o canal existir, false caso contrário
+   */
+  async twitchChannelExists(channelName) {
+    try {
+      // Ensure we have a valid token
+      if (!this.twitchToken) {
+        const token = await this._refreshTwitchToken();
+        if (!token) return false; // Can't proceed without token
+      }
+      
+      // Normalize channel name
+      const normalizedChannelName = channelName.toLowerCase().trim();
+      
+      // Query Twitch API to check if the user exists
+      const userResponse = await axios.get(
+        `https://api.twitch.tv/helix/users`,
+        {
+          headers: {
+            'Client-ID': this.twitchClientId,
+            'Authorization': `Bearer ${this.twitchToken}`
+          },
+          params: {
+            login: normalizedChannelName
+          }
+        }
+      );
+      
+      // If we got data and at least one user, the channel exists
+      return userResponse.data && 
+             userResponse.data.data && 
+             userResponse.data.data.length > 0;
+             
+    } catch (error) {
+      // If unauthorized, try to refresh token and try again
+      if (error.response && error.response.status === 401) {
+        await this._refreshTwitchToken();
+        // Try one more time with the new token
+        try {
+          const userResponse = await axios.get(
+            `https://api.twitch.tv/helix/users`,
+            {
+              headers: {
+                'Client-ID': this.twitchClientId,
+                'Authorization': `Bearer ${this.twitchToken}`
+              },
+              params: {
+                login: channelName.toLowerCase().trim()
+              }
+            }
+          );
+          
+          return userResponse.data && 
+                 userResponse.data.data && 
+                 userResponse.data.data.length > 0;
+        } catch (retryError) {
+          this.logger.error(`Error checking if Twitch channel exists (retry): ${channelName}`, retryError.message);
+          return false;
+        }
+      }
+      
+      this.logger.error(`Error checking if Twitch channel exists: ${channelName}`, error.message);
+      return false;
+    }
+  }
+
+  /**
    * Poll Twitch channels for status updates
    * @private
    */

@@ -4,6 +4,7 @@ const LLMService = require('./services/LLMService');
 const ReturnMessage = require('./models/ReturnMessage');
 const path = require('path');
 const fs = require('fs').promises;
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Sistema para gerenciamento de monitoramento de streams
@@ -40,7 +41,7 @@ class StreamSystem {
       this.registerEventHandlers();
       
       // Carrega canais para monitorar
-      await this.loadChannelsToMonitor();
+      await this.loadChannelsToMonitor(true);
       
       // Inicia o monitoramento (apenas se ainda não estiver ativo)
       if (!this.streamMonitor.isMonitoring) {
@@ -157,8 +158,9 @@ class StreamSystem {
 
   /**
    * Carrega canais para monitorar a partir dos grupos cadastrados
+   * @param {boolean} cleanup - Se deve verificar e remover canais inexistentes (default: false)
    */
-  async loadChannelsToMonitor() {
+  async loadChannelsToMonitor(cleanup = false) {
     try {
       // Obtém todos os grupos
       const groups = await this.bot.database.getGroups();
@@ -173,8 +175,23 @@ class StreamSystem {
       for (const group of groups) {
         // Adiciona canais Twitch
         if (group.twitch && Array.isArray(group.twitch)) {
+          // Array para armazenar canais a serem removidos
+          const channelsToRemove = [];
+          
           for (const channel of group.twitch) {
             if(!channel.channel.startsWith("xxx_") && !channel.channel.includes("twitch")){
+              // Se cleanup estiver ativado, verifica se o canal existe
+              if (cleanup && this.streamMonitor) {
+                const channelExists = await this.streamMonitor.twitchChannelExists(channel.channel);
+                
+                if (!channelExists) {
+                  this.logger.info(`[loadChannelsToMonitor][Cleanup] Canal Twitch não encontrado: ${channel.channel} - Removendo do grupo ${group.id} (${group.name || 'sem nome'})`);
+                  channelsToRemove.push(channel.channel.toLowerCase());
+                  continue;
+                }
+                await sleep(500);
+              }
+              
               if (!subscribedChannels.twitch.includes(channel.channel)) {
                 this.streamMonitor.subscribe(channel.channel, 'twitch');
                 subscribedChannels.twitch.push(channel.channel);
@@ -182,6 +199,13 @@ class StreamSystem {
             } else {
               this.logger.info(`[loadChannelsToMonitor][${group.name}] ${channel.channel} ignorado por nome estranho`);
             }
+          }
+          
+          // Remove canais inexistentes se cleanup estiver ativado
+          if (cleanup && channelsToRemove.length > 0) {
+            group.twitch = group.twitch.filter(c => !channelsToRemove.includes(c.channel.toLowerCase()));
+            await this.bot.database.saveGroup(group);
+            this.logger.info(`[loadChannelsToMonitor][Cleanup] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
           }
         }
         

@@ -1938,23 +1938,33 @@ async setWelcomeMessage(bot, message, args, group) {
         content: `Canal da Twitch removido: ${channelName}`
       });
     } else {
-      // Add channel with default configuration
-      const newChannel = {
-        channel: channelName,
-        onConfig: this.createDefaultNotificationConfig('twitch', channelName),
-        offConfig: {
-          "media": []
-        },
-        changeTitleOnEvent: true,
-        useThumbnail: true,
-        useAI: false
-      };
-      
-      channels.push(newChannel);
-      await this.database.saveGroup(group);
-      
-      // Subscribe to the channel in StreamMonitor
+      // Check if the channel exists on Twitch before adding
       if (bot.streamMonitor) {
+        const channelExists = await bot.streamMonitor.twitchChannelExists(channelName);
+        
+        if (!channelExists) {
+          return new ReturnMessage({
+            chatId: group.id,
+            content: `❌ Erro: O canal "${channelName}" não existe na Twitch ou não foi possível verificá-lo.`
+          });
+        }
+        
+        // Add channel with default configuration
+        const newChannel = {
+          channel: channelName,
+          onConfig: this.createDefaultNotificationConfig('twitch', channelName),
+          offConfig: {
+            "media": []
+          },
+          changeTitleOnEvent: true,
+          useThumbnail: true,
+          useAI: false
+        };
+        
+        channels.push(newChannel);
+        await this.database.saveGroup(group);
+        
+        // Subscribe to the channel in StreamMonitor
         bot.streamMonitor.subscribe(channelName, 'twitch');
         
         return new ReturnMessage({
@@ -1965,8 +1975,7 @@ async setWelcomeMessage(bot, message, args, group) {
       } else {
         return new ReturnMessage({
           chatId: group.id,
-          content: `Canal da Twitch adicionado: ${channelName}\n\n` +
-            `⚠️ Aviso: O monitoramento de streams não está inicializado no bot. Entre em contato com o administrador.`
+          content: `❌ Erro: O monitoramento de streams não está inicializado no bot.`
         });
       }
     }
