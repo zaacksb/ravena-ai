@@ -5,9 +5,8 @@ const WhatsAppBot = require('./src/WhatsAppBot');
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
 const BotAPI = require('./src/BotAPI');
-const MentionHandler = require('./src/MentionHandler');
-const LoadReport = require('./src/LoadReport');
-const InviteSystem = require('./src/InviteSystem');
+const fs = require('fs');
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Exemplo de criação de múltiplas instâncias de bot
@@ -24,42 +23,61 @@ async function main() {
     const chromePath = process.env.CHROME_PATH || '';
     const headlessMode = process.env.HEADLESS_MODE !== 'false'; // Padrão: true
     
+    
+    const rBots = JSON.parse(fs.readFileSync("bots.json", 'utf8')) || [];
+
+    if(rBots.length == 0){
+      logger.info(`Nenhum bot definido no bots.json.`);
+      return;
+    } else {
+      logger.info(`Inicializando ${rBots.length} bots:\n${JSON.stringify(rBots, null, "\t")}`);
+    }
+
     logger.info(`Configuração de Chrome: Path=${chromePath || 'padrão'}, Headless=${headlessMode}`);
+
+    for(let rBot of rBots){
+      const newRBot = new WhatsAppBot({
+        id: rBot.nome,
+        phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+        eventHandler: eventHandler,
+        prefix: process.env.DEFAULT_PREFIX || '!',
+        otherBots: rBots.map(rB => rB.numero),
+        // Configurações de puppeteer
+        puppeteerOptions: {
+          executablePath: chromePath || undefined,
+          args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox', 
+            '--disable-extensions', 
+            '--disable-gpu', 
+            '--disable-accelerated-2d-canvas', 
+            '--no-first-run', 
+            '--no-zygote', 
+            '--disable-dev-shm-usage',
+            '--disable-session-crashed-bubble',
+            '--start-maximized',
+            `--window-name=${rBot.nome}`
+
+          ],
+          headless: headlessMode
+        },
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
+        ignorePV: rBot.ignorePV ?? false,
+        ignoreInvites: rBot.ignoreInvites ?? false,
+        // IDs dos grupos para notificações da comunidade
+        grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
+        grupoInvites: rBot.grupoInvites ?? process.env.GRUPO_INVITES,
+        grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
+        grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
+        linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
+        linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS
+      });
+      
+      newRBot.initialize();
+      await sleep(500);
+      botInstances.push(newRBot);
+    }
     
-    // Cria primeira instância do bot
-    const ravenaTestes = new WhatsAppBot({
-      id: 'ravena-testes',
-      phoneNumber: '555596424307', // Número de telefone para solicitar código de pareamento
-      eventHandler: eventHandler,
-      prefix: process.env.DEFAULT_PREFIX || '!',
-      // Configurações de puppeteer
-      puppeteerOptions: {
-        executablePath: chromePath || undefined,
-        args: [
-          '--no-sandbox', 
-          '--disable-setuid-sandbox', 
-          '--disable-extensions', 
-          '--disable-gpu', 
-          '--disable-accelerated-2d-canvas', 
-          '--no-first-run', 
-          '--no-zygote', 
-          '--disable-dev-shm-usage'
-        ],
-        headless: headlessMode
-      },
-      // IDs dos grupos para notificações da comunidade
-      grupoLogs: process.env.GRUPO_LOGS,
-      grupoInvites: process.env.GRUPO_INVITES,
-      grupoAvisos: process.env.GRUPO_AVISOS,
-      grupoInteracao: process.env.GRUPO_INTERACAO,
-      linkGrupao: process.env.LINK_GRUPO_INTERACAO,
-      linkAvisos: process.env.LINK_GRUPO_AVISOS
-    });
-    
-    botInstances.push(ravenaTestes);
-    
-    // Inicializa e inicia os bots
-    await ravenaTestes.initialize();
     
     logger.info('Todos os bots inicializados e rodando');
     
@@ -76,7 +94,7 @@ async function main() {
     
     // Manipula encerramento do programa
     process.on('SIGINT', async () => {
-      logger.info('Desligando bots e servidor API...');
+      logger.info('[SIGINT] Desligando bots e servidor API...');
       
       // Para o servidor API primeiro
       await botAPI.stop();
@@ -153,6 +171,18 @@ async function main() {
     logger.info('Todos os bots destruídos com sucesso. Encerrando...');
     
     process.exit(0);
+  });
+
+  process.on('unhandledRejection', (reason, p) => {
+    logger.warn("---- Rejection não tratada ");
+    logger.warn(p);
+    logger.warn("---- Fim ");
+  })
+
+  process.on('uncaughtException', err => {
+    logger.error("---- Erro Não tratado ");
+    logger.error(err);
+    logger.error("---- Fim ");
   });
 }
 
