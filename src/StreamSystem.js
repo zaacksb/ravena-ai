@@ -477,7 +477,36 @@ class StreamSystem {
 
       // Envia as mensagens originais para o grupo
       if (returnMessages.length > 0) {
-        await this.bot.sendReturnMessages(returnMessages);
+        if(!group.botNotInGroup){
+          group.botNotInGroup = [];
+        }
+
+        // Verifica se o bot está marcado como fora desse grupo antes de tentar enviar
+        if(group.botNotInGroup.includes(this.bot.id)){
+          this.logger.info(`[processStreamEvent][${this.bot.id}][${eventData.channelName}][${group.name}] O bot está marcado como não estando neste grupo, ignorando evento.`);
+        } else {
+          const resultados = await this.bot.sendReturnMessages(returnMessages);
+          // Aqui dá pra verificar se foi possível entregar a mensagem
+          let nenhumaEnviada = true;
+
+          for(let resultado of resultados){
+            const resInfo = await resultado.getInfo();
+
+            if(resInfo.delivery.length == 0 && resInfo.played.length == 0 && resInfo.read.length == 0){
+              this.logger.debug(`[processStreamEvent][${this.bot.id}][${eventData.channelName}][${group.name}] Msg notificação NÃO FOI ENVIADA!`, resInfo);
+            } else {
+              this.logger.debug(`[processStreamEvent][${this.bot.id}][${eventData.channelName}][${group.name}] Msg retorno enviada ok`);
+              nenhumaEnviada = false;
+            }
+          }
+
+          // Se nenhuma enviada, o bot não tá no grupo e ainda não sabia
+          if(nenhumaEnviada){
+            this.logger.info(`[processStreamEvent] O bot ${this.bot.id} não conseguiu enviar mensagens sobre a live '${eventData.channelName}' para o grupo ${group.name}/${group.id}, ignorando daqui pra frente`);
+            group.botNotInGroup.push(this.bot.id);
+            await this.bot.database.saveGroup(group);
+          }
+        }
         
         if (this.debugNotificacoes && this.bot.grupoLogs) {
           await this.bot.sendMessage(

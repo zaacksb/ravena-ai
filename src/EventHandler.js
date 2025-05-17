@@ -149,14 +149,16 @@ class EventHandler {
       if (message.group) {
         group = await this.getOrCreateGroup(message.group);
 
-        // TEMPORÁRIO REMOVER APÓS 1 DIA DE NOVO CÓDIGO
-        // DESTRAVAR GRUPOS ATIVOS
-        // if(group.paused){
-        //   this.logger.info(`[processMessage] DESTRAVADO GRUPO: '${group.name}'`);
-        //   group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
-        //   await this.database.saveGroup(group);
-        // }
-        // DESTRAVAR
+        if(!group.botNotInGroup){
+          group.botNotInGroup = [];
+        } else {
+          // Verifica se o bot está marcada como fora do grupo - se ele recebeu msg aqui, é pq tá dentro!
+          if(group.botNotInGroup.includes(bot.id)){
+            this.logger.info(`[processMessage] O bot '${bot.id}' estava como fora do grupo '${group.name}', mas recebeu mensagem - atualizando`);
+            group.botNotInGroup = group.botNotInGroup.filter(b => b !== bot.id);
+            await this.database.saveGroup(group);
+          }
+        }
         
         // Armazena mensagem para histórico de conversação
         await SummaryCommands.storeMessage(message, group);

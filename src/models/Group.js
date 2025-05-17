@@ -28,7 +28,8 @@ class Group {
     this.twitch = data.twitch || [];
     this.kick = data.kick || [];
     this.youtube = data.youtube || [];
-    
+    this.botNotInGroup = [];
+
     // Mensagens de boas-vindas e despedida
     this.greetings = data.greetings || {};
     this.farewells = data.farewells || {};
