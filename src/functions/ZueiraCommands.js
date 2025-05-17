@@ -10,34 +10,12 @@ const logger = new Logger('general-commands');
 const database = Database.getInstance();
 const variableProcessor = new CustomVariableProcessor();
 
-
-async function violencia(bot, message, args, group) {
+ 
+async function handleComandoVariavelSimples(bot, message, args, group, variavel) {
   const chatId = message.group || message.author;
 
   const customVariables = await database.getCustomVariables();
-  const frases = customVariables.violencia;
-  const fraseIndex = Math.floor(Math.random() * frases.length);
-  
-  const options = {};
-  const fraseFinal = await variableProcessor.process(frases[fraseIndex], {message, group, options, bot});
-
-  const resposta = new ReturnMessage({
-    chatId: chatId,
-    content: fraseFinal,
-    options: {
-      quotedMessageId: message.origin.id._serialized,
-      ...options
-    }
-  });
-
-  return resposta;
-}
-
-async function morreu(bot, message, args, group) {
-  const chatId = message.group || message.author;
-
-  const customVariables = await database.getCustomVariables();
-  const frases = customVariables.morreu;
+  const frases = customVariables[variavel];
   const fraseIndex = Math.floor(Math.random() * frases.length);
   
   const options = {};
@@ -73,42 +51,6 @@ async function presente(bot, message, args, group) {
   return resposta;
 }
 
-
-async function boleto(bot, message, args, group) {
-  const chatId = message.group || message.author;
-
-  const options = {};
-  const fraseFinal = await variableProcessor.process("*{mention}* foi escolhido pra pagar esse boleto para *{nomeAutor}* 😏😏\n___\n```B O Q U E T E```\n█║▌│║▌║▌│█│▌║│█│\n¹²³ ³² ²³¹ ¹ ¹²³² ³²¹ ³²³ ¹²³", {message, group, options, bot});
-  const resposta = new ReturnMessage({
-    chatId: chatId,
-    content: fraseFinal,
-    options: {
-      quotedMessageId: message.origin.id._serialized,
-      ...options
-    }
-  });
-
-  return resposta;
-}
-
-async function cartao(bot, message, args, group) {
-  const chatId = message.group || message.author;
-
-  const options = {};
-  const fraseFinal = await variableProcessor.process("💳 {nomeAutor} *clonou* o cartão de {mention}! 😏🥷 \n\n🔢 *Número:* {rndDadoRange-1000-9999}-{rndDadoRange-1000-9999}-{rndDadoRange-1000-9999}-{rndDadoRange-1000-9999}\n🔐 *Código de Segurança:* {rndDadoRange-100-999}\n📅 *Validade*: {rndDadoRange-1-12}/{rndDadoRange-23-50}\n📍 *CEP*: {rndDadoRange-10000-99999}-{rndDadoRange-100-999}\n💸 *Limite*: R${rndDadoRange-100-9999},{rndDadoRange-10-99}", {message, group, options, bot});
-  const resposta = new ReturnMessage({
-    chatId: chatId,
-    content: fraseFinal,
-    options: {
-      quotedMessageId: message.origin.id._serialized,
-      ...options
-    }
-  });
-
-  return resposta;
-}
-
-
 // Criar array de comandos usando a classe Command
 const commands = [
   new Command({
@@ -118,7 +60,9 @@ const commands = [
     reactions: {
       after: "💢"
     },
-    method: violencia
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "violencia");
+    }
   }),
   new Command({
     name: 'violência',
@@ -126,7 +70,9 @@ const commands = [
     reactions: {
       after: "💢"
     },
-    method: violencia
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "violencia");
+    }
   }),
 
   new Command({
@@ -136,7 +82,9 @@ const commands = [
     reactions: {
       after: "⚰️"
     },
-    method: violencia
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "morreu");
+    }
   }),
 
   new Command({
@@ -146,7 +94,9 @@ const commands = [
     reactions: {
       after: "🔳"
     },
-    method: boleto
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "boleto");
+    }
   }),
 
   new Command({
@@ -156,7 +106,9 @@ const commands = [
     reactions: {
       after: "💳"
     },
-    method: cartao
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "cartao");
+    }
   }),
 
   new Command({
@@ -167,6 +119,39 @@ const commands = [
       after: "🎁"
     },
     method: presente
+  }),
+
+  new Command({
+    name: 'aniversario',
+    description: 'Parabeniza um membro do grupo!',
+    category: "zoeira",
+    reactions: {
+      after: "🎂"
+    },
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "aniversario");
+    }
+  }),
+  new Command({
+    name: 'aniversário',
+    hidden: 'true',
+    reactions: {
+      after: "🎂"
+    },
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "aniversario");
+    }
+  }),
+
+  new Command({
+    name: 'genshin',
+    hidden: 'true',
+    reactions: {
+      after: "☄️"
+    },
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "genshin");
+    }
   })
 ];
 

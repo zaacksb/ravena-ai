@@ -40,7 +40,7 @@ async function main() {
         id: rBot.nome,
         phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
         eventHandler: eventHandler,
-        prefix: process.env.DEFAULT_PREFIX || '!',
+        prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
         otherBots: rBots.map(rB => rB.numero),
         // Configurações de puppeteer
         puppeteerOptions: {

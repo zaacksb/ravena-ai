@@ -364,9 +364,19 @@ class Management {
 
     let bodyTexto;
     if (!quotedMsg) {
-      if(args.length > 1){
-        bodyTexto = args.slice(1).join(" ");
-        commandTrigger = args[0];
+      if(args.length > 1){ // Tem argumetnos, tenta pegar o body pra incluir quebras de linha
+        if (message.origin && message.origin.body) {
+          // Extrai o texto após o comando
+          const prefixo = group.prefix || '!';
+          commandTrigger = args[0];
+          const comandoCompleto = `${prefixo}g-addCmd ${commandTrigger}`;
+          bodyTexto = message.origin.body.substring(message.origin.body.indexOf(comandoCompleto) + comandoCompleto.length).trim();
+        } else {
+          this.logger.info(`[addCmd] Não consegui pegar o body de mensagem, vou usar os args mesmo.`);
+          bodyTexto = args.slice(1).join(" ");
+          commandTrigger = args[0];
+
+        }
       } else {
         return new ReturnMessage({
           chatId: group.id,
@@ -377,7 +387,10 @@ class Management {
       bodyTexto = quotedMsg.body ?? quotedMsg._data.body;
     }
     
-    
+
+    if(commandTrigger.startsWith(group.prefix)){
+      commandTrigger = commandTrigger.replace(group.prefix, "");
+    }
     
     
     // Obtém o conteúdo da mensagem citada
@@ -489,14 +502,24 @@ class Management {
     
     let commandTrigger = args.join(' ').toLowerCase();
 
-    // Verifica se a mensagem é uma resposta
+
     const quotedMsg = await message.origin.getQuotedMessage();
 
     let bodyTexto;
     if (!quotedMsg) {
-      if(args.length > 1){
-        bodyTexto = args.slice(1).join(" ");
-        commandTrigger = args[0];
+      if(args.length > 1){ // Tem argumetnos, tenta pegar o body pra incluir quebras de linha
+        if (message.origin && message.origin.body) {
+          // Extrai o texto após o comando
+          const prefixo = group.prefix || '!';
+          commandTrigger = args[0];
+          const comandoCompleto = `${prefixo}g-addCmd ${commandTrigger}`;
+          bodyTexto = message.origin.body.substring(message.origin.body.indexOf(comandoCompleto) + comandoCompleto.length).trim();
+        } else {
+          this.logger.info(`[addCmdReply] Não consegui pegar o body de mensagem, vou usar os args mesmo.`);
+          bodyTexto = args.slice(1).join(" ");
+          commandTrigger = args[0];
+
+        }
       } else {
         return new ReturnMessage({
           chatId: group.id,
