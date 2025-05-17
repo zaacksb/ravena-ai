@@ -15,7 +15,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Constantes do jogo
 const MAX_FISH_PER_USER = 10;
 const MIN_FISH_WEIGHT = 1;
-const MAX_FISH_WEIGHT = 100; // Aumentado para 100kg
+const MAX_FISH_WEIGHT = 110; // Aumentado para 100kg
 const DIFFICULTY_THRESHOLD = 60; // Peso a partir do qual a dificuldade aumenta
 const FISHING_COOLDOWN = 5;
 const MAX_BAITS = 5; // Máximo de iscas reduzido para 5
@@ -602,7 +602,10 @@ function applyBuffs(userData, fish) {
   if ((!userData.buffs || userData.buffs.length === 0) && (!userData.debuffs || userData.debuffs.length === 0)) {
     return { fish, buffs: [] };
   }
-  
+    
+  if(!userData.debuffs){
+    userData.debuffs = [];
+  }
   // Copia o peixe para não modificar o original
   let modifiedFish = { ...fish };
   // Copia os buffs para atualizá-los

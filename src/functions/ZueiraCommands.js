@@ -136,7 +136,7 @@ const commands = [
     reactions: {
       after: "⚰️"
     },
-    method: violencia
+    method: morreu
   }),
 
   new Command({
