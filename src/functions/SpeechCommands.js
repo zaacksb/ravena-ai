@@ -21,7 +21,6 @@ const llmService = new LLMService({});
 
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
 const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';
-const alltalkOutputFolder = path.join(process.env.ALLTALK_FOLDER, "outputs");
 
 const whisperPath = process.env.WHISPER;
 

@@ -81,7 +81,7 @@ class WhatsAppBot {
    * Inicializa o cliente WhatsApp
    */
   async initialize() {
-    this.logger.info(`Inicializando instância de bot ${this.id}`);
+    this.logger.info(`Inicializando instância de bot ${this.id}, prefixo ${this.prefix}`);
 
     this.database.registerBotInstance(this);
 
@@ -209,7 +209,7 @@ class WhatsAppBot {
         try {
           const startMessage = `🟢 [${this.phoneNumber.slice(2,4)}] *${this.id}* tá _on_! (${new Date().toLocaleString("pt-BR")})`;
           this.logger.debug(`Enviando startMessage no grupoAvisos: `, startMessage, this.grupoAvisos);
-          await this.sendMessage(this.grupoAvisos, startMessage);
+          //await this.sendMessage(this.grupoAvisos, startMessage);
         } catch (error) {
           this.logger.error('Erro ao enviar notificação de inicialização:', error);
         }

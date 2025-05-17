@@ -4,204 +4,96 @@
 
 > Novo código da ravena completamente desenvolvido utilizando LLM Claude 3.7 Sonnet. Esta versão apresenta uma arquitetura modular, suporte a múltiplas instâncias, comandos personalizáveis e integração com plataformas de streaming. Livre para uso, sem garantias. Consulte o arquivo "Prompts" para ver as coisas que eu pedi pro Claude. Leia mais sobre os [design patterns aqui](docs/DesignPatterns.md).
 
-## ℹ️ Principais diferenças
-
-*No dia a dia:*
-- Os comandos de gerencia foram trocados por !g-xxx, envie !cmd-g para conhecê-los!
-- Todos os comandos precisam de prefixo agora, então quando criar um comando, não coloque o "!" na frente do nome do comando
-- O prefixo dos comandos pode ser alterado usando !g-setPrefixo
-- O !stt, que transformar áudio em texto, agora roda local e não precisa mais de chave azure nenhuma
-- Agora dá pra adicionar quantos canais de twitch, kick e youtube quiser em um grupo
- 
-
-*Novos comandos legais*
-- Pastas: É o _drive da ravena_! Guarde seus arquivos aqui e use comandos pra baixar todos de uma vez. Útil para grupos que precisam toda hora enviar documentos e outras coisas para membros novos.
-- TTS com voz personalizada: Agora sintetizo as vozes local usando o AllSpeak, sendo o default a voz da ravena, mas podendo aprender a voz de outras pessoas também
-
-*De código:*
-- O código está liberado e qualquer um pode contribuir pra novas funçoes
-- Foi 90% escrito por inteligência artificial _(Claude Sonnet 3.7)_
-- A base de dados é compartilhada entre todas as ravenas agora
-- Todas as ravenas rodam no mesmo processo
-
 ## 🔮 Visão Geral
 
-RavenaBot é um bot avançado para WhatsApp usado em grupos. Oferece:
+RavenaBot é um bot para WhatsApp que vem sendo desenvolvido há quase 4 anos, apenas como uma brincadeira/hobby. Começou como um bot da twitch (pra aprender um pouco da API deles com python) e depois foi integrado ao WhatsApp (pra aprender sobre nodejs) - virando um _spaghetti code_ absurdo, aí veio a ideia de refazer todo o código do zero, mas com uma ajudinha especial dos LLM (pra ver o estado atual de criação de código assistido por IA).
+O foco deste bot é a utilização do mesmo em grupos, onde ele pode notificar status das lives, responder comandos com utilidades (!clima, !gpt, ..,), criar comandos personalizados do grupo (como nightbot, StreamElements, etc.).
 
-- **Sistema modular de comandos** - comandos fixos, personalizáveis, e de gerenciamento
-- **Multiplas instâncias** - múltiplos números de WhatsApp podem ser executados no mesmo processo e compartilham a base de dados
-- **Integração com streaming** - monitoramento de Twitch, Kick e YouTube com notificações customizáveis
-- **Interação com LLM** - suporte a ChatGPT, Claude e outros modelos de linguagem
-- **Detecção de NSFW** - filtragem de conteúdo impróprio
-- **Sistema de convites** - gerenciamento avançado de convites de grupo
-- **Personalização profunda** - comandos, filtros, reações e muito mais
+Este bot foi implemetado utilizando o [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js), que manipula o WhatsAppWeb através de um navegador controlado pelo puppeteer.
+Bots deste tipo **não são permitidos**, então não use em seu número principal - compre um chip só pra isso.
 
-Os usuários podem usar os comandos existentes ou criar seus próprios comandos personalizados para estender as funcionalidades do WhatsApp.
 
 ## 🚀 Recursos Principais
-
-- **Comandos Fixos**: Comandos pré-definidos com funcionalidades prontas
-- **Comandos Personalizáveis**: Crie comandos específicos para seu grupo
-- **Monitoramento de Streams**: Receba notificações quando streamers ficarem online/offline
-- **Integração com LLM**: Responda menções usando modelos de linguagem
-- **Sistema de Filtros**: Filtre mensagens por palavras, links ou conteúdo NSFW
-- **Manipulação de Mídia**: Stickers, conversões de arquivos e mais
+- **Básico de Mídia** - Stickers, stickers sem fundo, baixa vídeos/música do youtube, baixa gifs, imagens, converte formatos, muda volume e mais!
+- **Sistema modular de Comandos** - Comandos fixos implementados por arquivo que todos podem ajudar a expandir + Interpretador comandos personalizados que podem ser cirados em tempo real dentro dos grupos
+- **Plataformas de Streaming** - Monitoramento de Twitch, Kick e YouTube com notificações customizáveis dentro dos grupos
+- **Jogos** - Roleta russa, pescaria, pokemon, geoguesser... Tudo isso no chat do grupo
+- **Zoeira** - Comandos de zueira pra entreter os memrbos
+- **Interações no Grupo** - Mensagens de boas vindas, despedidas, resumo de conversas, interações inteligentes
+- **Integração com LLMs** - Código pronto pra utilizar APIs OpenRouter, Gemini, ChatGPT e locais com o LMStudio
+- **StableDiffusion** - Gera imagens via sdwebui e envia direto no whats, rodando local sem pagar APIs
+- **Filtros de Mensagens** - Apaga mensagens com palavras específicas, links e também detecta conteúdo 18+
+- **Sistema de Convites** - O bot processa links de convites e possui comandos para que o administrador coloque o bot nos grupos de forma remota
+- **Painel de Controle Web** - Possui um painel de controle web (!g-painel) para configurar as opções do grupo
+- **Multiplas instâncias** - Múltiplos bots rodam com o mesmo código, compartilhando a base de dados
 - **Gerenciamento de Grupos**: Ferramentas para administradores
 - **Sistema de Convites**: Controle quem pode adicionar o bot a grupos
 - **Interações Automáticas**: O bot pode interagir aleatoriamente com mensagens
-- **Notificações Personalizáveis**: Customize mensagens de boas-vindas e despedida
 
-## ✅ TODO-Core
+## 🐦‍⬛ Quero usar agora!
 
-- [x] Estrutura base do bot
-- [x] Sistema de comandos (fixos, personalizados, gerenciamento)
-- [x] Gerenciamento de grupos
-- [x] Variáveis personalizadas em respostas
-- [x] Integração com LLM (OpenRouter, LM Studio)
-- [x] Monitoramento de streams (Twitch, Kick, YouTube)
-- [x] Sistema de convites
-- [x] Detecção de conteúdo NSFW
-- [x] Manipulação de mídia
-- [x] Sistema de doações pelo tipa.ai
-- [x] Servidor API
-- [x] Instruções do VOSK para speech-to-text
-- [X] Implementar docs para todas as funções implementadas até o momento
-- [X] Implementar e testar comandos com variáveis para APIs personalizadas (RAB, LoL, WR, valorant, etc.)
-- [X] Organizar/traduzir docs das funções
-- [X] Mensagem IA pra join/leave de grupo
-- [X] Comandos genéricos: Variáveis dinâmicas
-    - [x] Implementar comando !g- pra mostrar todas
-- [X] Comandos genéricos: processCustomStaticVariables implementar seleção random
-- [X] Dados de quem enviou convite na mensagem quando add ravena
-- [X] Additonal Admins: Bot considera outras pessoas como admin (a que add no grupo ou outra manual)
-- [x] Editar README com principais diferenças da ravena antiga
-- [x] Comando: !lembrar e versão nova com opção de repetir
-- [x] Comando: !gif, busca de gifs
-- [x] Comando: !imagine, geração de imagens no sdwebui
-- [x] Comando: !anime, info de animes
-    - [x] Traduzir sinopse
-- [x] Comando: !imdb, info de filmes e séries
-    - [x] Traduzir sinopse
-- [x] Comando: !wiki, busca na wikipédia
-- [x] Comando: !velharia, importa os comandos genéricos antigos da ravena
-- [x] Comando: !dxx, comandos de dados agora como fixos
-- [x] Comando: !apagar, pra apagar msgs do bot
-- [x] Comando: !g-pausar, suspende atividade do bot no grupo
-- [x] Comando: !traduzir + reações de bandeira
-- [x] Comando: !lastfm
-- [x] Comando: !news, ViniMunews (antigo JrMunews)
-- [x] Comando: !live, pega info da streams do grupo
-- [x] Comando: !streamers, mostra todas as lives monitoradas pelo bot (online)
-- [x] Comando: !placa (apenas alguns grupos, serviço pago)
-- [X] Implementar classes ReturnMessage e Command
-- [x] Migrar as funções para utlizar as classes Command e ReturnMessage
-- [x] Comandos de superadmin (!sa-join, !sa-block, refletir no model command.js)
-- [x] Implementar isAdmin/AdditionalAdmin/SuperAdmin
-- [x] Status do bot no status do whats
-- [x] Quando o bot carregar, pegar contatos bloqueados e ignorar os mesmos em grupos
-- [x] Interagir automatico em grupo com chance setada
-- [x] Mensagem boas vindas fixa (data/groupJoin.txt)
-- [x] Ranking mensagens (!faladores)
-- [x] Comando: !apelido, remover do gerenciamento e processar no EventHandler
-- [x] Comando: !g-manage dentro do grupo sem argumento
-- [x] GroupJoin: Enviar o nome que ficou o grupo e como mudar
-- [x] Variáveis: Mencionar pessoas {mention-55999999...}
-- [x] Variáveis: Importar todas da ravena antiga
-- [x] Melhorar comando !cmd pra ficar mais organizado
-- [x] COOLDOWN DOS COMANDOS
-- [x] Script para migração de dados da ravena antiga
-    - [x] Grupos
-    - [x] Lembretes
-    - [x] Listas
-    - [x] Outros
-    - [x] News
-    - [x] Midia da twitch
-- [x] Implementar !g-abrir e !g-fechar
-- [x] Implementar !g-setApelido numero Apelido
-- [x] !live atualizar titulo do grupo
-- [x] Add !convite
-- [x] Marcar com link no {mention}
-- [x] Criar antigo {membroRandom}
-- [x] Donates no convite
-- [x] Management updates:
-    - [x] adminOnly pra customCommands
-    - [x] Não permitir mudar fixedCommands
-    - [x] Coisas dos jogos, no código dos jogos
-- [x] Add alguns checks do modelo Command direto no executeFixedCommand (isAdmin, etc.)
+Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratuitamente_ em alguns números, você pode conferir o status dos bots [aqui neste link](https://ravena.moothz.win/)
+
+## ✅ TODO - O que esperar do futuro
+
+Lista completa do que já foi feito [aqui](docs/TODO.md)
+
+- [x] Melhor explicação da implementação do bot no README
 - [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
 - [ ] Comando convite com argumento pro id do bot
 - [ ] Add !info
-
-## ✅ TODO-FIX
-- [X] Fix respostas LLM não chegarem pelo OpenRouter
-- [X] Fix boas vindas enviando mesmo sem setar
-- [x] Fix emojis e reações que o claude criou estranhos
-- [x] Fix autoStt não triggando
-- [x] Imagine não tá retornando img
-- [x] !gif tá retornando img estática
-- [x] Fix TTS com AllTalk V2
-- [x] Busca img não funciona
-- [x] Não salvando algumas propriedades de grupo
-- [x] Gerenciar no PV buga coisas normais
-- [x] !g-manage está fazendo o bot responder dentro do grupo
-- [x] Mention bot apenas no começo
-- [x] Streams midia está substituindo e não adicionando
-- [x] Quando der 404 na busca de canal  youtube, tirar da lista de monitorados e avisar no grupo
-- [x] Algumas reações do AFTER não vão (ex.: !s)
-- [x] !live tá enviando pra ele mesmo as msgs
-- [x] Usar faster-whisper-xll
-- [x] AllTalk pegar arquivos via API
-- [x] Revisar cooldowns em todos comandos fixos
-- [x] Cooldown por ravena e por grupo, não global entre as 3
-- [x] Atualizar código para {mention} e {membroRandom}
-- [x] Ignorar mensagens entre ravenas (grupos de adm)
-- [x] Quando exceder requests do Gemini, tentar outro modelo ou local
-- [x] Fix novo Database.js com politica mais robusta de backups e gravações
-- [x] Ignorar mensagens grupo de invites
-- [x] Ordem processamento comandos com nome que só muda o final (cmd, cmd1, cmd2..)
-- [x] Fix SiPt
-- [x] Fix: Comando g-roletaReset
-- [x] Bot não envia mensagem de READY
-- [x] !le mais de 1 lista _([valeu, bernardo!](https://github.com/moothz/ravena-ai/pull/3))_
-- [x] !g-info colocar tudo da twitch, titulo, etc.
-- [x] Parse nome do canal da twitch: Remover on/off e https://twit...
 - [ ] Fix: SIGINT/SIGTERM não estão chegando/sendo executados
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] Stickers quadrados videos não envia (client.sendMessage)
 - [ ] Fix Riot API
 - [ ] Fix reset do ranking de pesca
-
-
-## ✅ TODO-Extras
-- [x] Interface web para status dos bots
-    - [ ] Interface web para administração
-- [x] Emoji Kitchen
 - [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
-- [x] Novo Jogo: Pesca
-- [x] Novo Jogo: Pinto
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
-- [x] Novo Comando: Msgs anônimas
 - [ ] Novo Comando: busca no youtube
-- [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
 - [ ] Implementar ADB para digitar code de login automaticamente
-- [ ] Melhor explicação da implementação do bot no README
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [ ] Gerar README.md atualizado
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 
-## 🔧 Instalação
+## 🔧 Quer hospedar sua própria ravena? 
+Se você não entende nada de programação ou nunca rodou aplicativos via código fonte, o melhor mesmo é chamar seu amigo da TI pra dar aquele help.
+O programa foi feito para rodar em Windows e Linux (MacOS deve funcionar sem problemas, é claro). Já rodei muito em Raspberry Pi/OrangePi e similares, mas nunca tentei rodar diretamente num Android.
 
-### Pré-requisitos
+### Requisitos Mínimos
+Sem isso, não vai dar pra rodar o bot.
 
-* [Node.js](https://nodejs.org/) (v14.0.0 ou superior)
-* [npm](https://www.npmjs.com/) (normalmente instalado com Node.js)
-* [Python 3.7+](https://www.python.org/downloads/) (para funcionalidades de IA e processamento de imagem)
-* [ImageMagick](docs/ImageManipulation.md) (para manipulação de imagens)
-* [FFmpeg](https://ffmpeg.org/download.html) (para processamento de áudio e vídeo)
+* Um servidor capaz de rodar o nodejs e todas as dependências
+* Um celular com whatsapp ativo (NÃO USE O SEU CHIP!)
+* [Node.js](https://nodejs.org/)
+* [Google Chrome](https://www.google.com/chrome/): Para poder enviar vídeos é necessário o Chrome
+* [FFmpeg](https://ffmpeg.org/download.html): (para processamento de áudio e vídeo)
+
+### Requisitos Recomendados
+Para funções bastante utilizadas do bot
+
+* [Python 3.7+](https://www.python.org/downloads/): Para usar nsfw-detect
+* [ImageMagick](docs/ImageManipulation.md): Comandos de efeito em imagens
+* [faster-whisper](https://github.com/SYSTRAN/faster-whisper): Para transcrição de áudios _(speech-to-text)_ - fácil de usar, binaries prontos
+* [alltalk_tts](https://github.com/erew123/alltalk_tts/tree/alltalkbeta): Texto pra voz, ferramenta grátis e poderosa (dá até pra copiar voz dos outros!)
+* [API - Gemini](https://ai.google.dev/): Na minha opinião, a melhor LLM Free _(gemini-2.0-flash-exp)_
+* [API - OWM](https://openweathermap.org/api): API grátis de previsão do tempo
+
+### Opcionais e Extras
+* [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui): Para gerar imagens com IA localmente
+* [nsfw-predict](https://github.com/GantMan/nsfw_model): Deteção de imagens 18+ (precisa do modelo abaixo)
+* [nsfw_mobilenet_v2_140_224.zip](https://github.com/GantMan/nsfw_model/releases/tag/1.1.0): Ótimo modelo free para detecção de imagens 18+
+* [API - Giphy](https://developers.giphy.com/): Para busca de GIFs
+* [API - OMDB](https://www.omdbapi.com/apikey.aspx): Para busca de informação de filmes (IMDB Free)
+* [API - Unsplash](https://unsplash.com/developers): Busca de Imagens
+* [API - Last.fm](https://www.last.fm/pt/api): Busca no Last.fm (perfis, infos)
+* [API - RiotGames](https://developer.riotgames.com/): Busca de ELO informações de jogos da Riot
+* [API - Placas](https://apiplacas.com.br/): API paga para busca de placas de carros (não é das melhores, mas é barato!)
+* [LM Studio](https://lmstudio.ai/): Caso não queira usar APIs para IA, hospede sua própria
+
 
 ### Passo a passo
 
@@ -217,10 +109,7 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
    python -m pip install backgroundremover
    ```
 
-3. Copie o arquivo `.env.example` para `.env`:
-   ```bash
-   cp .env.example .env
-   ```
+3. Copie o arquivo `.env.example` para `.env`
 
 4. Configure o arquivo `.env` (veja a seção [Configuração](#-configuração))
 
@@ -233,121 +122,79 @@ Os usuários podem usar os comandos existentes ou criar seus próprios comandos 
 
 ## ⚙️ Configuração
 
-Edite o arquivo `.env` com suas configurações. Abaixo estão as variáveis mais importantes:
+Edite o arquivo `.env` conforme instruções abaixo
 
 ```env
-# Configuração do bot
-DEFAULT_PREFIX=!        # Prefixo padrão para comandos
-SAFE_MODE=false         # Modo seguro (não envia mensagens reais)
-DEBUG=true              # Modo de depuração
-HEADLESS_MODE=true      # Modo headless do navegador
-YOUTUBE_DL_FOLDER=D:/youtube
+# Opções Gerais
+DEFAULT_PREFIX=!                    # Prefixo padrão de comandos
+SAFE_MODE=false                     # Apenas simula envio de mensagens e printa no terminal
+DEBUG=true                          # Mostra Mensagens de debug mais
+HEADLESS_MODE=false                 # false = mostra o navegador, true = navegador escondido
+DL_FOLDER=D:/downloads              # Pasta onde serão baixados mídias (youtube, etc)
+NOTIFY_UNKNOWN_COMMANDS=false       # Responder mensagens de "comando não encontrado"
+SUPER_ADMINS=12345@c.us             # Número de pessoas que podem dar comandos de SuperAdmin (padrão ID whats)
+MAX_BACKUPS=10
 
-# Configuração da API
-API_PORT=5000           # Porta para o servidor da API
-TIPA_TOKEN=seu_token    # Token webhook do Tipa.ai
+# API da RavenaBot
+BOT_DOMAIN=https://seuhost.com/rv   # URL da API 
+API_PORT=5000                       # Porta da API
+BOTAPI_USER=admin                   # Usuário para comandos remotos
+BOTAPI_PASSWORD=senhaCecreta        # Senha para comandos Remotos
+MANAGEMENT_TOKEN_DURATION=30        # Tempo em minutos de duração da sessão para !g-painel
 
-# Chaves de API
-OPENAI_API_KEY=         # Chave da API OpenAI (opcional)
-OPENROUTER_API_KEY=     # Chave da API OpenRouter (recomendado)
-LOCAL_LLM_ENDPOINT=     # Endpoint LLM local (ex: http://localhost:1234/v1)
-OPENWEATHER_API_KEY=    # Chave da API OpenWeather (opcional)
-SDWEBUI_URL=            # URL da API Stable Diffusion Web UI
-OMDB_API_KEY=           # Chave da API do OMDB (para comandos IMDB)
-GIPHY_API_KEY=          # Chave da API do Giphy
+# Chaves de API Externas
+TWITCH_CLIENT_ID=                   # https://dev.twitch.tv/docs/api/
+TWITCH_CLIENT_SECRET=               # 
+GOOGLE_API_KEY=                     # https://ai.google.dev/
+GOOGLE_MAPS_API_KEY=                # https://developers.google.com/maps/documentation/javascript/get-api-key
+DEEPSEEK_API_KEY=                   # https://platform.deepseek.com/apiKeys
+OPENAI_API_KEY=                     # https://openai.com/api/
+OPENROUTER_API_KEY=                 # https://openrouter.ai/docs/api-reference/api-keys/get-api-key
+OPENWEATHER_API_KEY=                # https://openweathermap.org/api
+RIOT_GAMES=                         # https://developer.riotgames.com/
+GIPHY_API_KEY=                      # https://developers.giphy.com/
+OMDB_API_KEY=                       # https://www.omdbapi.com/apikey.aspx
+UNSPLASH_API_KEY=                   # https://unsplash.com/developers
+LASTFM_APIKEY=                      # https://www.last.fm/pt/api
+LASTFM_SECRET=                      # 
+API_PLACAS_COMUM=                   # https://apiplacas.com.br/
+API_PLACAS_PREMIUM=                 # https://apiplacas.com.br/
+TIPA_TOKEN=                         # https://tipa.ai/settings/apps (WEBHOOKS)
+#API_PLACAS_USAR_PREMIUM=TRUE       # Caso tenha comprad uma chave premium
+GRUPOS_PLACA_PREMIUM=grupo1,grupo2  # Nomes de grupos que podem usar a API placa premium
 
-# Configurações de doação
-DONATION_LINK=          # Link para doações tipa.ai
-DONATION_GOAL_AMOUNT=   # Meta de doação
-DONATION_GOAL_DESC=     # Descrição da meta
+# URL de APIs Locais
+API_TIMEOUT=10000                   # 
+SDWEBUI_URL=http://192.168.3.200:7860       # Porta padrão SDWebui
+LOCAL_LLM_ENDPOINT=http://localhost:9666/v1 # Porta padrão LMStudio
+ALLTALK_API=http://localhost:7851           # Porta padrão AllTalk v2
 
-# IDs dos grupos de comunidade, formato 1234567890@g.us
-GRUPO_LOGS=             # ID do grupo para logs
-GRUPO_INVITES=          # ID do grupo para convites
-GRUPO_AVISOS=           # ID do grupo para avisos
-GRUPO_INTERACAO=        # ID do grupo para interação
+# Configuração das doações (provavelmente inútil pra ti que vai rodar o bot particular)
+DONATION_LINK=https://tipa.ai/user
+DONATION_GOAL_AMOUNT=1000
+DONATION_GOAL_DESCRIPTION=Pagar o moothz!
 
-# Tokens Twitch (para monitoramento de streams)
-TWITCH_CLIENT_ID=       # Client ID da Twitch
-TWITCH_CLIENT_SECRET=   # Client Secret da Twitch
-```
+# Grupos para Desenvolvimento e debug do bot
+LINK_GRUPO_INTERACAO=https://chat.whatsapp.com/abc123   # Para !grupao
+LINK_GRUPO_AVISOS=https://chat.whatsapp.com/def456      # Para !avisos
+GRUPO_LOGS=1234678901234567890@g.us                     # ID WhatsApp de grupos para debug e monitoramento
+GRUPO_INVITES=1234678901234567890@g.us                  # 1. Adicione o bot nos grupos
+GRUPO_AVISOS=1234678901234567890@g.us                   # 2. Abra o arquivo data/groups.json
+GRUPO_INTERACAO=1234678901234567890@g.us                # 3. Pegueo o ID de lá! (pra facilitar, use !g-setName)
 
-### Programas Externos
 
-O bot utiliza alguns programas externos para funcionalidades avançadas:
-
-* [ImageMagick](docs/ImageManipulation.md) - Para manipulação de imagens
-* [FFmpeg](https://ffmpeg.org/download.html) - Para processamento de áudio e vídeo
-* [AllTalk V2](https://github.com/erew123/alltalk_tts/tree/alltalkbeta) - Para síntese de voz (opcional)
-* [Whisper](https://github.com/openai/whisper) - Para transcrição de áudios (opcional)
-* [Stable Diffusion Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui) - Para geração de imagens (opcional)
-
-Configure os caminhos destes programas no arquivo `.env`:
-
-```env
 # Programas
-FFMPEG_PATH=C:/path/to/ffmpeg/bin/ffmpeg.exe
-CHROME_PATH=             # Caminho personalizado para o Chrome (opcional)
+# Eu rodo a ravena em um Windows Server, então vou deixar aqui os exemplos como seria em uma máquina Windows
+WHISPER=C:/Apps/Faster-Whisper-XXL/faster-whisper-xxl.exe
+FFMPEG_PATH=C:/Apps/ffmpeg.exe
+CHROME_PATH=C:/Program Files/Google/Chrome/Application/chrome.exe
+NSFW_PREDICT_COMMAND=C:/Users/Voce/AppData/Local/Packages/Py.../LocalCache/local-packages/Python310/Scripts/nsfw-predict.exe
+NSFW_PREDICT_MODEL=C:/Apps/mobilenet_v2_140_224
 ```
-
-## 📋 Tipos de Comandos
-
-O bot implementa quatro tipos de comandos:
-
-### 1. Comandos Fixos
-
-São comandos pré-definidos implementados em JavaScript na pasta `src/functions`. Exemplos:
-
-- `!ping`: Verifica se o bot está online
-- `!ai <pergunta>`: Faz uma pergunta ao LLM
-- `!weather <local>`: Obtém previsão do tempo
-- `!roll [lados]`: Joga um dado (padrão: 6 lados)
-- `!help`: Mostra comandos disponíveis
-- `!imagine <prompt>`: Gera imagens com Stable Diffusion
-- `!gif <termo>`: Busca e envia GIFs do Giphy
-- `!anime <nome>`: Busca informações sobre animes
-- `!imdb <título>`: Busca informações sobre filmes/séries
-- `!wiki <termo>`: Busca artigos na Wikipedia
-- `!dXX`: Comandos de dados (d20, d6, etc.)
-- `!lembrar <data/hora>`: Cria um lembrete
-- `!apagar`: Apaga mensagens do bot quando respondido
-
-### 2. Comandos Personalizados
-
-São criados pelos usuários para cada grupo usando o comando de gerenciamento `!g-addCmd`:
-
-```
-!g-addCmd saudação
-Olá a todos no grupo!
-```
-
-Após criar, o comando pode ser usado com: `!saudação`
-
-Os comandos personalizados suportam:
-- Texto simples
-- Mídia (imagens, vídeos, áudio, etc.)
-- Variáveis: `{pessoa}`, `{date}`, `{time}`, etc.
-- Comportamentos especiais como reagir à mensagem
-
-### 3. Comandos de Gerenciamento
-
-Começam com `!g-` e são usados para configurar o bot e o grupo:
-
-- `!g-setName <nome>`: Define o nome do grupo
-- `!g-addCmd <gatilho>`: Adiciona comando personalizado (usado como resposta)
-- `!g-delCmd <comando>`: Remove comando personalizado
-- `!g-setCustomPrefix <prefixo>`: Altera o prefixo de comando (vazio = sem prefixo)
-- `!g-setWelcome <mensagem>`: Define mensagem de boas-vindas
-- `!g-setFarewell <mensagem>`: Define mensagem de despedida
-- `!g-filtro-palavra <palavra>`: Adiciona/remove palavra do filtro
-- `!g-filtro-links`: Ativa/desativa filtro de links
-- `!g-filtro-nsfw`: Ativa/desativa filtro de conteúdo NSFW
-- `!g-pausar`: Pausa/retoma todas as atividades do bot no grupo
-
-
 ## 🧩 Criando Novos Comandos
 
-Para adicionar um novo comando fixo, crie um arquivo `.js` na pasta `src/functions/`. Exemplo:
+Para adicionar um novo comando fixo, crie um arquivo `.js` na pasta `src/functions/`.
+Aqui vai uma boa base pra começar:
 
 ```javascript
 const Logger = require('../utils/Logger');
@@ -355,7 +202,6 @@ const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
 
 const logger = new Logger('meus-comandos');
-
 
 const commands = [
   new Command({
@@ -378,21 +224,45 @@ const commands = [
         content: `Olá, ${nome}!`
       });
     }
-  }),
-  
-  // Adicione mais comandos aqui
+  })
 ];
 
 // Exporta os comandos
 module.exports = { commands };
 ```
 
+### 🤖 Criar comandos usando IA
+Se você sabe pedir pras LLMs programarem, aqui vai uma dica de como fazer:
+Anexe os seguintes arquivos:
+```
+- models/Group.js
+- models/Command.js
+- models/ReturnMessage.js
+- Este código de exemplo acima como exemplo.js
+```
+Se estiver fazendo alguma função similar a alguma existente no bot, anexo também o arquivo JS da pasta functions - por exemplo, se for fazer um comando que retorne Stickers, anexe o Stickers.js para a IA saber como tratar ReturnMessage de stickers, etc.
+
+
+Peça para a LLM:
+```
+Respeitando os padrões de implementação apresentados nos modelos e no exemplo.js desenvolva um novo comando conforme instruções a seguir:
+- Comando 'soletrar'
+- Recebe como argumento várias palavras
+- Para cada palavra recebida como argumento, separe as letras com hifen
+
+Exemplo:
+- Entrada: !soletrar batata porco
+- Saída: B-A-T-A-T-A | P-O-R-C-O
+```
+
+
+
 ### Propriedades de Comando
 
 | Propriedade | Tipo | Descrição |
 |-------------|------|-----------|
 | `name` | string | **Obrigatório**. Nome do comando (usado após o prefixo). |
-| `description` | string | Descrição do comando, exibida em mensagens de ajuda. |
+| `description` | string | Descrição do comando, exibido no menu. |
 | `method` | function | **Obrigatório**. Função a ser executada. Recebe `(bot, message, args, group)`. |
 | `needsMedia` | boolean | Se `true`, o comando requer mídia. |
 | `needsQuotedMsg` | boolean | Se `true`, o comando requer mensagem citada. |
@@ -402,55 +272,12 @@ module.exports = { commands };
 | `groupOnly` | boolean | Se `true`, o comando só pode ser usado em grupos. |
 | `privateOnly` | boolean | Se `true`, o comando só pode ser usado em chats privados. |
 | `enabled` | boolean | Se `false`, o comando está desativado. |
-| `hidden` | boolean | Se `true`, o comando não é mostrado na ajuda. |
+| `hidden` | boolean | Se `true`, o comando não é mostrado no menu. |
 
-## 📊 Monitoramento de Streams
+## 📊 A definir
 
-O bot pode monitorar canais do Twitch, Kick e YouTube e notificar os grupos quando eles ficam online/offline:
+Aqui vou refatorar a parte do README que fala sobre os comandos, em breve.
 
-### Comandos Twitch
-
-- `!g-twitch-canal <canal>`: Ativa/desativa monitoramento do canal
-- `!g-twitch-midia-on <canal>`: Define notificação para quando o canal ficar online
-- `!g-twitch-midia-off <canal>`: Define notificação para quando o canal ficar offline
-- `!g-twitch-mudarTitulo <canal>`: Ativa/desativa alteração do título do grupo
-- `!g-twitch-titulo-on <canal> <título>`: Define título personalizado para quando online
-- `!g-twitch-usarIA <canal>`: Ativa/desativa geração de mensagens com IA
-
-Comandos similares existem para Kick (`!g-kick-...`) e YouTube (`!g-youtube-...`).
-
-## 📚 Documentação dos Comandos
-
-Esta seção contém documentação detalhada de cada categoria de comandos disponíveis atualmente no bot, explicando sua implementação, uso e requisitos.
-
-- [Comandos de Anime](docs/AnimeCommands.md) - Busca informações sobre animes no MyAnimeList
-- [Comandos de Dados (Dice)](docs/DiceCommands.md) - Sistema de dados para RPG e jogos
-- [Comandos de Clima](docs/WeatherCommands.md) - Previsão do tempo e condições meteorológicas
-- [Comandos de Conversão de Arquivos](docs/FileConversions.md) - Ferramentas para manipulação de áudio e mídia
-- [Comandos de Fala e Voz](docs/SpeechCommands.md) - Conversão de texto para voz (TTS) e voz para texto (STT)
-- [Comandos de Gestão de Arquivos](docs/FileCommands.md) - Sistema de armazenamento e compartilhamento de arquivos
-- [Comandos de Grupo](docs/GroupCommands.md) - Gerenciamento e interação com grupos do WhatsApp
-- [Comandos de IA](docs/IACommands.md) - Inteligência artificial, geração de texto e imagens
-- [Comandos de Listas](docs/ListCommands.md) - Criação e gerenciamento de listas de participantes
-- [Comandos de Monitoramento de Streams](docs/StreamCommands.md) - Monitoramento de Twitch, Kick e YouTube
-- [Comandos de Busca](docs/SearchCommands.md) - Ferramentas para realizar buscas na web e imagens
-- [Comandos de Stickers](docs/Stickers.md) - Criação e manipulação de stickers para WhatsApp
-- [Comandos de Tradução](docs/TranslationCommands.md) - Tradução de texto entre diversos idiomas
-- [Comandos do Wikipedia](docs/WikipediaCommands.md) - Busca de informações na enciclopédia online
-- [Comandos do YouTube](docs/YoutubeDownloader.md) - Download de vídeos e áudios do YouTube
-- [Comandos de Arquivos](docs/FileManager.md) - Gerenciamento e compartilhamento de arquivos entre usuários
-- [Comandos Gerais](docs/GeneralCommands.md) - Comandos básicos e de utilidade geral
-- [Comandos de GIFs](docs/GiphyCommands.md) - Busca e envio de GIFs animados
-- [Comandos de Filmes e Séries](docs/ImdbCommands.md) - Busca de informações de filmes e séries
-- [Comandos do Last.FM](docs/LastFMCommands.md) - Estatísticas e informações musicais do Last.FM
-- [Comandos de Lembretes](docs/LembreteCommands.md) - Sistema de lembretes programados
-- [Comandos de Ranking](docs/RankingMessages.md) - Estatísticas de participação no grupo
-- [Comandos de Jogos Riot](docs/RiotGames.md) - Informações sobre jogadores de LoL, Wild Rift e Valorant
-- [Comandos de Roleta Russa](docs/RoletaRussaCommands.md) - Jogo de roleta russa com timeout
-- [Comandos de Clima](docs/Weather.md) - Informações meteorológicas e previsões do tempo
-- [Comandos do YouTube](docs/YoutubeDownloader.md) - Download de vídeos e áudios do YouTube
-
-Para informações detalhadas sobre a configuração de comandos de gerenciamento (que começam com !g-), consulte a [Documentação de Gerenciamento](docs/Management.md).
 
 ## 📝 Licença
 
