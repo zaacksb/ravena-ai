@@ -413,40 +413,48 @@ class StreamMonitor extends EventEmitter {
       this.logger.info(`[cleanupChannelList] Algum dos canais desta lista pode estar com erro, verificando todos: `, channels);
       const groups = await this.database.getGroups();
 
-      // Processa cada grupo
-      for (const group of groups) {
-        // Adiciona canais Twitch
-        if (group.twitch && Array.isArray(group.twitch)) {
-          if(channels.includes(group.twitch.channel)){
-            // Array para armazenar canais a serem removidos
-            const channelsToRemove = [];
-            
-            for (const channel of group.twitch) {
-              const channelExists = await this.twitchChannelExists(channel.channel);
-              
-              if (!channelExists) {
-                this.logger.info(`[cleanupChannelList] Canal Twitch não encontrado: ${channel.channel} - Removendo do grupo ${group.id} (${group.name || 'sem nome'})`);
-                channelsToRemove.push(channel.channel.toLowerCase());
-                continue;
-              }
-              await sleep(1000);
-            }
-            
-            if (channelsToRemove.length > 0) {
-              group.twitch = group.twitch.filter(c => !channelsToRemove.includes(c.channel.toLowerCase()));
-              await this.bot.database.saveGroup(group);
-              this.logger.info(`[cleanupChannelList] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
-            }
-          } else {
-            // Apenas da unsubscribe se já removeram do grupo
-            const channelExists = await this.twitchChannelExists(channel.channel);
-            if (!channelExists) {
-              const resUnsub = this.unsubscribe(channel.channel, 'twitch');
-              this.logger.info(`[cleanupChannelList] Canal Twitch não encontrado: ${channel.channel} - Apenas unsubscribe ${resUnsub}`);
-            }
 
+      const channelsToRemove = [];
+
+      // Processa cada grupo
+      for(let channelCheck of channels){
+        // Procura quais grupos tem esse canal
+
+        let channelHasGroup = false;
+        for (const group of groups) {
+          if (group.twitch && Array.isArray(group.twitch)) {
+            for (const gpChannel of group.twitch) {
+              if(gpChannel.channel == channelCheck){
+                channelHasGroup = true;
+
+                // Ok, canal está num grupo, mas esse canal existe?
+                const channelExists = await this.twitchChannelExists(channelCheck);
+              
+                if (!channelExists) {
+                  this.logger.info(`[cleanupChannelList] Canal Twitch não encontrado: ${channelCheck} - Removendo do grupo ${group.id} (${group.name || 'sem nome'})`);
+                  channelsToRemove.push(channel.channel.toLowerCase());
+                  continue;
+                } else {
+                  this.logger.info(`[cleanupChannelList] ${channelCheck} @ (${group.name || 'sem nome'}, ok, existe!`);
+                }
+                await sleep(500);  // API da twitch fica nervosa com spam
+              }
+            }
           }
+        }  
+
+        // Passei por todos os grupos mas não encontrei o canal, só dá unsubscribe
+        // Provavelmente chegou aqui pq configuraram errado e depois removeram antes do bot mesmo remover
+        if(!channelHasGroup){
+            this.logger.info(`[cleanupChannelList] Canal Twitch não está em grupo algum: ${channelCheck} - Apenas unsubscribe ${resUnsub}`);
+            const resUnsub = this.unsubscribe(channelCheck, 'twitch');
         }
+      }
+
+      if (channelsToRemove.length > 0) {
+        group.twitch = group.twitch.filter(c => !channelsToRemove.includes(c.channel.toLowerCase()));
+        await this.bot.database.saveGroup(group);
+        this.logger.info(`[cleanupChannelList] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
       }
     } catch (error) {
       this.logger.error('[cleanupChannelList] Erro ao fazer limpeza dos canais:', error);
