@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create default text content based on platform
         let defaultText = '';
         
-        let changeTitle = true/
+        let changeTitle = true;
         if (platform === 'youtube') {
             defaultText = `*⚠️ Vídeo novo! ⚠️*\n\n*{author}:* *{title}* \n{link}`;
             changeTitle = false;
