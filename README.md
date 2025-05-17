@@ -59,7 +59,7 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
 - [ ] Gerar README.md atualizado
 - [ ] Downloader de SocialMedias (Insta, TikTok)
 
-## 🔧 Quer hospedar sua própria ravena? 
+## 🔧 Hospedar sua própria ravena
 Se você não entende nada de programação ou nunca rodou aplicativos via código fonte, o melhor mesmo é chamar seu amigo da TI pra dar aquele help.
 O programa foi feito para rodar em Windows e Linux (MacOS deve funcionar sem problemas, é claro). Já rodei muito em Raspberry Pi/OrangePi e similares, mas nunca tentei rodar diretamente num Android.
 
@@ -113,16 +113,34 @@ Para funções bastante utilizadas do bot
 
 4. Configure o arquivo `.env` (veja a seção [Configuração](#-configuração))
 
-5. Inicie o bot:
+4. Copie o arquivo `bots.json.example` para `bots.json`
+
+5. Configure o arquivo `bots.json`
+
+6. Inicie o bot:
    ```bash
    npm start
    ```
 
-6. Escaneie o código QR que aparecerá no console usando o WhatsApp no seu celular.
+7. Escaneie o código QR que aparecerá no console usando o WhatsApp no seu celular.
 
 ## ⚙️ Configuração
 
-Edite o arquivo `.env` conforme instruções abaixo
+Edite o arquivo `bots.json` conforme instruções abaixo:
+```json
+[
+   {
+    "nome": "ravenabot",
+    "numero": "559912345678",
+    "ignorePV": false,          // Ignorar comandos no PV (menos de gerencia)
+    "ignoreInvites": false,     // Não ativar sistema de invites
+    "customPrefix": "!"         // Prefixo padrão dos comandos (os grupos são criados com este prefixo, mas podem alterar depois)
+   }
+]
+```
+
+
+Edite o arquivo `.env` conforme instruções abaixo:
 
 ```env
 # Opções Gerais
@@ -240,10 +258,10 @@ Anexe os seguintes arquivos:
 - models/ReturnMessage.js
 - Este código de exemplo acima como exemplo.js
 ```
-Se estiver fazendo alguma função similar a alguma existente no bot, anexo também o arquivo JS da pasta functions - por exemplo, se for fazer um comando que retorne Stickers, anexe o Stickers.js para a IA saber como tratar ReturnMessage de stickers, etc.
+Se estiver fazendo alguma função similar a alguma existente no bot, anexo também o arquivo JS da pasta functions - por exemplo, se for fazer um comando que retorne Stickers, anexe o `Stickers.js` para a IA saber como tratar ReturnMessage de stickers, etc.
 
 
-Peça para a LLM:
+Peça para o LLM:
 ```
 Respeitando os padrões de implementação apresentados nos modelos e no exemplo.js desenvolva um novo comando conforme instruções a seguir:
 - Comando 'soletrar'
