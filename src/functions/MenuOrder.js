@@ -20,7 +20,8 @@ const CATEGORY_EMOJIS = {
   "diversao": "🎮",
   "info": "ℹ️",
   "imagens": "🖼️",
-  "resto": "❓",
+  "zoeira": "🤪", 
+  "resto": "❓"
 };
 
 /**

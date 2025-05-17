@@ -388,7 +388,7 @@ async function runTests() {
     // // Wait for message processing
     // await new Promise(resolve => setTimeout(resolve, 2000));
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!rab PPAAC');
+    await simulator.simulateTextMessage(testUser, testGroup, '!pesca');
     
     logger.info('All tests completed successfully');
   } catch (error) {

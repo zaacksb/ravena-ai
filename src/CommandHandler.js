@@ -1029,7 +1029,7 @@ class CommandHandler {
       command.count = (command.count || 0) + 1;
       command.lastUsed = Date.now();
       await this.database.updateCustomCommand(group.id, command);
-      this.logger.debug(`Atualizadas estatísticas de uso para o comando *${command.startsWith}*, contagem: ${command.count}`);
+      //this.logger.debug(`Atualizadas estatísticas de uso para o comando *${command.startsWith}*, contagem: ${command.count}`);
       
       // Reage à mensagem se especificado (esta é a reação específica do comando)
       if (command.react) {

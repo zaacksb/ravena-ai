@@ -69,15 +69,16 @@ class CustomVariableProcessor {
       // Processa variáveis de tempo e data
       processedText = this.processSystemVariables(processedText);
       
+      // Processa variáveis estáticas personalizadas
+      if (this.cache.variables) {
+        processedText = this.processCustomStaticVariables(processedText);
+      }
+      
       // Processa variáveis específicas de contexto
       if (context) {
         processedText = await this.processContextVariables(processedText, context);
       }
       
-      // Processa variáveis estáticas personalizadas
-      if (this.cache.variables) {
-        processedText = this.processCustomStaticVariables(processedText);
-      }
       
       // Processa variáveis dinâmicas de API
       processedText = await this.processDynamicVariables(processedText);

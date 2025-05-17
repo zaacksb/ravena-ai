@@ -49,7 +49,15 @@ const TRASH_ITEMS = [
   { name: "Garrafa vazia", emoji: "🍾" },
   { name: "Chapéu de pirata", emoji: "👒" },
   { name: "Celular quebrado", emoji: "📱" },
-  { name: "Relógio parado", emoji: "⌚" }
+  { name: "Relógio parado", emoji: "⌚" },
+  { name: "Bebê Reborn", emoji: "👶" },
+  { name: "Faca Velha", emoji: "🔪" },
+  { name: "Tesoura Enferrujada", emoji: "✂" },
+  { name: "Cadeado Sem Chave", emoji: "🔒" },
+  { name: "Botão de salvar?", emoji: "💾" },
+  { name: "Hétero", emoji: "🔝" },
+  { name: "Microscópio Sujo", emoji: "🔬" },
+  { name: "Extintor Velho", emoji: "🧯" }
 ];
 
 // Upgrades para pesca
@@ -64,6 +72,7 @@ const UPGRADES = [
 // Downgrades para pesca
 const DOWNGRADES = [
   { name: "Mina Aquática", chance: 0.0001, emoji: "💣", effect: "clear_inventory" },
+  { name: "Vela Acesa do 𝒸𝒶𝓅𝒾𝓇𝑜𝓉𝑜", chance: 0.01, emoji: "🕯", effect: "weight_loss", value: -0.3, duration: 3 },
   { name: "Tartaruga Gulosa", chance: 0.01, emoji: "🐢", effect: "remove_baits", minValue: 1, maxValue: 3 }
 ];
 
@@ -457,6 +466,7 @@ function applyItemEffect(userData, item) {
   
   // Inicializa propriedades de buff se não existirem
   if (!userData.buffs) userData.buffs = [];
+  if (!userData.debuffs) userData.debuffs = [];
   
   switch (item.type) {
     case 'trash':
@@ -500,6 +510,15 @@ function applyItemEffect(userData, item) {
       
     case 'downgrade':
       switch (item.effect) {
+        case 'weight_loss':
+          userData.debuffs.push({
+            type: 'weight_loss',
+            value: item.value,
+            remainingUses: item.duration
+          });
+          effectMessage = `\n\n${item.emoji} 𝕍𝕠𝕔ê 𝕡𝕖𝕤𝕔𝕠𝕦 𝕦𝕞𝕒... 🕯️𝕍𝔼𝕃𝔸 𝔸ℂ𝔼𝕊𝔸?! 😱 𝒪𝒷𝓇𝒶 𝒹𝑜 𝒸𝒶𝓅𝒾𝓇𝑜𝓉𝑜! 🔥👹🩸`;
+          break;
+
         case 'clear_inventory':
           userData.fishes = [];
           userData.totalWeight -= userData.inventoryWeight || 0;
@@ -519,6 +538,59 @@ function applyItemEffect(userData, item) {
   return { userData, effectMessage };
 }
 
+function toDemonic(text) {
+  const substitutions = {
+    a: ['𝖆', 'α', 'ᴀ', 'ᴀ', 'ค'],
+    b: ['𝖇', 'в', 'ɓ'],
+    c: ['𝖈', 'ƈ', 'ς'],
+    d: ['𝖉', 'ԁ', 'ɗ'],
+    e: ['𝖊', 'є', 'ɛ', 'ҽ'],
+    f: ['𝖋', 'ғ', 'ƒ'],
+    g: ['𝖌', 'ɠ', 'g'],
+    h: ['𝖍', 'ђ', 'ħ'],
+    i: ['𝖎', 'ι', 'ɨ', 'į'],
+    j: ['𝖏', 'ʝ', 'ј'],
+    k: ['𝖐', 'κ', 'ҡ'],
+    l: ['𝖑', 'ʟ', 'ℓ'],
+    m: ['𝖒', 'м', 'ʍ'],
+    n: ['𝖓', 'и', 'ภ'],
+    o: ['𝖔', 'σ', 'ø', 'ɵ'],
+    p: ['𝖕', 'ρ', 'ք'],
+    q: ['𝖖', 'զ', 'ʠ'],
+    r: ['𝖗', 'я', 'ʀ'],
+    s: ['𝖘', 'ѕ', 'ʂ'],
+    t: ['𝖙', 'τ', '†'],
+    u: ['𝖚', 'υ', 'ʋ'],
+    v: ['𝖛', 'ν', 'ⱱ'],
+    w: ['𝖜', 'ฬ', 'щ'],
+    x: ['𝖝', 'ж', 'ҳ'],
+    y: ['𝖞', 'ү', 'ყ'],
+    z: ['𝖟', 'ʐ', 'ζ']
+  };
+
+  function substituteChar(char) {
+    const lower = char.toLowerCase();
+    if (substitutions[lower]) {
+      const options = substitutions[lower];
+      const replacement = options[Math.floor(Math.random() * options.length)];
+      return char === lower ? replacement : replacement.toUpperCase();
+    }
+    return char;
+  }
+
+  // Embaralhar levemente a string mantendo um pouco de legibilidade
+  const chars = text.split('');
+  for (let i = chars.length - 1; i > 0; i--) {
+    if (Math.random() < 0.3) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+  }
+
+  return chars.map(substituteChar).join('');
+}
+
+
 /**
  * Aplica efeitos de buffs a um peixe
  * @param {Object} userData - Dados do usuário
@@ -526,8 +598,8 @@ function applyItemEffect(userData, item) {
  * @returns {Object} - Objeto com peixe modificado e buffs atualizados
  */
 function applyBuffs(userData, fish) {
-  // Se não há buffs, retorna o peixe original
-  if (!userData.buffs || userData.buffs.length === 0) {
+  // Se não há buffs OU debuffs, retorna o peixe original
+  if ((!userData.buffs || userData.buffs.length === 0) && (!userData.debuffs || userData.debuffs.length === 0)) {
     return { fish, buffs: [] };
   }
   
@@ -535,6 +607,7 @@ function applyBuffs(userData, fish) {
   let modifiedFish = { ...fish };
   // Copia os buffs para atualizá-los
   let updatedBuffs = [...userData.buffs];
+  let updatedDebuffs = [...userData.debuffs];
   let buffMessages = [];
   
   // Aplica cada buff e atualiza seus usos restantes
@@ -566,8 +639,31 @@ function applyBuffs(userData, fish) {
     // Mantém o buff se ainda tiver usos restantes
     return buff.remainingUses > 0;
   });
+
+  updatedDebuffs = updatedDebuffs.filter(debuff => {
+    if (debuff.remainingUses <= 0) return false;
+    
+    switch (debuff.type) {
+      case 'weight_loss':
+        const originalWeight = modifiedFish.weight;
+        modifiedFish.weight *= (1 + debuff.value);
+        modifiedFish.weight = parseFloat(modifiedFish.weight.toFixed(2));
+        
+        modifiedFish.name = toDemonic(modifiedFish.name);
+        // Adiciona mensagem de debuff
+        buffMessages.push(`⬇️ ⱻ𝖘𝖘𝖊 ⲡ𝖊𝗂𝖝𝖊 𝖕ⲁ𝓇𝖊𝖈𝖊... †αᑰ ʍαɢ𝓇υ? (${originalWeight}kg → ${modifiedFish.weight}kg)`);
+        break;
+    }
+    
+    // Decrementa usos restantes
+    debuff.remainingUses--;
+    // Mantém o buff se ainda tiver usos restantes
+    return debuff.remainingUses > 0;
+  });
+
+
   
-  return { fish: modifiedFish, buffs: updatedBuffs, buffMessages };
+  return { fish: modifiedFish, buffs: updatedBuffs, debuffs: updatedDebuffs, buffMessages };
 }
 
 /**
@@ -684,7 +780,8 @@ async function fishCommand(bot, message, args, group) {
         totalCatches: 0,
         baits: MAX_BAITS, // Começa com máximo de iscas
         lastBaitRegen: Date.now(),
-        buffs: []
+        buffs: [],
+        debuffs: []
       };
     } else {
       // Atualiza nome do usuário se mudou
@@ -762,6 +859,7 @@ async function fishCommand(bot, message, args, group) {
       const buffResult = applyBuffs(fishingData.fishingData[userId], fish);
       const modifiedFish = buffResult.fish;
       fishingData.fishingData[userId].buffs = buffResult.buffs;
+      fishingData.fishingData[userId].debuffs = buffResult.debuffs;
       
       // Adiciona mensagens de buffs ao effectMessage
       let buffResultMsg = "xxxxxxxx";
@@ -861,6 +959,7 @@ async function fishCommand(bot, message, args, group) {
     // Define o cooldown
     fishingCooldowns[userId] = now + FISHING_COOLDOWN;
     
+  
     // Se não pescou nenhum peixe (só lixo), retorna mensagem de lixo
     if (caughtFishes.length === 0) {
       return new ReturnMessage({
@@ -1117,6 +1216,19 @@ async function myFishCommand(bot, message, args, group) {
           }
         });
       }
+
+      if (userData.debuffs && userData.debuffs.length > 0) {
+        fishMessage += `\n*Debuffs Ativos*:\n`;
+        userData.debuffs.forEach(debuff => {
+          switch (debuff.type) {
+            case 'weight_loss':
+              fishMessage += `✝️ 𝕰'𝖘𝖍 𝖕𝖍𝖊𝖘𝖍 𝖛𝖍𝖔𝖗𝖓... †𝖆𝖆𝖆𝖌𝖗𝖗𝖗𝖗𝖍𝖙𝖍?? 🐟✝️ (🕯 ${debuff.remainingUses}🕯)\n`;
+              break;
+          }
+        });
+      }
+
+
       
       // Informa sobre o limite de inventário
       if (fishes.length >= MAX_FISH_PER_USER) {
@@ -1492,7 +1604,8 @@ async function showBaitsCommand(bot, message, args, group) {
         totalCatches: 0,
         baits: MAX_BAITS,
         lastBaitRegen: Date.now(),
-        buffs: []
+        buffs: [],
+        debuffs: []
       };
     }
     
