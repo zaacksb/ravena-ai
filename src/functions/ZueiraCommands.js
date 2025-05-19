@@ -66,6 +66,7 @@ const commands = [
   }),
   new Command({
     name: 'violência',
+    category: "zoeira",
     hidden: 'true',
     reactions: {
       after: "💢"
@@ -134,6 +135,7 @@ const commands = [
   }),
   new Command({
     name: 'aniversário',
+    category: "zoeira",
     hidden: 'true',
     reactions: {
       after: "🎂"
@@ -145,7 +147,8 @@ const commands = [
 
   new Command({
     name: 'genshin',
-    hidden: 'true',
+    hidden: 'false',
+    category: "zoeira",
     reactions: {
       after: "☄️"
     },

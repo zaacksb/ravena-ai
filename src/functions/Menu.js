@@ -61,6 +61,108 @@ function groupCommandsByCategory(commands) {
   return categories;
 }
 
+async function showCommandsByCategory (bot, message, args, group){
+  try {
+    // Extract the category from the command
+    const fullCommand = message.content.trim(); 
+    const prefix = group && group.prefix ? group.prefix : bot.prefix;
+    
+    // Check if it's a category command (cmd-xxx)
+    if (fullCommand.startsWith(`${prefix}cmd-`) && fullCommand.length > prefix.length + 4) {
+      const category = fullCommand.substring(prefix.length + 4).toLowerCase();
+      
+      // Skip if it's the management commands (already handled by cmd-g)
+      if (category === 'g' || category === 'gerenciamento') {
+        return await sendManagementCommandList(bot, message, args, group);
+      }
+      
+      // Get fixed commands
+      const fixedCommands = bot.eventHandler.commandHandler.fixedCommands.getAllCommands();
+      
+      // Filter commands by category
+      const commandsInCategory = fixedCommands.filter(cmd => 
+        cmd.category && cmd.category.toLowerCase() === category && !cmd.hidden
+      );
+      
+      // Get custom commands for this group
+      const customCommands = group ? 
+        (await database.getCustomCommands(group.id))
+          .filter(cmd => cmd.active && !cmd.deleted && 
+                 cmd.category && cmd.category.toLowerCase() === category) : 
+        [];
+      
+      // If no commands found in this category
+      if (commandsInCategory.length === 0 && customCommands.length === 0) {
+        return new ReturnMessage({
+          chatId: message.group || message.author,
+          content: `Nenhum comando encontrado na categoria '${category}'.`
+        });
+      }
+      
+      // Build message
+      let menuText = `🤖 *Comandos na categoria '${category}'*\n\n`;
+      
+      // Add fixed commands
+      if (commandsInCategory.length > 0) {
+        // Group related commands
+        const groupedCommands = groupRelatedCommands(commandsInCategory);
+        
+        // Sort commands
+        const sortedGroups = sortCommands(groupedCommands);
+        
+        // Format each command group
+        for (const cmdGroup of sortedGroups) {
+          if (Array.isArray(cmdGroup) && cmdGroup.length > 1) {
+            // Group of related commands
+            menuText += `${formatCommandGroup(cmdGroup, prefix)}\n`;
+          } else {
+            // Individual command
+            const cmd = Array.isArray(cmdGroup) ? cmdGroup[0] : cmdGroup;
+            menuText += `${formatSingleCommand(cmd, prefix)}\n`;
+          }
+        }
+      }
+      
+      // Add custom commands
+      if (customCommands.length > 0) {
+        if (commandsInCategory.length > 0) {
+          menuText += '\n';
+        }
+        
+        menuText += `*Comandos personalizados na categoria '${category}'*:\n`;
+        
+        for (const cmd of customCommands) {
+          menuText += `• *${prefix}${cmd.startsWith}*`;
+          
+          if (cmd.reactions && cmd.reactions.trigger) {
+            menuText += ` (${cmd.reactions.trigger})`;
+          }
+          
+          if (cmd.description) {
+            menuText += `: ${cmd.description}`;
+          }
+          
+          menuText += '\n';
+        }
+      }
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: menuText
+      });
+    }
+    
+    // If not a category command, return null to let other handlers process it
+    return null;
+  } catch (error) {
+    logger.error('Erro ao enviar lista de comandos por categoria:', error);
+    return new ReturnMessage({
+      chatId: message.group || message.author,
+      content: 'Erro ao recuperar lista de comandos por categoria. Por favor, tente novamente.'
+    });
+  }
+}
+
 /**
  * Agrupa comandos que compartilham a mesma propriedade 'group'
  * @param {Array} commands - Lista de comandos de uma categoria
@@ -560,7 +662,32 @@ const commands = [
     method: async (bot, message, args, group) => {
       return await sendGroupCommandList(bot, message, args, group);
     }
-  })
+  }),
+  new Command({
+    name: 'cmd-categoria',
+    description: 'Mostra comandos da categoria informada',
+    category: "geral",
+    method: async (bot, message, args, group) => {
+
+      return new ReturnMessage({
+          chatId: message.group || message.author,
+          content: `🤖 *Categorias disponíveis*:\n\n${Object.keys(CATEGORY_EMOJIS).map((c,v) => `- !cmd-${c}`).join("\n")}`
+        });
+    }
+  })  
 ];
+
+
+Object.keys(CATEGORY_EMOJIS).forEach((category,v) => {
+  commands.push( new Command({
+    name: `cmd-${category}`,
+    description: `Mostra comandos da categoria ${category}`,
+    category: "geral",
+    hidden: true,
+    method: showCommandsByCategory
+  }));
+
+})
+
 
 module.exports = { commands };

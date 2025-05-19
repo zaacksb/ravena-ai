@@ -709,7 +709,8 @@ class CommandHandler {
         }
 
         messageClone.origin = message.origin; // Aqui precisa, obrigatoriamente, ser a referência, não cópia
-        
+        messageClone.origin.body = messageClone.origin.body.replace(`${group.prefix} `, group.prefix); // "! " vira "!"
+
         const managementResponse = await this.management[methodName](bot, messageClone, args, group, this.privateManagement);
         
         // Se a resposta for ReturnMessage ou array de ReturnMessage, modifica chatId se necessário
@@ -773,8 +774,17 @@ class CommandHandler {
    */
   async executeFixedCommand(bot, message, command, args, group) {
     try {
-      //this.logger.info(`Executando comando fixo: ${command.name}, args: ${args.join(', ')}`);
-      
+      this.logger.info(`Executando comando fixo: ${command.name}@${command.category}, args: ${args.join(', ')}`);
+
+      // Verifica se a categoria de comando não está mutada
+      if (group && group.mutedCategories && Array.isArray(group.mutedCategories)) {  
+        if (command && command.category &&   
+            group.mutedCategories.includes(command.category.toLowerCase())) {  
+          this.logger.debug(`Ignorando comando '${command.name}' da categoria silenciada '${command.category}'`);  
+          return;
+        }  
+      }
+        
       // Verifica se o comando requer mensagem citada
       if (command.needsQuotedMsg) {
         const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);

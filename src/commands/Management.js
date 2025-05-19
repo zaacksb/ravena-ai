@@ -111,7 +111,11 @@ class Management {
       },
       'mute': {
         method: 'muteCommand',
-        description: 'Desativa comando com a palavra especificada'
+        description: 'Desativa/ativa comando com a palavra especificada'
+      },
+      'muteCategoria': {
+        method: 'toggleMuteCategory',
+        description: 'Desativa/ativa todos os comandos da categoria especificada'
       },
       'customAdmin': {
         method: 'customAdmin',
@@ -1335,7 +1339,11 @@ async setWelcomeMessage(bot, message, args, group) {
       }
       
       if (group.mutedStrings && group.mutedStrings.length > 0) {
-        infoMessage += `*Strings Ignoradas:* ${group.mutedStrings.length}\n`;
+        infoMessage += `*Comandos Ignorados:* ${group.mutedStrings.length}\n`;
+      }
+
+      if (group.mutedCategories && group.mutedCategories.length > 0) {  
+        infoMessage += `\n*Categorias Silenciadas:* ${group.mutedCategories.join(', ')}\n`;  
       }
       
       // Apelidos configurados
@@ -3667,6 +3675,62 @@ async setWelcomeMessage(bot, message, args, group) {
         content: 'Erro ao processar comando. Por favor, tente novamente.'
       });
     }
+  }
+
+  async toggleMuteCategory(bot, message, args, group) {  
+    if (!group) {  
+      return new ReturnMessage({  
+        chatId: message.author,  
+        content: 'Este comando só pode ser usado em grupos.'  
+      });  
+    }  
+      
+    if (args.length === 0) {  
+      // Show current muted categories  
+      const mutedCategories = group.mutedCategories || [];  
+        
+      if (mutedCategories.length === 0) {  
+        return new ReturnMessage({  
+          chatId: group.id,  
+          content: 'Não há categorias silenciadas neste grupo. Use !g-muteCategoria [categoria] para silenciar uma categoria inteira de comandos.'  
+        });  
+      }  
+        
+      return new ReturnMessage({  
+        chatId: group.id,  
+        content: `*Categorias silenciadas:*\n${mutedCategories.join(', ')}`  
+      });  
+    }  
+      
+    const category = args[0].toLowerCase();  
+      
+    // Initialize mutedCategories if it doesn't exist  
+    if (!group.mutedCategories) {  
+      group.mutedCategories = [];  
+    }  
+      
+    // Check if category is already muted  
+    const index = group.mutedCategories.indexOf(category);  
+      
+    if (index !== -1) {  
+      // Remove category from muted list  
+      group.mutedCategories.splice(index, 1);  
+      await this.database.saveGroup(group);  
+        
+      return new ReturnMessage({  
+        chatId: group.id,  
+        content: `✅ Categoria '${category}' foi reativada.`  
+      });  
+    } else {  
+      // Add category to muted list  
+      group.mutedCategories.push(category);  
+      await this.database.saveGroup(group);  
+        
+      return new ReturnMessage({  
+        chatId: group.id,  
+        content: `🔇 Categoria '${category}' foi silenciada.`  
+      });  
+    }  
   }
 
   /**

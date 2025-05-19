@@ -623,9 +623,9 @@ class EventHandler {
         // Caso 2: Outra pessoa entrou no grupo
         // Gera e envia mensagem de boas-vindas para o novo membro
         if (group.greetings) {
-          this.generateGreetingMessage(bot, group, data.user, chat).then(welcomeMessage => {
-            if (welcomeMessage) {
-              bot.sendMessage(group.id, welcomeMessage).catch(error => {
+          this.generateGreetingMessage(bot, group, data.user, chat).then(welcome => {
+            if (welcome) {
+              bot.sendMessage(group.id, welcome.message, { mentions: welcome.mentions }).catch(error => {
                 this.logger.error('Erro ao enviar mensagem de boas-vindas:', error);
               });
             }
@@ -706,15 +706,28 @@ class EventHandler {
       
       // Se houver múltiplos usuários, prepara os nomes
       let nomesPessoas = "";
+      let numeroPessoas = "";
       let quantidadePessoas = 1;
       let isPlural = false;
-      
+      let mentions = [];
+
+      /*
       if (Array.isArray(user)) {
         nomesPessoas = user.map(u => u.name || "Alguém").join(", ");
         quantidadePessoas = user.length;
         isPlural = quantidadePessoas > 1;
       } else {
         nomesPessoas = user.name || "Alguém";
+      }*/
+
+       if (Array.isArray(user)) {
+        numeroPessoas = user.map(u => `@${u.id.split('@')[0]}` || "@123456780").join(", ");
+        quantidadePessoas = user.length;
+        isPlural = quantidadePessoas > 1;
+        mentions = user.map(u => u.id);
+      } else {
+        numeroPessoas = `@${user.id.split('@')[0]}` || "@123456780";
+        mentions = [user.id];
       }
 
       // Se saudação de texto
@@ -723,12 +736,14 @@ class EventHandler {
         let message = group.greetings.text;
         
         // Variáveis básicas
-        message = message.replace(/{pessoa}/g, nomesPessoas);
+        //message = message.replace(/{pessoa}/g, nomesPessoas);
+        message = message.replace(/{pessoa}/g, numeroPessoas); // Usa o numero pra marcar
         
         // Variáveis de grupo
         message = message.replace(/{tituloGrupo}/g, chatData?.name || "Grupo");
         message = message.replace(/{nomeGrupo}/g, group?.name || "Grupo");
-        message = message.replace(/{nomePessoas}/g, nomesPessoas);
+        message = message.replace(/{nomePessoas}/g, numeroPessoas);
+        message = message.replace(/{numeroPessoas}/g, numeroPessoas);
         
         // Variáveis de pluralidade
         if (isPlural) {
@@ -745,7 +760,7 @@ class EventHandler {
           message = message.replace(/{plural_esao}/g, "é");
         }
         
-        return message;
+        return { message, mentions };
       }
       
       // Se saudação de sticker
@@ -781,9 +796,10 @@ class EventHandler {
       if (group.farewells.text) {
         // Substitui variáveis
         let message = group.farewells.text;
-        message = message.replace(/{pessoa}/g, user.name);
+        message = message.replace(/{pessoa}/g, `@${user.id.split('@')[0]}`);
         
-        return message;
+        const mentions = [user.id];
+        return { message, mentions };
       }
       
       // Despedida padrão

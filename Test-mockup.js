@@ -270,7 +270,8 @@ class BotSimulator {
     const notification = {
       id: { _serialized: `mock-notification-${Date.now()}` },
       type: 'group_join',
-      
+      user: {id: {_serialized: userId, name: "Batata"}},
+      getRecipients: () => [userId],
       // Mock methods
       getChat: async () => ({
         id: { _serialized: groupId },
@@ -353,7 +354,7 @@ async function runTests() {
     const simulator = new BotSimulator(bot);
     
     // Run example tests
-    const testUser = '987654321@c.us';
+    const testUser = '55123456789@c.us';
     const testGroup = '120363401355514899@g.us';
     
     // First, we need to ensure the database has the test group
@@ -386,9 +387,14 @@ async function runTests() {
     // await simulator.simulateVideoMessage(testUser, testGroup, '!sq Video teste');
     
     // // Wait for message processing
-    // await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    //logger.info('sending');
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!pesca');
+    //await simulator.simulateTextMessage(testUser, testGroup, '!g-muteCategoria zoeira');
+    //await simulator.simulateTextMessage(testUser, testGroup, '!genshin');
+  
+    logger.info('joining');    
+    await simulator.simulateGroupJoin(testGroup, testUser);
     
     logger.info('All tests completed successfully');
   } catch (error) {

@@ -47,6 +47,7 @@ class Group {
     this.ignoredNumbers = data.ignoredNumbers || [];
     this.ignoredUsers = data.ignoredUsers || [];
     this.mutedStrings = data.mutedStrings || [];
+    this.mutedCategories = data.mutedCategories || [];
     this.nicks = data.nicks || [];
     
     
