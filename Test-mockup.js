@@ -388,13 +388,12 @@ async function runTests() {
     
     // // Wait for message processing
     await new Promise(resolve => setTimeout(resolve, 5000));
-    //logger.info('sending');
+    logger.info('sending');
 
-    //await simulator.simulateTextMessage(testUser, testGroup, '!g-muteCategoria zoeira');
-    //await simulator.simulateTextMessage(testUser, testGroup, '!genshin');
+    await simulator.simulateTextMessage(testUser, testGroup, '$valorant Darker#Xayah-NA');
   
-    logger.info('joining');    
-    await simulator.simulateGroupJoin(testGroup, testUser);
+    //logger.info('joining');    
+    //await simulator.simulateGroupJoin(testGroup, testUser);
     
     logger.info('All tests completed successfully');
   } catch (error) {

@@ -7,12 +7,14 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('riot-games-commands');
 
 // Riot Games API key from environment variables
-const RIOT_API_KEY = process.env.RIOT_API_KEY;
+const RIOT_API_KEY = process.env.RIOT_GAMES;
 
 // Base URLs for different Riot APIs
+const RIOT_BASE_URL = 'https://americas.api.riotgames.com/riot';
 const LOL_BASE_URL = 'https://br1.api.riotgames.com/lol'; // Default to NA region
-const VALORANT_BASE_URL = 'https://br1.api.riotgames.com/val';
-const WR_BASE_URL = 'https://br1.api.riotgames.com/riot/account/v1';
+const VALORANT_BASE_URL = 'https://br.api.riotgames.com/val';
+const CHAMPIONS_URL = 'https://ddragon.leagueoflegends.com/cdn/15.10.1/data/en_US/champion.json';
+
 
 // Emoji mapping for ranked tiers
 const RANK_EMOJIS = {
@@ -25,6 +27,42 @@ const RANK_EMOJIS = {
   'MASTER': '🏆',
   'GRANDMASTER': '👑',
   'CHALLENGER': '⚡'
+};
+
+const RANK_EMOJIS_VALORANT = {
+    "Iron 1": '🔗',
+    "Iron 2": '🔗',
+    "Iron 3": '🔗',
+    "Iron":'🔗',
+    "Bronze 1": '🥉',
+    "Bronze 2": '🥉',
+    "Bronze 3": '🥉',
+    "Bronze":'🥉',
+    "Silver 1": '🥈',
+    "Silver 2": '🥈',
+    "Silver 3": '🥈',
+    "Silver":'🥈',
+    "Gold 1": '🥇',
+    "Gold 2": '🥇',
+    "Gold 3": '🥇',
+    "Gold":'🥇',
+    "Platinum 1": '💎',
+    "Platinum 2": '💎',
+    "Platinum 3": '💎',
+    "Platinum":'💎',
+    "Diamond 1": '💍',
+    "Diamond 2": '💍',
+    "Diamond 3": '💍',
+    "Diamond":'💍',
+    "Ascendant 1": '😇',
+    "Ascendant 2": '😇',
+    "Ascendant 3": '😇',
+    "Ascendant":'😇',
+    "Immortal 1": '☠️',
+    "Immortal 2": '☠️',
+    "Immortal 3": '☠️',
+    "Immortal":'☠️',
+    "Radiant": '☀️'
 };
 
 // Emoji mapping for positions/roles
@@ -56,34 +94,53 @@ function formatNumber(num) {
 
 /**
  * Get League of Legends summoner data
- * @param {string} summonerName - Summoner name to look up
+ * @param {string} gameName - Summoner name to look up
+ * @param {string} tagLine - Summoner tagLine to look up
  * @returns {Promise<Object>} - Formatted summoner data
  */
-async function getLolSummonerData(summonerName) {
+async function getLolSummonerData(gameName, tagLine) {
   try {
-    // Fetch summoner by name
-    const summonerResponse = await axios.get(
-      `${LOL_BASE_URL}/summoner/v4/summoners/by-name/${encodeURIComponent(summonerName)}`,
+    // Fetch account by gameName/tagLine
+    const accountResponse = await axios.get(
+      `${RIOT_BASE_URL}/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`,
       { headers: { 'X-Riot-Token': RIOT_API_KEY } }
     );
-    
-    const summoner = summonerResponse.data;
-    
+    /*
+    {
+      "puuid": "JJyNY...",
+      "gameName": "Nome",
+      "tagLine": "TAG"
+    }
+    */
+    const account = accountResponse.data;
+
+    const summonerRequest = await axios.get(
+      `${LOL_BASE_URL}/summoner/v4/summoners/by-puuid/${account.puuid}`,
+      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
+    );
+    const summoner = summonerRequest.data;
+
     // Fetch ranked data
+    console.log("ranked", `${LOL_BASE_URL}/league/v4/entries/by-puuid/${summoner.puuid}`);
     const rankedResponse = await axios.get(
-      `${LOL_BASE_URL}/league/v4/entries/by-summoner/${summoner.id}`,
+      `${LOL_BASE_URL}/league/v4/entries/by-puuid/${summoner.puuid}`,
       { headers: { 'X-Riot-Token': RIOT_API_KEY } }
     );
+    console.log(rankedResponse);
     
     // Fetch mastery data (top 5 champions)
+    console.log("champion",`${LOL_BASE_URL}/champion-mastery/v4/champion-masteries/by-puuid/${summoner.puuid}/top?count=5`);
     const masteryResponse = await axios.get(
-      `${LOL_BASE_URL}/champion-mastery/v4/champion-masteries/by-summoner/${summoner.id}/top?count=5`,
+      `${LOL_BASE_URL}/champion-mastery/v4/champion-masteries/by-puuid/${summoner.puuid}/top?count=5`,
       { headers: { 'X-Riot-Token': RIOT_API_KEY } }
     );
+    console.log(masteryResponse);
     
     // Get champion data to map champion IDs to names
+    console.log("champion");
     const championResponse = await axios.get(
-      'http://ddragon.leagueoflegends.com/cdn/latest/data/en_US/champion.json'
+      CHAMPIONS_URL,
+      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
     );
     
     const championData = championResponse.data.data;
@@ -107,7 +164,7 @@ async function getLolSummonerData(summonerName) {
     }));
     
     return {
-      name: summoner.name,
+      name: `${gameName}#${tagLine}`,
       level: summoner.summonerLevel,
       profileIconId: summoner.profileIconId,
       soloQueue: {
@@ -127,8 +184,8 @@ async function getLolSummonerData(summonerName) {
       mastery: masteryData
     };
   } catch (error) {
-    logger.error(`Error fetching LoL data for ${summonerName}:`, error.message);
-    throw new Error(`Não foi possível encontrar o invocador "${summonerName}" ou ocorreu um erro durante a busca.`);
+    logger.error(`Error fetching LoL data for ${gameName}#${tagLine}:`, error.message);
+    throw new Error(`Não foi possível encontrar o invocador "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
   }
 }
 
@@ -178,92 +235,6 @@ function formatLolMessage(data) {
   return message;
 }
 
-/**
- * Get Wild Rift player data
- * @param {string} gameName - Game name to look up
- * @param {string} tagLine - Tag line (e.g., "NA1")
- * @returns {Promise<Object>} - Formatted player data
- */
-async function getWildRiftPlayerData(gameName, tagLine) {
-  try {
-    // In a real implementation, we would use the Riot Account API to get the PUUID
-    // Then use that PUUID with the Wild Rift API
-    // For now, we'll create a simplified simulation since Wild Rift API isn't fully public
-    
-    // Fetch Riot account by riot ID (gameName#tagLine)
-    const accountResponse = await axios.get(
-      `${WR_BASE_URL}/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
-      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
-    );
-    
-    const puuid = accountResponse.data.puuid;
-    
-    // NOTE: The below is simulated as the Wild Rift API isn't fully public
-    // In a real implementation, these would be actual API calls
-    
-    // Simulate ranked data
-    const simulatedRankedData = {
-      tier: ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'][Math.floor(Math.random() * 10)],
-      rank: ['IV', 'III', 'II', 'I'][Math.floor(Math.random() * 4)],
-      leaguePoints: Math.floor(Math.random() * 100),
-      wins: Math.floor(Math.random() * 100) + 50,
-      losses: Math.floor(Math.random() * 100)
-    };
-    
-    // Simulate top champions
-    const sampleChampions = [
-      "Ahri", "Akali", "Ashe", "Braum", "Darius", "Evelynn", "Ezreal", 
-      "Gragas", "Jhin", "Jinx", "Lee Sin", "Leona", "Lux", "Master Yi", 
-      "Miss Fortune", "Nasus", "Singed", "Sona", "Soraka", "Teemo", "Vayne", "Yasuo"
-    ];
-    
-    const simulatedMasteryData = [];
-    for (let i = 0; i < 5; i++) {
-      simulatedMasteryData.push({
-        championName: sampleChampions[Math.floor(Math.random() * sampleChampions.length)],
-        championLevel: Math.floor(Math.random() * 5) + 3,
-        championPoints: Math.floor(Math.random() * 50000) + 20000
-      });
-    }
-    
-    return {
-      name: gameName,
-      tagLine: tagLine,
-      puuid: puuid,
-      ranked: simulatedRankedData,
-      mastery: simulatedMasteryData
-    };
-  } catch (error) {
-    logger.error(`Error fetching Wild Rift data for ${gameName}#${tagLine}:`);
-    throw new Error(`Não foi possível encontrar o jogador de Wild Rift "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
-  }
-}
-
-/**
- * Format Wild Rift player data into a message
- * @param {Object} data - Player data
- * @returns {string} - Formatted message
- */
-function formatWildRiftMessage(data) {
-  // Calculate win rate
-  const winRate = Math.round((data.ranked.wins / (data.ranked.wins + data.ranked.losses)) * 100);
-  
-  let message = `📱 *Wild Rift - ${data.name}#${data.tagLine}*\n\n`;
-  
-  // Ranked info
-  message += `*🏆 Ranqueada:*\n`;
-  message += `${getRankEmoji(data.ranked.tier)} ${data.ranked.tier} ${data.ranked.rank} (${data.ranked.leaguePoints} LP)\n`;
-  message += `🏅 ${data.ranked.wins}V ${data.ranked.losses}D (${winRate}% de vitórias)\n`;
-  
-  // Champion mastery
-  message += `\n*🏆 Principais Campeões:*\n`;
-  for (let i = 0; i < data.mastery.length; i++) {
-    const champ = data.mastery[i];
-    message += `${i+1}. ${champ.championName} (Nível ${champ.championLevel}, ${formatNumber(champ.championPoints)} pts)\n`;
-  }
-  
-  return message;
-}
 
 /**
  * Get Valorant player data
@@ -273,63 +244,112 @@ function formatWildRiftMessage(data) {
  */
 async function getValorantPlayerData(gameName, tagLine) {
   try {
-    // Fetch Riot account by riot ID (gameName#tagLine)
+    // Fetch account by gameName/tagLine
     const accountResponse = await axios.get(
-      `${WR_BASE_URL}/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`,
+      `${RIOT_BASE_URL}/account/v1/accounts/by-riot-id/${gameName}/${tagLine}`,
       { headers: { 'X-Riot-Token': RIOT_API_KEY } }
     );
     
-    const puuid = accountResponse.data.puuid;
+    const account = accountResponse.data;
+    const puuid = account.puuid;
+    console.log(account);
     
-    // NOTE: The below is simulated as we don't have full access to Valorant API
-    // In a real implementation, these would be actual API calls
+    // Get player ranked data
+    console.log(`${VALORANT_BASE_URL}/content/v1/contents`);
+    const rankedResponse = await axios.get(
+      `${VALORANT_BASE_URL}/content/v1/contents`,
+      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
+    );
+    console.log("rankedResponse", rankedResponse.data);
     
-    // Simulate ranked data
-    const ranks = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'ASCENDANT', 'IMMORTAL', 'RADIANT'];
-    const simulatedRankedData = {
-      tier: ranks[Math.floor(Math.random() * ranks.length)],
-      rank: ranks[ranks.length - 1] === 'RADIANT' ? '' : ['I', 'II', 'III'][Math.floor(Math.random() * 3)],
-      rr: Math.floor(Math.random() * 100),
-      wins: Math.floor(Math.random() * 100) + 20,
-      losses: Math.floor(Math.random() * 100)
-    };
+    // Get match history
+    console.log(`${VALORANT_BASE_URL}/match/v1/matchlists/by-puuid/${puuid}`);
+    const matchlistResponse = await axios.get(
+      `${VALORANT_BASE_URL}/match/v1/matchlists/by-puuid/${puuid}`,
+      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
+    );
+    console.log("matchlistResponse", matchlistResponse.data);
     
-    // Simulate agent data
-    const agents = [
-      "Jett", "Raze", "Breach", "Omen", "Brimstone", 
-      "Phoenix", "Sage", "Sova", "Viper", "Cypher", 
-      "Reyna", "Killjoy", "Skye", "Yoru", "Astra", 
-      "KAY/O", "Chamber", "Neon", "Fade", "Harbor",
-      "Gekko", "Deadlock", "Iso", "Clove"
-    ];
+    // Get MMR/ranked data
+    console.log(`${VALORANT_BASE_URL}/ranked/v1/leaderboards/by-puuid/${puuid}`);
+    const mmrResponse = await axios.get(
+      `${VALORANT_BASE_URL}/ranked/v1/leaderboards/by-puuid/${puuid}`,
+      { headers: { 'X-Riot-Token': RIOT_API_KEY } }
+    );
+    console.log("mmrResponse", mmrResponse.data);
     
-    const simulatedAgentData = [];
-    // Get 5 random unique agents
-    const chosenAgents = new Set();
-    while (chosenAgents.size < 5) {
-      chosenAgents.add(agents[Math.floor(Math.random() * agents.length)]);
-    }
+    // Process the data from the API responses
+    // Note: The actual structure will depend on the API responses
+    const rankedData = mmrResponse.data;
+    const matchlistData = matchlistResponse.data;
     
-    chosenAgents.forEach(agent => {
-      simulatedAgentData.push({
-        name: agent,
-        matches: Math.floor(Math.random() * 50) + 10,
-        winRate: Math.floor(Math.random() * 70) + 30,
-        kda: (Math.random() * 2 + 1).toFixed(2)
-      });
-    });
+    // Process agent data from match history
+    const agentStats = processAgentStats(matchlistData);
     
     return {
       name: gameName,
       tagLine: tagLine,
       puuid: puuid,
-      ranked: simulatedRankedData,
-      agents: simulatedAgentData
+      ranked: rankedData,
+      agents: agentStats
     };
   } catch (error) {
-    logger.error(`Error fetching Valorant data for ${gameName}#${tagLine}:`);
+    logger.error(`Error fetching Valorant data for ${gameName}#${tagLine}:`, error.message);
     throw new Error(`Não foi possível encontrar o jogador de Valorant "${gameName}#${tagLine}" ou ocorreu um erro durante a busca.`);
   }
+}
+
+// Helper function to process agent stats from match history
+function processAgentStats(matchlistData) {
+  // This would process the match history to extract agent performance
+  // Implementation depends on the actual structure of the API response
+  const agentStats = [];
+  
+  // Example processing (adjust based on actual API response)
+  if (matchlistData && matchlistData.matches) {
+    const agentMap = new Map();
+    
+    matchlistData.matches.forEach(match => {
+      const agent = match.agentUsed;
+      if (!agentMap.has(agent)) {
+        agentMap.set(agent, {
+          name: agent,
+          matches: 0,
+          wins: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0
+        });
+      }
+      
+      const stats = agentMap.get(agent);
+      stats.matches++;
+      if (match.won) stats.wins++;
+      stats.kills += match.kills || 0;
+      stats.deaths += match.deaths || 0;
+      stats.assists += match.assists || 0;
+    });
+    
+    // Convert map to array and calculate derived stats
+    for (const [_, stats] of agentMap) {
+      const winRate = Math.round((stats.wins / stats.matches) * 100);
+      const kda = stats.deaths > 0 ? 
+        ((stats.kills + stats.assists) / stats.deaths).toFixed(2) : 
+        (stats.kills + stats.assists).toFixed(2);
+      
+      agentStats.push({
+        name: stats.name,
+        matches: stats.matches,
+        winRate: winRate,
+        kda: kda
+      });
+    }
+    
+    // Sort by matches played
+    agentStats.sort((a, b) => b.matches - a.matches);
+  }
+  
+  return agentStats.slice(0, 5); // Return top 5 agents
 }
 
 /**
@@ -365,23 +385,44 @@ function formatValorantMessage(data) {
  * @returns {Object} - Parsed game name and tag line
  */
 function parseRiotId(args) {
-  // If the input has a hashtag, split by it
   const input = args.join(' ');
+
   if (input.includes('#')) {
-    const [gameName, tagLine] = input.split('#');
-    return { gameName, tagLine };
+    const [namePart, tagPart] = input.split('#');
+
+    let tagLine = null;
+    let server = null;
+
+    if (tagPart.includes('-')) {
+      [tagLine, server] = tagPart.split('-');
+    } else {
+      tagLine = tagPart;
+    }
+
+    return {
+      gameName: namePart.trim(),
+      tagLine: tagLine?.trim() || null,
+      server: server?.trim().toUpperCase() || null
+    };
   }
-  
-  // Otherwise, look for the last word and assume it's the tagLine
+
+  // Fallback for no hashtag
   if (args.length >= 2) {
-    const tagLine = args.pop();
-    const gameName = args.join(' ');
-    return { gameName, tagLine };
+    const lastArg = args.pop();
+    return {
+      gameName: args.join(' ').trim(),
+      tagLine: lastArg.trim(),
+      server: null
+    };
   }
-  
-  // If only one word, assume it's a legacy LoL summoner name (no tagline needed)
-  return { gameName: input, tagLine: null };
+
+  return {
+    gameName: input.trim(),
+    tagLine: null,
+    server: null
+  };
 }
+
 
 /**
  * Handles the LoL command
@@ -399,12 +440,20 @@ async function handleLolCommand(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça um nome de invocador. Exemplo: !lol Faker'
+        content: 'Por favor, forneça um nome de invocador. Exemplo: !lol Faker#ABC'
       });
     }
     
     const summonerName = args.join(' ');
-    
+
+    if(!summonerName.includes("#")){
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `❌ Informe o nome do invocador seguido da tag, exemplo: !lol Faker#ABC`
+      });
+    }
+
+
     // Send a waiting message
     returnMessages.push(
       new ReturnMessage({
@@ -414,7 +463,8 @@ async function handleLolCommand(bot, message, args, group) {
     );
     
     // Get summoner data
-    const summonerData = await getLolSummonerData(summonerName);
+    const [ gameName, tagLine ] = summonerName.split("#");
+    const summonerData = await getLolSummonerData(gameName, tagLine);
     
     // Format message
     const formattedMessage = formatLolMessage(summonerData);
@@ -434,64 +484,6 @@ async function handleLolCommand(bot, message, args, group) {
   }
 }
 
-/**
- * Handles the WR command
- * @param {WhatsAppBot} bot - Bot instance
- * @param {Object} message - Message data
- * @param {Array} args - Command arguments
- * @param {Object} group - Group data
- * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage or array of ReturnMessages
- */
-async function handleWRCommand(bot, message, args, group) {
-  const chatId = message.group || message.author;
-  const returnMessages = [];
-  
-  try {
-    if (args.length === 0) {
-      return new ReturnMessage({
-        chatId: chatId,
-        content: 'Por favor, forneça um Riot ID (ex: !wr NomeJogador#NA1)'
-      });
-    }
-    
-    // Parse the Riot ID
-    const { gameName, tagLine } = parseRiotId(args);
-    
-    if (!tagLine) {
-      return new ReturnMessage({
-        chatId: chatId,
-        content: 'Por favor, forneça um Riot ID completo com tagline (ex: NomeJogador#NA1)'
-      });
-    }
-    
-    // Send a waiting message
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: `🔍 Buscando jogador de Wild Rift: ${gameName}#${tagLine}...`
-      })
-    );
-    
-    // Get player data
-    const playerData = await getWildRiftPlayerData(gameName, tagLine);
-    
-    // Format message
-    const formattedMessage = formatWildRiftMessage(playerData);
-    
-    // Send response
-    return new ReturnMessage({
-      chatId: chatId,
-      content: formattedMessage
-    });
-    
-  } catch (error) {
-    logger.error('Erro ao executar comando wr:');
-    return new ReturnMessage({
-      chatId: chatId,
-      content: `Erro: ${error.message || 'Ocorreu um erro ao buscar o jogador.'}`
-    });
-  }
-}
 
 /**
  * Handles the Valorant command
@@ -509,34 +501,27 @@ async function handleValorantCommand(bot, message, args, group) {
     if (args.length === 0) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça um Riot ID (ex: !valorant NomeJogador#NA1)'
+        content: 'Por favor, forneça um Riot ID com tagline e servidor (ex: !valorant NomeJogador#ABC-NA)'
       });
     }
     
     // Parse the Riot ID
-    const { gameName, tagLine } = parseRiotId(args);
+    const { gameName, tagLine, server } = parseRiotId(args);
     
-    if (!tagLine) {
+    if (!tagLine || !server) {
       return new ReturnMessage({
         chatId: chatId,
-        content: 'Por favor, forneça um Riot ID completo com tagline (ex: NomeJogador#NA1)'
+        content: 'Por favor, forneça um Riot ID completo com tagline e servidor (ex: NomeJogador#ABC-NA)'
       });
     }
-    
-    // Send a waiting message
-    returnMessages.push(
-      new ReturnMessage({
-        chatId: chatId,
-        content: `🔍 Buscando jogador de Valorant: ${gameName}#${tagLine}...`
-      })
-    );
-    
+
     // Get player data
-    const playerData = await getValorantPlayerData(gameName, tagLine);
-    
-    // Format message
-    const formattedMessage = formatValorantMessage(playerData);
-    
+    const playerDataResponse = await axios.get(`https://vaccie.pythonanywhere.com/mmr/${gameName}/${tagLine}/${server}`);
+    const rank = playerDataResponse.data.split(",")[0];
+    const emojiRank = RANK_EMOJIS_VALORANT[rank] ?? "🏆";
+
+    const formattedMessage = `🔫 *Valorant - ${gameName}#${tagLine} @ ${server}*\n\n${emojiRank} ${playerDataResponse.data}`;
+
     // Send response
     return new ReturnMessage({
       chatId: chatId,
@@ -564,18 +549,6 @@ const commands = [
       error: "❌"
     },
     method: handleLolCommand
-  }),
-  
-  new Command({
-    name: 'wr',
-    description: 'Busca perfil de jogador de Wild Rift',
-    category: "jogos",
-    reactions: {
-      before: "⏳",
-      after: "📱",
-      error: "❌"
-    },
-    method: handleWRCommand
   }),
   
   new Command({
