@@ -446,8 +446,8 @@ class StreamMonitor extends EventEmitter {
         // Passei por todos os grupos mas não encontrei o canal, só dá unsubscribe
         // Provavelmente chegou aqui pq configuraram errado e depois removeram antes do bot mesmo remover
         if(!channelHasGroup){
+            const resUnsub = await this.unsubscribe(channelCheck, 'twitch');
             this.logger.info(`[cleanupChannelList] Canal Twitch não está em grupo algum: ${channelCheck} - Apenas unsubscribe ${resUnsub}`);
-            const resUnsub = this.unsubscribe(channelCheck, 'twitch');
         }
       }
 
