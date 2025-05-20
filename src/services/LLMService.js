@@ -100,7 +100,7 @@ class LLMService {
         throw new Error('Chave da API Google não configurada');
       }
 
-      const model = options.model || 'gemini-1.5-flash';
+      const model = options.model || 'gemini-2.0-flash-exp';
       this.logger.debug('Enviando solicitação para API Gemini:', { 
         model: model,
         promptLength: options.prompt.length,
@@ -369,16 +369,16 @@ class LLMService {
         const response = await this.geminiCompletion(options);
         return response.candidates[0].content.parts[0].text;
       }},
-      { name: 'deepseek-r1', method: async () => {
-        const response = await this.deepseekCompletion({...options, version: 'v1'});
-        return response.choices[0].message.content;
-      }},
-      { name: 'deepseek', method: async () => {
-        const response = await this.deepseekCompletion({...options, version: 'v3'});
-        return response.choices[0].message.content;
-      }},
+      // { name: 'deepseek-r1', method: async () => {
+      //   const response = await this.deepseekCompletion({...options, version: 'v1'});
+      //   return response.choices[0].message.content;
+      // }},
+      // { name: 'deepseek', method: async () => {
+      //   const response = await this.deepseekCompletion({...options, version: 'v3'});
+      //   return response.choices[0].message.content;
+      // }},
       { name: 'local', method: async () => {
-        const response = await this.openAICompletion({ ...options, useLocal: true });
+        const response = await this.openAICompletion({ ...options, useLocal: true, model: "hermes-3-llama-3.1-8b"});
         return response.choices[0].message.content;
       }}
     ];
