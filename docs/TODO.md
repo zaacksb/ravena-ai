@@ -109,6 +109,10 @@
 - [x] !le mais de 1 lista _([valeu, bernardo!](https://github.com/moothz/ravena-ai/pull/3))_
 - [x] !g-info colocar tudo da twitch, titulo, etc.
 - [x] Parse nome do canal da twitch: Remover on/off e https://twit...
+- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
+    - [ ] Gerador de código de mockup para os tutoriais
+    - [ ] Tutoriais
+- [x] Fix reset do ranking de pesca
 
 ## ✅ TODO-Extras
 - [x] Interface web para status dos bots

@@ -39,27 +39,19 @@ Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratui
 Lista completa do que já foi feito [aqui](docs/TODO.md)
 
 - [x] Melhor explicação da implementação do bot no README
-- [ ] Quando receber invite, ver se alguma das ravenas já tá no grupo
-- [ ] Comando convite com argumento pro id do bot
+- [x] Fix Riot API
 - [ ] Add !info
 - [ ] Fix: SIGINT/SIGTERM não estão chegando/sendo executados
 - [ ] Bot tentando notificar sem estar nos grupos
-- [ ] Stickers quadrados videos não envia (client.sendMessage)
-- [ ] Fix Riot API
-- [ ] Fix reset do ranking de pesca
-- [x] Simulador de mensagens do whats pra fazer tutoriais ([aqui](simulador/index.html))
-    - [ ] Gerador de código de mockup para os tutoriais
-    - [ ] Tutoriais
+- [ ] Stickers quadrados videos não envia (client.sendMessage vs ffmpeg)
 - [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Comando: busca no youtube
-- [ ] Implementar ADB para digitar code de login automaticamente
 - [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
-- [ ] Gerar README.md atualizado
-- [ ] Downloader de SocialMedias (Insta, TikTok)
+- [ ] Downloader de SocialMedias (Insta, TikTok - dificil pois bloqueiam)
 
-## 🔧 Hospedar sua própria ravena
+## 🔧 Como hospedar sua própria ravena
 Se você não entende nada de programação ou nunca rodou aplicativos via código fonte, o melhor mesmo é chamar seu amigo da TI pra dar aquele help.
 O programa foi feito para rodar em Windows e Linux (MacOS deve funcionar sem problemas, é claro). Já rodei muito em Raspberry Pi/OrangePi e similares, mas nunca tentei rodar diretamente num Android.
 

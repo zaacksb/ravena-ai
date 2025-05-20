@@ -13,60 +13,128 @@ const database = Database.getInstance();
 
 // Configurações do jogo
 const GAME_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
-const IMAGE_ANGLES = [0, 90, 180, 270]; // Ângulos para StreetView
+const IMAGE_ANGLES = [0, 120, 240]; // Ângulos para StreetView
 const MIN_DISTANCE_PERFECT = 500; // 500 metros ou menos = 100 pontos
 const MAX_DISTANCE_POINTS = 500000; // 500 km ou mais = 0 pontos
+const BRAZIL_BOUNDS = {
+  minLat: -33.75,
+  maxLat: 5.27,
+  minLng: -73.99,
+  maxLng: -34.79,
+};
+const PLACE_TYPES = [
+  'tourist_attraction',
+  'gas_station',
+  'restaurant',
+  'school',
+  'park',
+  'cafe',
+  'shopping_mall',
+  'museum',
+  'church',
+];
+const EMOJIS_LOCAL = {
+  school: "🏫",
+  restaurant: "🍽️",
+  cafe: "☕",
+  gas_station: "⛽",
+  park: "🏞️",
+  museum: "🏛️",
+  church: "⛪",
+  shopping_mall: "🛍️",
+  tourist_attraction: "📸"
+};
 
-// Armazena os jogos ativos
-const activeGames = {};
 
 // API Key - Deve ser configurada no .env como GOOGLE_MAPS_API_KEY
 const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
-// Lista de coordenadas pré-definidas com StreetView disponível
-// Estas são apenas coordenadas de exemplo - no funcionamento real, teríamos um banco de dados maior
-const PREDEFINED_LOCATIONS = [
-  { lat: 48.8584, lng: 2.2945 }, // Paris, Torre Eiffel
-  { lat: 40.6892, lng: -74.0445 }, // Nova York, Estátua da Liberdade
-  { lat: 37.8199, lng: -122.4783 }, // São Francisco, Golden Gate
-  { lat: -22.9519, lng: -43.2106 }, // Rio de Janeiro, Cristo Redentor
-  { lat: 35.6585, lng: 139.7454 }, // Tóquio, Torre de Tóquio
-  { lat: 41.8902, lng: 12.4922 }, // Roma, Coliseu
-  { lat: 27.1751, lng: 78.0421 }, // Agra, Taj Mahal
-  { lat: 25.1972, lng: 55.2744 }, // Dubai, Burj Khalifa
-  { lat: -33.8568, lng: 151.2153 }, // Sydney, Opera House
-  { lat: 51.5007, lng: -0.1246 }, // Londres, Big Ben
-  { lat: 13.4125, lng: 103.8670 }, // Angkor Wat, Camboja
-  { lat: -13.1631, lng: -72.5450 }, // Machu Picchu, Peru
-  { lat: 43.0729, lng: -79.0791 }, // Cataratas do Niágara
-  { lat: 48.2082, lng: 16.3738 }, // Viena, Áustria
-  { lat: 55.7539, lng: 37.6208 }, // Moscou, Praça Vermelha
-  { lat: 31.2001, lng: 29.9187 }, // Alexandria, Egito
-  { lat: -34.6037, lng: -58.3816 }, // Buenos Aires, Argentina
-  { lat: 37.9715, lng: 23.7267 }, // Atenas, Acrópole
-  { lat: 30.0444, lng: 31.2357 }, // Cairo, Pirâmides
-  { lat: 52.3676, lng: 4.9041 }, // Amsterdã, Países Baixos
-];
+// Armazena os jogos ativos
+const activeGames = {};
 
-/**
- * Seleciona uma localização aleatória
- * @returns {Object} Coordenadas {lat, lng}
- */
-function getRandomLocation() {
-  const index = Math.floor(Math.random() * PREDEFINED_LOCATIONS.length);
-  return PREDEFINED_LOCATIONS[index];
+function getRandomCoordinate(bounds) {
+  const lat = Math.random() * (bounds.maxLat - bounds.minLat) + bounds.minLat;
+  const lng = Math.random() * (bounds.maxLng - bounds.minLng) + bounds.minLng;
+  return { lat, lng };
 }
 
-/**
- * Gera URL para imagem do Street View
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @param {number} heading - Ângulo da visão (0-360)
- * @returns {string} URL da imagem
- */
-function generateStreetViewImageUrl(lat, lng, heading) {
-  return `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lng}&heading=${heading}&pitch=0&key=${API_KEY}`;
+function getRandomPlaceType() {
+  const index = Math.floor(Math.random() * PLACE_TYPES.length);
+  return PLACE_TYPES[index];
 }
+
+async function getRandomPlaceInBrazil() {
+  const location = getRandomCoordinate(BRAZIL_BOUNDS);
+  const type = getRandomPlaceType();
+  const radius = 50000; // meters
+
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=${radius}&type=${type}&key=${API_KEY}`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (data.status === 'OK' && data.results.length > 0) {
+    const randomResult = data.results[Math.floor(Math.random() * data.results.length)];
+    return {
+      name: randomResult.name,
+      location: randomResult.geometry.location,
+      type,
+    };
+  } else {
+    console.warn('No places found, retrying...');
+    return getRandomPlaceInBrazil(); // try again recursively
+  }
+}
+
+async function getStreetViewImagesFromPlace(place) {
+  const { lat, lng } = place.location;
+
+  // First, check if Street View exists nearby
+  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&radius=5000&key=${API_KEY}`;
+  const metadataRes = await fetch(metadataUrl);
+  const metadata = await metadataRes.json();
+
+  if (metadata.status !== 'OK') {
+    return null;
+  }
+
+  // Create Street View image URLs for multiple angles
+  const streetViewImages = IMAGE_ANGLES.map((heading) => {
+    return {
+      heading,
+      url: `https://maps.googleapis.com/maps/api/streetview?size=640x640&location=${lat},${lng}&fov=90&heading=${heading}&pitch=0&key=${API_KEY}`
+    };
+  });
+
+  // Create Static Map URL with pin and info
+  const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=16&size=640x640&maptype=roadmap&markers=color:red%7Clabel:P%7C${lat},${lng}&key=${API_KEY}`;
+
+  return {
+    placeName: place.name,
+    placeType: place.type,
+    location: { lat, lng },
+    streetViewImages,
+    staticMapUrl
+  };
+}
+
+async function getRandomStreetViewInBrazil(retries = 0) {
+  if(retries > 10){
+    return false;
+  }
+
+  logger.info(`[getRandomStreetViewInBrazil] ${retries}/10`);
+  const place = await getRandomPlaceInBrazil();
+  const placeStreetView =  await getStreetViewImagesFromPlace(place);
+
+  if(placeStreetView){
+    return placeStreetView;
+  } else {
+    logger.info(`[getRandomStreetViewInBrazil] No street view, trying again`);
+    return getRandomStreetViewInBrazil(retries+1);
+  }
+}
+
 
 /**
  * Calcula a distância entre dois pontos usando a fórmula de Haversine
@@ -119,6 +187,8 @@ function calculateScore(distance) {
  * @returns {Promise<ReturnMessage>} Mensagem de retorno
  */
 async function startGeoguesserGame(bot, message, args, group) {
+  const chatId = message.group || message.author;
+
   try {
     // Verifica se está em um grupo
     if (!message.group) {
@@ -141,66 +211,59 @@ async function startGeoguesserGame(bot, message, args, group) {
         const timeRemaining = Math.ceil((activeGames[groupId].endTime - Date.now()) / 1000);
         return new ReturnMessage({
           chatId: groupId,
-          content: `🌎 Já existe um jogo de Geoguesser em andamento! Tempo restante: ${timeRemaining} segundos.`
+          content: `🌎 Já existe um jogo de Geoguesser em andamento neste grupo! Tempo restante: ${timeRemaining} segundos.`
         });
       }
     }
     
-    // Seleciona uma localização aleatória
-    const location = getRandomLocation();
-    
-    // Cria o objeto do jogo
-    activeGames[groupId] = {
-      location,
-      guesses: [],
-      startTime: Date.now(),
-      endTime: Date.now() + GAME_DURATION,
-      mediaFiles: [] // Para armazenar os caminhos dos arquivos temporários
-    };
     
     // Envia mensagem inicial
-    await bot.sendMessage(groupId, '🌎 Iniciando jogo de Geoguesser! Adivinhe onde está esse lugar...');
-    
-    // Baixa e envia as imagens
-    try {
-      for (const angle of IMAGE_ANGLES) {
-        const imageUrl = generateStreetViewImageUrl(location.lat, location.lng, angle);
-        
-        // Baixa a imagem
-        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        const imageBuffer = Buffer.from(response.data);
-        
-        // Cria diretório temporário se não existir
-        const tempDir = path.join(__dirname, '../../temp');
-        await fs.mkdir(tempDir, { recursive: true });
-        
-        // Salva a imagem em um arquivo temporário
-        const tempFile = path.join(tempDir, `geoguesser_${groupId}_${Date.now()}_${angle}.jpg`);
-        await fs.writeFile(tempFile, imageBuffer);
-        
-        // Armazena o caminho do arquivo
-        activeGames[groupId].mediaFiles.push(tempFile);
-        
-        // Cria objeto de mídia
-        const media = new MessageMedia('image/jpeg', imageBuffer.toString('base64'));
-        
-        // Envia a imagem
-        await bot.sendMessage(groupId, media, {
-          caption: `📷 Vista ${angle}° do local`
-        });
-        
-        // Pequeno atraso entre as imagens
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    const returnMessages = [new ReturnMessage({chatId: chatId, content: "🌎 *Inicializando _Geoguesser_*, aguarde as imagens! ⏳"})];
+    try{
+
+      const localRandom = await getRandomStreetViewInBrazil();
+      const localEmoji = EMOJIS_LOCAL[localRandom.placeType] ?? "📍";
+
+      // Cria o objeto do jogo
+      activeGames[groupId] = {
+        location: localRandom.location,
+        mapUrl: localRandom.staticMapUrl,
+        locationInfo: `${localEmoji} ${localRandom.placeName}`,
+        guesses: [],
+        startTime: Date.now(),
+        endTime: Date.now() + GAME_DURATION
+      };
+
+
+      for(let img of localRandom.streetViewImages){
+        const media = await bot.createMediaFromURL(img.url);
+
+        returnMessages.push(new ReturnMessage({
+          chatId: chatId,
+          content: media,
+          options: {
+            // caption: `📷 Vista ${angle}° do local`, // Sem caption pra ficar organizado
+            quotedMessageId: message.origin.id._serialized
+          }
+        }));
+
       }
-      
+
       // Envia instruções
-      const instructions = '🔍 *Onde está esse lugar?*\n\n' +
+      const instructions = '🌎 *Onde está esse lugar?* 🔍\n\n' +
                          '- Envie sua localização pelo WhatsApp ou\n' +
-                         '- Use o comando !geoguess latitude longitude\n\n' +
-                         'Você tem 5 minutos para adivinhar! Boa sorte!';
+                         '- !geoguess latitude longitude\n\n' +
+                         'Vocês tem *5 minutos* para adivinhar!';
       
-      await bot.sendMessage(groupId, instructions);
-      
+      returnMessages.push(new ReturnMessage({
+        chatId: chatId,
+        content: instructions,
+        options: {
+          quotedMessageId: message.origin.id._serialized
+        },
+        delay: 1000
+      }));
+
       // Configura o temporizador para finalizar o jogo
       setTimeout(async () => {
         if (activeGames[groupId]) {
@@ -208,7 +271,7 @@ async function startGeoguesserGame(bot, message, args, group) {
         }
       }, GAME_DURATION);
       
-      return null; // Retorna null porque já enviamos as mensagens
+      return returnMessages;
     } catch (error) {
       logger.error('Erro ao baixar/enviar imagens:', error);
       
@@ -386,33 +449,18 @@ async function endGame(bot, groupId) {
     await bot.sendMessage(groupId, resultsMessage);
     
     // Cria e envia um mapa com a localização correta
-    try {
-      const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${game.location.lat},${game.location.lng}&zoom=13&size=600x400&markers=color:red%7C${game.location.lat},${game.location.lng}&key=${API_KEY}`;
-      
+    try {  
       // Baixa a imagem do mapa
-      const response = await axios.get(mapUrl, { responseType: 'arraybuffer' });
-      const mapBuffer = Buffer.from(response.data);
-      
-      // Cria objeto de mídia
-      const media = new MessageMedia('image/png', mapBuffer.toString('base64'));
-      
+      const mapMedia = await bot.createMediaFromURL(game.mapUrl);
       // Envia o mapa
-      await bot.sendMessage(groupId, media, {
-        caption: '🗺️ Localização correta'
+      await bot.sendMessage(groupId, mapMedia,{
+        caption: `🗺️ Localização correta\n\n_${game.locationInfo}_`
       });
     } catch (mapError) {
       logger.error('Erro ao enviar mapa:', mapError);
       await bot.sendMessage(groupId, '⚠️ Não foi possível enviar o mapa da localização correta.');
     }
     
-    // Limpa arquivos temporários
-    for (const filePath of game.mediaFiles) {
-      try {
-        await fs.unlink(filePath);
-      } catch (unlinkError) {
-        logger.error(`Erro ao excluir arquivo temporário ${filePath}:`, unlinkError);
-      }
-    }
     
     // Salva os resultados do jogo no banco de dados
     try {
@@ -928,4 +976,4 @@ const commands = [
   })
 ];
 
-//module.exports = { commands, processLocationMessage };
+module.exports = { commands, processLocationMessage };
