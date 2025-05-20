@@ -13,9 +13,9 @@ const database = Database.getInstance();
 //logger.info('Módulo LembretesCommands carregado');
 
 // Caminho para o arquivo JSON de lembretes
-const LEMBRETES_FILE = path.join(__dirname, '../../data/lembretes.json');
+const LEMBRETES_FILE = path.join(database.databasePath, 'lembretes.json');
 // Diretório para armazenar mídias dos lembretes
-const LEMBRETES_MEDIA_DIR = path.join(__dirname, '../../data/lembretes-media');
+const LEMBRETES_MEDIA_DIR = path.join(database.databasePath, 'lembretes-media');
 
 /**
  * Garante que os diretórios necessários existam

@@ -77,7 +77,7 @@ const DOWNGRADES = [
 ];
 
 // Caminho para o arquivo de dados de pesca
-const FISHING_DATA_PATH = path.join(__dirname, '../../data/fishing.json');
+const FISHING_DATA_PATH = path.join(database.databasePath, 'fishing.json');
 
 /**
  * Obtém os dados de pesca do arquivo JSON dedicado ou do buffer
@@ -1467,7 +1467,7 @@ async function biggestFishCommand(bot, message, args, group) {
 async function saveRareFishImage(mediaContent, userId, fishName) {
   try {
     // Cria o diretório de mídia se não existir
-    const mediaDir = path.join(__dirname, '../../data/media');
+    const mediaDir = path.join(database.databasePath, 'media');
     try {
       await fs.access(mediaDir);
     } catch (error) {
@@ -1738,7 +1738,7 @@ async function legendaryFishCommand(bot, message, args, group) {
         
         // Tenta carregar a imagem se existir
         if (legendary.imageName) {
-          const imagePath = path.join(__dirname, '../../data/media', legendary.imageName);
+          const imagePath = path.join(database.databasePath, 'media', legendary.imageName);
           try {
             await fs.access(imagePath);
             // Imagem existe, cria média

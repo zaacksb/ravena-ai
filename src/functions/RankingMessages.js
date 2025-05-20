@@ -3,6 +3,8 @@ const path = require('path');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
+const Database = require('../utils/Database');
+const database = Database.getInstance();
 
 const logger = new Logger('ranking-messages');
 
@@ -15,7 +17,7 @@ const logger = new Logger('ranking-messages');
 async function updateMessageCount(chatId, userId, userName) {
   try {
     // Define o caminho do arquivo de ranking
-    const rankingPath = path.join(__dirname, '../../data/ranking');
+    const rankingPath = path.join(database.databasePath, 'ranking');
     const rankingFile = path.join(rankingPath, `${chatId}.json`);
     
     // Certifica-se que o diretório existe
@@ -71,7 +73,7 @@ async function updateMessageCount(chatId, userId, userName) {
 async function getMessageRanking(chatId) {
   try {
     // Define o caminho do arquivo de ranking
-    const rankingFile = path.join(__dirname, '../../data/ranking', `${chatId}.json`);
+    const rankingFile = path.join(database.databasePath, 'ranking', `${chatId}.json`);
     
     // Tenta ler o arquivo de ranking
     try {

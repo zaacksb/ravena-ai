@@ -769,7 +769,7 @@ async function registerGeoguesserPoints(userId, userName, groupId, points) {
     customVariables.geoguesserRanking.groups[groupId][userId].name = userName;
     
     // Salva variáveis atualizadas
-    await database.saveCustomVariables(customVariables);
+    //await database.saveCustomVariables(customVariables);
     
     return true;
   } catch (error) {

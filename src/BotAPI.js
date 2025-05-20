@@ -58,7 +58,7 @@ class BotAPI {
 
   // Helper function to read tokens
   async readWebManagementToken(token) {
-      const dbPath = path.join(__dirname, '../data/webmanagement.json');
+      const dbPath = path.join(this.database.databasePath, 'webmanagement.json');
       
       try {
           const data = await fs.readFile(dbPath, 'utf8');
@@ -484,7 +484,7 @@ class BotAPI {
             // Signal bots to reload the group config
             const fs = require('fs').promises;
             const path = require('path');
-            const updatesPath = path.join(__dirname, '../data/group_updates.json');
+            const updatesPath = path.join(this.database.databasePath, 'group_updates.json');
             let updates = {};
             
             try {
@@ -564,7 +564,7 @@ class BotAPI {
             await this.database.saveGroup(groupData);  
               
             // Signal bots to reload the group config  
-            const updatesPath = path.join(__dirname, '../data/group_updates.json');  
+            const updatesPath = path.join(this.database.databasePath, 'group_updates.json');  
             let updates = {};  
               
             try {  

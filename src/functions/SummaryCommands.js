@@ -11,7 +11,7 @@ const database = Database.getInstance();
 const llmService = new LLMService({});
 
 // Diretório para armazenar mensagens recentes
-const dataDir = path.join(__dirname, '../../data/conversations');
+const dataDir = path.join(database.databasePath, 'conversations');
 
 // Garante que o diretório exista
 fs.mkdir(dataDir, { recursive: true })

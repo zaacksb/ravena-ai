@@ -28,7 +28,6 @@ class Database {
     this.saveInterval = parseInt(process.env.SAVE_INTERVAL) || 60000; // 60 segundos
     this.dirtyFlags = {
       groups: false,
-      variables: false,
       commands: {},
       loadReports: false,
       donations: false,
@@ -38,7 +37,6 @@ class Database {
     // Cache para objetos de banco de dados
     this.cache = {
       groups: null,
-      variables: null,
       commands: {},
       loadReports: null,
       donations: null,
@@ -400,14 +398,6 @@ class Database {
         this.saveJSONToFile(groupsPath, this.cache.groups);
         this.dirtyFlags.groups = false;
         this.logger.info('Dados de grupos persistidos no arquivo');
-      }
-      
-      // Variáveis
-      if ((this.dirtyFlags.variables || force) && this.cache.variables) {
-        const variablesPath = path.join(this.databasePath, 'custom-variables.json');
-        this.saveJSONToFile(variablesPath, this.cache.variables);
-        this.dirtyFlags.variables = false;
-        this.logger.info('Variáveis personalizadas persistidas no arquivo');
       }
       
       // Comandos personalizados para cada grupo
@@ -895,7 +885,6 @@ class Database {
     } else {
       this.cache = {
         groups: null,
-        variables: null,
         commands: {},
         loadReports: null,
         donations: null,

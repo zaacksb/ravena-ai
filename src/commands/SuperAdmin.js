@@ -13,7 +13,7 @@ class SuperAdmin {
     this.logger = new Logger('superadmin');
     this.adminUtils = AdminUtils.getInstance();
     this.database = Database.getInstance();
-    this.dataPath = path.join(__dirname, '../../data');
+    this.dataPath = this.database.databasePath;
     
     // Lista de superadmins do sistema
     this.superAdmins = process.env.SUPER_ADMINS ? 
@@ -35,8 +35,6 @@ class SuperAdmin {
       'foto': {'method': 'changeProfilePicture', 'description': 'Altera foto de perfil do bot'},
       'simular': {'method': 'simulateStreamEvent', 'description': 'Simula evento de stream'},
       'restart': {'method': 'restartBot', 'description': 'Reinicia o bot'},
-      'addpeixe': {'method': 'addFishTypeCommand', 'description': 'Adiciona um tipo de peixe'},
-      'removepeixe': {'method': 'removeFishTypeCommand', 'description': 'Remove um tipo de peixe'},
       'getGroupInfo': {'method': 'getGroupInfo', 'description': 'Dump de dados de grupo por nome cadastro'},
       'getMembros': {'method': 'getMembros', 'description': 'Lista todos os membros do grupo separados por admin e membros normais'},
       'blockList': {'method': 'blockList', 'description': 'Bloqueia todos os contatos recebidos separados por vírgula'},
@@ -818,7 +816,7 @@ class SuperAdmin {
       }
       
       // Adicionar thumbnail simulada
-      const mediaPath = path.join(__dirname, '../../data/simulado-live.jpg');
+      const mediaPath = path.join(this.database.databasePath, 'simulado-live.jpg');
       try {
         if (platform === 'youtube') {
           eventData.thumbnail = `https://i.ytimg.com/vi/${eventData.videoId}/maxresdefault.jpg`;
@@ -949,149 +947,6 @@ class SuperAdmin {
       return new ReturnMessage({
         chatId: message.group || message.author,
         content: '❌ Erro ao processar comando.'
-      });
-    }
-  }
-
-  /**
-   * Adiciona um tipo de peixe à lista de peixes disponíveis
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async addFishTypeCommand(bot, message, args, group) {
-    try {
-      // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
-        return new ReturnMessage({
-          chatId: message.group || message.author,
-          content: '⛔ Apenas super administradores podem usar este comando.'
-        });
-      }
-      
-      // Obtém ID do chat
-      const chatId = message.group || message.author;
-      
-      // Verifica se há argumentos
-      if (args.length === 0) {
-        return new ReturnMessage({
-          chatId,
-          content: '⚠️ Por favor, forneça o nome do peixe a ser adicionado. Exemplo: !sa-addpeixe Tilápia'
-        });
-      }
-      
-      // Obtém o nome do peixe
-      const fishName = args.join(' ');
-      
-      // Obtém variáveis personalizadas
-      const customVariables = await this.database.getCustomVariables();
-      
-      // Inicializa peixes se não existir
-      if (!customVariables.peixes) {
-        customVariables.peixes = [];
-      }
-      
-      // Verifica se o peixe já existe
-      if (customVariables.peixes.includes(fishName)) {
-        return new ReturnMessage({
-          chatId,
-          content: `⚠️ O peixe "${fishName}" já está na lista.`
-        });
-      }
-      
-      // Adiciona o peixe à lista
-      customVariables.peixes.push(fishName);
-      
-      // Salva as variáveis atualizadas
-      await this.database.saveCustomVariables(customVariables);
-      
-      return new ReturnMessage({
-        chatId,
-        content: `✅ Peixe "${fishName}" adicionado à lista com sucesso! A lista agora tem ${customVariables.peixes.length} tipos de peixes.`
-      });
-    } catch (error) {
-      this.logger.error('Erro ao adicionar tipo de peixe:', error);
-      
-      return new ReturnMessage({
-        chatId: message.group || message.author,
-        content: '❌ Ocorreu um erro ao adicionar o peixe. Por favor, tente novamente.'
-      });
-    }
-  }
-
-  /**
-   * Remove um tipo de peixe da lista
-   * @param {WhatsAppBot} bot - Instância do bot
-   * @param {Object} message - Dados da mensagem
-   * @param {Array} args - Argumentos do comando
-   * @param {Object} group - Dados do grupo
-   * @returns {Promise<ReturnMessage>} Mensagem de retorno
-   */
-  async removeFishTypeCommand(bot, message, args, group) {
-    try {
-      // Verifica se o usuário é um super admin
-      if (!this.isSuperAdmin(message.author)) {
-        return new ReturnMessage({
-          chatId: message.group || message.author,
-          content: '⛔ Apenas super administradores podem usar este comando.'
-        });
-      }
-      
-      // Obtém ID do chat
-      const chatId = message.group || message.author;
-      
-      // Verifica se há argumentos
-      if (args.length === 0) {
-        return new ReturnMessage({
-          chatId,
-          content: '⚠️ Por favor, forneça o nome do peixe a ser removido. Exemplo: !sa-removepeixe Tilápia'
-        });
-      }
-      
-      // Obtém o nome do peixe
-      const fishName = args.join(' ');
-      
-      // Obtém variáveis personalizadas
-      const customVariables = await this.database.getCustomVariables();
-      
-      // Verifica se há peixes
-      if (!customVariables.peixes || customVariables.peixes.length === 0) {
-        return new ReturnMessage({
-          chatId,
-          content: '🎣 Ainda não há tipos de peixes definidos.'
-        });
-      }
-      
-      // Verifica se o peixe existe
-      const index = customVariables.peixes.findIndex(
-        fish => fish.toLowerCase() === fishName.toLowerCase()
-      );
-      
-      if (index === -1) {
-        return new ReturnMessage({
-          chatId,
-          content: `⚠️ O peixe "${fishName}" não está na lista.`
-        });
-      }
-      
-      // Remove o peixe da lista
-      customVariables.peixes.splice(index, 1);
-      
-      // Salva as variáveis atualizadas
-      await this.database.saveCustomVariables(customVariables);
-      
-      return new ReturnMessage({
-        chatId,
-        content: `✅ Peixe "${fishName}" removido da lista com sucesso! A lista agora tem ${customVariables.peixes.length} tipos de peixes.`
-      });
-    } catch (error) {
-      this.logger.error('Erro ao remover tipo de peixe:', error);
-      
-      return new ReturnMessage({
-        chatId: message.group || message.author,
-        content: '❌ Ocorreu um erro ao remover o peixe. Por favor, tente novamente.'
       });
     }
   }
