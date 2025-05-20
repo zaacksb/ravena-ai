@@ -23,7 +23,7 @@ class StreamSystem {
     this.logger = new Logger(`stream-system-${bot.id}`);
     this.llmService = new LLMService({});
     this.streamMonitor = null; // Não cria uma nova instância aqui
-    this.dataPath = path.join(__dirname, '../data');
+    this.dataPath = bot.database.databasePath;
     this.mediaPath = path.join(this.dataPath, 'media');
   }
 

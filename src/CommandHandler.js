@@ -100,7 +100,7 @@ class CommandHandler {
    */
   async loadCooldowns() {
     try {
-      const cooldownsPath = path.join(__dirname, '../data/cooldowns.json');
+      const cooldownsPath = path.join(this.database.databasePath, 'cooldowns.json');
       try {
         const data = await fs.readFile(cooldownsPath, 'utf8');
         this.cooldowns = JSON.parse(data);
@@ -124,15 +124,8 @@ class CommandHandler {
    */
   async saveCooldowns() {
     try {
-      const cooldownsPath = path.join(__dirname, '../data/cooldowns.json');
-      
-      // Cria o diretório data se não existir
-      const dataDir = path.join(__dirname, '../data');
-      try {
-        await fs.access(dataDir);
-      } catch (error) {
-        await fs.mkdir(dataDir, { recursive: true });
-      }
+      const cooldownsPath = path.join(this.database.databasePath, 'cooldowns.json');
+  
       
       await fs.writeFile(cooldownsPath, JSON.stringify(this.cooldowns, null, 2));
       this.cooldownsLastSaved = Date.now();

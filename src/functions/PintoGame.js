@@ -26,7 +26,7 @@ const INTERVALO_SALVAMENTO = 5 * 60 * 1000; // 5 minutos em millisegundos
 let modificacoesNaoSalvas = false;
 
 // Caminho para o arquivo de dados do jogo
-const PINTO_DATA_PATH = path.join(__dirname, '../../data/pinto.json');
+const PINTO_DATA_PATH = path.join(database.databasePath, 'pinto.json');
 
 /**  
  * Obtém os dados do jogo do arquivo JSON dedicado  

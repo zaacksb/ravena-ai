@@ -542,7 +542,7 @@ class EventHandler {
         let botInfoMessage = `🦇 Olá, grupo! Eu sou a *ravenabot*, um bot de WhatsApp. Use "${group.prefix}cmd" para ver os comandos disponíveis.`;
       
         try {
-          const groupJoinPath = path.join(__dirname, '../data/textos/groupJoin.txt');
+          const groupJoinPath = path.join(this.database.databasePath, 'textos', 'groupJoin.txt');
           
           // Verifica se o arquivo existe
           const fileExists = await fs.access(groupJoinPath).then(() => true).catch(() => false);

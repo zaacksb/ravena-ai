@@ -18,7 +18,7 @@ let modificacoesNaoSalvas = false;
 /**
  * Caminho para o arquivo JSON de dados da Roleta Russa
  */
-const ROLETA_RUSSA_FILE = path.join(__dirname, '../../data/roletarussa.json');
+const ROLETA_RUSSA_FILE = path.join(database.databasePath, 'roletarussa.json');
 
 /**
  * Emojis para ranking

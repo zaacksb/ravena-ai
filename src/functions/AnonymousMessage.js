@@ -13,7 +13,7 @@ const COOLDOWN_HOURS = 6; // Cooldown de 12 horas
 const COOLDOWN_MS = COOLDOWN_HOURS * 60 * 60 * 1000; // Cooldown em milissegundos
 
 // Caminho para o arquivo de mensagens anônimas
-const ANON_MSGS_PATH = path.join(__dirname, '../../data/anon-msgs.json');
+const ANON_MSGS_PATH = path.join(database.databasePath, 'anon-msgs.json');
 
 /**
  * Obtém as mensagens anônimas armazenadas

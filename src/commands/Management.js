@@ -13,7 +13,7 @@ class Management {
     this.logger = new Logger('management');
     this.database = Database.getInstance();
     this.nsfwPredict = NSFWPredict.getInstance();
-    this.dataPath = path.join(__dirname, '../../data');
+    this.dataPath = this.database.databasePath;
     
     // Mapeamento de comando para método
     this.commandMap = {

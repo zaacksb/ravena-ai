@@ -4,6 +4,9 @@ const Logger = require('../utils/Logger');
 const Command = require('../models/Command');
 const ReturnMessage = require('../models/ReturnMessage');
 const chrono = require('chrono-node');
+const Database = require('../utils/Database');
+
+const database = Database.getInstance();
 
 // Cria novo logger
 const logger = new Logger('munews-commands');
@@ -63,7 +66,7 @@ async function detectNews(msgBody, groupId) {
         
         if (data) {
           // Cria o diretório de MuNews se não existir
-          const munewsDir = path.join(__dirname, '../../data/munews');
+          const munewsDir = path.join(database.databasePath, 'munews');
           await fs.mkdir(munewsDir, { recursive: true });
           
           // Nome do arquivo baseado na data
@@ -107,7 +110,7 @@ async function detectNews(msgBody, groupId) {
 async function getAllNewsDates() {
   try {
     // Caminho para o diretório de MuNews
-    const munewsDir = path.join(__dirname, '../../data/munews');
+    const munewsDir = path.join(database.databasePath, 'munews');
     
     // Lista todos os arquivos no diretório
     const files = await fs.readdir(munewsDir);
@@ -153,7 +156,7 @@ async function getStringMunewsDisponiveis(){
 async function getAllNewsDates() {
   try {
     // Caminho para o diretório de MuNews
-    const munewsDir = path.join(__dirname, '../../data/munews');
+    const munewsDir = path.join(database.databasePath, 'munews');
     
     // Lista todos os arquivos no diretório
     const files = await fs.readdir(munewsDir);
@@ -235,7 +238,7 @@ async function newsCommand(bot, message, args, group) {
     }
     
     // Caminho para o arquivo de MuNews
-    const filePath = path.join(__dirname, '../../data/munews', `${date}.news`);
+    const filePath = path.join(database.databasePath, 'munews', `${date}.news`);
     
     try {
       // Tenta ler o arquivo
