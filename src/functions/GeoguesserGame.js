@@ -15,7 +15,7 @@ const database = Database.getInstance();
 const GAME_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 const IMAGE_ANGLES = [0, 120, 240]; // Ângulos para StreetView
 const MIN_DISTANCE_PERFECT = 500; // 500 metros ou menos = 1000 pontos
-const MAX_DISTANCE_POINTS = 10000000; // 10000 km ou mais = 0 pontos
+const MAX_DISTANCE_POINTS = 10000; // 10000 km ou mais = 0 pontos
 const BRAZIL_BOUNDS = {
   minLat: -33.75,
   maxLat: 5.27,
@@ -47,12 +47,115 @@ const EMOJIS_LOCAL = {
   tourist_attraction: "📸"
 };
 
+// Emojis para ranking
+const EMOJIS_RANKING = ["","🥇","🥈","🥉","🐅","🐆","🦌","🐐","🐏","🐓","🐇"];
 
 // API Key - Deve ser configurada no .env como GOOGLE_MAPS_API_KEY
 const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
 // Armazena os jogos ativos
 const activeGames = {};
+
+// Variáveis para gerenciamento de cache e salvamento
+let dadosCache = null;  
+let ultimoSalvamento = 0;  
+const INTERVALO_SALVAMENTO = 5 * 60 * 1000; // 5 minutes in milliseconds  
+let modificacoesNaoSalvas = false;
+
+/**
+ * Caminho para o arquivo JSON de dados do Geoguesser
+ */
+const GEOGUESSER_FILE = path.join(database.databasePath, 'geoguesser.json');
+
+/**  
+ * Carrega os dados do Geoguesser
+ * @returns {Promise<Object>} Dados do Geoguesser
+ */  
+async function carregarDadosGeoguesser() {  
+  try {  
+    // Return cached data if available  
+    if (dadosCache !== null) {  
+      return dadosCache;  
+    }  
+    
+    let dados;  
+    
+    try {  
+      // Tenta ler o arquivo existente  
+      const fileContent = await fs.readFile(GEOGUESSER_FILE, 'utf8');  
+      dados = JSON.parse(fileContent);  
+    } catch (error) {  
+      logger.info('Arquivo de dados do Geoguesser não encontrado ou inválido, criando novo');  
+      
+      // Cria estrutura de dados inicial  
+      dados = {  
+        global: {},
+        grupos: {}
+      };  
+      
+      // Garante que o diretório exista  
+      const dir = path.dirname(GEOGUESSER_FILE);  
+      await fs.mkdir(dir, { recursive: true });  
+      
+      // Salva o arquivo  
+      await fs.writeFile(GEOGUESSER_FILE, JSON.stringify(dados, null, 2), 'utf8');  
+    }  
+    
+    // Update cache and last save time  
+    dadosCache = dados;  
+    ultimoSalvamento = Date.now();  
+    
+    return dados;  
+  } catch (error) {  
+    logger.error('Erro ao carregar dados do Geoguesser:', error);  
+    // Retorna estrutura vazia em caso de erro  
+    return {  
+      global: {},
+      grupos: {}
+    };  
+  }  
+}  
+  
+/**  
+ * Salva os dados do Geoguesser
+ * @param {Object} dados Dados a serem salvos  
+ * @param {boolean} forceSave Força o salvamento mesmo que não tenha passado o intervalo  
+ * @returns {Promise<boolean>} Sucesso ou falha  
+ */  
+async function salvarDadosGeoguesser(dados, forceSave = false) {  
+  try {  
+    // Update cache  
+    dadosCache = dados;  
+    modificacoesNaoSalvas = true;  
+    
+    // Only save to disk if forced or if enough time has passed since last save  
+    const agora = Date.now();  
+    if (forceSave || (agora - ultimoSalvamento) > INTERVALO_SALVAMENTO) {  
+      await fs.writeFile(GEOGUESSER_FILE, JSON.stringify(dados, null, 2), 'utf8');  
+      ultimoSalvamento = agora;  
+      modificacoesNaoSalvas = false;  
+      logger.info('Dados do Geoguesser salvos em disco');  
+    }  
+    
+    return true;  
+  } catch (error) {  
+    logger.error('Erro ao salvar dados do Geoguesser:', error);  
+    return false;  
+  }  
+}
+
+/**
+ * Inicializa dados de um grupo se não existirem
+ * @param {Object} dados Dados do Geoguesser
+ * @param {string} groupId ID do grupo
+ * @returns {Object} Dados atualizados
+ */
+function inicializarGrupo(dados, groupId) {
+  if (!dados.grupos[groupId]) {
+    dados.grupos[groupId] = {};
+  }
+  return dados;
+}
 
 function getRandomCoordinate(bounds) {
   const lat = Math.random() * (bounds.maxLat - bounds.minLat) + bounds.minLat;
@@ -137,7 +240,6 @@ async function getRandomStreetViewInBrazil(retries = 0) {
   }
 }
 
-
 /**
  * Calcula a distância entre dois pontos usando a fórmula de Haversine
  * @param {number} lat1 - Latitude do ponto 1
@@ -175,7 +277,7 @@ function calculateScore(distance) {
   
   // Escala logarítmica para a pontuação
   const score = 1000 - (Math.log10(distance) - Math.log10(MIN_DISTANCE_PERFECT)) / 
-                     (Math.log10(MAX_DISTANCE_POINTS) - Math.log10(MIN_DISTANCE_PERFECT)) * 1000;
+    (Math.log10(MAX_DISTANCE_POINTS) - Math.log10(MIN_DISTANCE_PERFECT)) * 1000;
   
   return Math.max(0, Math.min(1000, Math.round(score)));
 }
@@ -251,9 +353,9 @@ async function startGeoguesserGame(bot, message, args, group) {
 
       // Envia instruções
       const instructions = '🌎 *Onde está esse lugar?* 🔍\n\n' +
-                         '- Envie sua localização pelo WhatsApp ou\n' +
-                         '- !geoguess latitude longitude\n\n' +
-                         'Vocês tem *5 minutos* para adivinhar!';
+        '- Envie sua localização pelo WhatsApp ou\n' +
+        '- !geoguess latitude longitude\n\n' +
+        'Vocês tem *5 minutos* para adivinhar!';
       
       returnMessages.push(new ReturnMessage({
         chatId: chatId,
@@ -465,25 +567,26 @@ async function endGame(bot, groupId) {
     // Envia mensagem com os resultados
     bot.sendReturnMessages(msgFim);
     
-    
-    // Salva os resultados do jogo no banco de dados
+    // Salva os resultados do jogo no histórico
     try {
-      // Obter histórico atual
-      const customVariables = await database.getCustomVariables();
+      // Carrega dados do Geoguesser
+      let dados = await carregarDadosGeoguesser();
       
-      // Inicializa array de histórico se não existir
-      if (!customVariables.geoguesserHistory) {
-        customVariables.geoguesserHistory = [];
+      // Inicializa dados do grupo se necessário
+      dados = inicializarGrupo(dados, groupId);
+      
+      // Inicializa histórico do grupo se não existir
+      if (!dados.grupos[groupId].historico) {
+        dados.grupos[groupId].historico = [];
       }
       
       // Limita o tamanho do histórico (mantém apenas os últimos 50 jogos)
-      if (customVariables.geoguesserHistory.length >= 50) {
-        customVariables.geoguesserHistory = customVariables.geoguesserHistory.slice(-49);
+      if (dados.grupos[groupId].historico.length >= 50) {
+        dados.grupos[groupId].historico = dados.grupos[groupId].historico.slice(-49);
       }
       
       // Adiciona resultados do jogo ao histórico
-      customVariables.geoguesserHistory.push({
-        groupId,
+      dados.grupos[groupId].historico.push({
         location: game.location,
         guesses: game.guesses,
         startTime: game.startTime,
@@ -491,8 +594,13 @@ async function endGame(bot, groupId) {
         timestamp: Date.now()
       });
       
-      // Salva variáveis atualizadas
-      await database.saveCustomVariables(customVariables);
+      // Registra pontos para os jogadores
+      for (const guess of sortedGuesses) {
+        await registerGeoguesserPoints(guess.userId, guess.userName, groupId, guess.score);
+      }
+      
+      // Salva dados
+      await salvarDadosGeoguesser(dados);
     } catch (dbError) {
       logger.error('Erro ao salvar resultados do jogo:', dbError);
     }
@@ -692,14 +800,14 @@ async function showGameHistory(bot, message, args, group) {
     
     const groupId = message.group;
     
-    // Obtém o histórico
-    const customVariables = await database.getCustomVariables();
-    const allHistory = customVariables.geoguesserHistory || [];
+    // Carrega dados do Geoguesser
+    let dados = await carregarDadosGeoguesser();
     
-    // Filtra apenas os jogos deste grupo
-    const groupHistory = allHistory.filter(game => game.groupId === groupId);
+    // Inicializa dados do grupo se necessário
+    dados = inicializarGrupo(dados, groupId);
     
-    if (groupHistory.length === 0) {
+    // Verifica se há histórico para este grupo
+    if (!dados.grupos[groupId].historico || dados.grupos[groupId].historico.length === 0) {
       return new ReturnMessage({
         chatId: groupId,
         content: '📜 Ainda não há histórico de jogos de Geoguesser neste grupo.'
@@ -707,7 +815,7 @@ async function showGameHistory(bot, message, args, group) {
     }
     
     // Limita a exibir apenas os 5 jogos mais recentes
-    const recentGames = groupHistory.slice(-5).reverse();
+    const recentGames = dados.grupos[groupId].historico.slice(-5).reverse();
     
     // Prepara a mensagem de histórico
     let historyMessage = '📜 *Histórico de Geoguesser*\n\n';
@@ -735,7 +843,7 @@ async function showGameHistory(bot, message, args, group) {
       historyMessage += '\n';
     });
     
-    historyMessage += `Total de jogos realizados neste grupo: ${groupHistory.length}`;
+    historyMessage += `Total de jogos realizados neste grupo: ${dados.grupos[groupId].historico.length}`;
     
     return new ReturnMessage({
       chatId: groupId,
@@ -754,66 +862,63 @@ async function showGameHistory(bot, message, args, group) {
 // Registra pontos do geoguesser para um usuário
 async function registerGeoguesserPoints(userId, userName, groupId, points) {
   try {
-    // Obtém variáveis customizadas
-    const customVariables = await database.getCustomVariables();
+    // Carrega dados do Geoguesser
+    let dados = await carregarDadosGeoguesser();
     
-    // Inicializa classificação global se não existir
-    if (!customVariables.geoguesserRanking) {
-      customVariables.geoguesserRanking = {
-        global: {},
-        groups: {}
+    // Inicializa dados do grupo se necessário
+    dados = inicializarGrupo(dados, groupId);
+    
+    // Inicializa ranking do grupo se não existir
+    if (!dados.grupos[groupId].ranking) {
+      dados.grupos[groupId].ranking = {};
+    }
+    
+    // Inicializa dados do jogador no grupo se não existir
+    if (!dados.grupos[groupId].ranking[userId]) {
+      dados.grupos[groupId].ranking[userId] = {
+        nome: userName,
+        pontos: 0,
+        jogos: 0,
+        vitorias: 0
       };
     }
     
-    // Inicializa rankings por grupo se não existir
-    if (!customVariables.geoguesserRanking.groups[groupId]) {
-      customVariables.geoguesserRanking.groups[groupId] = {};
-    }
+    // Atualiza dados do jogador no grupo
+    dados.grupos[groupId].ranking[userId].pontos += points;
+    dados.grupos[groupId].ranking[userId].jogos += 1;
     
-    // Atualiza pontos globais
-    if (!customVariables.geoguesserRanking.global[userId]) {
-      customVariables.geoguesserRanking.global[userId] = {
-        name: userName,
-        points: 0,
-        games: 0,
-        wins: 0
-      };
-    }
-    
-    customVariables.geoguesserRanking.global[userId].points += points;
-    customVariables.geoguesserRanking.global[userId].games += 1;
-    
-    // Se obteve pontuação máxima (100), conta como vitória perfeita
+    // Se obteve pontuação máxima (1000), conta como vitória perfeita
     if (points === 1000) {
-      customVariables.geoguesserRanking.global[userId].wins += 1;
+      dados.grupos[groupId].ranking[userId].vitorias += 1;
     }
     
     // Atualiza nome se mudou
-    customVariables.geoguesserRanking.global[userId].name = userName;
+    dados.grupos[groupId].ranking[userId].nome = userName;
     
-    // Atualiza pontos do grupo
-    if (!customVariables.geoguesserRanking.groups[groupId][userId]) {
-      customVariables.geoguesserRanking.groups[groupId][userId] = {
-        name: userName,
-        points: 0,
-        games: 0,
-        wins: 0
+    // Inicializa ranking global se não existir
+    if (!dados.global[userId]) {
+      dados.global[userId] = {
+        nome: userName,
+        pontos: 0,
+        jogos: 0,
+        vitorias: 0
       };
     }
     
-    customVariables.geoguesserRanking.groups[groupId][userId].points += points;
-    customVariables.geoguesserRanking.groups[groupId][userId].games += 1;
+    // Atualiza dados do jogador no ranking global
+    dados.global[userId].pontos += points;
+    dados.global[userId].jogos += 1;
     
-    // Se obteve pontuação máxima (100), conta como vitória perfeita
+    // Se obteve pontuação máxima (1000), conta como vitória perfeita
     if (points === 1000) {
-      customVariables.geoguesserRanking.groups[groupId][userId].wins += 1;
+      dados.global[userId].vitorias += 1;
     }
     
     // Atualiza nome se mudou
-    customVariables.geoguesserRanking.groups[groupId][userId].name = userName;
+    dados.global[userId].nome = userName;
     
-    // Salva variáveis atualizadas
-    //await database.saveCustomVariables(customVariables);
+    // Salva dados
+    await salvarDadosGeoguesser(dados);
     
     return true;
   } catch (error) {
@@ -834,22 +939,23 @@ async function showGeoguesserRanking(bot, message, args, group) {
   try {
     const chatId = message.group || message.author;
     
-    // Obtém as variáveis customizadas
-    const customVariables = await database.getCustomVariables();
-    
-    // Verifica se existe ranking
-    if (!customVariables.geoguesserRanking) {
-      return new ReturnMessage({
-        chatId,
-        content: '🏆 Ainda não há ranking de Geoguesser. Jogue algumas partidas!'
-      });
-    }
+    // Carrega dados do Geoguesser
+    let dados = await carregarDadosGeoguesser();
     
     // Determina qual ranking mostrar (global ou do grupo)
     const showGlobal = args[0] === 'global' || !message.group;
-    const rankingData = showGlobal 
-      ? customVariables.geoguesserRanking.global 
-      : (customVariables.geoguesserRanking.groups[message.group] || {});
+    
+    let rankingData = {};
+    
+    if (showGlobal) {
+      rankingData = dados.global;
+    } else {
+      // Inicializa dados do grupo se necessário
+      dados = inicializarGrupo(dados, message.group);
+      
+      // Obtém ranking do grupo
+      rankingData = dados.grupos[message.group].ranking || {};
+    }
     
     // Converte para array para poder ordenar
     const players = Object.entries(rankingData).map(([id, data]) => ({
@@ -868,7 +974,7 @@ async function showGeoguesserRanking(bot, message, args, group) {
     }
     
     // Ordena por pontos (maior para menor)
-    players.sort((a, b) => b.points - a.points);
+    players.sort((a, b) => b.pontos - a.pontos);
     
     // Limita a 10 jogadores
     const topPlayers = players.slice(0, 10);
@@ -877,10 +983,10 @@ async function showGeoguesserRanking(bot, message, args, group) {
     let rankingMessage = `🏆 *Ranking de Geoguesser ${showGlobal ? 'Global' : 'do Grupo'}*\n\n`;
     
     topPlayers.forEach((player, index) => {
-      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-      const avgPoints = player.games > 0 ? (player.points / player.games).toFixed(1) : '0.0';
+      const medal = index < EMOJIS_RANKING.length ? EMOJIS_RANKING[index + 1] : `${index + 1}.`;
+      const avgPoints = player.jogos > 0 ? (player.pontos / player.jogos).toFixed(1) : '0.0';
       
-      rankingMessage += `${medal} ${player.name}: ${player.points} pts (${player.games} jogos, média: ${avgPoints}, vitórias perfeitas: ${player.wins})\n`;
+      rankingMessage += `${medal} ${player.nome}: ${player.pontos} pts (${player.jogos} jogos, média: ${avgPoints}, vitórias perfeitas: ${player.vitorias})\n`;
     });
     
     // Adiciona instruções para ver outro ranking
@@ -903,6 +1009,31 @@ async function showGeoguesserRanking(bot, message, args, group) {
     });
   }
 }
+
+setInterval(async () => {  
+  try {  
+      // Salva periodicamente se houver modificações não salvas  
+      if (modificacoesNaoSalvas && (Date.now() - ultimoSalvamento) > INTERVALO_SALVAMENTO) {  
+        await salvarDadosGeoguesser(dadosCache);  
+      }  
+  } catch (error) {  
+    logger.error('Erro na verificação periódica de dados Geoguesser:', error);  
+  }  
+}, INTERVALO_SALVAMENTO);
+
+// Adicione um handler para salvar dados antes de encerrar o processo  
+process.on('SIGINT', async () => {  
+  try {  
+    if (dadosCache !== null && modificacoesNaoSalvas) {  
+      logger.info('Salvando dados do Geoguesser antes de encerrar...');  
+      await salvarDadosGeoguesser(dadosCache, true);  
+    }  
+  } catch (error) {  
+    logger.error('Erro ao salvar dados do Geoguesser durante encerramento:', error);  
+  } finally {  
+    process.exit(0);  
+  }  
+});
 
 // Criar array de comandos usando a classe Command
 const commands = [
