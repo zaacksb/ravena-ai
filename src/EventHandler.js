@@ -299,7 +299,6 @@ class EventHandler {
    * @param {Group} group - O objeto do grupo (se em grupo)
    */
   async processNonCommandMessage(bot, message, group) {
-
     // Verifica se é uma mensagem de voz para processamento automático de STT    
     const processed = await SpeechCommands.processAutoSTT(bot, message, group);
     if (processed) return;
@@ -355,7 +354,7 @@ class EventHandler {
   async applyFilters(bot, message, group) {
     if (!group || !group.filters) return false;
     
-    const textContent = message.type === 'text' ? message.content : message.caption;
+    const textContent = message.type === 'text' ? message.content : message.caption ?? "";
     
     if(textContent.includes("g-filtro")){
       return false; // Não filtrar comandos de filtro

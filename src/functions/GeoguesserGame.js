@@ -14,8 +14,8 @@ const database = Database.getInstance();
 // Configurações do jogo
 const GAME_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 const IMAGE_ANGLES = [0, 120, 240]; // Ângulos para StreetView
-const MIN_DISTANCE_PERFECT = 500; // 500 metros ou menos = 100 pontos
-const MAX_DISTANCE_POINTS = 500000; // 500 km ou mais = 0 pontos
+const MIN_DISTANCE_PERFECT = 500; // 500 metros ou menos = 1000 pontos
+const MAX_DISTANCE_POINTS = 10000000; // 10000 km ou mais = 0 pontos
 const BRAZIL_BOUNDS = {
   minLat: -33.75,
   maxLat: 5.27,
@@ -92,7 +92,7 @@ async function getStreetViewImagesFromPlace(place) {
   const { lat, lng } = place.location;
 
   // First, check if Street View exists nearby
-  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&radius=5000&key=${API_KEY}`;
+  const metadataUrl = `https://maps.googleapis.com/maps/api/streetview/metadata?location=${lat},${lng}&radius=1000&key=${API_KEY}`;
   const metadataRes = await fetch(metadataUrl);
   const metadata = await metadataRes.json();
 
@@ -104,7 +104,7 @@ async function getStreetViewImagesFromPlace(place) {
   const streetViewImages = IMAGE_ANGLES.map((heading) => {
     return {
       heading,
-      url: `https://maps.googleapis.com/maps/api/streetview?size=640x640&location=${lat},${lng}&fov=90&heading=${heading}&pitch=0&key=${API_KEY}`
+      url: `https://maps.googleapis.com/maps/api/streetview?size=640x640&location=${lat},${lng}&fov=90&heading=${heading}&radius=1000&pitch=0&key=${API_KEY}`
     };
   });
 
@@ -166,7 +166,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
  */
 function calculateScore(distance) {
   if (distance <= MIN_DISTANCE_PERFECT) {
-    return 100;
+    return 1000;
   }
   
   if (distance >= MAX_DISTANCE_POINTS) {
@@ -174,10 +174,10 @@ function calculateScore(distance) {
   }
   
   // Escala logarítmica para a pontuação
-  const score = 100 - (Math.log10(distance) - Math.log10(MIN_DISTANCE_PERFECT)) / 
-                     (Math.log10(MAX_DISTANCE_POINTS) - Math.log10(MIN_DISTANCE_PERFECT)) * 100;
+  const score = 1000 - (Math.log10(distance) - Math.log10(MIN_DISTANCE_PERFECT)) / 
+                     (Math.log10(MAX_DISTANCE_POINTS) - Math.log10(MIN_DISTANCE_PERFECT)) * 1000;
   
-  return Math.max(0, Math.min(100, Math.round(score)));
+  return Math.max(0, Math.min(1000, Math.round(score)));
 }
 
 /**
@@ -235,6 +235,8 @@ async function startGeoguesserGame(bot, message, args, group) {
         startTime: Date.now(),
         endTime: Date.now() + GAME_DURATION
       };
+
+      logger.info(`[startGeoguesserGame][${groupId}] Dados do jogo iniciado: `, activeGames[groupId]);
 
 
       for(let img of localRandom.streetViewImages){
@@ -422,45 +424,46 @@ async function endGame(bot, groupId) {
     
     const game = activeGames[groupId];
     
+    logger.info(`[endGame] `, game);
     // Ordena as adivinhações pela pontuação (maior para menor)
     const sortedGuesses = [...game.guesses].sort((a, b) => b.score - a.score);
     
     // Prepara a mensagem de resultados
-    let resultsMessage = '🏁 *Fim do jogo de Geoguesser!*\n\n';
-    resultsMessage += `📍 Local correto: ${game.location.lat.toFixed(6)}, ${game.location.lng.toFixed(6)}\n\n`;
+    const mapMedia = await bot.createMediaFromURL(game.mapUrl);
+
+    let resultsMessage = '🏁 *Fim da rodada de _Geoguesser_!*\n\n';
+    resultsMessage += `📍 Local correto:\n- ${game.locationInfo}\n- https://www.google.com/maps/place/${game.location.lat.toFixed(6)},${game.location.lng.toFixed(6)}\n\n`;
     
     // Adiciona o ranking
     if (sortedGuesses.length > 0) {
-      resultsMessage += '*Ranking:*\n';
+      resultsMessage += '*Ranking da rodada:*\n';
       
       sortedGuesses.forEach((guess, index) => {
         const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-        resultsMessage += `${medal} ${guess.userName}: ${guess.score} pontos (${(guess.distance/1000).toFixed(2)} km)\n`;
+        resultsMessage += `- ${medal} ${guess.userName}: ${guess.score} pontos (${(guess.distance/1000).toFixed(2)} km)\n`;
       });
       
       // Menciona o vencedor
       if (sortedGuesses.length > 0) {
-        resultsMessage += `\n🏆 Parabéns a ${sortedGuesses[0].userName} pela melhor adivinhação!`;
+        resultsMessage += `\n🏆 Parabéns a _${sortedGuesses[0].userName}_ pela melhor adivinhação!`;
       }
     } else {
       resultsMessage += 'Ninguém fez uma adivinhação nesta rodada. 😢';
     }
     
+    const msgFim = new ReturnMessage({
+      chatId: groupId,
+      content: mapMedia,
+      options: {
+        caption: resultsMessage 
+      }
+    });
+
+    logger.info(`[endGame] `, resultsMessage);
+    console.log(resultsMessage);
+
     // Envia mensagem com os resultados
-    await bot.sendMessage(groupId, resultsMessage);
-    
-    // Cria e envia um mapa com a localização correta
-    try {  
-      // Baixa a imagem do mapa
-      const mapMedia = await bot.createMediaFromURL(game.mapUrl);
-      // Envia o mapa
-      await bot.sendMessage(groupId, mapMedia,{
-        caption: `🗺️ Localização correta\n\n_${game.locationInfo}_`
-      });
-    } catch (mapError) {
-      logger.error('Erro ao enviar mapa:', mapError);
-      await bot.sendMessage(groupId, '⚠️ Não foi possível enviar o mapa da localização correta.');
-    }
+    bot.sendReturnMessages(msgFim);
     
     
     // Salva os resultados do jogo no banco de dados
@@ -573,7 +576,7 @@ async function processLocationMessage(bot, message) {
       } else {
         return new ReturnMessage({
           chatId: groupId,
-          content: `⚠️ ${userName}, sua adivinhação anterior de ${activeGames[groupId].guesses[existingGuessIndex].score} pontos era melhor que esta (${score} pontos).`,
+          content: `⚠️ ${userName}, sua adivinhação anterior de ${activeGames[groupId].guesses[existingGuessIndex].score} pontos era melhor que esta (${score} pontos, ${(distance/1000).toFixed(2)} km).`,
           options: { quotedMessageId: message.origin.id._serialized }
         });
       }
@@ -781,7 +784,7 @@ async function registerGeoguesserPoints(userId, userName, groupId, points) {
     customVariables.geoguesserRanking.global[userId].games += 1;
     
     // Se obteve pontuação máxima (100), conta como vitória perfeita
-    if (points === 100) {
+    if (points === 1000) {
       customVariables.geoguesserRanking.global[userId].wins += 1;
     }
     
@@ -802,7 +805,7 @@ async function registerGeoguesserPoints(userId, userName, groupId, points) {
     customVariables.geoguesserRanking.groups[groupId][userId].games += 1;
     
     // Se obteve pontuação máxima (100), conta como vitória perfeita
-    if (points === 100) {
+    if (points === 1000) {
       customVariables.geoguesserRanking.groups[groupId][userId].wins += 1;
     }
     
@@ -907,7 +910,7 @@ const commands = [
     name: 'geoguesser',
     description: 'Inicia um jogo de adivinhação de localização',
     category: "jogos",
-    cooldown: 300, // 5 minutos
+    cooldown: 30, // 5 minutos
     reactions: {
       before: "🌎",
       after: "🔍",
