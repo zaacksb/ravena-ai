@@ -12,6 +12,7 @@ const RankingMessages = require('./functions/RankingMessages');
 const fs = require('fs').promises;
 const path = require('path');
 const Stickers = require('./functions/Stickers');
+const GeoGuesser = require('./functions/GeoguesserGame');
 
 class EventHandler {
   constructor() {
@@ -306,6 +307,14 @@ class EventHandler {
     if (!group && !bot.ignorePV) {
       const stickerProcessed = await Stickers.processAutoSticker(bot, message, group);
       if (stickerProcessed) return;
+    }
+
+    // Trigger para jogos
+    if (group && message.type === 'location') {
+      const respGeo = await GeoGuesser.processLocationMessage(bot, message);
+      if(respGeo){
+        bot.sendReturnMessages(respGeo);
+      }
     }
 
     if (group && message.type === 'text') {

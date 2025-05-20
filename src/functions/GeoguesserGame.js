@@ -22,6 +22,7 @@ const BRAZIL_BOUNDS = {
   minLng: -73.99,
   maxLng: -34.79,
 };
+
 const PLACE_TYPES = [
   'tourist_attraction',
   'gas_station',
@@ -33,6 +34,7 @@ const PLACE_TYPES = [
   'museum',
   'church',
 ];
+
 const EMOJIS_LOCAL = {
   school: "🏫",
   restaurant: "🍽️",
@@ -240,11 +242,7 @@ async function startGeoguesserGame(bot, message, args, group) {
 
         returnMessages.push(new ReturnMessage({
           chatId: chatId,
-          content: media,
-          options: {
-            // caption: `📷 Vista ${angle}° do local`, // Sem caption pra ficar organizado
-            quotedMessageId: message.origin.id._serialized
-          }
+          content: media
         }));
 
       }
@@ -343,8 +341,8 @@ async function makeGuess(bot, message, args, group) {
     }
     
     // Extrai e valida latitude e longitude
-    const lat = parseFloat(args[0]);
-    const lng = parseFloat(args[1]);
+    const lat = parseFloat(args[0].replace(",", ""));
+    const lng = parseFloat(args[1].replace(",", ""));
     
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return new ReturnMessage({
@@ -381,12 +379,14 @@ async function makeGuess(bot, message, args, group) {
         
         return new ReturnMessage({
           chatId: groupId,
-          content: `🔄 ${userName} atualizou sua adivinhação para ${lat.toFixed(6)}, ${lng.toFixed(6)}.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos (melhor que sua tentativa anterior)`
+          content: `🔄 ${userName} atualizou sua adivinhação para ${lat.toFixed(6)}, ${lng.toFixed(6)}.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos (melhor que sua tentativa anterior)`,
+          options: { quotedMessageId: message.origin.id._serialized }
         });
       } else {
         return new ReturnMessage({
           chatId: groupId,
-          content: `⚠️ ${userName}, sua adivinhação anterior de ${activeGames[groupId].guesses[existingGuessIndex].score} pontos era melhor que esta (${score} pontos).`
+          content: `⚠️ ${userName}, sua adivinhação anterior de ${activeGames[groupId].guesses[existingGuessIndex].score} pontos era melhor que esta (${score} pontos).`,
+          options: { quotedMessageId: message.origin.id._serialized }
         });
       }
     } else {
@@ -395,7 +395,8 @@ async function makeGuess(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `✅ ${userName} adivinhou as coordenadas ${lat.toFixed(6)}, ${lng.toFixed(6)}.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos`
+        content: `✅ ${userName} tentou advinhar nas coordenadas ${lat.toFixed(6)}, ${lng.toFixed(6)}.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos`,
+        options: { quotedMessageId: message.origin.id._serialized }
       });
     }
   } catch (error) {
@@ -504,18 +505,13 @@ async function endGame(bot, groupId) {
 }
 
 /**
- * Processa uma localização enviada
+ * Processa uma localização enviada, invocada no EventHandler->processNonCommandMessage
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem formatada
  * @returns {Promise<ReturnMessage|null>} Mensagem de retorno ou null
  */
 async function processLocationMessage(bot, message) {
   try {
-    // Verifica se é uma mensagem de grupo
-    if (!message.group) {
-      return null;
-    }
-    
     const groupId = message.group;
     
     // Verifica se há um jogo ativo no grupo
@@ -529,20 +525,14 @@ async function processLocationMessage(bot, message) {
       return null;
     }
     
-// Extrai as coordenadas da mensagem de localização
-    let lat, lng;
-    
-    // Na mensagem original, a localização está em message.origin._data.lat/lng
-    if (message.origin && message.origin._data && message.origin._data.lat && message.origin._data.lng) {
-      lat = message.origin._data.lat;
-      lng = message.origin._data.lng;
-    } else if (message.content && typeof message.content === 'object') {
-      // Alguns clientes podem enviar a localização em message.content
-      lat = message.content.lat || message.content.latitude;
-      lng = message.content.lng || message.content.longitude;
-    }
-    
+    // Extrai as coordenadas da mensagem de localização
+    const lat = message.content?.latitude ?? message.origin?.location?.latitude ?? message.content?.lat ?? message.origin?._data?.lat;
+    const lng = message.content?.longitude ?? message.origin?.location?.longitude ?? message.content?.lng ?? message.origin?._data?.lng;
+
+    logger.info(`[processLocationMessage] Recebida localização: ${lat}, ${lng}`)
     if (!lat || !lng) {
+      logger.info(`[processLocationMessage] Não consegui local?`, message.origin);
+
       return null; // Não é uma mensagem de localização válida
     }
     
@@ -577,12 +567,14 @@ async function processLocationMessage(bot, message) {
         
         return new ReturnMessage({
           chatId: groupId,
-          content: `🔄 ${userName} atualizou sua adivinhação usando localização.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos (melhor que sua tentativa anterior)`
+          content: `🔄 ${userName} atualizou sua adivinhação usando localização.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos (melhor que sua tentativa anterior)`,
+          options: { quotedMessageId: message.origin.id._serialized }
         });
       } else {
         return new ReturnMessage({
           chatId: groupId,
-          content: `⚠️ ${userName}, sua adivinhação anterior de ${activeGames[groupId].guesses[existingGuessIndex].score} pontos era melhor que esta (${score} pontos).`
+          content: `⚠️ ${userName}, sua adivinhação anterior de ${activeGames[groupId].guesses[existingGuessIndex].score} pontos era melhor que esta (${score} pontos).`,
+          options: { quotedMessageId: message.origin.id._serialized }
         });
       }
     } else {
@@ -591,7 +583,8 @@ async function processLocationMessage(bot, message) {
       
       return new ReturnMessage({
         chatId: groupId,
-        content: `✅ ${userName} adivinhou usando localização.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos`
+        content: `✅ ${userName} tentou adivinhar.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos`,
+        options: { quotedMessageId: message.origin.id._serialized }
       });
     }
   } catch (error) {

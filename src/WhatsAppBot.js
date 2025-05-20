@@ -182,17 +182,6 @@ class WhatsAppBot {
       this.eventHandler.onConnected(this);
 
        
-      try {
-        this.blockedContacts = await this.client.getBlockedContacts();
-        this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
-
-        if (this.isConnected && this.otherBots.length > 0) {
-          this.prepareOtherBotsBlockList();
-        }
-      } catch (error) {
-        this.logger.error('Erro ao carregar contatos bloqueados:', error);
-        this.blockedContacts = [];
-      }
 
 
       // Envia notificação de inicialização para o grupo de logs
@@ -215,11 +204,17 @@ class WhatsAppBot {
         }
       }
 
-      if (this.otherBots && this.otherBots.length > 0) {
-        this.prepareOtherBotsBlockList();
+      try {
+        this.blockedContacts = await this.client.getBlockedContacts();
+        this.logger.info(`Carregados ${this.blockedContacts.length} contatos bloqueados`);
+
+        if (this.isConnected && this.otherBots.length > 0) {
+          this.prepareOtherBotsBlockList();
+        }
+      } catch (error) {
+        this.logger.error('Erro ao carregar contatos bloqueados:', error);
+        this.blockedContacts = [];
       }
-
-
 
       // Inicializa o sistema de streaming agora que estamos conectados
       this.streamSystem = new StreamSystem(this);
@@ -465,6 +460,9 @@ class WhatsAppBot {
       } else if (message.type === 'sticker') {
         type = 'sticker';
         content = await message.downloadMedia();
+      } else if (message.type === 'location') {
+        type = 'location';
+        content = message.location;
       }
       
       return {
