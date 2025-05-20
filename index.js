@@ -56,6 +56,7 @@ async function main() {
             '--disable-dev-shm-usage',
             '--disable-session-crashed-bubble',
             '--start-maximized',
+            '--disable-prompt-on-repost',
             `--window-name=${rBot.nome}`
 
           ],

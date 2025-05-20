@@ -1198,8 +1198,8 @@ class CommandHandler {
         });
       }
       
-      // Verifica se é uma resposta de mídia (formato: "{img-filename.png} Legenda")
-      const mediaMatch = processedResponse.match(/^\{(audio|voice|image|video|document|sticker)-([^}]+)\}\s*(.*)/);
+      // Verifica se é uma resposta de mídia (formato: "{img-filename.png} Legenda\nlegenda 2...")
+      const mediaMatch = processedResponse.match(/^\{(audio|voice|image|video|document|sticker)-([^}]+)\}\s*(.*)/s);
       
       if (mediaMatch) {
         const [, mediaType, fileName, caption] = mediaMatch;
