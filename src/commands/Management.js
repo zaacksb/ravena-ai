@@ -1971,12 +1971,16 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       // Check if the channel exists on Twitch before adding
       if (bot.streamMonitor) {
-        const channelExists = await bot.streamMonitor.twitchChannelExists(channelName);
+        const charsValidos = /^(#)?[a-zA-Z0-9_]{4,25}$/;
+        let channelExists = charsValidos.test(channelName);
+        if(channelExists){ // só verifica se for um nome válido
+         channelExists = await bot.streamMonitor.twitchChannelExists(channelName);
+        }
         
         if (!channelExists) {
           return new ReturnMessage({
             chatId: group.id,
-            content: `❌ Erro: O canal "${channelName}" não existe na Twitch ou não foi possível verificá-lo.`
+            content: `❌ Erro: O canal "${channelName}" não existe na Twitch. Use apenas o nome do seu canal, sem caracteres extras.`
           });
         }
         

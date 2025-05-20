@@ -435,7 +435,7 @@ class StreamMonitor extends EventEmitter {
                   channelsToRemove.push(channelCheck.toLowerCase());
                   continue;
                 } else {
-                  this.logger.info(`[cleanupChannelList] ${channelCheck} @ (${group.name || 'sem nome'}, ok, existe!`);
+                  this.logger.info(`[cleanupChannelList] ${channelCheck} @ (${group.name || 'sem nome'}), ok, existe!`);
                 }
                 await sleep(500);  // API da twitch fica nervosa com spam
               }
