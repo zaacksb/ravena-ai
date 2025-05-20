@@ -432,7 +432,7 @@ class StreamMonitor extends EventEmitter {
               
                 if (!channelExists) {
                   this.logger.info(`[cleanupChannelList] Canal Twitch não encontrado: ${channelCheck} - Removendo do grupo ${group.id} (${group.name || 'sem nome'})`);
-                  channelsToRemove.push(channel.channel.toLowerCase());
+                  channelsToRemove.push(channelCheck.toLowerCase());
                   continue;
                 } else {
                   this.logger.info(`[cleanupChannelList] ${channelCheck} @ (${group.name || 'sem nome'}, ok, existe!`);
