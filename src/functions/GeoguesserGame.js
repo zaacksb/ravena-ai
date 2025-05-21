@@ -14,8 +14,8 @@ const database = Database.getInstance();
 // Configurações do jogo
 const GAME_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 const IMAGE_ANGLES = [0, 120, 240]; // Ângulos para StreetView
-const MIN_DISTANCE_PERFECT = 500; // 500 metros ou menos = 1000 pontos
-const MAX_DISTANCE_POINTS = 10000; // 10000 km ou mais = 0 pontos
+const MIN_DISTANCE_PERFECT = 10000; // Em metros
+const MAX_DISTANCE_POINTS = 20000000; // Em metros
 const BRAZIL_BOUNDS = {
   minLat: -33.75,
   maxLat: 5.27,

@@ -451,10 +451,12 @@ class StreamMonitor extends EventEmitter {
         }
       }
 
-      if (channelsToRemove.length > 0) {
-        group.twitch = group.twitch.filter(c => !channelsToRemove.includes(c.channel.toLowerCase()));
-        await this.bot.database.saveGroup(group);
-        this.logger.info(`[cleanupChannelList] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
+      for (const group of groups) {
+        if (channelsToRemove.length > 0) {
+          group.twitch = group.twitch.filter(c => !channelsToRemove.includes(c.channel.toLowerCase()));
+          await this.bot.database.saveGroup(group);
+          this.logger.info(`[cleanupChannelList] Removidos ${channelsToRemove.length} canais inexistentes do grupo ${group.id}`, channelsToRemove);
+        }
       }
     } catch (error) {
       this.logger.error('[cleanupChannelList] Erro ao fazer limpeza dos canais:', error);

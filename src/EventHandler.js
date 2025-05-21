@@ -126,6 +126,7 @@ class EventHandler {
    */
   async processMessage(bot, message) {
     try {
+
       // Verifica links de convite em chats privados
       if (!message.group) {
         // Verifica se é uma mensagem de link de convite
@@ -149,7 +150,7 @@ class EventHandler {
       let group = null;
       if (message.group) {
         group = await this.getOrCreateGroup(message.group);
-
+        console.log(group);
         if(!group.botNotInGroup){
           group.botNotInGroup = [];
         } else {
