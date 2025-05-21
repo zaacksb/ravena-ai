@@ -55,10 +55,10 @@ async function audioCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   try {
-    if (!args.length) {
+    if (args.length < 1) {
       return new ReturnMessage({
         chatId,
-        content: "Digite o nome do áudio para buscar.",
+        content: "🔇 Digite o nome do áudio para buscar no site MyInstants\n!audio nome do áudio",
         options: {
           quotedMessageId: message.origin?.id?._serialized
         }
@@ -76,7 +76,7 @@ async function audioCommand(bot, message, args, group) {
     if (!resultados.length) {
       return new ReturnMessage({
         chatId,
-        content: `Nenhum áudio encontrado para "${query}".`,
+        content: `🔇 Nenhum áudio encontrado para "${query}".`,
         options: {
           quotedMessageId: message.origin?.id?._serialized
         }
@@ -84,10 +84,10 @@ async function audioCommand(bot, message, args, group) {
     }
 
     if (!numeroInformado) {
-      const preview = resultados.map((r, i) => `${i + 1}. ${r.title}`).join("\n");
+      const preview = resultados.map((r, i) => `- ${i + 1}. ${r.title}`).join("\n");
       return new ReturnMessage({
         chatId,
-        content: `Resultados para "${query}":\n${preview}\n\nUse: !audio-buscar ${query} número_do_áudio para enviar o áudio desejado.\n\nExemplo: !audio-buscar ${query} 1`,
+        content: `🔊 Resultados para "${query}":\n${preview}\n\nUse: !audio ${query} número_do_áudio para enviar o áudio desejado.\n\nExemplo: !audio ${query} 1`,
         options: {
           quotedMessageId: message.origin?.id?._serialized
         }
@@ -100,7 +100,7 @@ async function audioCommand(bot, message, args, group) {
     if (!resultado) {
       return new ReturnMessage({
         chatId,
-        content: `Número inválido. Encontre um número entre 1 e ${resultados.length}.`,
+        content: `❌ Número inválido, para '${query}' digite um número entre 1 e ${resultados.length}.\n!audio ${query} n`,
         options: {
           quotedMessageId: message.origin?.id?._serialized
         }
@@ -113,23 +113,19 @@ async function audioCommand(bot, message, args, group) {
 
     return new ReturnMessage({
       chatId,
-      content: `▶️ ${resultado.title}`,
-      media: audio,
-      reactions: {
-        after: "🔊"
-      },
+      content: audio,
       options: {
+        sendAudioAsVoice: true,
+        caption: `▶️ ${resultado.title}`,
         quotedMessageId: message.origin?.id?._serialized
       }
     });
+    
   } catch (error) {
     logger.error('Erro ao executar comando audio:', error);
     return new ReturnMessage({
       chatId,
-      content: '❌ Ocorreu um erro ao buscar o áudio. Por favor, tente novamente mais tarde.',
-      reactions: {
-        after: "❌"
-      }
+      content: '❌ Ocorreu um erro ao buscar o áudio. Por favor, tente novamente mais tarde.'
     });
   }
 }
@@ -137,10 +133,10 @@ async function audioCommand(bot, message, args, group) {
 // Criação dos comandos
 const commands = [
   new Command({
-    name: 'audio-buscar',
-    description: 'Busca e envia um áudio do site myinstants.com',
-    usage: '/audio [nome_do_áudio] [número_opcional]',
-    category: "utilidades",
+    name: 'audio',
+    description: 'Busca um áudio no site MyInstants',
+    usage: '!audio <nome_do_áudio> <número>',
+    category: "busca",
     reactions: {
       before: "⏳",
       after: "🔊",
