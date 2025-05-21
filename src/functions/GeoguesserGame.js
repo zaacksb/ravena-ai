@@ -17,12 +17,12 @@ const database = Database.getInstance();
 const GAME_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
 const IMAGE_ANGLES = [0, 90, 180, 270]; // Ângulos para StreetView
 const MIN_DISTANCE_PERFECT = 10000; // Em metros
-const MAX_DISTANCE_POINTS = 20000000; // Em metros
+const MAX_DISTANCE_POINTS = 10000000; // Em metros
 const BRAZIL_BOUNDS = {
-  minLat: -33.75,
-  maxLat: 5.27,
-  minLng: -73.99,
-  maxLng: -34.79,
+  minLat: -34.513624230082094,
+  maxLat: -0.3381745506226877,
+  minLng: -65.85206416262956,
+  maxLng: -36.057150968621926,
 };
 
 const PLACE_TYPES = [
@@ -183,8 +183,25 @@ async function getRandomPlaceInBrazil() {
 
   if (data.status === 'OK' && data.results.length > 0) {
     const randomResult = data.results[Math.floor(Math.random() * data.results.length)];
+
+      // Info endereço
+    const responseDetails = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${randomResult.place_id}&key=${API_KEY}&`);
+    const dataDetails = await responseDetails.json();
+
+    let addr = "-";
+    if (dataDetails.status === 'OK' && dataDetails.result) {
+      addr = dataDetails.result.formatted_address;
+    }
+
+    if((addr.includes("Brazil") || addr.includes("Brasil"))){
+      logger.warn('Not in brazil, retrying...');
+      return getRandomPlaceInBrazil(); // try again recursively
+    }
+
+    
     return {
       name: randomResult.name,
+      formatted_address: addr,
       location: randomResult.geometry.location,
       type,
     };
@@ -267,6 +284,7 @@ async function getStreetViewImagesFromPlace(place) {
     placeName: place.name,
     placeType: place.type,
     location: { lat, lng },
+    formatted_address: place.formatted_address,
     streetViewImages,
     streetViewCombined
   };
@@ -489,6 +507,7 @@ async function startGeoguesserGame(bot, message, args, group) {
       // Cria o objeto do jogo
       activeGames[groupId] = {
         location: localRandom.location,
+        address: localRandom.formatted_address,
         locationInfo: `${localEmoji} ${localRandom.placeName}`,
         guesses: [],
         startTime: Date.now(),
@@ -759,7 +778,7 @@ async function endGame(bot, groupId) {
     const mapMedia = await bot.createMediaFromURL(mapaFinal); 
 
     let resultsMessage = '🏁 *Fim da rodada de _Geoguesser_!*\n\n';
-    resultsMessage += `📍 Local correto:\n- ${game.locationInfo}\n- https://www.google.com/maps/place/${game.location.lat},${game.location.lng}\n\n`;
+    resultsMessage += `📍 Local correto:\n- ${game.address}\n- ${game.locationInfo}\n- https://www.google.com/maps/place/${game.location.lat},${game.location.lng}\n\n`;
     
     // Adiciona o ranking
     if (sortedGuesses.length > 0) {
