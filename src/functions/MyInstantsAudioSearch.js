@@ -111,15 +111,23 @@ async function audioCommand(bot, message, args, group) {
 
     logger.info(`Enviando áudio: ${resultado.title}`);
 
-    return new ReturnMessage({
+    return [
+    new ReturnMessage({
+      chatId,
+      content: `▶️ _${resultado.title}_`,
+      options: {
+        quotedMessageId: message.origin?.id?._serialized
+      }
+    }),
+    new ReturnMessage({
       chatId,
       content: audio,
       options: {
         sendAudioAsVoice: true,
-        caption: `▶️ ${resultado.title}`,
-        quotedMessageId: message.origin?.id?._serialized
-      }
-    });
+      },
+      delay: 500
+    })
+    ];
     
   } catch (error) {
     logger.error('Erro ao executar comando audio:', error);
