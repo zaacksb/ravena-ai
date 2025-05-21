@@ -150,7 +150,6 @@ class EventHandler {
       let group = null;
       if (message.group) {
         group = await this.getOrCreateGroup(message.group);
-        console.log(group);
         if(!group.botNotInGroup){
           group.botNotInGroup = [];
         } else {
@@ -497,7 +496,6 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupJoin(bot, data) {
-    console.log(data);
     this.logger.info(`Usuário ${data.user.name} (${data.user.id}) entrou no grupo ${data.group.name} (${data.group.id}). Quem adicionou: ${data.responsavel.name}/${data.responsavel.id}`);
     
     try {
@@ -506,7 +504,7 @@ class EventHandler {
       
       // Verifica se o próprio bot é quem está entrando
       const isBotJoining = data.user.id === bot.client.info.wid._serialized;
-      console.log(`isBotJoining (${isBotJoining}}) = data.user.id (${data.user.id}) === bot.client.info.wid._serialized ${bot.client.info.wid._serialized}`);
+      //console.log(`isBotJoining (${isBotJoining}}) = data.user.id (${data.user.id}) === bot.client.info.wid._serialized ${bot.client.info.wid._serialized}`);
       
       // Obtém ou cria grupo
       const group = await this.getOrCreateGroup(data.group.id, data.group.name);
@@ -654,7 +652,6 @@ class EventHandler {
    * @param {Object} data - Dados do evento
    */
   async processGroupLeave(bot, data) {
-    console.log(data);
     this.logger.info(`Usuário ${data.user.name} (${data.user.id}) saiu do grupo ${data.group.name} (${data.group.id}). Quem removeu: ${data.responsavel.name}/${data.responsavel.id}`);
     
     try {
