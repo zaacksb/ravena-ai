@@ -2,18 +2,20 @@
 const path = require('path');
 const fs = require('fs').promises;
 const axios = require('axios');
+const crypto = require('crypto');
 const { Location } = require('whatsapp-web.js');
 const Logger = require('../utils/Logger');
 const ReturnMessage = require('../models/ReturnMessage');
 const Command = require('../models/Command');
 const Database = require('../utils/Database');
+const sharp = require('sharp');
 
 const logger = new Logger('geoguesser-game');
 const database = Database.getInstance();
 
 // Configurações do jogo
-const GAME_DURATION = 0.5 * 60 * 1000; // 5 minutos em milissegundos
-const IMAGE_ANGLES = [0, 120, 240]; // Ângulos para StreetView
+const GAME_DURATION = 5 * 60 * 1000; // 5 minutos em milissegundos
+const IMAGE_ANGLES = [0, 90, 180, 270]; // Ângulos para StreetView
 const MIN_DISTANCE_PERFECT = 10000; // Em metros
 const MAX_DISTANCE_POINTS = 20000000; // Em metros
 const BRAZIL_BOUNDS = {
@@ -187,9 +189,55 @@ async function getRandomPlaceInBrazil() {
       type,
     };
   } else {
-    console.warn('No places found, retrying...');
+    logger.warn('No places found, retrying...');
     return getRandomPlaceInBrazil(); // try again recursively
   }
+}
+
+async function combineStreetViewImages(streetViewImages) {
+  const tempFolder = path.join(database.databasePath, '..', 'temp');
+
+  // Ensure the temp folder exists
+  await fs.mkdir(tempFolder, { recursive: true });
+
+  // Download and buffer each image
+  const imageBuffers = await Promise.all(
+    streetViewImages.map(async (svi) => {
+      const response = await axios.get(svi.url, { responseType: 'arraybuffer' });
+      return Buffer.from(response.data);
+    })
+  );
+
+  // Resize all images to same dimensions
+  const resizedImages = await Promise.all(
+    imageBuffers.map((buffer) =>
+      sharp(buffer).resize(640, 640).toBuffer()
+    )
+  );
+
+  // Combine into a 2x2 grid
+  const compositeImage = await sharp({
+    create: {
+      width: 1280,
+      height: 1280,
+      channels: 3,
+      background: { r: 255, g: 255, b: 255 }
+    }
+  })
+    .composite([
+      { input: resizedImages[0], left: 0, top: 0 },
+      { input: resizedImages[1], left: 640, top: 0 },
+      { input: resizedImages[2], left: 0, top: 640 },
+      { input: resizedImages[3], left: 640, top: 640 }
+    ])
+    .jpeg()
+    .toBuffer();
+
+  const hash = crypto.randomBytes(2).toString('hex');
+  const outputPath = path.join(tempFolder, `streetview-${hash}.jpg`);
+  await fs.writeFile(outputPath, compositeImage);
+
+  return outputPath;
 }
 
 async function getStreetViewImagesFromPlace(place) {
@@ -212,11 +260,15 @@ async function getStreetViewImagesFromPlace(place) {
     };
   });
 
+
+  const streetViewCombined = await combineStreetViewImages(streetViewImages);
+
   return {
     placeName: place.name,
     placeType: place.type,
     location: { lat, lng },
-    streetViewImages
+    streetViewImages,
+    streetViewCombined
   };
 }
 
@@ -365,7 +417,6 @@ async function testeGeo(bot, message, args, group) {
 
   const msgs = [];
   const markers = generateStaticMapUrl([[lat,lng],  ...pins], ["F", "A", "B", "C"]);
-  console.log(markers);
   const mediaTeste = await bot.createMediaFromURL(markers);
 
   msgs.push(new ReturnMessage({
@@ -381,7 +432,6 @@ async function testeGeo(bot, message, args, group) {
   // }));
 
 
-  console.log(msgs);
 
   return msgs;
 }
@@ -448,6 +498,7 @@ async function startGeoguesserGame(bot, message, args, group) {
       logger.info(`[startGeoguesserGame][${groupId}] Dados do jogo iniciado: `, activeGames[groupId]);
 
 
+      /*
       for(let img of localRandom.streetViewImages){
         const media = await bot.createMediaFromURL(img.url);
 
@@ -457,12 +508,22 @@ async function startGeoguesserGame(bot, message, args, group) {
         }));
 
       }
+      */
+      const media = await bot.createMedia(localRandom.streetViewCombined);
+      returnMessages.push(new ReturnMessage({
+        chatId: chatId,
+        content: media
+      }));
+
+
+      
 
       // Envia instruções
       const instructions = '🌎 *Onde está esse lugar?* 🔍\n\n' +
         '- Envie sua localização pelo WhatsApp ou\n' +
-        '- !geoguess latitude longitude\n\n' +
-        'Vocês tem *5 minutos* para adivinhar!';
+        '- !geoguess nome do lugar\n' +
+        '- !geoguess -20.123 -15.32\n\n' +
+        'Vocês tem *5 minutos* para adivinhar! ⏰';
       
       returnMessages.push(new ReturnMessage({
         chatId: chatId,
@@ -501,6 +562,48 @@ async function startGeoguesserGame(bot, message, args, group) {
     });
   }
 }
+
+async function searchLocation(input) {
+  const parseCoordinates = (str) => {
+    // Match various coordinate formats
+    const coordRegex = /(-?\d+(?:[\.,]\d+)?)\s*(?:[,eE-]{1,3})\s*(-?\d+(?:[\.,]\d+)?)/;
+    const match = str.match(coordRegex);
+    if (match) {
+      const lat = parseFloat(match[1].replace(',', '.'));
+      const lng = parseFloat(match[2].replace(',', '.'));
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return { lat, lng };
+      }
+    }
+    return null;
+  };
+
+  const coords = parseCoordinates(input);
+  if (coords) {
+    return coords;
+  }
+
+  // Not coordinates: do geocoding using Google Maps API
+  const encoded = encodeURIComponent(input);
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&region=br&key=${API_KEY}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      return { lat: location.lat, lng: location.lng };
+    } else {
+      logger.error(`Geocoding failed: ${data.status}`);
+      return null;
+    }
+  } catch (error) {
+    logger.error('Error in searchLocation:', error);
+    return null;
+  }
+}
+
 
 /**
  * Processa uma adivinhação de localização
@@ -543,22 +646,28 @@ async function makeGuess(bot, message, args, group) {
       });
     }
     
-    // Verifica argumentos (latitude e longitude)
-    if (args.length < 2) {
+    // Verifica argumentos (latitude e longitude ou nome)
+    if (args.length < 1) {
       return new ReturnMessage({
         chatId: groupId,
-        content: '❌ Formato incorreto. Use: !geoguess latitude longitude'
+        content: '❌ Formato incorreto. Use: !geoguess latitude longitude ou !geoguess nome do lugar'
       });
     }
     
+    const localBuscado = await searchLocation(args.join(" "));
+
     // Extrai e valida latitude e longitude
-    const lat = parseFloat(args[0].replace(",", ""));
-    const lng = parseFloat(args[1].replace(",", ""));
+    //const lat = parseFloat(args[0].replace(",", ""));
+    //const lng = parseFloat(args[1].replace(",", ""));
+
+    const lat = localBuscado.lat;
+    const lng = localBuscado.lng;
+
     
     if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
       return new ReturnMessage({
         chatId: groupId,
-        content: '❌ Coordenadas inválidas. Latitude deve estar entre -90 e 90, e longitude entre -180 e 180.'
+        content: `❌ Coordenadas ou local inválido (${args.join(" ")}). Latitude deve estar entre -90 e 90, e longitude entre -180 e 180.`
       });
     }
     
@@ -641,7 +750,6 @@ async function endGame(bot, groupId) {
     // Ordena as adivinhações pela pontuação (maior para menor)
     const sortedGuesses = [...game.guesses].sort((a, b) => b.score - a.score);
     
-    console.log("sortedGuesses", sortedGuesses);
     // Prepara a mensagem de resultados
     const guessesPins = sortedGuesses.map(sG => [sG.lat, sG.lng]);
     const guessesLabels = sortedGuesses.map(sG => sG.userName[0].toUpperCase());
@@ -679,7 +787,6 @@ async function endGame(bot, groupId) {
     });
 
     logger.info(`[endGame] `, resultsMessage);
-    console.log(resultsMessage);
 
     // Envia mensagem com os resultados
     bot.sendReturnMessages(msgFim);
