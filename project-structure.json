@@ -273,6 +273,11 @@
             },
             {
               "type": "file",
+              "name": "MyInstantsAudioSearch.js",
+              "path": ".\\ravena-ai\\src\\functions\\MyInstantsAudioSearch.js"
+            },
+            {
+              "type": "file",
               "name": "GiphyCommands.js",
               "path": ".\\ravena-ai\\src\\functions\\GiphyCommands.js"
             },
