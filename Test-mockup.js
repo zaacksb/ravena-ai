@@ -390,7 +390,7 @@ async function runTests() {
     await new Promise(resolve => setTimeout(resolve, 5000));
     logger.info('sending');
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!ai receita pudim');
+    await simulator.simulateTextMessage(testUser, testGroup, '$geotest');
     //await simulator.simulateTextMessage(testUser, testGroup, '!geoguess -1.2614419 -60.4063437');
 
   

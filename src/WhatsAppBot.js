@@ -1,4 +1,4 @@
-const { Client, Contact, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const { Client, Contact, LocalAuth, MessageMedia, Location } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const qrimg = require('qr-image');
 const Database = require('./utils/Database');
@@ -507,7 +507,14 @@ class WhatsAppBot {
 
       if (typeof content === 'string') {
         return await this.client.sendMessage(chatId, content, options);
-      } else if (content instanceof MessageMedia) {
+      } else if (content instanceof Location) {
+        try{
+          return await this.client.sendMessage(chatId, content, options);
+        } catch(err){
+          this.logger.error(`Erro ao enviar mensagem Location pra ${chatId}:`, err, content, fullOpts);
+        }
+      }
+      else if (content instanceof MessageMedia) {
         const fullOpts = {
           caption: options.caption,
           sendMediaAsSticker: options.asSticker || false,
@@ -516,6 +523,15 @@ class WhatsAppBot {
 
         try{
           return await this.client.sendMessage(chatId, content, fullOpts);
+        } catch(err){
+          this.logger.error(`Erro ao enviar mensagem MessageMedia pra ${chatId}:`, err, content, fullOpts);
+        }
+      } else {
+
+        this.logger.info(`[sendMessage] Mensagem de tipo indefinido?`, content);
+        console.log(content);
+        try{
+          return await this.client.sendMessage(chatId, content, options);
         } catch(err){
           this.logger.error(`Erro ao enviar mensagem pra ${chatId}:`, err, content, fullOpts);
         }
