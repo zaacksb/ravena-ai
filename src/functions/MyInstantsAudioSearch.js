@@ -112,21 +112,21 @@ async function audioCommand(bot, message, args, group) {
     logger.info(`Enviando áudio: ${resultado.title}`);
 
     return [
-    new ReturnMessage({
-      chatId,
-      content: `▶️ _${resultado.title}_`,
-      options: {
-        quotedMessageId: message.origin?.id?._serialized
-      }
-    }),
-    new ReturnMessage({
-      chatId,
-      content: audio,
-      options: {
-        sendAudioAsVoice: true,
-      },
-      delay: 500
-    })
+      new ReturnMessage({
+        chatId,
+        content: `▶️ _${resultado.title}_`,
+        options: {
+          quotedMessageId: message.origin?.id?._serialized
+        }
+      }),
+      new ReturnMessage({
+        chatId,
+        content: audio,
+        options: {
+          sendAudioAsVoice: true,
+        },
+        delay: 500
+      })
     ];
     
   } catch (error) {
