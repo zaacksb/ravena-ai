@@ -9,6 +9,9 @@ const ReturnMessage = require('../models/ReturnMessage');
 const logger = new Logger('stable-diffusion-commands');
 const nsfwPredict = NSFWPredict.getInstance();
 
+const LLMService = require('../services/LLMService');
+const llmService = new LLMService({});
+
 //logger.info('Módulo StableDiffusionCommands carregado');
 
 // Configuração da API SD WebUI
@@ -49,13 +52,32 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       chatId: chatId,
       content: 'Por favor, forneça um prompt para gerar a imagem. Exemplo: !imagine um gato usando chapéu de cowboy'
     });
-
   }
-  
 
   logger.info(`Gerando imagem com prompt: ${prompt}`);
   
   try {
+  
+    const safetyQuestion = `Check if this image generation prompt is safe and appropriate: "${prompt}". 
+    Is it requesting gore, extreme violence, explicit sexual content, child safety concerns or other inappropriate material? 
+    Answer only "SAFE" or "UNSAFE" followed by a brief reason.`;
+    
+    const safetyResponse = await llmService.getCompletion({
+      prompt: safetyQuestion
+    });
+    
+    let safetyMsg = "";
+    // Check if the response indicates unsafe content
+    if (safetyResponse.toLowerCase().includes("unsafe") || 
+        prompt.toLowerCase().includes("gore")) {
+      
+      // Log the inappropriate request
+      const reportMessage = `⚠️ INAPPROPRIATE IMAGE REQUEST ⚠️\nUser: ${message.author}\nName: ${message.authorName || "Unknown"}\nPrompt: ${prompt}\nLLM Response: ${safetyResponse}\n\n!sa-block ${message.author}`;
+      bot.sendMessage(process.env.GRUPO_LOGS, reportMessage);
+      
+      safetyMsg = "\n\n> ⚠️ *AVISO*: O conteúdo solicitado é duvidoso. Esta solicitação será revisada pelo administrador e pode resultar em suspensão.";
+    }
+    
     if(!skipNotify){
       // Envia mensagem de processamento
       await bot.sendReturnMessages(new ReturnMessage({
@@ -70,7 +92,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     // Parâmetros para a API
     const payload = {
       prompt: prompt,
-      negative_prompt: "(worst quality:1.2), (low quality:1.2), (lowres:1.1), bad anatomy, bad hands, text, missing fingers, extra digit, fewer digits, cropped, low-res, worst quality, jpeg artifacts, signature, watermark, username, blurry",
+      negative_prompt: "bad anatomy, bad hands, text, missing fingers, extra digit, fewer digits, cropped, low-res, worst quality, jpeg artifacts, signature, watermark, username, blurry",
       ...DEFAULT_PARAMS
     };
     
@@ -111,7 +133,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     logger.info(`Recebida resposta, savaldno imagem em: ${tempImagePath}`);
 
     // Verificar NSFW
-      let isNSFW = false;
+    let isNSFW = false;
     try {
       const nsfwResult = await nsfwPredict.detectNSFW(tempImagePath);
       isNSFW = nsfwResult.isNSFW;
@@ -127,10 +149,10 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       } catch (unlinkError) {
         logger.error('Erro ao excluir arquivo temporário:', tempImg, unlinkError);
       }
-    }, 300000, tempImagePath);
+    }, 30000, tempImagePath);
     
     // Prepara a legenda com informações sobre a geração
-    const caption = `🎨 *Prompt:* ${prompt}\n📊 *Modelo:* ${modelName}\n⏱️ *Tempo:* ${generationTime}s`;
+    const caption = `🎨 *Prompt:* ${prompt}\n📊 *Modelo:* ${modelName}\n⏱️ *Tempo:* ${generationTime}s${safetyMsg}`;
     
     const media = await bot.createMedia(tempImagePath);
     logger.info(media);
@@ -142,7 +164,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
           chatId: chatId,
           content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado e este grupo está filtrando conteúdo NSFW, por isso o resultado não foi enviado.'
         }));
-      } else {      
+      } else {    
         returnMessages.push(new ReturnMessage({
           chatId: chatId,
           content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado, abra com cautela.'
