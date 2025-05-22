@@ -104,11 +104,12 @@ class LLMService {
       this.logger.debug('Enviando solicitação para API Gemini:', { 
         model: model,
         promptLength: options.prompt.length,
-        maxTokens: options.maxTokens || 1000
+        maxTokens: options.maxTokens || 5000
       });
 
       // Endpoint da API Gemini
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.googleKey}`;
+
 
       const response = await axios.post(
         endpoint,
@@ -116,8 +117,16 @@ class LLMService {
           contents: [
             { role: 'user', parts: [{ text: options.prompt }] }
           ],
+          system_instruction:
+          {
+            parts: [
+              {
+                text: options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz"
+              }
+            ]
+          },
           generationConfig: {
-            maxOutputTokens: options.maxTokens || 1000,
+            maxOutputTokens: options.maxTokens || 5000,
             temperature: options.temperature || 0.7
           }
         },
