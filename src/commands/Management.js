@@ -1944,7 +1944,7 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
-    const channelName = args[0].replace("https://www.twitch.tv/", "").toLowerCase();
+    const channelName = args[0].replace("https://www.twitch.tv/", "").replace("http://www.twitch.tv/", "").toLowerCase();
     
     // Get current channels
     const channels = this.getChannelConfig(group, 'twitch');
