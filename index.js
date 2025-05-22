@@ -57,6 +57,8 @@ async function main() {
             '--disable-session-crashed-bubble',
             '--start-maximized',
             '--disable-prompt-on-repost',
+            '--disable-beforeunload',
+            '--disable-features=InfiniteSessionRestore',
             `--window-name=${rBot.nome}`
 
           ],

@@ -63,6 +63,28 @@ async function avisosCommand(bot, message, args, group){
   });
 }
 
+async function goldCommand(bot, message, args, group) {
+  const chatId = message.group || message.author;
+
+  try {
+    const goldPath = path.join(database.databasePath, 'textos', 'gold.txt');
+    const goldContent = await fs.readFile(goldPath, 'utf8');
+
+    return new ReturnMessage({
+      chatId: chatId,
+      content: goldContent.trim()
+    });
+
+  } catch (error) {
+    logger.warn('Erro ao ler gold.txt:', error);
+    return new ReturnMessage({
+      chatId: chatId,
+      content: `🔗 *Github:* https://github.com/moothz/ravena-ai`
+    });
+  }
+
+}
+
 async function codigoCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
@@ -76,7 +98,7 @@ async function codigoCommand(bot, message, args, group) {
     });
 
   } catch (error) {
-    logger.warn('Erro ao ler cabeçalho do menu:', error);
+    logger.warn('Erro ao ler codigo.txt:', error);
     return new ReturnMessage({
       chatId: chatId,
       content: `🔗 *Github:* https://github.com/moothz/ravena-ai`
@@ -473,6 +495,17 @@ const commands = [
     },
     method: codigoCommand
   }),
+  new Command({
+    name: 'gold',
+    description: 'Info Ravena gold',
+    category: "geral",
+    hidden: true,
+    reactions: {
+      before: "🪙"
+    },
+    method: goldCommand
+  }),
+  
   new Command({
     name: 'convite',
     description: 'Saiba mas sobre a ravena em grupos',
