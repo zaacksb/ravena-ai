@@ -15,15 +15,16 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Constantes do jogo
 const MAX_FISH_PER_USER = 10;
 const MIN_FISH_WEIGHT = 1;
-const MAX_FISH_WEIGHT = 110; // Aumentado para 100kg
+const MAX_FISH_WEIGHT = 125; // Aumentado para 100kg
 const DIFFICULTY_THRESHOLD = 60; // Peso a partir do qual a dificuldade aumenta
 const FISHING_COOLDOWN = 5;
-const MAX_BAITS = 5; // Máximo de iscas reduzido para 5
-const BAIT_REGEN_TIME = 90 * 60; // 1 hora e 30 minutos em segundos para regenerar isca
+const MAX_BAITS = 3; // Máximo de iscas reduzido para 5
+const BAIT_REGEN_TIME = 180 * 60; // 3 horas
 const SAVE_INTERVAL = 30 * 1000; // 30 segundos em milissegundos
 
 // Armazena os cooldowns de pesca
 const fishingCooldowns = {};
+const weightScaleMsgs = [140,100,90,70,60,50];
 
 // Buffer para os dados de pesca
 let fishingDataBuffer = null;
@@ -32,8 +33,9 @@ let hasUnsavedChanges = false;
 
 // Peixes raríssimos e seus pesos adicionais
 const RARE_FISH = [
-  { name: "Megalodon", chance: 0.00001, weightBonus: 5000, emoji: "🦈" },
-  { name: "Leviathan", chance: 0.00001, weightBonus: 5000, emoji: "🐉" },
+  { name: "Dai Gum Loong", chance: 0.000008, weightBonus: 10000, emoji: "🐲" },
+  { name: "Leviathan", chance: 0.00001, weightBonus: 8000, emoji: "🐉" },
+  { name: "Megalodon", chance: 0.000015, weightBonus: 6000, emoji: "🦈" },
   { name: "Baleia", chance: 0.00005, weightBonus: 1000, emoji: "🐋" },
   //{ name: "Tubarão", chance: 0.0001, weightBonus: 500, emoji: "🦈" }
 ];
@@ -57,23 +59,43 @@ const TRASH_ITEMS = [
   { name: "Botão de salvar?", emoji: "💾" },
   { name: "Hétero", emoji: "🔝" },
   { name: "Microscópio Sujo", emoji: "🔬" },
-  { name: "Extintor Velho", emoji: "🧯" }
+  { name: "Extintor Velho", emoji: "🧯" },
+  { name: "Camisinha Furada", emoji: "🎈" },
+  { name: "Conta de Energia", emoji: "📜" },
+  { name: "Conta de Água", emoji: "📜" },
+  { name: "Boleto do Condomínio", emoji: "📜" },
+  { name: "Siso Cariado", emoji: "🦷" },
+  { name: "Maiô Rasgado", emoji: "🩱"},
+  { name: "Biquíni", emoji: "👙"},
+  { name: "Anel de Plástico", emoji: "💍"},
+  { name: "Fita Mimosa", emoji: "🎗"},
+  { name: "Boia Seca", emoji: "🛟"},
+  { name: "Relógio Enferrujado", emoji: "⏲"},
+  { name: "Imã", emoji: "🧲"},
+  { name: "Tijolo 6 Furo", emoji: "🧱"},
+  { name: "Chapa de Raio X", emoji: "🩻"},
+  { name: "Fita Fofinha", emoji: "🎀"},
+  { name: "Pacote da Shopee", emoji: "📦"},
+  { name: "Pacote da OLX", emoji: "📦"},
+  { name: "Pacote do Mercado Livre", emoji: "📦"},
+  { name: "Pacote do AliExpress", emoji: "📦"},
+  { name: "Pacote da Amazon", emoji: "📦"}
 ];
 
 // Upgrades para pesca
 const UPGRADES = [
-  { name: "Chapéu de Pescador", chance: 0.05, emoji: "👒", effect: "weight_boost", value: 0.1, duration: 10 },
-  { name: "Minhocão", chance: 0.05, emoji: "🪱", effect: "next_fish_bonus", minValue: 20, maxValue: 50 },
-  { name: "Rede", chance: 0.05, emoji: "🕸️", effect: "double_catch" },
-  { name: "Carretel", chance: 0.01, emoji: "🧵", effect: "weight_boost", value: 0.5, duration: 10 },
-  { name: "Pacote de Iscas", chance: 0.05, emoji: "🎁", effect: "extra_baits", minValue: 1, maxValue: 3 }
+  { name: "Chapéu de Pescador", chance: 0.05, emoji: "👒", effect: "weight_boost", value: 0.2, duration: 3 },
+  { name: "Minhocão", chance: 0.05, emoji: "🪱", effect: "next_fish_bonus", minValue: 10, maxValue: 80 },
+  { name: "Rede", chance: 0.01, emoji: "🕸️", effect: "double_catch" },
+  { name: "Carretel", chance: 0.02, emoji: "🧵", effect: "weight_boost", value: 0.75, duration: 3 },
+  { name: "Pacote de Iscas", chance: 0.1, emoji: "🎁", effect: "extra_baits", minValue: 1, maxValue: 3 }
 ];
 
 // Downgrades para pesca
 const DOWNGRADES = [
-  { name: "Mina Aquática", chance: 0.0001, emoji: "💣", effect: "clear_inventory" },
-  { name: "Vela Acesa do 𝒸𝒶𝓅𝒾𝓇𝑜𝓉𝑜", chance: 0.01, emoji: "🕯", effect: "weight_loss", value: -0.3, duration: 3 },
-  { name: "Tartaruga Gulosa", chance: 0.01, emoji: "🐢", effect: "remove_baits", minValue: 1, maxValue: 3 }
+  { name: "Mina Aquática", chance: 0.0003, emoji: "💣", effect: "clear_inventory" },
+  { name: "Vela Acesa do 𝒸𝒶𝓅𝒾𝓇𝑜𝓉𝑜", chance: 0.006, emoji: "🕯", effect: "weight_loss", value: -0.4, duration: 3 },
+  { name: "Tartaruga Gulosa", chance: 0.015, emoji: "🐢", effect: "remove_baits", minValue: 1, maxValue: 3 }
 ];
 
 // Caminho para o arquivo de dados de pesca
@@ -1015,17 +1037,17 @@ async function fishCommand(bot, message, args, group) {
     // Adiciona informações adicionais para peixes grandes
     if (caughtFishes.length === 1) {
       const weight = caughtFishes[0].weight;
-      if (weight > 90) {
+      if (weight > weightScaleMsgs[5]) {
         effectMessage = '\n\n👏 *EXTRAORDINÁRIO!* Este é um peixe monumental, quase impossível de encontrar!' + effectMessage;
-      } else if (weight > 80) {
-        effectMessage = '\n\n👏 *IMPRESSIONANTE!* Este é um peixe extraordinariamente raro!' + effectMessage;
-      } else if (weight > 70) {
-        effectMessage = '\n\n👏 *FENOMENAL!* Um peixe deste tamanho é extremamente raro!' + effectMessage;
-      } else if (weight > 60) {
+      } else if (weight > weightScaleMsgs[4]) {
+        effectMessage = '\n\n👏 *IMPRESSIONANTE!* Este é um peixe muito raro!' + effectMessage;
+      } else if (weight > weightScaleMsgs[3]) {
+        effectMessage = '\n\n👏 *FENOMENAL!* Um peixe deste tamanho é raro!' + effectMessage;
+      } else if (weight > weightScaleMsgs[2]) {
         effectMessage = '\n\n👏 *UAU!* Este é um peixe verdadeiramente enorme!' + effectMessage;
-      } else if (weight > 50) {
+      } else if (weight > weightScaleMsgs[1]) {
         effectMessage = '\n\n👏 Muito impressionante! Que espécime magnífico!' + effectMessage;
-      } else if (weight > 40) {
+      } else if (weight > weightScaleMsgs[0]) {
         effectMessage = '\n\n👏 Um excelente exemplar!' + effectMessage;
       }
     }
@@ -1693,9 +1715,10 @@ async function legendaryFishCommand(bot, message, args, group) {
     
     // Ordena os peixes lendários por data (mais recente primeiro)
     const sortedLegendaryFishes = [...fishingData.legendaryFishes].sort((a, b) => b.timestamp - a.timestamp);
-    
+    const rareFishList = RARE_FISH.map(f => `\t${f.emoji} ${f.name} _(${f.weightBonus}kg)_`).join("\n");
+
     // Prepara a mensagem com a lista completa de todos os peixes lendários
-    let textMessage = '🏆 *REGISTRO DE PEIXES LENDÁRIOS*\n\n';
+    let textMessage = `🌊 *Lista de Peixes Lendários* 🎣\n${rareFishList}\n\n🏆 *REGISTRO DE PEIXES LENDÁRIOS* 🎖️\n\n`;
     
     // Adiciona todos os peixes lendários na mensagem de texto
     for (let i = 0; i < sortedLegendaryFishes.length; i++) {

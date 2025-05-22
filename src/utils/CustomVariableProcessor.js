@@ -423,7 +423,7 @@ class CustomVariableProcessor {
             
             // Adiciona à lista de menções para notificação
             if (mentionId) {
-              this.logger.debug(`[processContextVariables] Mention: ${mentionId}, ${mentionName}, `, mentionContact);
+              this.logger.debug(`[processContextVariables] Mention: ${mentionId}, ${mentionName}`);
               if (context.options && context.options.mentions){
                 if (!context.options.mentions.includes(mentionId)) {
                   context.options.mentions.push(mentionId);

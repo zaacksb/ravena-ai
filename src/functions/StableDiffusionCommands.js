@@ -59,7 +59,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
   try {
   
     const safetyQuestion = `Check if this image generation prompt is safe and appropriate: "${prompt}". 
-    Is it requesting gore, extreme violence, explicit sexual content, child safety concerns or other inappropriate material? 
+    Is it requesting explicit sexual content, child safety concerns? 
     Answer only "SAFE" or "UNSAFE" followed by a brief reason.`;
     
     const safetyResponse = await llmService.getCompletion({
