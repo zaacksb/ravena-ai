@@ -274,8 +274,6 @@ class EventHandler {
           
           return; // Evita processamento adicional
         }
-        
-
 
         // Processa comando normal
         this.commandHandler.handleCommand(bot, message, commandText, group).catch(error => {
@@ -283,6 +281,7 @@ class EventHandler {
         });
       } else {
         // Processa mensagem não-comando
+        // Aqui também vai cair quando o grupo tiver a opção customIgnoresPrefix, que os comandos personalizados não precisam de prefixo
         this.processNonCommandMessage(bot, message, group).catch(error => {
           this.logger.error('Erro em processNonCommandMessage:', error);
         });
@@ -317,6 +316,8 @@ class EventHandler {
     }
 
     if (group && message.type === 'text') {
+
+      // Vê se a mensagem não é um MuNews
       try {
         const isNewsDetected = await MuNewsCommands.detectNews(message.content, group.id);
         if (isNewsDetected) {
@@ -331,12 +332,19 @@ class EventHandler {
       }
     }
         
-    // Manipula comandos personalizados acionados automaticamente (aqueles que não requerem prefixo)
     if (group) {
       try {
+        // Se o grupo escolheu a opção 'customIgnoresPrefix', pode ser que um comando personalizado esteja sendo executado
+        // Gera um comando e manda pro handleCommand, mas com a flag de ser apenas custom
         const textContent = message.type === 'text' ? message.content : message.caption;
+
+        if(group.customIgnoresPrefix){
+          this.commandHandler.processCustomIgnoresPrefix(textContent, bot, message, group);
+        }
+
         if (textContent) {
-          await this.commandHandler.checkAutoTriggeredCommands(bot, message, textContent, group);
+          // Manipula comandos personalizados acionados automaticamente (aqueles que não requerem prefixo)
+          this.commandHandler.checkAutoTriggeredCommands(bot, message, textContent, group);
         }
       } catch (error) {
         this.logger.error('Erro ao verificar comandos acionados automaticamente:', error);

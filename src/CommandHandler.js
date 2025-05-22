@@ -1097,6 +1097,19 @@ class CommandHandler {
       await bot.sendReturnMessages(returnMessage);
     }
   }
+
+  processCustomIgnoresPrefix(textContent, bot, message, group){
+      const command =  `${textContent}`;
+
+      this.logger.debug(`[processCustomIgnoresPrefix][${group.name}] Buscando comando '${command}'`);
+      const customCommand = this.findCustomCommand(command, this.customCommands[group.id]);
+      this.logger.debug(customCommand);
+
+      if (customCommand) {
+        this.executeCustomCommand(bot, message, customCommand, [], group);
+      }
+  }
+          
   
   /**
    * Processa uma resposta para um comando personalizado

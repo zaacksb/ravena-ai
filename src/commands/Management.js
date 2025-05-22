@@ -37,6 +37,10 @@ class Management {
         method: 'setCustomPrefix',
         description: 'Altera o prefixo de comandos (padrão !)'
       },
+      'setCustomSemPrefixo': {
+        method: 'setCustomSemPrefixo',
+        description: 'Faz com que comandos personalizados não precisem de prefixo'
+      },
       'setBemvindo': {
         method: 'setWelcomeMessage',
         description: 'Mensagem quando alguém entra '
@@ -780,6 +784,31 @@ class Management {
     });
   }
   
+  async setCustomSemPrefixo(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Alterna a configuração de auto-STT
+    group.customIgnoresPrefix = !group.customIgnoresPrefix;
+    
+    // Atualiza grupo no banco de dados
+    await this.database.saveGroup(group);
+    
+    // Envia mensagem de confirmação
+    const statusMsg = group.customIgnoresPrefix ? 
+      'Os comandos personalizados do grupo agora *não precisam* mais do prefixo pra serem ativados.' : 
+      'Os comandos personalizados do grupo agora *precisam* do prefixo para serm ativados _(funcionamento normal)_.';
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: statusMsg
+    });
+  }
+
   /**
    * Define prefixo personalizado para um grupo
    * @param {WhatsAppBot} bot - Instância do bot

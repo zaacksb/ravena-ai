@@ -40,11 +40,12 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
 
 - [x] Melhor explicação da implementação do bot no README
 - [x] Fix Riot API
+- [x] Novo Jogo: Geoguesser
+- [x] Comandos sem prefixos no grupo
 - [ ] Add !info
 - [ ] Fix: SIGINT/SIGTERM não estão chegando/sendo executados
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] Stickers quadrados videos não envia (client.sendMessage vs ffmpeg)
-- [ ] Novo Jogo: Geoguesser
 - [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Comando: busca no youtube

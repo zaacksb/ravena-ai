@@ -12,6 +12,7 @@ class Group {
     this.removedBy = data.removedBy || false;
     this.name = data.name || (this.id ? this.id.split('@')[0].toLowerCase().replace(/\s+/g, '').substring(0, 16) : null);
     this.prefix = data.prefix || '!';
+    this.customIgnoresPrefix = data.customIgnoresPrefix || false;
     this.inviteCode = data.inviteCode || null;
     this.paused = data.paused || false;
     this.additionalAdmins = data.additionalAdmins || [];
@@ -67,6 +68,7 @@ class Group {
       removedBy: this.removedBy,
       name: this.name,
       prefix: this.prefix,
+      customIgnoresPrefix: this.customIgnoresPrefix,
       inviteCode: this.inviteCode,
       paused: this.paused,
       additionalAdmins: this.additionalAdmins,
@@ -74,6 +76,7 @@ class Group {
       twitch: this.twitch,
       kick: this.kick,
       youtube: this.youtube,
+      botNotInGroup: this.botNotInGroup,
       greetings: this.greetings,
       farewells: this.farewells,
       interact: this.interact,
@@ -95,6 +98,7 @@ class Group {
     // Atualiza apenas propriedades fornecidas
     if (data.name) this.name = data.name;
     if (data.prefix) this.prefix = data.prefix;
+    if (data.customIgnoresPrefix) this.customIgnoresPrefix = data.customIgnoresPrefix;
     if (data.inviteCode) this.inviteCode = data.inviteCode;
     if (typeof data.paused === 'boolean') this.paused = data.paused;
     if (data.additionalAdmins) this.additionalAdmins = data.additionalAdmins;
@@ -112,6 +116,9 @@ class Group {
     if (data.kick) this.kick = data.kick;
     if (data.youtube) this.youtube = data.youtube;
     
+    // Not in group
+    if (data.botNotInGroup) this.botNotInGroup = data.botNotInGroup;
+
     // Atualiza boas-vindas
     if (data.greetings) {
       this.greetings = {
