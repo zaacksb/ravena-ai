@@ -12,7 +12,28 @@ class StabilityMonitor {
     setTimeout((is) => {
       this.logger.info(`[StabilityMonitor] Inicializado monitorando ${is.length} bots: ${is.map(i => i.id).join(", ")}`);
     }, 15000, this.instances);
-    setInterval(this.checkStability, 5 * 60 * 1000);
+
+
+    setInterval((logg, ists, hst)=> {
+      const currentTs = Math.round(+new Date()/1000);
+      for(const bIns of ists){
+        if(!hst[bIns.id]){
+          logg.info(`[checkStability] ${bIns.id} Inicializado`);
+          hst[bIns.id] = currentTs;
+        }
+        const dif = (currentTs - hst[bIns.id]);
+
+        logg.info(`[checkStability] ${bIns.id}: ${dif}s`);
+
+        // Os bots enviam mensagem de loadReport a cada 10 minutos
+        // então é o tempo limite pra não ver msgs uma das outras
+        if(dif > 660){ // 11 Minutos
+          logg.warn(`[checkStability] ${bIns.id}: DELAY ELEVADO! (${dif}s) Reiniciando.`)
+          bIns.restartBot(`O delay está elevado (${responseTime}s), por isso o bot será reiniciado.`).catch(err => this.logger.error(`Erro ao reiniciar bot ${bIns.id} por delay elevado:`, err));
+          hst = currentTs + 60 * 5; // Pra evitar que seja reiniciado novamente, adiciona 5 minutos no tempo
+        }
+      }
+    }, 5 * 60 * 1000, this.logger, this.instances, this.history);
   }
 
 
@@ -36,25 +57,6 @@ class StabilityMonitor {
       }
     }
   }
-
-  checkStability(){
-    const currentTs = Math.round(+new Date()/1000);
-
-    for(let bIns of this.instances){
-      const dif = (currentTs - this.history[bIns.id]);
-
-      this.logger.info(`[checkStability] ${bIns.id}: ${dif}s`);
-
-      // Os bots enviam mensagem de loadReport a cada 10 minutos
-      // então é o tempo limite pra não ver msgs uma das outras
-      if(dif > 660){ // 11 Minutos
-        this.logger.warn(`[checkStability] ${bIns.id}: DELAY ELEVADO! (${dif}s) Reiniciando.`)
-        bIns.restartBot(`O delay está elevado (${responseTime}s), por isso o bot será reiniciado.`).catch(err => this.logger.error(`Erro ao reiniciar bot ${bIns.id} por delay elevado:`, err));
-        this.history = currentTs + 60 * 5; // Pra evitar que seja reiniciado novamente, adiciona 5 minutos no tempo
-      }
-    }
-  }
-
 }
 
 module.exports = StabilityMonitor;

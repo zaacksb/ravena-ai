@@ -390,8 +390,7 @@ async function runTests() {
     await new Promise(resolve => setTimeout(resolve, 5000));
     logger.info('sending');
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!audio-buscar fbi open up');
-    await simulator.simulateTextMessage(testUser, testGroup, '!audio-buscar fbi open up 9');
+    await simulator.simulateTextMessage(testUser, testGroup, '!yt pudim');
 
   
     //logger.info('joining');    

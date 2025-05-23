@@ -107,6 +107,12 @@ class LLMService {
         maxTokens: options.maxTokens || 5000
       });
 
+      if(options.systemContext){
+        this.logger.info(`[geminiCompletion] Usando ctx personalizado: ${options.systemContext.trim(0, 30)}...`);
+      }
+
+      this.logger.info(`[geminiCompletion] Prompt: ${options.prompt.trim(0, 30)}...`);
+
       // Endpoint da API Gemini
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.googleKey}`;
 

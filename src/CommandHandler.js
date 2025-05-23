@@ -1273,13 +1273,13 @@ class CommandHandler {
     try {
       // Pula se não houver comandos personalizados para este grupo
       if (!this.customCommands[group.id]) {
-        this.logger.debug(`Sem comandos personalizados para o grupo ${group.id}, pulando verificação de auto-trigger`);
+        //this.logger.debug(`Sem comandos personalizados para o grupo ${group.id}, pulando verificação de auto-trigger`);
         return;
       }
 
       // Verifica se o grupo está pausado
       if (group.paused) {
-        this.logger.info(`Ignorando comandos auto-acionados em grupo pausado: ${group.id}`);
+        //this.logger.info(`Ignorando comandos auto-acionados em grupo pausado: ${group.id}`);
         return;
       }
       

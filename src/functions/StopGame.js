@@ -11,16 +11,16 @@ const logger = new Logger('stop-game');
 const llmService = new LLMService();
 
 // Constantes do jogo
-const GAME_DURATION = 1 * 60 * 1000; // 5 minutos em milissegundos
+const GAME_DURATION = 1.5 * 60 * 1000; // 2 minutos em milissegundos
 const NUM_CATEGORIES = 5; // Número de categorias por rodada
-const MINIMUM_RESPONSES = 0; // Mínimo de respostas para validar o jogo
+const MINIMUM_RESPONSES = 1; // Mínimo de respostas para validar o jogo
 
 // Lista de categorias disponíveis
 const CATEGORIES = [
   "Alimento", "Fruta", "Animal", "Celebridade", "Carro", 
-  "C.E.P (Cidade, Estado, País)", "Cor", "Esporte", "Filme", 
+  "CEP", "Cor", "Esporte", "Filme", 
   "Série", "Banda", "Marca", "Meios de Transporte", 
-  "Partes do Corpo", "Ator ou Atriz", "Flor", "Objeto"
+  "Partes do Corpo", "Flor", "Objeto"
 ];
 
 // Lista de letras disponíveis para sorteio (excluindo letras difíceis como K, W, X, Y, Z)
@@ -180,10 +180,7 @@ async function startStopGame(bot, message, args, group) {
     messages.push(new ReturnMessage({
       chatId: groupId,
       content: gameMessage,
-      options: {
-        quotedMessageId: message.origin.id._serialized
-      },
-      delay: 1000
+      delay: 500
     }));
     
     
@@ -231,7 +228,7 @@ function processStopGameResponse(bot, message) {
 
     // A primeira linha é !stop 12345@g.us
     // Pega o ID do grupo
-    const groupId = messageContent.match(/(?<=stop\s)\d+@g\.us/);
+    const groupId = messageContent.match(/(?<=stop\s)\d+(?:-\d+)?@g\.us/);
 
     if(!groupId){
       return false;
@@ -239,12 +236,18 @@ function processStopGameResponse(bot, message) {
 
     // Verifica se há um jogo ativo no grupo
     if (!activeGames[groupId]) {
-      return false;
+      return new ReturnMessage({
+        chatId: userId,
+        content: `🫸 Não há um jogo ativo neste grupo`
+      });
     }
     
     // Verifica se o jogo expirou
     if (Date.now() > activeGames[groupId].endTime) {
-      return false;
+      return new ReturnMessage({
+        chatId: userId,
+        content: `🫸 O último jogo neste grupo já expirou!`
+      });
     }
 
     const categories = activeGames[groupId].categories;
@@ -365,7 +368,14 @@ function parseLLMResponse(llmResponse) {
     }
     
     // Se não encontrar um padrão JSON claro, tenta analisar a resposta completa
-    return JSON.parse(llmResponse);
+    try{
+      const tudo = JSON.parse(llmResponse);
+      return tudo;
+    } catch(e){
+      logger.error('Erro ao analisar resposta do LLM completa:', error);  
+      logger.debug(llmResponse);
+      return {};
+    }
   } catch (error) {
     logger.error('Erro ao analisar resposta do LLM:', error);
     logger.debug('Resposta do LLM:', llmResponse);
@@ -421,7 +431,7 @@ async function endGame(bot, groupId) {
         const [winnerId, winner] = sortedPlayers[0];
         options = {mentions: [winnerId]};
         
-        resultsMessage += `\n🏆 *Vencedor:* @${winnerId}\n\n`;
+        resultsMessage += `\n🏆 *Vencedor:* @${winnerId.split("@")[0]}\n\n`;
         resultsMessage += '*Respostas enviadas:*\n';
         
         sortedPlayers.forEach(([userId, result], index) => {

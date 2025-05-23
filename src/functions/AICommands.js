@@ -26,7 +26,7 @@ async function aiCommand(bot, message, args, group) {
   let cmdGerenciaSimplesList = "";
 
   for(let cmd of fixedCommands){
-    if(cmd.description && cmd.description.length > 0 && !cmd.description.toLowerCase().includes("alias")){
+    if(cmd.description && cmd.description.length > 0 && !cmd.description.toLowerCase().includes("alias") && !cmd.hidden){
       const usage = cmd.usage ? ` | Uso: ${cmd.usage}`: "";
     	cmdSimpleList += `- ${bot.prefix}${cmd.name}: ${cmd.description}${usage}\n`;
     }
@@ -38,7 +38,7 @@ async function aiCommand(bot, message, args, group) {
 
   ctxContent += `\n\nEstes são todos os comandos que você pode processar:\n\n${cmdSimpleList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube`;
   
-  let question = args.join(' ');
+  let question = message.caption ?? message.content;
   const quotedMsg = await message.origin.getQuotedMessage();
   if(quotedMsg){
     // Tem mensagem marcada, junta o conteudo (menos que tenha vindo de reação)
@@ -60,7 +60,7 @@ async function aiCommand(bot, message, args, group) {
     });
   }
   
-  logger.debug(`Comando ai com pergunta: ${question}`);
+  logger.debug(`Comando ai com pergunta: ctx: ${ctxContent}, \n Prompt: '${question}'`);
   
   // Obtém resposta da IA
   try {
@@ -149,4 +149,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands  };
+module.exports = { commands, aiCommand };
