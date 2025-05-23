@@ -12,7 +12,7 @@ class StabilityMonitor {
 
     setTimeout((is) => {
       this.logger.info(`[StabilityMonitor] Inicializado monitorando ${is.length} bots: ${is.map(i => i.id).join(", ")}`);
-    }, 10000, this.instances);
+    }, 15000, this.instances);
     setInterval(this.checkStability, 5 * 60 * 1000);
   }
 
@@ -21,21 +21,30 @@ class StabilityMonitor {
   }
 
   // Recebe direto do eventHandler, então msg é um objeto do whatsapp
-  registerBotMessage(msg) {
-    // Sistema de estabilidade onde as ravenas monitoram as outras ravenas
-    for(let bIns of instances){
-      if(msg.from.includes(bIns.numero)){
-        // Recebi mensagem de algum bot
-        this.logger.info(`[registerBotMessage] Detectada mensagem de ${bIns.id} (${bIns.phoneNumber})`);
-        this.history[bIns.id] = getCurrentTimestamp();
+  async registerBotMessage(msg) {
+    if(msg.from.includes("@g")){ // Só considera mensagens de grupo, elas não vão se comunicar no PV
+      let author = msg.author;
+      if(!author){ 
+        this.logger.info(`[registerBotMessage] Msg não tinha author, pegando contato`)
+        const sender = await msg.getContact();
+        author = sender.id._serialized;
+      }
+
+      // Sistema de estabilidade onde as ravenas monitoram as outras ravenas
+      for(let bIns of this.instances){
+        if(author.includes(bIns.phoneNumber)){
+          // Recebi mensagem de algum bot
+          this.logger.info(`[registerBotMessage] Detectada mensagem de ${bIns.id} (${bIns.phoneNumber})`);
+          this.history[bIns.id] = this.getCurrentTimestamp();
+        }
       }
     }
   }
 
   checkStability(){
-    const currentTs = getCurrentTimestamp();
+    const currentTs = this.getCurrentTimestamp();
 
-    for(let bIns of instances){
+    for(let bIns of this.instances){
       const dif = (currentTs - this.history[bIns.id]);
 
       this.logger.info(`[checkStability] ${bIns.id}: ${dif}s`);

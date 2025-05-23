@@ -144,7 +144,27 @@ const commands = [
       return await handleComandoVariavelSimples(bot, message, args, group, "aniversario");
     }
   }),
-
+  new Command({
+    name: 'pecar',
+    category: "zoeira",
+    reactions: {
+      after: "⛪️"
+    },
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "pecados");
+    }
+  }),
+  new Command({
+    name: 'meus-pecados',
+    category: "zoeira",
+    hidden: 'true',
+    reactions: {
+      after: "⛪️"
+    },
+    method: async (bot, message, args, group) => {
+      return await handleComandoVariavelSimples(bot, message, args, group, "pecados");
+    }
+  }),
   new Command({
     name: 'genshin',
     hidden: 'false',
@@ -160,4 +180,4 @@ const commands = [
 
 
 
-module.exports = { commands  };
+module.exports = { commands };

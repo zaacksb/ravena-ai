@@ -146,13 +146,13 @@ class LoadReport {
       }
       
       // Envia relatório para o grupo de logs se configurado
-      if (this.bot.grupoLogs) {
+      if (this.bot.grupoEstabilidade) {
         try {
           const reportMessage = this.formatReportMessage(report);
           this.logger.info(reportMessage);
-          //await this.bot.sendMessage(this.bot.grupoLogs, reportMessage);
+          await this.bot.sendMessage(this.bot.grupoEstabilidade, reportMessage);
         } catch (error) {
-          this.logger.error('Erro ao enviar relatório de carga para o grupo de logs:', error);
+          this.logger.error('Erro ao enviar relatório de carga para o grupo de estatbilidade:', error);
         }
       }
 
@@ -182,8 +182,9 @@ class LoadReport {
     const startDate = new Date(report.period.start).toLocaleString("pt-BR");
     const endDate = new Date(report.period.end).toLocaleString("pt-BR");
     const durationMinutes = Math.floor(report.duration / 60);
-    
-    return `📊 *LoadReport para ${this.bot.id}* - ${startDate}~${endDate}\n\n` +
+    const rndString = (Math.random() + 1).toString(36).substring(7);
+
+    return `📊 *LoadReport para ${this.bot.id}* - ${startDate}~${endDate} (${rndString}}\n\n` +
            `📥 *Mensagens:*\n` +
            `- Mensagens/h: ${report.messages.messagesPerHour}\n`+
            `- Recebidas: ${report.messages.totalReceived} (${report.messages.receivedPrivate} pv/${report.messages.receivedGroup} gp)\n`+
@@ -191,7 +192,7 @@ class LoadReport {
            `⏱️ *Tempo de Resposta:*\n` +
            `- Média: ${report.responseTime.average}s\n` +
            `- Máximo: ${report.responseTime.max}s\n` +
-           `- Medições: ${report.responseTime.count}`;
+           `- Medições: ${report.responseTime.count}\n\n${rndString}`;
   }
 
   /**
