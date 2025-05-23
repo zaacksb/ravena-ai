@@ -46,6 +46,7 @@ class WhatsAppBot {
     this.grupoInvites = options.grupoInvites || process.env.GRUPO_INVITES;
     this.grupoAvisos = options.grupoAvisos || process.env.GRUPO_AVISOS;
     this.grupoInteracao = options.grupoInteracao || process.env.GRUPO_INTERACAO;
+    this.grupoEstabilidade = options.grupoEstabilidade || process.env.GRUPO_ESTABILIDADE;
     this.linkGrupao = options.linkGrupao || process.env.LINK_GRUPO_INTERACAO;
     this.linkAvisos = options.linkAvisos || process.env.LINK_GRUPO_AVISOS;
     this.userAgent = options.userAgent ||  process.env.USER_AGENT || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0";
@@ -71,6 +72,10 @@ class WhatsAppBot {
     this.streamSystem = null;
     this.streamMonitor = null;
     
+
+    // Monitora estabilidade dos bots entre eles
+    this.stabilityMonitor = options.stabilityMonitor ?? false; 
+
     this.llmService = new LLMService({});
     this.adminUtils = AdminUtils.getInstance();
 
@@ -242,6 +247,12 @@ class WhatsAppBot {
 
     // Evento de mensagem
     this.client.on('message', async (message) => {
+
+      // Mais importante de tudo: registrar que o bot tá 'on'
+      if(this.stabilityMonitor){
+        this.stabilityMonitor.registerBotMessage(message);
+      }
+
       // Descarta mensagens nos primeiros 5 segundos após inicialização
       if (this.shouldDiscardMessage()) {
         this.logger.debug(`Descartando mensagem recebida durante período inicial de ${this.id}`);
@@ -256,6 +267,8 @@ class WhatsAppBot {
       const responseTime = Math.max(0, currentTimestamp - messageTimestamp); // Não permite valores negativos
       
       // Verifica se o tempo de resposta é muito alto e se precisamos reiniciar o bot
+      // DESABILITADO Temporariamente
+      /*
       if (responseTime > 60 && false) { // Desativado reiniciar por delay
         // Verifica se o bot não foi reiniciado recentemente pelo mesmo motivo
         const currentTime = Math.floor(Date.now() / 1000);
@@ -276,11 +289,12 @@ class WhatsAppBot {
           this.logger.warn(`Delay de resposta elevado (${responseTime}s), mas o bot já foi reiniciado recentemente. Aguardando.`);
         }
       }
+      */
 
       try {
         // Verifica se a mensagem é de um grupo a ser ignorado
-        if (message.from === this.grupoLogs || message.from === this.grupoInvites) {
-          this.logger.debug(`Ignorando mensagem do grupo de logs/invites: ${message.from}`);
+        if (message.from === this.grupoLogs || message.from === this.grupoInvites || message.from === this.grupoEstabilidade) {
+          //this.logger.debug(`Ignorando mensagem do grupo de logs/invites/estabilidade: ${message.from}`);
           return; // Ignora o processamento adicional
         }
 

@@ -5,6 +5,7 @@ const WhatsAppBot = require('./src/WhatsAppBot');
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
 const BotAPI = require('./src/BotAPI');
+const StabilityMonitor = require('./src/services/StabilityMonitor');
 const fs = require('fs');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -16,8 +17,12 @@ async function main() {
   let botInstances = [];
   
   try {
-    // Cria manipulador de eventos compartilhado
+
+    // Cria manipulador de eventos compartilhado com SingleTon do StabilityMonitor
     const eventHandler = new EventHandler();
+
+    // Monitor de estabilidade também é compartilhado
+    const stabilityMonitor = new StabilityMonitor({instances: botInstances})
     
     // Configurações do puppeteer
     const chromePath = process.env.CHROME_PATH || '';
@@ -40,6 +45,7 @@ async function main() {
         id: rBot.nome,
         phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
         eventHandler: eventHandler,
+        stabilityMonitor: stabilityMonitor,
         prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
         otherBots: rBots.map(rB => rB.numero),
         // Configurações de puppeteer
@@ -68,6 +74,7 @@ async function main() {
         ignorePV: rBot.ignorePV ?? false,
         ignoreInvites: rBot.ignoreInvites ?? false,
         // IDs dos grupos para notificações da comunidade
+        grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
         grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
         grupoInvites: rBot.grupoInvites ?? process.env.GRUPO_INVITES,
         grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
@@ -80,7 +87,6 @@ async function main() {
       await sleep(500);
       botInstances.push(newRBot);
     }
-    
     
     logger.info('Todos os bots inicializados e rodando');
     
