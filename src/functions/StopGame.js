@@ -477,9 +477,9 @@ const commands = [
   new Command({
     name: 'adedonha',
     description: 'Inicia um jogo de Stop/Adedonha',
+    group: "stopadedonha",
     category: "jogos",
     cooldown: 0,
-    hidden: true,
     reactions: {
       before: "🛑",
       after: "📝",
@@ -491,9 +491,9 @@ const commands = [
   new Command({
     name: 'stop',
     description: 'Alias para o jogo de Stop/Adedonha',
+    group: "stopadedonha",
     category: "jogos",
     cooldown: 0,
-    hidden: true,
     reactions: {
       before: "🛑",
       after: "📝",

@@ -33,7 +33,7 @@ async function aiCommand(bot, message, args, group) {
   }
   for(let cmd in managementCommands){
     const desc = managementCommands[cmd].description;
-    cmdGerenciaSimplesList += `- ${bot.prefix}${cmd}: ${desc}\n`;
+    cmdGerenciaSimplesList += `- ${bot.prefix}g-${cmd}: ${desc}\n`;
   }
 
   ctxContent += `\n\nEstes são todos os comandos que você pode processar:\n\n${cmdSimpleList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube`;

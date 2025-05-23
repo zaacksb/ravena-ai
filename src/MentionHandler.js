@@ -1,6 +1,6 @@
 const Logger = require('./utils/Logger');
 const ReturnMessage = require('./models/ReturnMessage');
-const { aiCommand } = require('./src/AICommands.js');
+const { aiCommand } = require('./functions/AICommands');
 /**
  * Trata menções ao bot em mensagens
  */
@@ -67,9 +67,7 @@ class MentionHandler {
       this.logger.info(`Processando prompt para LLM: "${prompt}"`);
 
       const msgsLLM = await aiCommand(bot, message, null, null)
-      await bot.sendReturnMessages(returnMessage);
-
-      
+      await bot.sendReturnMessages(msgsLLM);
       return true;
     } catch (error) {
       this.logger.error('Erro ao processar menção:', error);
