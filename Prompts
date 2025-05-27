@@ -2309,3 +2309,373 @@ Instead of the raw json of the modifications, show it formatted as HTML for bett
 Show the raw json in a multiarea text just for debug
 
 
+
+
+---
+
+This file should be treated as an implemented interface.
+
+It uses the methods and objects from the library whatsapp-web.js to send and receive messages from Whatsapp
+
+
+I want to move forward and start using the library baileys, which interacts directly with the websocket.
+
+But I want my code to be fully compatible, by creating a new file: WhatsAppBotBaileys.js, which can simply be imported just like this WhatsAppBot.js. I provided a index.js file that uses this one. If you need any additional file to better understand the project before continuing, ask me.
+
+
+This will require implementing things like analyzing the MessageMedia content of messages to be sent if they are not plain text and wrap around this. The same should be said for receiving messages - the wrapper must receive data in the dailyes way and wrap it around the MessageMedia object.
+
+There are other objects like Location and Contact too, which must me taking into consideration.
+
+
+These are the library verions:
+
+"@whiskeysockets/baileys": "^6.7.17",
+
+"whatsapp-web.js": "^1.27.0",
+
+
+--- 
+Evolution
+I need to update this function to correctly interpret evoMessageData objects
+I will provide real example objects so you can check the correct properties
+
+js
+```
+  async formatMessageFromEvo(evoMessageData) {
+
+  }
+```
+
+Text message:
+json
+```
+{
+  key: {
+    remoteJid: '555194211823@s.whatsapp.net',
+    fromMe: true,
+    id: '3EB04D0156F066730F5DD6'
+  },
+  pushName: 'moothz',
+  status: 'SERVER_ACK',
+  message: { conversation: 'eu to lendo os docs aqui' },
+  contextInfo: {
+    ephemeralSettingTimestamp: '1748378671',
+    disappearingMode: {
+      initiator: 'CHANGED_IN_CHAT',
+      trigger: 'CHAT_SETTING',
+      initiatedByMe: false
+    }
+  },
+  messageType: 'conversation',
+  messageTimestamp: 1748379916,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'web'
+}
+```
+
+
+Image
+json
+```
+{
+  key: {
+    remoteJid: '555194211823@s.whatsapp.net',
+    fromMe: true,
+    id: '3EB01FCFF7095EEE5AB62A'
+  },
+  pushName: 'moothz',
+  status: 'SERVER_ACK',
+  message: {
+    imageMessage: {
+      url: 'https://mmg.whatsapp.net/o1/v/t24/f2/m233/AQNxAWYSj35vOSuHVBOt-YFPeDnveqo0FqXmUXNfpUdpUTlNkVse2l0bnX1hpOyClDX00jR8g_dFgCh3Y63cHvEsH49ae09fv8RWjO5F5w?ccb=9-4&oh=01_Q5Aa1gFh2aqQoHhHPhuOjLmwT0iULwpR5NOZsH72PXWva00idw&oe=685DA1D2&_nc_sid=e6ed6c&mms3=true',
+      mimetype: 'image/jpeg',
+      caption: 'a minha ideia é essa função aqui transformar os objectos do evo em Messages da minha lib',
+      fileSha256: 'TkTMvdWUALPdmpWRWQ03B+RPHRI3er8Ih5ZczBtyZjE=',
+      fileLength: '39164',
+      height: 211,
+      width: 555,
+      mediaKey: 'Ep957qWR3g2zzscFso6xhzHtHcGcewhLGGay3+yE9Cw=',
+      fileEncSha256: 'xIBLYXeaNaIdHJbZJuAZE3aUXdyuoAcngwk9lFDj9uQ=',
+      directPath: '/o1/v/t24/f2/m233/AQNxAWYSj35vOSuHVBOt-YFPeDnveqo0FqXmUXNfpUdpUTlNkVse2l0bnX1hpOyClDX00jR8g_dFgCh3Y63cHvEsH49ae09fv8RWjO5F5w?ccb=9-4&oh=01_Q5Aa1gFh2aqQoHhHPhuOjLmwT0iULwpR5NOZsH72PXWva00idw&oe=685DA1D2&_nc_sid=e6ed6c',
+      mediaKeyTimestamp: '1748379939',
+      jpegThumbnail: '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',
+      contextInfo: [Object],
+      viewOnce: false
+    }
+  },
+  contextInfo: {
+    ephemeralSettingTimestamp: '1748378671',
+    disappearingMode: { initiator: 'CHANGED_IN_CHAT' }
+  },
+  messageType: 'imageMessage',
+  messageTimestamp: 1748379940,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'web'
+}
+```
+
+
+Audio
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: '3EB0721487F418DE6D5707'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    audioMessage: {
+      url: 'https://mmg.whatsapp.net/v/t62.7114-24/30771178_1178053703536428_707456300188818729_n.enc?ccb=11-4&oh=01_Q5Aa1QF_owSCt5WfkNAD3_PMksiqSWH-Slkfl6oiI7Rta85NKA&oe=682E3DED&_nc_sid=5e03e0&mms3=true',
+      mimetype: 'audio/mpeg',
+      fileSha256: 'mErTNN6pC2KiO8WnFB/s2U7guaX2foz4JZBPiugoL1g=',
+      fileLength: '156778',
+      seconds: 6,
+      ptt: false,
+      mediaKey: 'Qlko6xzltZPFsTRYPSI8pdGiAzcgzxOVJ5L3i7A/Elw=',
+      fileEncSha256: 'wlSsUqpyRH6zVCUrD4zFDnq4nPOKRaC09AaL2dEaDY8=',
+      directPath: '/v/t62.7114-24/13970187_1348574196224264_1254295466852659113_n.enc?ccb=11-4&oh=01_Q5Aa1gE95zxdKfYohHu_2IrXZbTXKmHo7XI9h7j4K5fyL0Jm7A&oe=685D973D&_nc_sid=5e03e0',
+      mediaKeyTimestamp: '1745281628',
+      contextInfo: [Object],
+      streamingSidecar: '7e46l5TN9BIUWnqUMejXqZ8P3d/m7WT5+3i1/TIo',
+      viewOnce: false
+    },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: 'yM9+5lFYDkt2NA9S5tmxKZuMRq6jiPYUzsmvMXQL8kE='
+    }
+  },
+  contextInfo: {
+    ephemeralSettingTimestamp: '1742410994',
+    disappearingMode: { initiator: 'CHANGED_IN_CHAT' }
+  },
+  messageType: 'audioMessage',
+  messageTimestamp: 1748380133,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'web'
+}
+```
+
+Voice
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: '5B30F7F6A7517D5F011A4C5CE6F48E79'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    audioMessage: {
+      url: 'https://mmg.whatsapp.net/v/t62.7117-24/40951981_1658883968099065_6225345500174304408_n.enc?ccb=11-4&oh=01_Q5Aa1gEje3XwfZeaOK_56mYgv9ReYbb_HiJjDPbkVu1l--4Kwg&oe=685D8474&_nc_sid=5e03e0&mms3=true',
+      mimetype: 'audio/ogg; codecs=opus',
+      fileSha256: 'z50dO5imgUrR0WibTnNpwMEFEZdVw33Ck8hY9k3V5cs=',
+      fileLength: '2878',
+      seconds: 1,
+      ptt: true,
+      mediaKey: 'h2f4EAsPOQjZCznE5cwB5i3iKakYki8Ey+UtdSjq1xM=',
+      fileEncSha256: 'MfKfhgUz2IV7CkIzVWKXCMvt6B6D2GoID2GShk0495s=',
+      directPath: '/v/t62.7117-24/40951981_1658883968099065_6225345500174304408_n.enc?ccb=11-4&oh=01_Q5Aa1gEje3XwfZeaOK_56mYgv9ReYbb_HiJjDPbkVu1l--4Kwg&oe=685D8474&_nc_sid=5e03e0',
+      mediaKeyTimestamp: '1748380237',
+      waveform: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwdLDA0Nzo9Pj9AQUJCQkE/Pj09PT0+Pz8/Pz4wQA=='
+    },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: 'AMR8fW96qtak6A/nEIeoOuJGT2hbp816u6QC+iKvUVE='
+    }
+  },
+  contextInfo: null,
+  messageType: 'audioMessage',
+  messageTimestamp: 1748380238,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'android'
+}
+```
+
+
+Video
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: '46411355DFA3B0519DCA30B9CF78C189'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    videoMessage: {
+      url: 'https://mmg.whatsapp.net/v/t62.7161-24/55656456_1157052999440038_4572642088615116797_n.enc?ccb=11-4&oh=01_Q5Aa1gHOxfK-m_PZucD3rUH2lAbCyPE4FrF1dF6ggoRJI_lyHw&oe=685DA03A&_nc_sid=5e03e0&mms3=true',
+      mimetype: 'video/mp4',
+      fileSha256: 'mIGjYVv8Rc0xAArU6f3HjEvyZP52A531iiy1GhG+MGI=',
+      fileLength: '402869',
+      seconds: 2,
+      mediaKey: 'nlrGQOJ00Ty9zKZT+pP4eLoOmzJTKfOvN+gKySFWGf4=',
+      height: 850,
+      width: 474,
+      fileEncSha256: '9p3BkUCehIMOzaq8oIrM8b5QiMzjUO7HmRrvH9Yxl8c=',
+      directPath: '/v/t62.7161-24/55656456_1157052999440038_4572642088615116797_n.enc?ccb=11-4&oh=01_Q5Aa1gHOxfK-m_PZucD3rUH2lAbCyPE4FrF1dF6ggoRJI_lyHw&oe=685DA03A&_nc_sid=5e03e0',
+      mediaKeyTimestamp: '1748380258',
+      jpegThumbnail: '/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEABsbGxscGx4hIR4qLSgtKj04MzM4PV1CR0JHQl2NWGdYWGdYjX2Xe3N7l33gsJycsOD/2c7Z//////////////8BGxsbGxwbHiEhHiotKC0qPTgzMzg9XUJHQkdCXY1YZ1hYZ1iNfZd7c3uXfeCwnJyw4P/Zztn////////////////CABEIAEgAKAMBIgACEQEDEQH/xAAnAAEBAAAAAAAAAAAAAAAAAAAABgEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAAmQAAAAAAAAAAAAAAf//EABQQAQAAAAAAAAAAAAAAAAAAAFD/2gAIAQEAAT8AN//EABQRAQAAAAAAAAAAAAAAAAAAADD/2gAIAQIBAT8Af//EABQRAQAAAAAAAAAAAAAAAAAAADD/2gAIAQMBAT8Af//Z',
+      contextInfo: {},
+      streamingSidecar: 'k+U1Couj+Ic2JP9mHE88kJ1/B0LxmwPLt24QYO5B4dEVmqptf5SZV7ZFX62wJiY85em2sWtWogRzGGAy/6znFnxG7XXBgw=='
+    },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: 'QWUHuf1KnJE41kYh643Z5NldOM/c9FQyEdqSkUC1gug='
+    }
+  },
+  contextInfo: {},
+  messageType: 'videoMessage',
+  messageTimestamp: 1748380259,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'android'
+}
+```
+
+Document
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: '3EB02E5263DBBB76414C36'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    documentMessage: {
+      url: 'https://mmg.whatsapp.net/v/t62.7119-24/11926238_1001619355415808_1631142336240089855_n.enc?ccb=11-4&oh=01_Q5Aa1gG8qoS4xFYgsc-4dJP-VvQNssYSo6snv9VzQQLX2z5rAw&oe=685DA9AF&_nc_sid=5e03e0&mms3=true',
+      mimetype: 'application/x-bittorrent',
+      title: 'A.Working.Man.2025.1080p.WEB.h264-ETHEL.torrent',
+      fileSha256: 'HHfbf6/SF9GYU88RS1+6u+hG03Huyfw+fEedIuPhk8U=',
+      fileLength: '179148',
+      mediaKey: 'XnTHnFV7U85VNEykWYXy52mSCCjdZfCEkTwezsuY/ys=',
+      fileName: 'A.Working.Man.2025.1080p.WEB.h264-ETHEL.torrent',
+      fileEncSha256: '+vRWeNsleYG9//h0rgiXb5BK4OP2VI8YzF+pWFjmiR8=',
+      directPath: '/v/t62.7119-24/11926238_1001619355415808_1631142336240089855_n.enc?ccb=11-4&oh=01_Q5Aa1gG8qoS4xFYgsc-4dJP-VvQNssYSo6snv9VzQQLX2z5rAw&oe=685DA9AF&_nc_sid=5e03e0',
+      mediaKeyTimestamp: '1748380271',
+      contactVcard: false,
+      contextInfo: [Object]
+    },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: 'dqnYhQFioGP66+haHUBwB8iXodTExHxQr0F+ee4ypk8='
+    }
+  },
+  contextInfo: {
+    ephemeralSettingTimestamp: '1742410994',
+    disappearingMode: { initiator: 'CHANGED_IN_CHAT' }
+  },
+  messageType: 'documentMessage',
+  messageTimestamp: 1748380274,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'web'
+}
+```
+
+Location
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: 'F5E3B808295A4A3F4C92660F8C0DC5D0'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    locationMessage: {
+      degreesLatitude: 77.97859217124721,
+      degreesLongitude: -7.843852713704109,
+      name: 'Greenland',
+      address: 'Greenland',
+      jpegThumbnail: '/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCABkAGQDASIAAhEBAxEB/8QAGQABAQEBAQEAAAAAAAAAAAAAAAcGBAUD/8QAKxABAAICAQIEBQQDAAAAAAAAAAECAwQRBTEGEiFBUWFxgbEHEzKRJEKi/8QAGgEBAQACAwAAAAAAAAAAAAAAAAUBBgIEB//EACwRAQABAgQDBQkAAAAAAAAAAAABAgMEBRExBkFhExQVIdESIiQyM1FxgcH/2gAMAwEAAhEDEQA/AK6AstSAAAAAAAAAAAAAAAAGd694r1Ol5ra+Oltrar/KlJ4rT5Wt8flES9fq+xbU6Tu7OPib4cF8lefjFZmPwiu3mtgwWyTM3vM+s2nvM95lKzPHV4aIot7y27hbIrOZ1V3sTPuUco5z6KDqePMVssRuaF8OOf8AfHk/c4+scRP9cthr5sWzgpmwXrkxXjzVtWeYmEF6fu3z5Zx5IjtzEwpX6abOS2Df1bTzixWpkpHw83m5j/nn7y6+XZjdu3exveevNS4k4bwmFwnfMHrTFMxrGszvOnPz3bQBdefgAAAAAAAPntYKbOtlwZY5x5aTS0fGJjiUb6r07LobWbR3a82p2n2vX2tH1/PMey0PB8YdGjqvTLXxV/zMETfFMd7fGn3/ADwm5ng+8W/ap+anZtHC+deG4js7v069Inp9p9eiT4NbFrea1I49PWZn2VHwL0nJ07pt8+zWabG1MXmk961j+MT8/WZ+/HszXgLpNOpbtt3PXza2tMeSJ7Wyd4/qOJ+swpTp5Rg5j4iv9eq1xnnUVT4bY2jSavzvEf2eoAvPPQAAAAAAAAAHN0/Q1enYbYdLDXDjteck1rz62nvLpBiIimNIc666q6pqrnWZAGXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//2Q=='
+    },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: 'Bf8sbcFGSkpia1DuGL0TSSmTUIWB29ZvxIiEreXASIA='
+    }
+  },
+  contextInfo: null,
+  messageType: 'locationMessage',
+  messageTimestamp: 1748380306,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'android'
+}
+```
+
+Contact
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: '8656A355F7A729CA51E9CAAA8B6539D3'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    contactMessage: {
+      displayName: 'bouken#com#br apoiador ravenabot',
+      vcard: 'BEGIN:VCARD\n' +
+        'VERSION:3.0\n' +
+        'N:apoiador ravenabot;bouken#com#br;;;\n' +
+        'FN:bouken#com#br apoiador ravenabot\n' +
+        'TEL;type=Mobile;waid=555194211823:+55 51 9421-1823\n' +
+        'END:VCARD'
+    },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: '5yeZ9Q+mxUfjubfPITgdK5+jVTqKaKDbGrrvKJYCJzQ='
+    }
+  },
+  contextInfo: null,
+  messageType: 'contactMessage',
+  messageTimestamp: 1748380351,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'android'
+}
+```
+
+Multiple contacts
+json
+```
+{
+  key: {
+    remoteJid: '555596792072@s.whatsapp.net',
+    fromMe: false,
+    id: '4683BF02BAD63D4398EB340B04F654D8'
+  },
+  pushName: 'moothz',
+  status: 'DELIVERY_ACK',
+  message: {
+    contactsArrayMessage: { displayName: '3 contacts', contacts: [Array] },
+    messageContextInfo: {
+      deviceListMetadata: [Object],
+      deviceListMetadataVersion: 2,
+      messageSecret: 'hOn/s8wGl6UvNsermnWj88auBSQtV6HgbsYNuLjNn6U='
+    }
+  },
+  contextInfo: null,
+  messageType: 'contactsArrayMessage',
+  messageTimestamp: 1748380374,
+  instanceId: 'c6a502a0-7927-4895-992a-330b8f749a79',
+  source: 'android'
+}
+```

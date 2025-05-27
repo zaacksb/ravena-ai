@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 const qrcode = require('qrcode-terminal');
 const path =require('path');
 const fs = require('fs'); // For createMedia, etc.
@@ -14,7 +15,8 @@ const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem'); // Will need significant review for Evo API context
 const LLMService = require('./services/LLMService');
 const AdminUtils = require('./utils/AdminUtils');
-const ReturnMessage = require('./ReturnMessage'); // Assuming it's in the same directory structure
+const ReturnMessage = require('./models/ReturnMessage'); // Assuming it's in the same directory structure
+const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -42,7 +44,7 @@ class WhatsAppBotEvo {
     
     this.evolutionApiUrl = options.evolutionApiUrl;
     this.evolutionApiKey = options.evolutionApiKey;
-    this.instanceName = options.instanceName;
+    this.instanceName = options.evoInstanceName;
     this.webhookHost = options.webhookHost; // e.g., from cloudflared tunnel
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
 
@@ -65,7 +67,7 @@ class WhatsAppBotEvo {
     );
 
     this.database = Database.getInstance();
-    this.isConnected = false;
+    this.isConnected = true;
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.otherBots = options.otherBots || [];
     
@@ -79,12 +81,13 @@ class WhatsAppBotEvo {
     this.userAgent = options.userAgent || process.env.USER_AGENT;
 
 
+    this.mentionHandler = new MentionHandler();
+
     this.lastMessageReceived = Date.now();
     this.startupTime = Date.now();
     
     this.loadReport = new LoadReport(this);
     this.inviteSystem = new InviteSystem(this); // Will require Evo API for joining groups
-    this.mentionHandler = new MentionHandler(); // Should work if formattedMessage is correct
     this.reactionHandler = new ReactionsHandler(); // Will need Evo API for sending/receiving reactions
     
     // StreamSystem and stabilityMonitor might need re-evaluation for Evolution API
@@ -102,47 +105,52 @@ class WhatsAppBotEvo {
   }
 
   async initialize() {
-    this.logger.info(`Initializing Evolution API bot instance ${this.id} (Evo Instance: ${this.instanceName})`);
+    this.logger.info(`Initializing Evolution API bot instance ${this.id} (Evo Instance: ${this.instanceName}@${this.webhookPort})`);
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
 
     try {
-      // 1. Setup Webhook Server
-      this.webhookApp = express();
-      this.webhookApp.use(express.json());
-      const webhookPath = `/webhook/evo/${this.id}`; // Unique path for this bot instance
-      this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
+      // 1. Setup Webhook Server OR Websocket connection
+      if(this.websocket){
+        this.logger.info(`Usar websocket`);
+      } else {
+        this.webhookApp = express();
+        this.webhookApp.use(express.json());
+        const webhookPath = `/webhook/evo/${this.id}`; // Unique path for this bot instance
+        this.webhookApp.post(webhookPath, this._handleWebhook.bind(this));
 
-      await new Promise((resolve, reject) => {
-        this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
-          this.logger.info(`Webhook listener for bot ${this.id} started on http://localhost:${this.webhookPort}${webhookPath}`);
-          resolve();
-        }).on('error', (err) => {
-          this.logger.error(`Failed to start webhook listener for bot ${this.id}:`, err);
-          reject(err);
+        await new Promise((resolve, reject) => {
+          this.webhookServer = this.webhookApp.listen(this.webhookPort, () => {
+            this.logger.info(`Webhook listener for bot ${this.id} started on http://localhost:${this.webhookPort}${webhookPath}`);
+            resolve();
+          }).on('error', (err) => {
+            this.logger.error(`Failed to start webhook listener for bot ${this.id}:`, err);
+            reject(err);
+          });
         });
-      });
+
+      }
 
       // 2. Configure Webhook in Evolution API
-      const fullWebhookUrl = `${this.webhookHost.replace(/\/$/, '')}${webhookPath}`;
-      this.logger.info(`Attempting to set Evolution API webhook for instance ${this.instanceName} to: ${fullWebhookUrl}`);
+      // const fullWebhookUrl = `${this.webhookHost.replace(/\/$/, '')}${webhookPath}`;
+      // this.logger.info(`Attempting to set Evolution API webhook for instance ${this.instanceName} to: ${fullWebhookUrl}`);
       
-      // IMPORTANT: Verify the exact event names your Evolution API version uses!
-      const desiredEvents = [
-        "messages.upsert", 
-        "messages.update", // For reactions or edits, if applicable
-        "connection.update",
-        "group-participants.update", // For join/leave
-        // "groups.update", // For group subject/description changes
-        // "message.reaction" // If reactions are a separate event
-      ];
+      // // IMPORTANT: Verify the exact event names your Evolution API version uses!
+      // const desiredEvents = [
+      //   "messages.upsert", 
+      //   "messages.update", // For reactions or edits, if applicable
+      //   "connection.update",
+      //   "group-participants.update", // For join/leave
+      //   // "groups.update", // For group subject/description changes
+      //   // "message.reaction" // If reactions are a separate event
+      // ];
 
-      await this.apiClient.post(`/instance/webhook/set`, { // Pass instanceName via constructor to apiClient
-        enabled: true,
-        url: fullWebhookUrl,
-        // events: desiredEvents // Some Evolution API versions might not support granular events here, it might be all or none
-      });
-      this.logger.info(`Successfully requested webhook setup for instance ${this.instanceName}.`);
+      // await this.apiClient.post(`/instance/webhook/set`, { // Pass instanceName via constructor to apiClient
+      //   enabled: true,
+      //   url: fullWebhookUrl,
+      //   // events: desiredEvents // Some Evolution API versions might not support granular events here, it might be all or none
+      // });
+      // this.logger.info(`Successfully requested webhook setup for instance ${this.instanceName}.`);
 
     } catch (error) {
       this.logger.error(`Error during webhook setup for instance ${this.instanceName}:`, error);
@@ -153,7 +161,7 @@ class WhatsAppBotEvo {
     await this._loadDonationsToWhitelist();
 
     // 4. Check instance status and connect if necessary
-    await this._checkInstanceStatusAndConnect();
+    //await this._checkInstanceStatusAndConnect();
     
     return this;
   }
@@ -232,11 +240,12 @@ class WhatsAppBotEvo {
   }
 
   async _handleWebhook(req, res) {
-    const botIdFromPath = req.params.botId;
-    if (botIdFromPath !== this.id) {
-      this.logger.warn(`Webhook received for unknown botId ${botIdFromPath}. Ignoring.`);
-      return res.status(400).send('Unknown botId');
-    }
+    // console.log(req.params);
+    // const botIdFromPath = req.params.botId;
+    // if (botIdFromPath !== this.id) {
+    //   this.logger.warn(`Webhook received for unknown botId ${botIdFromPath}. Ignoring.`);
+    //   return res.status(400).send('Unknown botId');
+    // }
 
     const payload = req.body;
     this.logger.debug(`[${this.id}] Webhook received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
@@ -260,9 +269,8 @@ class WhatsAppBotEvo {
           break;
 
         case 'messages.upsert':
-          // Assuming payload.data is an array of messages, but often it's a single message object at data for upsert
-          // Let's assume payload.data is the message object itself, or the first element if it's an array
           const incomingMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
+          
           if (incomingMessageData && incomingMessageData.key && !incomingMessageData.key.fromMe) {
             // Basic filtering (from original bot)
             const chatToFilter = incomingMessageData.key.remoteJid;
@@ -270,14 +278,10 @@ class WhatsAppBotEvo {
                 this.logger.debug(`[${this.id}] Ignoring message from system group: ${chatToFilter}`);
                 break;
             }
-            // TODO: Add blocked contact check here if this.blockedContacts is populated
-            // if (this.blockedContacts.some(c => c.id._serialized === (incomingMessageData.key.participant || incomingMessageData.key.remoteJid))) {
-            //   this.logger.debug(`Ignoring message from blocked contact.`);
-            //   break;
-            // }
 
             const formattedMessage = await this.formatMessageFromEvo(incomingMessageData);
             if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
+              console.log("dispirando onMessage", formattedMessage);
               this.eventHandler.onMessage(this, formattedMessage);
             }
           }
@@ -313,10 +317,9 @@ class WhatsAppBotEvo {
     res.sendStatus(200);
   }
 
+
   async formatMessageFromEvo(evoMessageData) {
-    // CRITICAL: This assumes a Baileys-like structure for evoMessageData. VERIFY WITH EVO DOCS.
-    // evoMessageData e.g., { key: { remoteJid, fromMe, id, participant? }, pushName, message, messageTimestamp }
-    // message e.g., { conversation } or { extendedTextMessage: { text } } or { imageMessage: { caption, mimetype, url?, fileSha256?, mediaKey? } }
+    console.log(evoMessageData);
     try {
       const key = evoMessageData.key;
       const waMessage = evoMessageData.message; // The actual message content part
@@ -327,12 +330,12 @@ class WhatsAppBotEvo {
 
       const chatId = key.remoteJid;
       const isGroup = chatId.endsWith('@g.us');
-      const author = isGroup ? (key.participant || key.remoteJid) : key.remoteJid;
+      const author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid; // Added evoMessageData.author as a potential source
       const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
       
       const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
           ? evoMessageData.messageTimestamp 
-          : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp) : Math.floor(Date.now()/1000));
+          : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now()/1000));
       const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
 
       this.loadReport.trackReceivedMessage(isGroup, responseTime, chatId); // From original bot
@@ -349,45 +352,49 @@ class WhatsAppBotEvo {
       } else if (waMessage.extendedTextMessage) {
         type = 'text';
         content = waMessage.extendedTextMessage.text;
+        // Quoted message context can be found in waMessage.extendedTextMessage.contextInfo
+        // caption = waMessage.extendedTextMessage.contextInfo?.quotedMessage?.conversation etc.
+        // For now, focusing on direct content.
       } else if (waMessage.imageMessage) {
         type = 'image';
         caption = waMessage.imageMessage.caption;
         mediaInfo = {
           mimetype: waMessage.imageMessage.mimetype || 'image/jpeg',
-          url: waMessage.imageMessage.url, // Evo might provide a direct URL
-          // mediaKey, fileSha256 etc. might be needed to download if no direct URL
+          url: waMessage.imageMessage.url, 
           filename: waMessage.imageMessage.fileName || `image-${key.id}.${mime.extension(waMessage.imageMessage.mimetype || 'image/jpeg') || 'jpg'}`,
-          _evoMediaDetails: waMessage.imageMessage // Store raw details for potential download
+          _evoMediaDetails: waMessage.imageMessage 
         };
-        // For compatibility with EventHandler's NSFW filter (message.content.data)
-        // content = { data: await this._downloadMediaAsBase64(mediaInfo), ...mediaInfo }; // This makes it slow
-        content = mediaInfo; // Let EventHandler decide if/how to download via a method on formattedMessage
+        content = mediaInfo;
       } else if (waMessage.videoMessage) {
         type = 'video';
-        caption = waMessage.videoMessage.caption;
+        caption = waMessage.videoMessage.caption; // As per your original code; example didn't have it.
         mediaInfo = {
           mimetype: waMessage.videoMessage.mimetype || 'video/mp4',
           url: waMessage.videoMessage.url,
           filename: waMessage.videoMessage.fileName || `video-${key.id}.${mime.extension(waMessage.videoMessage.mimetype || 'video/mp4') || 'mp4'}`,
+          seconds: waMessage.videoMessage.seconds,
           _evoMediaDetails: waMessage.videoMessage
         };
         content = mediaInfo;
       } else if (waMessage.audioMessage) {
         type = waMessage.audioMessage.ptt ? 'ptt' : 'audio';
         mediaInfo = {
-          mimetype: waMessage.audioMessage.mimetype || 'audio/ogg',
+          mimetype: waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg'), // Adjusted default for ptt
           url: waMessage.audioMessage.url,
-          filename: `audio-${key.id}.${mime.extension(waMessage.audioMessage.mimetype || 'audio/ogg') || 'ogg'}`,
+          filename: `audio-${key.id}.${mime.extension(waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg')) || (waMessage.audioMessage.ptt ? 'ogg' : 'mp3')}`,
+          seconds: waMessage.audioMessage.seconds,
+          ptt: waMessage.audioMessage.ptt,
           _evoMediaDetails: waMessage.audioMessage
         };
         content = mediaInfo;
       } else if (waMessage.documentMessage) {
         type = 'document';
-        caption = waMessage.documentMessage.caption;
+        caption = waMessage.documentMessage.title || waMessage.documentMessage.fileName; // Use title first, then fileName
         mediaInfo = {
           mimetype: waMessage.documentMessage.mimetype || 'application/octet-stream',
           url: waMessage.documentMessage.url,
-          filename: waMessage.documentMessage.fileName || `document-${key.id}`,
+          filename: waMessage.documentMessage.fileName || `document-${key.id}${waMessage.documentMessage.mimetype ? '.' + (mime.extension(waMessage.documentMessage.mimetype) || '') : ''}`.replace(/\.$/,''), // Fallback filename with extension if possible
+          title: waMessage.documentMessage.title,
           _evoMediaDetails: waMessage.documentMessage
         };
         content = mediaInfo;
@@ -396,36 +403,60 @@ class WhatsAppBotEvo {
         mediaInfo = {
           mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
           url: waMessage.stickerMessage.url,
-          filename: `sticker-${key.id}.webp`,
+          filename: `sticker-${key.id}.webp`, // Stickers are typically webp
           _evoMediaDetails: waMessage.stickerMessage
         };
         content = mediaInfo;
       } else if (waMessage.locationMessage) {
         type = 'location';
-        content = { // This structure should match what EventHandler expects
+        content = { 
           latitude: waMessage.locationMessage.degreesLatitude,
           longitude: waMessage.locationMessage.degreesLongitude,
-          description: waMessage.locationMessage.name || waMessage.locationMessage.address,
-          // url: waMessage.locationMessage.url // If available in payload
+          name: waMessage.locationMessage.name,
+          address: waMessage.locationMessage.address,
+          description: waMessage.locationMessage.name || waMessage.locationMessage.address, // Kept original logic
+          jpegThumbnail: waMessage.locationMessage.jpegThumbnail, // Added jpegThumbnail
+          // url: waMessage.locationMessage.url // Example does not contain this
         };
+      } else if (waMessage.contactMessage) {
+        type = 'contact';
+        content = {
+            displayName: waMessage.contactMessage.displayName,
+            vcard: waMessage.contactMessage.vcard,
+            _evoContactDetails: waMessage.contactMessage
+        };
+     } else if (waMessage.contactsArrayMessage) {
+        type = 'contacts_array';
+        content = {
+            displayName: waMessage.contactsArrayMessage.displayName,
+            contacts: waMessage.contactsArrayMessage.contacts.map(contact => ({
+                displayName: contact.displayName, // Assuming this structure for individual contacts
+                vcard: contact.vcard            // Assuming this structure
+            })),
+            _evoContactsArrayDetails: waMessage.contactsArrayMessage
+        };
+        // Note: The exact structure of elements within waMessage.contactsArrayMessage.contacts
+        // was '[Array]' in the example. The mapping above assumes they contain displayName and vcard.
+        // If they contain full vcard strings directly, or another structure, adjust the map function.
+        // If each `contact` in the array is like a `contactMessage` itself, you might parse them further.
       } else {
         this.logger.warn(`[${this.id}] Unhandled Evolution message type for ID ${key.id}:`, Object.keys(waMessage).join(', '));
-        content = '[Unsupported message type]';
+        content = `[Unsupported message type: ${Object.keys(waMessage).join(', ')}]`; // More informative
       }
 
-      // Create the message object that EventHandler expects
       const formattedMessage = {
+        id: key.id, // Adding message id to formatted message directly
         group: isGroup ? chatId : null,
-        author: author,
+        author: author.replace("@s.whatsapp.net", "@c.us"),
         authorName: authorName,
         type: type,
-        content: content, // For text: string. For media: mediaInfo object. For location: location object.
+        content: content, 
         caption: caption,
-        origin: evoMessageData, // The raw Evolution API message payload
+        origin: {}, 
         responseTime: responseTime,
-        key: key, // Expose the message key for replies, reactions, deletion
+        timestamp: messageTimestamp, // Adding timestamp to formatted message
+        key: key, 
 
-        // Compatibility methods (these are bound to the WhatsAppBotEvo instance)
         getContact: async () => {
             const contactIdToFetch = isGroup ? (key.participant || author) : author;
             return await this.getContactDetails(contactIdToFetch);
@@ -433,32 +464,38 @@ class WhatsAppBotEvo {
         getChat: async () => {
             return await this.getChatDetails(chatId);
         },
-        delete: async (forEveryone = true) => { // `forEveryone` might not be an option in Evo's delete
+        delete: async (forEveryone = true) => { 
             return await this.deleteMessage(key);
         },
-        downloadMedia: async () => { // If type is media, download it
+        downloadMedia: async () => { 
             if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
-                return await this._downloadMediaAsBase64(mediaInfo);
+                const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
+                  // Optionally update mediaInfo or content with the base64 data if needed persistently
+                  // For example: if (downloadedMedia) mediaInfo.data = downloadedMedia;
+                  return downloadedMedia;
             }
             this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
             return null;
         }
       };
       
-      // If media, and EventHandler needs immediate base64 for NSFW filter:
-      if (['image', 'video', 'audio', 'sticker', 'document'].includes(type) && this.eventHandler.nsfwPredict) { // Assuming nsfwPredict is a flag or object
+      if (['image', 'video', 'sticker'].includes(type) && this.eventHandler?.nsfwPredict) { // Added audio, document if needed for NSFW
           try {
-            // This will make message processing slower as it downloads here.
             const base64Data = await formattedMessage.downloadMedia();
-            if (base64Data) {
-                formattedMessage.content.data = base64Data; // Add .data for direct access like in original
+            if (base64Data && formattedMessage.content && typeof formattedMessage.content === 'object') {
+                formattedMessage.content.data = base64Data; 
             }
           } catch (dlError) {
               this.logger.error(`[${this.id}] Failed to pre-download media for NSFW check:`, dlError);
           }
       }
 
-
+      formattedMessage.origin = {
+        id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
+        react: (emoji) => { return this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji) },
+        getContact: formattedMessage.getContact,
+        ...evoMessageData
+      }
       return formattedMessage;
 
     } catch (error) {
@@ -467,30 +504,90 @@ class WhatsAppBotEvo {
     }
   }
   
-  async _downloadMediaAsBase64(mediaInfo) {
-      // This method would use mediaInfo.url or other details (mediaKey, etc.)
-      // to make another API call to Evolution API to get the media buffer, then convert to base64
-      // OR, if mediaInfo.url is a direct public URL, download from there.
-      // For now, this is a placeholder. Evolution API might have a specific endpoint to download media.
-      // e.g. GET /chat/getBase64FromMediaMessage/{instanceName} with messageKey
-      this.logger.debug(`[${this.id}] Placeholder: _downloadMediaAsBase64 called for:`, mediaInfo.filename);
-      if (mediaInfo.url && mediaInfo.url.startsWith('http')) { // Simplistic check for a direct URL
-          try {
-              const response = await axios.get(mediaInfo.url, { responseType: 'arraybuffer' });
-              return Buffer.from(response.data).toString('base64');
-          } catch (e) {
-              this.logger.error(`[${this.id}] Failed to download media from direct URL ${mediaInfo.url}:`, e.message);
+  /**
+   * Downloads media content and returns it as a base64 string.
+   * It prioritizes using the /chat/getBase64FromMediaMessage Evolution API endpoint.
+   *
+   * @param {object} mediaInfo - An object containing media details.
+   * Expected properties:
+   * - filename (string): The name of the file for logging.
+   * - _evoMediaDetails (object): Raw media object (not directly used if messageKey is primary).
+   * - url (string, optional): A direct URL to the media (used as fallback).
+   * @param {object} messageKey - The original message key {remoteJid, fromMe, id, participant?}.
+   * This is CRUCIAL for the /chat/getBase64FromMediaMessage endpoint.
+   * @returns {Promise<string|null>} A promise that resolves to the base64 encoded media string, or null if download fails.
+   */
+   /**
+   * Downloads media content and returns it as a base64 string.
+   * It prioritizes using the POST /chat/getBase64FromMediaMessage Evolution API endpoint.
+   *
+   * @param {object} mediaInfo - An object containing media details.
+   * Expected properties:
+   * - filename (string): The name of the file for logging.
+   * - _evoMediaDetails (object): Raw media object (not directly used if messageKey is primary).
+   * - url (string, optional): A direct URL to the media (used as fallback).
+   * @param {object} messageKey - The original message key {remoteJid, fromMe, id, participant?}.
+   * This is CRUCIAL for the /chat/getBase64FromMediaMessage endpoint.
+   * @returns {Promise<string|null>} A promise that resolves to the base64 encoded media string, or null if download fails.
+   */
+  async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
+    this.logger.debug(`[${this.id}] Attempting to download media for: ${mediaInfo.filename} using messageKey:`, messageKey);
+
+    if (!messageKey || !messageKey.id || !messageKey.remoteJid) {
+      this.logger.error(`[${this.id}] Crucial messageKey information (id, remoteJid) is missing. Cannot use /chat/getBase64FromMediaMessage.`);
+      // Proceed to fallback if messageKey is invalid or essential parts are missing.
+    }
+
+    if (messageKey && messageKey.id && messageKey.remoteJid && this.evolutionApiUrl && this.evolutionApiKey && this.instanceName) {
+      this.logger.info(`[${this.id}] Attempting media download via Evolution API POST /chat/getBase64FromMediaMessage for: ${mediaInfo.filename}`);
+      try {
+        const endpoint = `${this.evolutionApiUrl}/chat/getBase64FromMediaMessage/${this.instanceName}`;
+        const payload = {message: evoMessageData, convertToMp4: true};
+
+        if (messageKey.participant) {
+          payload.participant = messageKey.participant;
+        }
+        this.logger.debug(`[${this.id}] Calling Evolution API POST endpoint: ${endpoint} with payload:`, payload);
+
+        const response = await axios.post(endpoint, payload, {
+          headers: {
+            'apikey': this.evolutionApiKey,
+            'Content-Type': 'application/json', // Explicitly set Content-Type for POST
+          },
+          // timeout: 30000, // 30 seconds, for example
+        });
+
+        // Process the response (same logic as before):
+        if (response.data) {
+          if (typeof response.data === 'string' && response.data.length > 100) {
+            this.logger.info(`[${this.id}] Media downloaded successfully as direct base64 string via Evolution API for: ${mediaInfo.filename}`);
+            return response.data;
+          } else if (response.data.base64 && typeof response.data.base64 === 'string') {
+            this.logger.info(`[${this.id}] Media downloaded successfully (from base64 field) via Evolution API for: ${mediaInfo.filename}`);
+            return response.data.base64;
+          } else {
+            this.logger.warn(`[${this.id}] Evolution API /chat/getBase64FromMediaMessage did not return expected base64 data for ${mediaInfo.filename}. Response data:`, response.data);
           }
+        } else {
+          this.logger.warn(`[${this.id}] No data received from Evolution API /chat/getBase64FromMediaMessage for ${mediaInfo.filename}`);
+        }
+
+      } catch (apiError) {
+        let errorMessage = apiError.message;
+        if (apiError.response) {
+          errorMessage = `Status: ${apiError.response.status}, Data: ${JSON.stringify(apiError.response.data)}`;
+        }
+        this.logger.error(`[${this.id}] Error downloading media via Evolution API POST /chat/getBase64FromMediaMessage for ${mediaInfo.filename}: ${errorMessage}`);
       }
-      // If no direct URL, you'd need to use an Evo API endpoint to fetch media using its key/details
-      this.logger.warn(`[${this.id}] Actual media download from Evo API not yet implemented. Media URL: ${mediaInfo.url}`);
-      return null;
+    } else {
+      this.logger.info(`[${this.id}] Skipping Evolution API POST /chat/getBase64FromMediaMessage download for ${mediaInfo.filename} due to missing messageKey or API configuration.`);
+    }
+
+    this.logger.warn(`[${this.id}] Failed to download media for ${mediaInfo.filename} using all available methods.`);
+    return null;
   }
 
-
   async sendMessage(chatId, content, options = {}) {
-    // This will map ReturnMessage structure to Evolution API calls
-    // Phase 1: Text messages
     this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content})`, {content: typeof content === 'string' ? content.substring(0,30) : content, options});
 
     try {
@@ -502,58 +599,29 @@ class WhatsAppBotEvo {
         return { id: { _serialized: `safe-mode-msg-${this.rndString()}` }, ack: 0, body: content }; // Mimic wwebjs
       }
 
+      
       if (!this.isConnected) {
         this.logger.warn(`[${this.id}] Attempted to send message while disconnected from ${this.instanceName}.`);
         throw new Error('Not connected to WhatsApp via Evolution API');
       }
-
-      let evoPayload = {
-        number: chatId,
-        options: {
-          delay: options.delay || 1200, // Default from Evo docs
-          presence: options.sendAudioAsVoice ? "recording" : "composing", // Set presence
-        }
-      };
-      let endpoint = null;
-
-      // Map quoted message
-      if (options.quotedMessageId) {
-        // Assuming quotedMessageId is the serialized ID. Evo needs full key.
-        // We need a way to get the full key if only ID is provided.
-        // For now, assuming options.quotedMessageId is the actual message key object if available from a replied message.
-        if (typeof options.quotedMessageId === 'object' && options.quotedMessageId.id && options.quotedMessageId.remoteJid) {
-             evoPayload.options.quoted = options.quotedMessageId; // Pass the whole key
-        } else if (typeof options.quotedMessageId === 'string') {
-            // This is problematic. Evo needs the full key: { remoteJid, fromMe, id, participant? }
-            // We can only guess remoteJid (chatId) and ID. fromMe and participant are unknown here.
-            // Best if quotedMessageId is the *full message key object* from the original message.
-            evoPayload.options.quoted = { key: { remoteJid: chatId, id: options.quotedMessageId, fromMe: false }}; // GUESSING fromMe and no participant
-            this.logger.warn(`[${this.id}] Quoting with only message ID string. This might be unreliable.`);
-        }
-      }
       
-      if (options.linkPreview !== undefined) { // default true in wweb.js, default false in Evo API
-          evoPayload.options.linkPreview = options.linkPreview; // Evo uses 'linkPreview', not 'disableLinkPreview'
-      }
 
+      // Variáveis padrões do payload
+      const evoPayload = {
+        number: chatId,
+        delay: options.delay || Math.floor(Math.random() * (1500 - 300 + 1)) + 300,
+        presence: options.sendAudioAsVoice ? "recording" : "composing",
+        quoted: options.evoReply,
+        mentioned: options.mentions ? options.mentions.map(s => s.split('@')[0]) : [],
+        linkPreview: options.linkPreview
+      };
 
+      // Cada tipo de mensagem tem um endpoint diferente
+      let endpoint = null;
       if (typeof content === 'string') {
         endpoint = '/message/sendText';
-        evoPayload.textMessage = { text: content };
-        if (options.mentions && Array.isArray(options.mentions)) {
-          // Evo API expects mentions: ["number1@s.whatsapp.net", "number2@s.whatsapp.net"] inside options
-          evoPayload.options.mentions = options.mentions;
-        }
-      } else if (content instanceof Location || (content && typeof content.latitude === 'number' && typeof content.longitude === 'number')) {
-        // Duck-typing for Location object (original wwebjs or a compatible one)
-        endpoint = '/message/sendLocation';
-        evoPayload.locationMessage = {
-          latitude: content.latitude,
-          longitude: content.longitude,
-          name: content.description || content.name || "Localização",
-          // address: content.address // if available
-        };
-      } else if (content instanceof MessageMedia || (content && content.mimetype && (content.data || content.url))) {
+        evoPayload.text = content;
+      } else if (content instanceof MessageMedia) {
         // Duck-typing for MessageMedia (original wwebjs or compatible like from createMedia)
         endpoint = '/message/sendMedia';
         
@@ -562,26 +630,55 @@ class WhatsAppBotEvo {
         else if (content.mimetype.startsWith('video/')) mediaType = 'video';
         else if (content.mimetype.startsWith('audio/')) mediaType = 'audio';
 
-        if (options.sendMediaAsSticker && mediaType === 'image') mediaType = 'sticker';
         if (options.sendMediaAsDocument) mediaType = 'document';
 
-        evoPayload.mediaMessage = {
-          mediaType: mediaType,
-          caption: options.caption || '',
-          media: content.url || `data:${content.mimetype};base64,${content.data}`, // URL or Base64 data URI
-          filename: content.filename || `media.${mime.extension(content.mimetype) || 'bin'}`,
-        };
-        if (options.sendAudioAsVoice && mediaType === 'audio') evoPayload.mediaMessage.isPtt = true;
-        if (options.sendVideoAsGif && mediaType === 'video') evoPayload.mediaMessage.isGif = true;
-        if (options.isViewOnce) evoPayload.mediaMessage.viewOnce = true;
+        if (options.sendMediaAsSticker){
+          mediaType = 'sticker';
+          endPoint = '/message/sendSticker';
+          evoPayload.sticker = content.url || `data:${content.mimetype};base64,${content.data}`;
 
-        if (mediaType === 'sticker' && (options.stickerAuthor || options.stickerName || options.stickerCategories)) {
-            evoPayload.stickerMessage = evoPayload.stickerMessage || {}; // Ensure stickerMessage object exists
-            if(options.stickerName) evoPayload.stickerMessage.pack = options.stickerName;
-            if(options.stickerAuthor) evoPayload.stickerMessage.author = options.stickerAuthor;
-            if(options.stickerCategories) evoPayload.stickerMessage.categories = options.stickerCategories; // Array of emojis
+          if ((options.stickerAuthor || options.stickerName || options.stickerCategories)) {
+              if(options.stickerName) evoPayload.pack = options.stickerName;
+              if(options.stickerAuthor) evoPayload.author = options.stickerAuthor;
+              if(options.stickerCategories) evoPayload.categories = options.stickerCategories;
+          }
         }
 
+        evoPayload.mediatype = mediaType;
+        evoPayload.mimetype = content.mimetype;
+        evoPayload.caption = options.caption || '';
+        evoPayload.media = content.url || `data:${content.mimetype};base64,${content.data}`;
+        evoPayload.fileName = content.filename || `media.${mime.extension(content.mimetype) || 'bin'}`;
+        
+        if (options.sendAudioAsVoice && mediaType === 'audio'){
+          endPoint = '/message/sendWhatsAppAudio';
+          evoPayload.audio = content.url || `data:${content.mimetype};base64,${content.data}`;
+        } 
+
+        if (options.sendVideoAsGif && mediaType === 'video') evoPayload.isGif = true;
+        if (options.isViewOnce) evoPayload.viewOnce = true;
+      } else if (content instanceof Location) {
+        endpoint = '/message/sendLocation';
+        
+        evoPayload.latitude = content.latitude;
+        evoPayload.longitude = content.longitude;
+        evoPayload.name = content.description || content.name || "Localização";
+      } else if (content instanceof Contact) {
+        endpoint = '/message/sendContact';
+        
+        evoPayload.contact = [{
+            "fullName": content.name ?? content.pushname,
+            "wuid": content.number,
+            "phoneNumber": content.number
+            // "organization": "Company Name",
+            // "email": "email",
+            // "url": "url page"
+        }];
+      } else if (content instanceof Poll) {
+        endpoint = '/message/sendPoll';
+        evoPayload.name = content.name;
+        evoPayload.selectableCount = contet.options.allowMultipleAnswers ? content.pollOptions.length : 1;
+        evoPayload.values = content.pollOptions;
       } else {
         this.logger.error(`[${this.id}] sendMessage: Unhandled content type for Evolution API. Content:`, content);
         throw new Error('Unhandled content type for Evolution API');
@@ -662,7 +759,6 @@ class WhatsAppBotEvo {
             }
           } catch (e) { /* ignore, treat as string */ }
       }
-      // If content is already a MessageMedia-like object, it should pass through if compatible with sendMessage duck-typing
 
       try {
         const result = await this.sendMessage(message.chatId, contentToSend, options);
@@ -971,6 +1067,7 @@ class WhatsAppBotEvo {
   }
 
   shouldDiscardMessage() {
+    return false;
     const timeSinceStartup = Date.now() - this.startupTime;
     return timeSinceStartup < (parseInt(process.env.DISCARD_MSG_STARTUP_SECONDS) || 5) * 1000; // 5 seconds default
   }
@@ -986,8 +1083,8 @@ class WhatsAppBotEvo {
     }
     this._onInstanceDisconnected('DESTROYED'); // Mark as disconnected internally
     try {
-      await this.apiClient.post(`/instance/logout`); // Logout the instance
-      this.logger.info(`[${this.id}] Instance ${this.instanceName} logout requested.`);
+      //await this.apiClient.post(`/instance/logout`); // Logout the instance
+      //this.logger.info(`[${this.id}] Instance ${this.instanceName} logout requested.`);
     } catch (error) {
       this.logger.error(`[${this.id}] Error logging out instance ${this.instanceName}:`, error);
     }

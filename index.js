@@ -1,7 +1,15 @@
 // Carrega variáveis de ambiente do arquivo .env
 require('dotenv').config();
 
-const WhatsAppBot = require('./src/WhatsAppBot');
+const evolutionAPI = process.env.USE_EVOLUTION ?? false;
+
+let WhatsAppBot;
+if(evolutionAPI){
+  WhatsAppBot = require('./src/WhatsAppBotEvo');
+} else {
+  WhatsAppBot = require('./src/WhatsAppBot');
+}
+
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
 const BotAPI = require('./src/BotAPI');
@@ -80,7 +88,14 @@ async function main() {
         grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
         grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
         linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
-        linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS
+        linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS,
+        
+        // EvolutionAPI
+        evoInstanceName: evolutionAPI ? rBot.nome : undefined,
+        evolutionApiUrl: evolutionAPI ? process.env.EVOLUTION_API_URL : undefined,
+        evolutionApiKey: evolutionAPI ? process.env.EVOLUTION_API_KEY : undefined,
+        webhookHost: evolutionAPI ? process.env.EVO_WEBHOOK_HOST : undefined,
+        webhookPort: evolutionAPI ? process.env.EVO_WEBHOOK_PORT : undefined
       });
       
       newRBot.initialize();
@@ -88,6 +103,8 @@ async function main() {
       botInstances.push(newRBot);
     }
     
+
+
     logger.info('Todos os bots inicializados e rodando');
     
     // Inicializa servidor da API
