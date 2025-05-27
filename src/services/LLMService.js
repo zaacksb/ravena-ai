@@ -107,9 +107,9 @@ class LLMService {
         maxTokens: options.maxTokens || 5000
       });
 
-      if(options.systemContext){
-        this.logger.info(`[geminiCompletion] Usando ctx personalizado: ${options.systemContext.trim(0, 30)}...`);
-      }
+      //if(options.systemContext){
+      //  this.logger.info(`[geminiCompletion] Usando ctx personalizado: ${options.systemContext.trim(0, 30)}...`);
+      //}
 
       this.logger.info(`[geminiCompletion] Prompt: ${options.prompt.trim(0, 30)}...`);
 

@@ -25,6 +25,8 @@ class Command {
     
     this.exclusive = undefined;                     // Comandos exclusivos por grupo (como API pagas)
 
+    this.ignoreInteract = false;                    // Não usar este comando no interagir automatico
+
     // Reações e feedback
     this.reactions = data.reactions || {
       trigger: false,                                // Emoji usado para ativar um comando
@@ -156,6 +158,7 @@ class Command {
       cooldown: this.cooldown,
       timeout: this.timeout,
       deleteOnComplete: this.deleteOnComplete,
+      ignoreInteract: this.ignoreInteract,
       // Não inclui o method para evitar problemas de serialização de funções
       middlewares: this.middlewares.length,
       createdAt: this.createdAt,

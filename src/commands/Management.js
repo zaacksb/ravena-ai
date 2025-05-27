@@ -21,6 +21,26 @@ class Management {
         method: 'setGroupName',
         description: 'ID/Nome do grupo (nome stickers, gerenciamento)'
       },
+      'setPrefixo': {
+        method: 'setCustomPrefix',
+        description: 'Altera o prefixo de comandos do *grupo* (padrão !)'
+      },
+
+      'setCustomSemPrefixo': {
+        method: 'setCustomSemPrefixo',
+        description: 'Faz com que comandos personalizados não precisem de prefixo'
+      },
+
+      'setBemvindo': {
+        method: 'setWelcomeMessage',
+        description: 'Mensagem quando alguém entra no gurpo'
+      },
+      'setDespedida': {
+        method: 'setFarewellMessage',
+        description: 'Mensagem quando alguém sai do grupo'
+      },
+
+      // Controles de comandos personalizados
       'addCmd': {
         method: 'addCustomCommand',
         description: 'Cria um comando personalizado'
@@ -33,41 +53,30 @@ class Management {
         method: 'deleteCustomCommand',
         description: 'Exclui um comando personalizado'
       },
-      'setPrefixo': {
-        method: 'setCustomPrefix',
-        description: 'Altera o prefixo de comandos (padrão !)'
-      },
-      'setCustomSemPrefixo': {
-        method: 'setCustomSemPrefixo',
-        description: 'Faz com que comandos personalizados não precisem de prefixo'
-      },
-      'setBemvindo': {
-        method: 'setWelcomeMessage',
-        description: 'Mensagem quando alguém entra '
-      },
-      'setDespedida': {
-        method: 'setFarewellMessage',
-        description: 'Mensagem quando alguém sai/é removido'
-      },
+
       'cmd-enable': {
         method: 'enableCustomCommand',
-        description: 'Habilita um comando desabilitado'
+        description: 'Habilita comando (comandos personalizados)'
       },
       'cmd-disable': {
         method: 'disableCustomCommand',
-        description: 'Desabilita um comando'
+        description: 'Desabilita comando (comandos personalizados)'
       },
       'cmd-react': {
         method: 'setReaction',
-        description: 'Reaçao pós-comando (apeas cmds do grupo)'
+        description: 'Reaçao quando usar o comando'
       },
       'cmd-startReact': {
         method: 'setStartReaction',
-        description: 'Reaçao pré-comando (apeas cmds do grupo)'
+        description: 'Reaçao pré-comando (útil para APIs, como loading)'
       },
       'cmd-setAdm': {
         method: 'setCmdAdmin',
         description: 'Define que apenas admins podem usar um comando'
+      },
+      'cmd-setInteragir': {
+        method: 'setCmdInteragir',
+        description: 'Define que comando seja usado nas interações aleatórias'
       },
       'cmd-setHoras': {
         method: 'setCmdAllowedHours',
@@ -87,27 +96,27 @@ class Management {
       },
       'manage': {
         method: 'manageCommand',
-        description: 'Ativa o gerenciamento do grupo pelo PV do bot (apenas g-xxx)'
+        description: 'Ativa o gerenciamento do grupo pelo PV do bot'
       },
       'filtro-palavra': {
         method: 'filterWord',
-        description: 'Apaga mensagens com a palavra/frase especificada'
+        description: 'Detecta e Apaga mensagens com a palavra/frase especificada'
       },
       'filtro-links': {
         method: 'filterLinks',
-        description: 'Apaga mensagens com links'
+        description: 'Detecta e Apaga mensagens com links'
       },
       'filtro-pessoa': {
         method: 'filterPerson',
-        description: 'Apaga mensagens desta pessoa'
+        description: 'Detecta e Apaga mensagens desta pessoa'
       },
       'filtro-nsfw': {
         method: 'filterNSFW',
-        description: 'Apaga mensagens NSFW'
+        description: 'Detecta e Apaga mensagens NSFW'
       },
       'apelido': {
         method: 'setUserNickname',
-        description: 'Define seu apelido no grupo'
+        description: 'Define apelido de *outro membro* no grupo'
       },
       'ignorar': {
         method: 'ignoreUser',
@@ -456,6 +465,7 @@ class Management {
       startsWith: commandTrigger,
       responses: [responseContent],
       adminOnly: false,
+      ignoreInteract: false, 
       sendAllResponses: false,
       mentions: [],
       cooldown: 0,
@@ -1948,6 +1958,49 @@ async setWelcomeMessage(bot, message, args, group) {
     };
   }
 
+
+    /**
+   * Processes a string to extract and sanitize a Twitch channel name.
+   *
+   * @param {string} inputString - The raw input string, potentially a URL or just a name.
+   * @returns {string} The sanitized Twitch channel name, or an empty string if input is invalid.
+   */
+  sanitizeTwitchChannelName(inputString) {
+    // Check if inputString is actually a string and not null/undefined
+    if (typeof inputString !== 'string') {
+      return "";
+    }
+
+    // 1. Remove common Twitch URL prefixes (http, https, www) case-insensitively.
+    //    The regex ^(https?:\/\/)?(www\.)?twitch\.tv\/ matches:
+    //    - ^             : asserts position at start of the string
+    //    - (https?:\/\/)? : optionally matches "http://" or "https://"
+    //    - (www\.)?      : optionally matches "www."
+    //    - twitch\.tv\/  : matches "twitch.tv/"
+    //    - i             : flag for case-insensitive matching of the URL part
+    const withoutUrl = inputString.replace(/^(https?:\/\/)?(www\.)?twitch\.tv\//i, "");
+
+    // 2. Convert the result to lowercase, as Twitch names are case-insensitive in practice
+    //    and often normalized to lowercase.
+    const lowercased = withoutUrl.toLowerCase();
+
+    // 3. Sanitize the name to keep only characters allowed in Twitch usernames:
+    //    - a-z (lowercase letters)
+    //    - 0-9 (numbers)
+    //    - _   (underscore)
+    //    The regex /[^a-z0-9_]/g matches any character that is NOT in the allowed set.
+    //    - [^...] : is a negated character set
+    //    - g      : flag for global match (replaces all occurrences)
+    const sanitized = lowercased.replace(/[^a-z0-9_]/g, "");
+
+    // Note: Twitch usernames also have length constraints (typically 4-25 characters).
+    // This sanitization step focuses on character validity.
+    // Length validation should be performed separately if needed.
+    // e.g., if (sanitized.length >= 4 && sanitized.length <= 25) { ... }
+
+    return sanitized ?? "";
+  }
+
   /**
    * Toggles monitoring of a Twitch channel
    * @param {WhatsAppBot} bot - The bot instance
@@ -1973,7 +2026,7 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
-    const channelName = args[0].replace("https://www.twitch.tv/", "").replace("http://www.twitch.tv/", "").toLowerCase();
+    const channelName = this.sanitizeTwitchChannelName(args[0] ?? "") ?? "";
     
     // Get current channels
     const channels = this.getChannelConfig(group, 'twitch');
@@ -2000,42 +2053,50 @@ async setWelcomeMessage(bot, message, args, group) {
     } else {
       // Check if the channel exists on Twitch before adding
       if (bot.streamMonitor) {
-        const charsValidos = /^(#)?[a-zA-Z0-9_]{4,25}$/;
-        let channelExists = charsValidos.test(channelName);
-        if(channelExists){ // só verifica se for um nome válido
-         channelExists = await bot.streamMonitor.twitchChannelExists(channelName);
-        }
-        
-        if (!channelExists) {
+        if(channelName.length > 3 && channelName.length < 25){
+          const charsValidos = /^(#)?[a-zA-Z0-9_]{4,25}$/;
+          let channelExists = charsValidos.test(channelName);
+          if(channelExists){ // só verifica se for um nome válido
+           channelExists = await bot.streamMonitor.twitchChannelExists(channelName);
+          }
+          
+          if (!channelExists) {
+            return new ReturnMessage({
+              chatId: group.id,
+              content: `❌ Erro: O canal "${channelName}" não existe na Twitch. Use apenas o nome do seu canal, sem caracteres extras.`
+            });
+          }
+          
+          // Add channel with default configuration
+          const newChannel = {
+            channel: channelName,
+            onConfig: this.createDefaultNotificationConfig('twitch', channelName),
+            offConfig: {
+              "media": []
+            },
+            changeTitleOnEvent: true,
+            useThumbnail: true,
+            useAI: false
+          };
+          
+          channels.push(newChannel);
+          await this.database.saveGroup(group);
+          
+          // Subscribe to the channel in StreamMonitor
+          bot.streamMonitor.subscribe(channelName, 'twitch');
+          
           return new ReturnMessage({
             chatId: group.id,
-            content: `❌ Erro: O canal "${channelName}" não existe na Twitch. Use apenas o nome do seu canal, sem caracteres extras.`
+            content: `Canal da Twitch adicionado: ${channelName}\n\n` +
+              `Configuração padrão de notificação "online" definida. Use !g-twitch-midia on ${channelName} para personalizar.`
+          });
+
+        } else {
+          return new ReturnMessage({
+            chatId: group.id,
+            content: `❌ Erro: O canal "${channelName}" não parece ser válido. Os canais da twitch precisam ter entre _4 e 25 caracteres_.`
           });
         }
-        
-        // Add channel with default configuration
-        const newChannel = {
-          channel: channelName,
-          onConfig: this.createDefaultNotificationConfig('twitch', channelName),
-          offConfig: {
-            "media": []
-          },
-          changeTitleOnEvent: true,
-          useThumbnail: true,
-          useAI: false
-        };
-        
-        channels.push(newChannel);
-        await this.database.saveGroup(group);
-        
-        // Subscribe to the channel in StreamMonitor
-        bot.streamMonitor.subscribe(channelName, 'twitch');
-        
-        return new ReturnMessage({
-          chatId: group.id,
-          content: `Canal da Twitch adicionado: ${channelName}\n\n` +
-            `Configuração padrão de notificação "online" definida. Use !g-twitch-midia on ${channelName} para personalizar.`
-        });
       } else {
         return new ReturnMessage({
           chatId: group.id,
@@ -4054,7 +4115,7 @@ async setWelcomeMessage(bot, message, args, group) {
       : 'Interações automáticas **desativadas** para este grupo.\n\n';
     
     if (group.interact.enabled) {
-      response += `📊 Chance atual: ${group.interact.chance/100}% (${group.interact.chance}/10000)\n`;
+      response += `📊 Chance atual: ${group.interact.chance/100}%\n`;
       response += `⏱️ Cooldown atual: ${group.interact.cooldown} minutos\n\n`;
       response += 'Use `!g-interagir-chance` e `!g-interagir-cd` para ajustar estes valores.';
     }
@@ -4100,8 +4161,14 @@ async setWelcomeMessage(bot, message, args, group) {
     }
     
     // Analisa e valida o cooldown
+    let textoMinimo = "";
+
     let cooldown = parseInt(args[0]);
-    if (cooldown < 5) cooldown = 5; // Mínimo 5 minutos
+    if (cooldown < 30){
+      textoMinimo = " (mínimo possível)";
+      cooldown = 30; // Mínimo 30 minutos
+    } 
+
     if (cooldown > 43200) cooldown = 43200; // Máximo 30 dias
     
     // Atualiza cooldown
@@ -4112,7 +4179,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `⏱️ Cooldown de interações definido para ${cooldown} minutos.`
+      content: `⏱️ Cooldown de interações definido para ${cooldown} minutos${textoMinimo}.`
     });
   }
 
@@ -4150,10 +4217,14 @@ async setWelcomeMessage(bot, message, args, group) {
       });
     }
     
+    let textoMaximo = "";
     // Analisa e valida a chance
     let chance = parseInt(args[0]);
     if (chance < 1) chance = 1; // Mínimo 0.01%
-    if (chance > 1000) chance = 1000; // Máximo 10%
+    if (chance >= 500){
+      chance = 500; // Máximo 5%
+      textoMaximo = " (máximo possível)";
+    } 
     
     // Atualiza chance
     group.interact.chance = chance;
@@ -4163,7 +4234,7 @@ async setWelcomeMessage(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `📊 Chance de interações definida para ${chance/100}% (${chance}/10000).`
+      content: `📊 Chance de interações definida para ${chance/100}%${textoMaximo}.`
     });
   }
 
@@ -4962,6 +5033,65 @@ async setWelcomeMessage(bot, message, args, group) {
     return this.setStreamGroupPhoto(bot, message, args, group, 'youtube');
   }
   
+
+  /**
+   * Define horários permitidos para um comando personalizado
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async setCmdInteragir(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    if (args.length < 1) {
+      return new ReturnMessage({
+        chatId: group.id,
+        content: 'Por favor, forneça um nome de comando. Exemplo: !g-cmd-setInteragir comando'
+      });
+    }
+    
+    const commandName = args[0].toLowerCase();
+    const emoji = args[1];
+        
+    // Verifica se é um comando personalizado
+    const customCommands = await this.database.getCustomCommands(group.id);
+    const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
+    
+    if (customCommand) {
+      if (!customCommand.ignoreInteract) {
+        customCommand.ignoreInteract = true;
+      } else {
+        customCommand.ignoreInteract = false;
+      }
+      
+      // Atualiza o comando
+      await this.database.updateCustomCommand(group.id, customCommand);
+      
+      // Limpa cache de comandos para garantir que o comando atualizado seja carregado
+      this.database.clearCache(`commands:${group.id}`);
+
+      // Recarrega comandos
+      await bot.eventHandler.commandHandler.loadCustomCommandsForGroup(group.id);
+      
+      return new ReturnMessage({
+        chatId: group.id,
+        content: `Definido '${commandName}' para ${customCommand.adminOnly ? "não" : ""} ser usado nas interações aleatórias`
+      });
+    }
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: `Comando '${commandName}' não encontrado.`
+    });
+  }
+
 
   /**
    * Define horários permitidos para um comando personalizado

@@ -1272,11 +1272,8 @@ class CommandHandler {
   async checkAutoTriggeredCommands(bot, message, text, group) {
     try {
       // Pula se não houver comandos personalizados para este grupo
-      if (!this.customCommands[group.id]) {
-        //this.logger.debug(`Sem comandos personalizados para o grupo ${group.id}, pulando verificação de auto-trigger`);
-        return;
-      }
-
+      const customCommandsProcessar = this.customCommands[group.id] ?? [];
+      
       // Verifica se o grupo está pausado
       if (group.paused) {
         //this.logger.info(`Ignorando comandos auto-acionados em grupo pausado: ${group.id}`);
@@ -1290,39 +1287,55 @@ class CommandHandler {
         // Verifica o último tempo de interação para cooldown
         const now = Date.now();
         const lastInteraction = group.interact.lastInteraction || 0;
-        const cooldown = (group.interact.cooldown || 30) * 60 * 1000; // Converte minutos para milissegundos
+        let cdMinutos = (group.interact.cooldown || 60);
+        if(cdMinutos < 30){
+          cdMinutos = 30; // Limite 30
+        }
+        const cooldown = cdMinutos * 60 * 1000; // Converte minutos para milissegundos
         
         if (now - lastInteraction >= cooldown) {
+
           // Gera número aleatório entre 1 e 10000
           const randomValue = Math.floor(Math.random() * 10000) + 1;
-          const interactionChance = group.interact.chance || 100; // Padrão 1% de chance (100/10000)
+          let interactionChance = group.interact.chance || 100; // Padrão 1% de chance (100/10000)
+          if(interactionChance > 500){
+            interactionChance = 500; // Limite 5%
+          }
           
           //this.logger.debug(`Verificação de interação automática: ${randomValue} <= ${interactionChance}`);
           
           if (randomValue <= interactionChance) {
-            // Seleciona um comando aleatório que tenha ignorePrefix definido como true
-            const autoCommands = this.customCommands[group.id].filter(cmd => 
-              cmd.ignorePrefix && cmd.active && !cmd.deleted
-            );
+
+            // Atualiza último tempo de interação
+            group.interact.lastInteraction = now;
+            //this.database.saveGroup(group);
+
+            const autoCommands = customCommandsProcessar.filter(cmd => cmd.active && !cmd.deleted && !cmd.ignoreInteract);
             
-            if (autoCommands.length > 0) {
+            // 2 tipos de interação: Um usa o !interagir e outro pega comando custom do grupo
+            // Se não tiver custom, sempre usar LLM
+            const interagirLLM = (Math.random() > 0.5) || autoCommands.length == 0;
+            if(interagirLLM){
+              const interactCommand = this.fixedCommands.getCommand("interagir");
+              this.logger.info(`[interagir] Acionando LLM-Interagir`);
+
+              await this.executeFixedCommand(bot, message, interactCommand, [], group);
+              return;
+            } else {             
               const randomCommand = autoCommands[Math.floor(Math.random() * autoCommands.length)];
-              this.logger.info(`Acionando comando automaticamente: ${randomCommand.startsWith}`);
-              
-              // Atualiza último tempo de interação
-              group.interact.lastInteraction = now;
-              await this.database.saveGroup(group);
+              this.logger.info(`[interagir] Acionando comando automaticamente: ${randomCommand.startsWith}`);
               
               // Executa o comando
               await this.executeCustomCommand(bot, message, randomCommand, [], group);
               return;
             }
+
           }
         }
       }
 
       // Verifica cada comando personalizado
-      for (const command of this.customCommands[group.id]) {
+      for (const command of customCommandsProcessar) {
         // Processa apenas comandos com startsWith que não precisam de prefixo
         if (command.startsWith && command.ignorePrefix && text.toLowerCase().includes(command.startsWith.toLowerCase())) {
           this.logger.debug(`Encontrado comando auto-acionado: ${command.startsWith}`);
