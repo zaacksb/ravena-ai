@@ -58,6 +58,15 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
   
   try {
   
+    if(!skipNotify){
+      // Envia mensagem de processamento
+      await bot.sendReturnMessages(new ReturnMessage({
+        chatId: chatId,
+        content: `🖼️ Gerando imagem para '${prompt}', isso pode levar alguns segundos...`,
+        reaction: "⏳"
+      }));
+    }
+
     const safetyQuestion = `Check if this image generation prompt is safe and appropriate: "${prompt}". 
     Is it requesting explicit sexual content, child safety concerns? 
     Answer only "SAFE" or "UNSAFE" followed by a brief reason.`;
@@ -68,7 +77,7 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     
     let safetyMsg = "";
     // Check if the response indicates unsafe content
-    if (safetyResponse.toLowerCase().includes("unsafe") || 
+    if (safetyResponse.substring(0,10).toLowerCase().includes("unsafe") || 
         prompt.toLowerCase().includes("gore")) {
       
       // Log the inappropriate request
@@ -78,13 +87,6 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       safetyMsg = "\n\n> ⚠️ *AVISO*: O conteúdo solicitado é duvidoso. Esta solicitação será revisada pelo administrador e pode resultar em suspensão.";
     }
     
-    if(!skipNotify){
-      // Envia mensagem de processamento
-      await bot.sendReturnMessages(new ReturnMessage({
-        chatId: chatId,
-        content: '🖼️ Gerando imagem, isso pode levar alguns segundos...'
-      }));
-    }
     
     // Inicia cronômetro para medir tempo de geração
     const startTime = Date.now();

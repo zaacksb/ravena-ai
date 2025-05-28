@@ -678,6 +678,7 @@ class EventHandler {
             bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} saiu do grupo: ${data.group.name} (${data.group.id})})\nQuem removeu: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
               this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
             });
+
           }
         } catch (error) {
           this.logger.error('Erro ao enviar notificação de saída do grupo para o grupo de logs:', error);
@@ -685,9 +686,9 @@ class EventHandler {
       }
       
       if (group && group.farewells && !isBotLeaving) {
-        const farewellMessage = this.processFarewellMessage(group, data.user);
-        if (farewellMessage) {
-          bot.sendMessage(data.group.id, farewellMessage).catch(error => {
+        const farewell = this.processFarewellMessage(group, data.user);
+        if (farewell) {
+          bot.sendMessage(data.group.id, farewell.message, { mentions: farewell.mentions }).catch(error => {
             this.logger.error('Erro ao enviar mensagem de despedida:', error);
           });
         }

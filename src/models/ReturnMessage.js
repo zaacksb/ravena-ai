@@ -45,7 +45,7 @@ class ReturnMessage {
     }
     
     // Propriedades opcionais adicionais
-    this.reactions = data.reactions || null;
+    this.reaction = data.reaction || null;
     this.delay = data.delay || 0;   // Milissegundos para atrasar antes de enviar
     this.metadata = data.metadata || {}; // Metadados personalizados para rastreamento ou outros fins
   }
