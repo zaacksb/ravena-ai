@@ -1359,4 +1359,4 @@ const commands = [
   })
 ];
 
-module.exports = { commands, processLocationMessage };
+//module.exports = { commands, processLocationMessage };

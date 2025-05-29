@@ -242,7 +242,7 @@ class LLMService {
         endpoint,
         model: options.model || 'gpt-3.5-turbo',
         promptLength: options.prompt.length,
-        maxTokens: options.maxTokens || 1000
+        maxTokens: options.maxTokens || 1000 
       });
 
       const response = await axios.post(
@@ -250,6 +250,7 @@ class LLMService {
         {
           model: options.model || 'gpt-3.5-turbo',
           messages: [
+            { role: 'system', content: options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz" },
             { role: 'user', content: options.prompt }
           ],
           max_tokens: options.maxTokens || 1000,

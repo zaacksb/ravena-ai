@@ -199,7 +199,7 @@ async function startStopGame(bot, message, args, group) {
     
     return messages; 
   } catch (error) {
-    logger.error('Erro ao iniciar jogo de Stop/Adedonha:', error);
+    logger.warn('Erro ao iniciar jogo de Stop/Adedonha:', error);
     
     return new ReturnMessage({
       chatId: message.group || message.author,
@@ -300,7 +300,7 @@ function processStopGameResponse(bot, message) {
     });
 
   } catch (error) {
-    logger.error('Erro ao processar resposta do jogo Stop/Adedonha:', error);
+    logger.warn('Erro ao processar resposta do jogo Stop/Adedonha:', error);
     return false;
   }
 }
@@ -343,12 +343,12 @@ async function analyzeResponses(game) {
       }
 
     } catch (llmError) {
-      logger.error('Erro ao validar respostas com LLM:', llmError);
+      logger.warn('Erro ao validar respostas com LLM:', llmError);
     }
     
     return game.responses;
   } catch (error) {
-    logger.error('Erro ao analisar respostas:', error);
+    logger.warn('Erro ao analisar respostas:', error);
     throw error;
   }
 }
@@ -372,12 +372,12 @@ function parseLLMResponse(llmResponse) {
       const tudo = JSON.parse(llmResponse);
       return tudo;
     } catch(e){
-      logger.error('Erro ao analisar resposta do LLM completa:', error);  
+      logger.warn('Erro ao analisar resposta do LLM completa:', error);  
       logger.debug(llmResponse);
       return {};
     }
   } catch (error) {
-    logger.error('Erro ao analisar resposta do LLM:', error);
+    logger.warn('Erro ao analisar resposta do LLM:', error);
     logger.debug('Resposta do LLM:', llmResponse);
     
     // Retorna um objeto vazio em caso de erro
@@ -457,13 +457,13 @@ async function endGame(bot, groupId) {
     // Remove o jogo da lista de ativos
     delete activeGames[groupId];
   } catch (error) {
-    logger.error('Erro ao finalizar jogo de Stop/Adedonha:', error);
+    logger.warn('Erro ao finalizar jogo de Stop/Adedonha:', error);
     
     // Tenta enviar mensagem de erro
     try {
       await bot.sendMessage(groupId, '❌ Ocorreu um erro ao finalizar o jogo. Por favor, tente novamente.');
     } catch (sendError) {
-      logger.error('Erro ao enviar mensagem de erro:', sendError);
+      logger.warn('Erro ao enviar mensagem de erro:', sendError);
     }
     
     // Garante que o jogo seja removido mesmo em caso de erro
