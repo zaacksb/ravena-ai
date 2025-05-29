@@ -38,6 +38,18 @@ Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratui
 
 Lista completa do que já foi feito [aqui](docs/TODO.md)
 
+- [ ] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
+  - [ ] Implementar wrappers pra todos os métodos do client usados
+  - [x] Implementar wrappers pra todos os métodos do chat usados
+  - [x] Implementar wrappers pra todos os métodos da Message usados
+  - [ ] Aceitar convites
+  - [ ] Sair de grupo
+  - [ ] Alterar Status
+  - [x] Recebendo mensagens
+  - [x] Enviando mensagens
+  - [x] Troca titulos do grupo
+  - [ ] Verifica se é admin
+  - [ ] Testar todos os comandos
 - [x] Melhor explicação da implementação do bot no README
 - [x] Fix Riot API
 - [x] Novo Jogo: Geoguesser

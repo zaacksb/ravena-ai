@@ -416,7 +416,7 @@ class Management {
     // Trata mensagens de mídia
     if (quotedMsg?.hasMedia) {
       this.logger.info(`tem mídia, baixando...`);
-      const caption = quotedMsg.caption ?? quotedMsg._data.caption;
+      const caption = quotedMsg.caption ?? quotedMsg._data?.caption;
       try {
         const media = await quotedMsg.downloadMedia();
         let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
@@ -2196,7 +2196,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         mediaConfig.type = mediaType;
         mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption || "";
+        mediaConfig.caption = quotedMsg.caption ?? "";
       }
       
       // Set the new config (replace existing)
@@ -2312,7 +2312,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         mediaConfig.type = mediaType;
         mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption || "";
+        mediaConfig.caption = quotedMsg.caption ?? "";
       }
       
       // Set the new config (replace existing)
@@ -2948,7 +2948,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         mediaConfig.type = mediaType;
         mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption || "";
+        mediaConfig.caption = quotedMsg.caption ?? "";
       }
       
       channelConfig.onConfig = {
@@ -3057,7 +3057,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         mediaConfig.type = mediaType;
         mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption || "";
+        mediaConfig.caption = quotedMsg.caption ?? "";
       }
       
       channelConfig.offConfig = {
@@ -3566,7 +3566,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         mediaConfig.type = mediaType;
         mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption || "";
+        mediaConfig.caption = quotedMsg.caption ?? "";
       }
       
       channelConfig.onConfig = {
@@ -4396,7 +4396,7 @@ async setWelcomeMessage(bot, message, args, group) {
         
         mediaConfig.type = mediaType;
         mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption || "";
+        mediaConfig.caption = quotedMsg.caption ?? "";
       }
       
       // Initialize the config if it doesn't exist

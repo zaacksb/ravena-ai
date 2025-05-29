@@ -1,3 +1,12 @@
+/*
+TODO?
+  - Enviar gif
+  - Implementar os metodos do client que tão faltando (final do constructor)
+  - eventos de connection pra saber se tá on
+  - nunca testei logar pela API
+  - usar evento pra ver se a mensagem for enviada e colocar no getInfo
+
+*/
 const express = require('express');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
@@ -108,6 +117,12 @@ class WhatsAppBotEvo {
 
     this.blockedContacts = []; // To be populated via API if possible / needed
 
+    if (!this.streamSystem) {
+      this.streamSystem = new StreamSystem(this);
+      this.streamSystem.initialize();
+      this.streamMonitor = this.streamSystem.streamMonitor;
+    }
+
     // Client Fake
     this.client = {
       getChatById: async (chatId) => {
@@ -172,10 +187,18 @@ class WhatsAppBotEvo {
         });
 
         socket.on('connection.update', (data) => {
-          console.log('group-participants.update', data);
+          console.log('connection.update', data);
 
           this.handleWebsocket(data);
         });
+
+        socket.on('send.messages', (data) => {
+          console.log('send.messages', data);
+
+          this.handleWebsocket(data);
+        });
+
+
 
         
 
@@ -297,13 +320,6 @@ class WhatsAppBotEvo {
 
     await this._sendStartupNotifications();
     await this.fetchAndPrepareBlockedContacts(); // Fetch initial blocklist
-
-    // Initialize other systems that depend on connection
-    // if (!this.streamSystem) {
-    //   this.streamSystem = new StreamSystem(this);
-    //   await this.streamSystem.initialize();
-    //   this.streamMonitor = this.streamSystem.streamMonitor;
-    // }
   }
 
   _onInstanceDisconnected(reason = 'Unknown') {
@@ -862,9 +878,9 @@ class WhatsAppBotEvo {
         throw new Error('Unhandled content type for Evolution API');
       }
 
-      console.log(`EVO- API posting, ${endpoint}`, evoPayload);
 
       const response = await this.apiClient.post(endpoint, evoPayload);
+      console.log(`EVO- API posting, ${endpoint}`, evoPayload, response);
 
       // Mimic whatsapp-web.js Message object structure for return (as much as useful)
       return {
@@ -881,7 +897,10 @@ class WhatsAppBotEvo {
         from: this.phoneNumber ? `${this.phoneNumber.replace(/\D/g, '')}@c.us` : this.instanceName, // Approximate sender
         to: chatId,
         url: (content && content.url) ? content.url : undefined, // if media sent by URL
-        _data: response // Store raw API response
+        _data: response,
+        getInfo: () => { // Usado no StreamSystem pra saber se foi enviada
+          return { delivery: [1], played: [1],read: [1] };
+        }
       };
 
     } catch (error) {
@@ -979,12 +998,13 @@ class WhatsAppBotEvo {
     try {
       // For Evolution API, passing URL directly to `sendMessage` is often possible if `content.url` is used.
       const filename = path.basename(new URL(url).pathname) || 'media_from_url';
-      let mimetype = mime.lookup(url) || (options.unsafeMime ? 'application/octet-stream' : null);
+      let mimetype = mime.lookup(url.split("?")[0]) || (options.unsafeMime ? 'application/octet-stream' : null);
       
       if (!mimetype && options.unsafeMime) {
           // Try to get Content-Type header if it's a direct download
           try {
               const headResponse = await axios.head(url);
+              console.log("mimetype do hedaer? ", headResponse);
               mimetype = headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream';
           } catch(e) { /* ignore */ }
       }
@@ -1065,7 +1085,7 @@ class WhatsAppBotEvo {
 
         return {
           setSubject: async (title) => {
-            return await this.apiClient.get(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
+            return await this.apiClient.post(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
           },
           id: { _serialized: groupData.id || chatId },
           name: groupData.subject,
