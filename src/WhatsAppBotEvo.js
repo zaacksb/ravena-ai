@@ -1230,6 +1230,13 @@ class WhatsAppBotEvo {
           setSubject: async (title) => {
             return await this.apiClient.post(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
           },
+          setMessagesAdminsOnly: async (adminOnly) => {
+            if(adminOnly){
+              return await this.apiClient.post(`/group/updateSetting`, { groupJid: chatId, action: "announcement" });
+            } else {
+              return await this.apiClient.post(`/group/updateSetting`, { groupJid: chatId, action: "not_announcement" });
+            }
+          },
           id: { _serialized: groupData.id || chatId },
           name: groupData.subject,
           isGroup: true,

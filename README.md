@@ -53,6 +53,7 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
   - [x] Verifica se é admin
   - [x] originReaction
   - [x] Testar todos os comandos
+  - [x] setMessagesAdminsOnly
   - [ ] Eventos de connection
   - [ ] Evento send.message pra saber se foi enviada
   - [ ] Enviar GIF
