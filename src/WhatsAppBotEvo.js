@@ -180,6 +180,11 @@ class WhatsAppBotEvo {
           this.handleWebsocket(data);
         });
 
+        socket.on('groups.upsert', (data) => {
+          this.logger.info('groups.upsert', data);
+          this.handleWebsocket(data);
+        });
+
         socket.on('connection.update', (data) => {
           this.logger.info('connection.update', data);
 
@@ -425,22 +430,60 @@ class WhatsAppBotEvo {
           }
           break;
         
+        case 'groups.upsert':
+/*
+{
+  event: 'groups.upsert',
+  instance: 'ravena-testes',
+  data: [
+    {
+      id: '120363402005217365@g.us',
+      subject: '💚mutez Subes ONLINE',
+      subjectOwner: '555596424307@s.whatsapp.net',
+      subjectTime: 1748560136,
+      size: 2,
+      creation: 1745262897,
+      owner: '555596792072@s.whatsapp.net',
+      desc: 'canal para inscritos na twitch do muutiz',
+      descId: '8F5C7FE14D2F39D2',
+      restrict: false,
+      announce: false,
+      isCommunity: false,
+      isCommunityAnnounce: false,
+      joinApprovalMode: false,
+      memberAddMode: true,
+      participants: [Array],
+      author: '555596792072@s.whatsapp.net'
+    }
+  ],
+  server_url: 'http://localhost:4567',
+  date_time: '2025-05-29T20:21:26.033Z',
+  sender: '555596424307@s.whatsapp.net',
+  apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
+}
+*/        
+          // Simular que um membro foi add
+          const groupUpsertData = payload.data[0];
+          groupUpsertData.action = "add";
+          if (groupUpsertData && groupUpsertData.id && groupUpsertData.action && groupUpsertData.participants) {
+             this._handleGroupParticipantsUpdate(groupUpsertData);
+          }
+          break;
         case 'group-participants.update':
           /*{
-            event: 'group-participants.update',
-            instance: 'ravena-testes',
-            data: {
-              id: '120363402005217365@g.us',
-              author: '555596792072@s.whatsapp.net',
-              participants: [ '559591146078@s.whatsapp.net' ],
-              action: 'remove'
-            },
-            server_url: 'http://localhost:4567',
-            date_time: '2025-05-28T17:14:08.899Z',
-            sender: '555596424307@s.whatsapp.net',
-            apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
+event: 'group-participants.update',
+instance: 'ravena-testes',
+data: {
+  id: '120363402005217365@g.us',
+  author: '555596792072@s.whatsapp.net',
+  participants: [ '559591146078@s.whatsapp.net' ],
+  action: 'remove'
+},
+server_url: 'http://localhost:4567',
+date_time: '2025-05-28T17:14:08.899Z',
+sender: '555596424307@s.whatsapp.net',
+apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           }*/
-          // And possibly payload.author for who triggered it. THIS NEEDS VERIFICATION FROM EVO DOCS.
           const groupUpdateData = payload.data;
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
              this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
@@ -862,7 +905,7 @@ class WhatsAppBotEvo {
           }
         }
 
-        if (options.sendAudioAsVoice && mediaType === 'audio'){
+        if (options.sendAudioAsVoice || mediaType === 'audio'){
           endpoint = '/message/sendWhatsAppAudio';
           evoPayload.audio = formattedContent;
           evoPayload.presence = "recording";
@@ -1049,8 +1092,10 @@ class WhatsAppBotEvo {
   }
   
   // --- Placeholder/To be implemented based on Evo API specifics ---
-  async getContactDetails(contactId) {
-    if (!contactId) return null;
+  async getContactDetails(cid) {
+    if (!cid) return null;
+
+    let contactId = (typeof cid === "object") ? cid.id : cid;
     try {
       const number = contactId.split("@")[0];
 
@@ -1230,6 +1275,10 @@ class WhatsAppBotEvo {
           setSubject: async (title) => {
             return await this.apiClient.post(`/group/updateGroupSubject`, { groupJid: chatId, subject: title });
           },
+          fetchMessages: async (limit = 30) => {
+            //https://doc.evolution-api.com/v2/api-reference/chat-controller/find-messages
+            return false;
+          },
           setMessagesAdminsOnly: async (adminOnly) => {
             if(adminOnly){
               return await this.apiClient.post(`/group/updateSetting`, { groupJid: chatId, action: "announcement" });
@@ -1304,17 +1353,27 @@ class WhatsAppBotEvo {
   }
 
   async _handleGroupParticipantsUpdate(groupUpdateData) {
+    console.log(groupUpdateData);
+
     const groupId = groupUpdateData.id;
     const action = groupUpdateData.action;
     const participants = groupUpdateData.participants; // Array of JIDs
 
     try {
-        const groupDetails = await this.getChatDetails(groupId); // To get group name
+        let groupName;
+        if(groupUpdateData.subject){
+          groupName = groupUpdateData.subject;
+        } else {
+          this.logger.info(`[_handleGroupParticipantsUpdate] Não veio nome do grupo no evento, buscando infos de '${groupId}'`);
+          const groupDetails = await this.getChatDetails(groupId);
+          groupName = groupDetails?.name || groupId;
+        }
         const responsibleContact = await this.getContactDetails(groupUpdateData.author) ?? {id: groupUpdateData.author.split("@")[0]+"@c.us", name: "Admin do Grupo"};
-        for (const userId of participants) {
+        for (const uid of participants) {
+            const userId = (typeof uid === "object") ? uid.id : uid;
             const userContact = await this.getContactDetails(userId);
             const eventData = {
-                group: { id: groupId, name: groupDetails?.name || groupId },
+                group: { id: groupId, name: groupName },
                 user: { id: userId.split('@')[0]+"@c.us", name: userContact?.name || userId.split('@')[0] },
                 responsavel: { id: responsibleContact.id?._serialized, name: responsibleContact.name || 'Sistema' },
                 origin: { 
