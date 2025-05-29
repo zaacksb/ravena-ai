@@ -5065,10 +5065,10 @@ async setWelcomeMessage(bot, message, args, group) {
     const customCommand = customCommands.find(cmd => cmd.startsWith === commandName && !cmd.deleted);
     
     if (customCommand) {
-      if (!customCommand.ignoreInteract) {
-        customCommand.ignoreInteract = true;
-      } else {
+      if (customCommand.ignoreInteract) {
         customCommand.ignoreInteract = false;
+      } else {
+        customCommand.ignoreInteract = true;
       }
       
       // Atualiza o comando
@@ -5082,7 +5082,7 @@ async setWelcomeMessage(bot, message, args, group) {
       
       return new ReturnMessage({
         chatId: group.id,
-        content: `Definido '${commandName}' para ${customCommand.adminOnly ? "não" : ""} ser usado nas interações aleatórias`
+        content: `Definido '${commandName}' para ${customCommand.ignoreInteract ? "*não*" : ""}ser usado nas interações aleatórias`
       });
     }
     
