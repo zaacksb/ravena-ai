@@ -1,12 +1,3 @@
-/*
-TODO?
-  - Enviar gif
-  - Implementar os metodos do client que tão faltando (final do constructor)
-  - eventos de connection pra saber se tá on
-  - nunca testei logar pela API
-  - usar evento pra ver se a mensagem for enviada e colocar no getInfo
-
-*/
 const express = require('express');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
@@ -61,6 +52,7 @@ class WhatsAppBotEvo {
 
     this.messageCache = [];
     this.contactCache = [];
+    this.sentMessagesCache = [];
     this.maxCacheSize = 3000;
 
     if (!this.evolutionApiUrl || !this.evolutionApiKey || !this.instanceName || !this.webhookHost) {
@@ -194,15 +186,9 @@ class WhatsAppBotEvo {
           this.handleWebsocket(data);
         });
 
-        socket.on('send.messages', (data) => {
-          this.logger.info('send.messages', data);
-
+        socket.on('send.message', (data) => {
           this.handleWebsocket(data);
         });
-
-
-
-        
 
         // Lidando com desconexão
         socket.on('disconnect', () => {
@@ -338,9 +324,9 @@ class WhatsAppBotEvo {
   }
 
   async handleWebsocket(data){
-    return this._handleWebhook({websocket: true, body: data}, {sendStatus: () => 0 });
+    return this._handleWebhook({websocket: true, body: data}, {sendStatus: () => 0 }, true);
   }
-  async _handleWebhook(req, res) {
+  async _handleWebhook(req, res, socket = false) {
     // this.logger.info(req.params);
     // const botIdFromPath = req.params.botId;
     // if (botIdFromPath !== this.id) {
@@ -349,7 +335,7 @@ class WhatsAppBotEvo {
     // }
 
     const payload = req.body;
-    this.logger.debug(`[${this.id}] Webhook received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
+    this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
     this.lastMessageReceived = Date.now();
 
     if (this.shouldDiscardMessage() && payload.event === 'messages.upsert') { // Only discard messages, not connection events
@@ -369,9 +355,56 @@ class WhatsAppBotEvo {
           }
           break;
 
+        case 'send.message':
+/*
+{
+  event: 'send.message',
+  instance: 'ravena-testes',
+  data: {
+    key: {
+      remoteJid: '120363402005217365@g.us',
+      fromMe: true,
+      id: '3EB0B46BB2D742C4B85CC492153D8CA463DAB035'
+    },
+    pushName: '',
+    status: 'PENDING',
+    message: {
+      conversation: '🗑 Só posso apagar minhas próprias mensagens ou mensagens de outros se eu for admin do grupo.'
+    },
+    contextInfo: null,
+    messageType: 'conversation',
+    messageTimestamp: 1748533669,
+    instanceId: 'e1af61d2-4abc-4e85-9efb-b8f19df5eebc',
+    source: 'unknown'
+  },
+  server_url: 'http://localhost:4567',
+  date_time: '2025-05-29T12:47:49.381Z',
+  sender: '555596424307@s.whatsapp.net', // CUIDAR ISSO PQ MUDA ESSE LIXO???
+  apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
+}
+*/
+          const incomingSentMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
+          if (incomingSentMessageData && incomingSentMessageData.key && incomingSentMessageData.key.fromMe) {
+            const incomingSentMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
+            incomingSentMessageData.event = "send.message";
+            incomingSentMessageData.sender = payload.sender;
+            this.formatMessageFromEvo(incomingSentMessageData);
+          }
+
+          // Marca msg como enviada, não faço ideia qual os status, não tem no doc
+          // talvez venha em outro evento...
+          if(incomingSentMessageData.status != "PENDING"){
+            console.log(`======STATUS====== ${incomingSentMessageData.status} ======STATUS=====`);
+          }
+
+          if(incomingSentMessageData.status === "DELIVERY_ACK"){
+            this.sentMessagesCache.push(incomingSentMessageData.key);
+          }
+          break;
+
         case 'messages.upsert':
           const incomingMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
-          if (incomingMessageData && incomingMessageData.key && !incomingMessageData.key.fromMe) {
+          if (incomingMessageData && incomingMessageData.key) {
             // Basic filtering (from original bot)
             const chatToFilter = incomingMessageData.key.remoteJid;
             if (chatToFilter === this.grupoLogs || chatToFilter === this.grupoInvites || chatToFilter === this.grupoEstabilidade) {
@@ -381,7 +414,9 @@ class WhatsAppBotEvo {
 
             this.formatMessageFromEvo(incomingMessageData).then(formattedMessage => {
               if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
-                this.eventHandler.onMessage(this, formattedMessage);
+                if(!incomingMessageData.key.fromMe){ // Só rodo o onMessage s enão for msg do bot. preciso chamar o formatMessage pra elas serem formatadas e irem pro cache
+                  this.eventHandler.onMessage(this, formattedMessage);
+                }
               }
             }).catch(e => {
               this.logger(`[messages.upsert] Erro formatando mensagem`,incomingMessageData, e, "-----");
@@ -431,7 +466,7 @@ class WhatsAppBotEvo {
   }
 
   getMessageFromCache(id){
-    this.logger.info("buscando msg no cache");
+    //console.log("buscando msg no cache", id, "----------", this.messageCache, "----------");
     if(id){
       return this.messageCache.find(m => m.key.id == id);
     } else {
@@ -440,7 +475,6 @@ class WhatsAppBotEvo {
   }
 
   putContactInCache(data){
-    console.log(`[putContactInCache] ${data}`);
     this.contactCache.push(data);
     if(this.contactCache.length > this.maxCacheSize){
       this.contactCache.shift();
@@ -471,13 +505,16 @@ class WhatsAppBotEvo {
         if (!key || !waMessage) {
           this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
           resolve(null); // Resolve with null
-          return;
         }
 
         const chatId = key.remoteJid;
         const isGroup = chatId.endsWith('@g.us');
         // Added evoMessageData.author as a potential source
-        const author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
+        let author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
+
+        if(evoMessageData.event === "send.message"){
+          author = evoMessageData.sender.split("@")[0]+"@c.us";
+        }
         const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
         
         const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
@@ -587,14 +624,14 @@ class WhatsAppBotEvo {
               _evoContactsArrayDetails: waMessage.contactsArrayMessage
           };
         } 
-        else if(waMessage.reactionMessage){
+        else if(waMessage.reactionMessage && evoMessageData.event === "messages.upsert"){ // Pra evitar pegar coisa do send.message
           const reactionData = waMessage.reactionMessage;
           if (reactionData && reactionData.key && !reactionData.key.fromMe) {
               if(reactionData.text !== ""){
                 this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
                 this.reactionHandler.processReaction(this, { // await is used here
                   reaction: reactionData.text,
-                  senderId: reactionData.key.participant.split("@")[0]+"@c.us",
+                  senderId: reactionData.key?.participant ? reactionData.key.participant.split("@")[0]+"@c.us" : waMessage.sender, // waMessage.sender vem no send.message event
                   msgId: {_serialized: reactionData.key.id}
                 });
               }
@@ -611,7 +648,9 @@ class WhatsAppBotEvo {
 
         const formattedMessage = {
           id: key.id,
+          fromMe: evoMessageData.key.fromMe,
           group: isGroup ? chatId : null,
+          from: isGroup ? chatId : author,
           author: author.replace("@s.whatsapp.net", "@c.us"),
           authorName: authorName,
           type: type,
@@ -633,7 +672,7 @@ class WhatsAppBotEvo {
               return await this.getChatDetails(chatId);
           },
           delete: async (forEveryone = true) => { 
-              return await this.deleteMessage(key);
+              return this.deleteMessageByKey(evoMessageData.key);
           },
           downloadMedia: async () => {
               if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
@@ -658,6 +697,8 @@ class WhatsAppBotEvo {
 
         formattedMessage.origin = {
           id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
+          author: formattedMessage.author,
+          from: formattedMessage.from,
           // If this.sendReaction is async, this will correctly return a Promise
           react: (emoji) => this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji), 
           getContact: formattedMessage.getContact,
@@ -665,6 +706,9 @@ class WhatsAppBotEvo {
           getQuotedMessage: async () => {
             const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
             return await this.getMessageFromCache(quotedMsgId);
+          },
+          delete: async () => {
+            return this.deleteMessageByKey(evoMessageData.key);
           },
           body: content,
           ...evoMessageData
@@ -684,35 +728,9 @@ class WhatsAppBotEvo {
   }
   
   shortJson(json, max = 30){
-    return JSON.stringify(payload, null, "\t").substring(0,max);
+    return JSON.stringify(json, null, "\t").substring(0,max);
   }
 
-  /**
-   * Downloads media content and returns it as a base64 string.
-   * It prioritizes using the /chat/getBase64FromMediaMessage Evolution API endpoint.
-   *
-   * @param {object} mediaInfo - An object containing media details.
-   * Expected properties:
-   * - filename (string): The name of the file for logging.
-   * - _evoMediaDetails (object): Raw media object (not directly used if messageKey is primary).
-   * - url (string, optional): A direct URL to the media (used as fallback).
-   * @param {object} messageKey - The original message key {remoteJid, fromMe, id, participant?}.
-   * This is CRUCIAL for the /chat/getBase64FromMediaMessage endpoint.
-   * @returns {Promise<string|null>} A promise that resolves to the base64 encoded media string, or null if download fails.
-   */
-   /**
-   * Downloads media content and returns it as a base64 string.
-   * It prioritizes using the POST /chat/getBase64FromMediaMessage Evolution API endpoint.
-   *
-   * @param {object} mediaInfo - An object containing media details.
-   * Expected properties:
-   * - filename (string): The name of the file for logging.
-   * - _evoMediaDetails (object): Raw media object (not directly used if messageKey is primary).
-   * - url (string, optional): A direct URL to the media (used as fallback).
-   * @param {object} messageKey - The original message key {remoteJid, fromMe, id, participant?}.
-   * This is CRUCIAL for the /chat/getBase64FromMediaMessage endpoint.
-   * @returns {Promise<string|null>} A promise that resolves to the base64 encoded media string, or null if download fails.
-   */
   async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
     this.logger.debug(`[${this.id}] Attempting to download media for: ${mediaInfo.filename} using messageKey: ${this.shortJson(messageKey)}`);
 
@@ -894,8 +912,8 @@ class WhatsAppBotEvo {
       }
 
 
+      //this.logger.info(`EVO- API posting, ${endpoint}`, evoPayload);
       const response = await this.apiClient.post(endpoint, evoPayload);
-      //this.logger.info(`EVO- API posting, ${endpoint}`, evoPayload, response);
 
       // Mimic whatsapp-web.js Message object structure for return (as much as useful)
       return {
@@ -1206,7 +1224,7 @@ class WhatsAppBotEvo {
       this.logger.debug(`[${this.id}] Fetching chat details for: ${chatId}`);
       if (chatId.endsWith('@g.us')) {
         const groupData = await this.apiClient.get(`/group/findGroupInfos`, { groupJid: chatId });
-        this.logger.debug(`[${this.id}] groupInfos:`, groupData);
+        //this.logger.debug(`[${this.id}] groupInfos:`, groupData);
 
         return {
           setSubject: async (title) => {
@@ -1242,51 +1260,20 @@ class WhatsAppBotEvo {
     }
   }
 
-  async deleteMessage(messageKey) {
-    // messageKey should be { remoteJid: "string", fromMe: boolean, id: "string", participant?: "string" }
-    if (!messageKey || !messageKey.remoteJid || !messageKey.id) {
-        this.logger.error(`[${this.id}] Invalid messageKey for deletion:`, messageKey);
-        return false;
-    }
-    this.logger.info(`[${this.id}] Requesting deletion of message ${messageKey.id} in chat ${messageKey.remoteJid}`);
-    try {
-      // Evolution API uses POST /message/sendText with a special revoke message structure
-      // Or it might have a dedicated /message/delete or /message/revoke endpoint.
-      // The provided docs link doesn't show /delete or /revoke.
-      // Let's assume it uses a "revoke" type message for now.
-      // THIS IS A GUESS - VERIFY THE CORRECT METHOD FROM EVO DOCS.
-      const payload = {
-        number: messageKey.remoteJid,
-        textMessage: {
-          text: '', // No text for revoke usually
-          key: messageKey // Reference the message to revoke
-        },
-        options: {
-          revoke: true // Custom flag, or it could be a different endpoint or message type
-        }
-      };
-      // OR if it's a different endpoint:
-      // await this.apiClient.post(`/message/delete`, { key: messageKey });
-      // For now, logging. THIS NEEDS CORRECT IMPLEMENTATION.
-      this.logger.warn(`[${this.id}] Message deletion for Evo API needs to be verified. Attempting with a hypothetical revoke. Key:`, messageKey);
-      // Example if it were a sendJson with type: 'revoke' (hypothetical for Baileys-like)
-      // const revokePayload = { type: 'revoke', message: { key: messageKey } };
-      // await this.apiClient.post(`/message/sendJson/${this.instanceName}`, revokePayload);
-      // For now, let's assume there's a specific delete endpoint that takes the key:
-      // This is common:
-      // await this.apiClient.post(`/message/delete`, { key: messageKey });
+  
+  async deleteMessageByKey(key){
+      if (!key) {
+          this.logger.error(`[${this.id}] Invalid messageKey for deletion. ${key}`);
+          return false;
+      }
 
-      // The Evolution API docs you linked DON'T specify a delete/revoke message endpoint.
-      // A common way some Baileys wrappers handle this is by sending an "empty" reaction to the message ID
-      // which then triggers a revoke, OR by sending a specific type of message.
-      // Check Evolution API community/support for how to delete messages.
-      // For now, can't implement without knowing the exact mechanism.
-      this.logger.error(`[${this.id}] MESSAGE DELETION VIA EVO API IS NOT IMPLEMENTED. Unknown endpoint/method.`);
-      return false;
-    } catch (error) {
-      this.logger.error(`[${this.id}] Failed to delete message ${messageKey.id}:`, error);
-      return false;
-    }
+      this.logger.info(`[${this.id}][deleteMessage] Requesting deletion of message ${JSON.stringify(key)}`);
+      try {
+        return this.apiClient.delete("/chat/deleteMessageForEveryone", { ...key  });
+      } catch (error) {
+        this.logger.error(`[${this.id}][deleteMessage] Failed to delete message ${JSON.stringify(key)}:`, error);
+        return false;
+      }
   }
 
   async sendReaction(chatId, messageId, reaction) {
@@ -1357,11 +1344,14 @@ class WhatsAppBotEvo {
     */
     if (!userId || !groupId) return false;
     try {
-      const response = await this.apiClient.get(`/group/participants`, { groupId: groupId });
-      // Assuming members is an array like: [{ id: "userId@c.us", admin: "admin"|"superadmin"|null }, ...]
-      // VERIFY THIS STRUCTURE FROM EVO DOCS
-      const member = response.participants.find(m => m.id === userId);
-      return !!(member && (member.admin === 'admin' || member.admin === 'superadmin'));
+      const response = await this.apiClient.get(`/group/participants`, { groupJid: groupId });
+      const member = response.participants.find(m => m.id.split("@")[0] === userId.split("@")[0]);
+      if(member){
+        const isAdmin = (member.admin ?? "").includes("admin");
+        return isAdmin;
+      }
+
+      return false;
     } catch (error) {
       this.logger.error(`[${this.id}] Error checking admin status for ${userId} in ${groupId}:`, error);
       return false;

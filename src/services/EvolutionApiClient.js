@@ -60,7 +60,7 @@ class EvolutionApiClient {
     
     this.logger.debug(`Evo API DELETE: ${url}`, data);
     try {
-      const response = await this.client.delete(url, data, { params });
+      const response = await this.client.delete(url, { data, params });
       this.logger.debug(`Evo API DELETE Response from ${url}:`, response.status, response.data?.status || response.data?.key?.id);
       return response.data;
     } catch (error) {

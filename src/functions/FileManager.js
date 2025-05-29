@@ -75,7 +75,7 @@ async function loadFilesDB() {
  */
 async function saveFilesDB(db) {
   try {
-    return await database.saveJSON(path.join(database.databasePath, FILES_DB_FILE), db);
+    return await database.saveJSONToFile(path.join(database.databasePath, FILES_DB_FILE), db);
   } catch (error) {
     logger.error('Erro ao salvar banco de dados de arquivos:', error);
     return false;
@@ -520,6 +520,8 @@ async function downloadFile(bot, message, args, group) {
             fileBuffer.toString('base64'),
             path.basename(folderFilePath)
           );
+
+          media.filename = path.basename(folderFilePath);
           
           // Adiciona mensagem com o arquivo ao array de retorno
           returnMessages.push(
@@ -527,6 +529,8 @@ async function downloadFile(bot, message, args, group) {
               chatId: chatId,
               content: media,
               options: {
+                sendMediaAsDocument: true,
+                fileName: path.basename(filePath),
                 caption: `Arquivo: ${folderFilePath} (${formatSize(info.size || fileBuffer.length)})`
               }
             })
@@ -572,6 +576,8 @@ async function downloadFile(bot, message, args, group) {
           chatId: chatId,
           content: media,
           options: {
+            sendMediaAsDocument: true,
+            fileName: path.basename(filePath),
             caption: `Arquivo: ${filePath} (${formatSize(fileInfo.size || fileBuffer.length)})`
           }
         });

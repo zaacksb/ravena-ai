@@ -201,7 +201,7 @@ async function apagarMensagem(bot, message, args, group) {
           // Obtém informações do chat
           const chat = await message.origin.getChat();
         
-          // Verifica se o bot é admin
+          // Verifica se quem pediu é admin
           if (chat.isGroup) {
             const participants = chat.participants || [];
             const botParticipant = participants.find(p => p.id._serialized === botNumber);
@@ -223,7 +223,7 @@ async function apagarMensagem(bot, message, args, group) {
             }
           }
         } catch (chatError) {
-          logger.error('Erro ao verificar se bot é admin:', chatError);
+          logger.error('Erro ao verificar se quem pediu é admin:', chatError);
         }
       }
       
@@ -247,11 +247,11 @@ async function apagarMensagem(bot, message, args, group) {
       }
       
       // Apaga também o comando !apagar
-      try {
-        await message.origin.delete(true);
-      } catch (deleteError) {
-        logger.error('Erro ao apagar mensagem de comando:', deleteError);
-      }
+      // try {
+      //   await message.origin.delete(true);
+      // } catch (deleteError) {
+      //   logger.error('Erro ao apagar mensagem de comando:', deleteError);
+      // }
       
       return null;
     } catch (error) {
@@ -271,7 +271,6 @@ async function apagarMensagem(bot, message, args, group) {
           content: 'Não foi possível apagar a mensagem. Verifique se tenho permissões necessárias.'
         });
       }
-      
       return null;
     }
   } catch (error) {

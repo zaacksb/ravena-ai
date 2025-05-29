@@ -434,6 +434,28 @@ class CustomVariableProcessor {
             }
           }
         }
+
+        const singleMentionMatches = text.match(/{singleMention}/g);
+        if (singleMentionMatches) {
+          // Todos pela mesma
+          const { mentionId, mentionName, mentionContact } = await replaceMention();
+          for (let i = 0; i < singleMentionMatches.length; i++) {
+            // Substitui apenas a primeira ocorrência restante
+            text = text.replace(/{singleMention}/, mentionName);
+          }
+          // Adiciona à lista de menções para notificação
+          if (mentionId) {
+            this.logger.debug(`[processContextVariables] SingleMention: ${mentionId}, ${mentionName}`);
+            if (context.options && context.options.mentions){
+              if (!context.options.mentions.includes(mentionId)) {
+                context.options.mentions.push(mentionId);
+              }
+            } else if (context.options) {
+              context.options.mentions = [mentionId];
+            }
+          }
+        }
+        
       } catch (error) {
         this.logger.error('Erro ao processar variável {mention}:', error);
       }
