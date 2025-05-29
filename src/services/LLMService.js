@@ -245,13 +245,15 @@ class LLMService {
         maxTokens: options.maxTokens || 1000 
       });
 
+      const ctxInclude = options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz";
+      
       const response = await axios.post(
         endpoint,
         {
           model: options.model || 'gpt-3.5-turbo',
           messages: [
-            { role: 'system', content: options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz" },
-            { role: 'user', content: options.prompt }
+            //{ role: 'system', content: options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz" },
+            { role: 'user', content: `${ctxInclude} ${options.prompt}` }
           ],
           max_tokens: options.maxTokens || 1000,
           temperature: options.temperature || 0.7
