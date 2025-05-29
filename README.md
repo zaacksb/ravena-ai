@@ -47,6 +47,8 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
   - [ ] Alterar Status
   - [x] Recebendo mensagens
   - [x] Enviando mensagens
+  - [ ] Apagando mensagens
+  - [ ] Fix get Contact
   - [x] Troca titulos do grupo
   - [ ] Verifica se é admin
   - [ ] Testar todos os comandos

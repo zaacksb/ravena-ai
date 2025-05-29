@@ -60,6 +60,7 @@ class WhatsAppBotEvo {
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
 
     this.messageCache = [];
+    this.contactCache = [];
     this.maxCacheSize = 3000;
 
     if (!this.evolutionApiUrl || !this.evolutionApiKey || !this.instanceName || !this.webhookHost) {
@@ -125,32 +126,33 @@ class WhatsAppBotEvo {
 
     // Client Fake
     this.client = {
-      getChatById: async (chatId) => {
-        return await this.getChatDetails(chatId);
+      getChatById: (arg) => {
+        return this.getChatDetails(arg);
       },
-      getContactById: async (xxx) => {
-        return false;
+      getContactById: (arg) => {
+        return this.getContactDetails(arg);
       },
-      getInviteInfo: async (xxx) => {
-        return false;
+      getInviteInfo: (arg) => {
+        return this.inviteInfo(arg);
       },
-      getMessageById: async (id) => {
-        return this.getMessageFromCache(id);
+      getMessageById: (arg) => {
+        return this.getMessageFromCache(arg);
       },
-      acceptInvite: async (xxx) => {
-        return false;
+      setStatus: (arg) => {
+        this.updateProfileStatus(arg);
       },
-      leaveGroup: async (xxx) => {
-        return false;
+      leaveGroup: (arg) => {
+        this.leaveGroup(arg);
+      },
+      setProfilePicture: (arg) => {
+        this.updateProfilePicture(arg);
+      },
+      acceptInvite: (arg) => {
+        return this.acceptInviteCode(arg);
       },
       sendPresenceUpdate: async (xxx) => {
-        return false;
-      },
-      setProfilePicture: async (xxx) => {
-        return false;
-      },
-      setStatus: async (xxx) => {
-        return false;
+        // Sem necessidade dessa função
+        return true;
       },
       info: {
         wid: {
@@ -174,26 +176,26 @@ class WhatsAppBotEvo {
         });
 
         socket.on('connect', () => {
-          console.log('>>> Conectado ao WebSocket da Evolution API <<<');
+          this.logger.info('>>> Conectado ao WebSocket da Evolution API <<<');
         });
 
         // Escutando eventos
         socket.on('messages.upsert', (data) => this.handleWebsocket(data));
 
         socket.on('group-participants.update', (data) => {
-          console.log('group-participants.update', data);
+          this.logger.info('group-participants.update', data);
 
           this.handleWebsocket(data);
         });
 
         socket.on('connection.update', (data) => {
-          console.log('connection.update', data);
+          this.logger.info('connection.update', data);
 
           this.handleWebsocket(data);
         });
 
         socket.on('send.messages', (data) => {
-          console.log('send.messages', data);
+          this.logger.info('send.messages', data);
 
           this.handleWebsocket(data);
         });
@@ -204,7 +206,7 @@ class WhatsAppBotEvo {
 
         // Lidando com desconexão
         socket.on('disconnect', () => {
-          console.log('Desconectado do WebSocket da Evolution API');
+          this.logger.info('Desconectado do WebSocket da Evolution API');
         });
       } else {
         this.webhookApp = express();
@@ -251,10 +253,10 @@ class WhatsAppBotEvo {
     }
 
     // 3. Load donations to whitelist (from original bot)
-    await this._loadDonationsToWhitelist();
+    this._loadDonationsToWhitelist();
 
     // 4. Check instance status and connect if necessary
-    await this._checkInstanceStatusAndConnect();
+    this._checkInstanceStatusAndConnect();
     
     return this;
   }
@@ -275,7 +277,7 @@ class WhatsAppBotEvo {
 
       const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
       if (state === 'CONNECTED') {
-        await this._onInstanceConnected();
+        this._onInstanceConnected();
       } else if (state === 'OPEN' || state === 'CONNECTING' || state === 'PAIRING' || !state /* if undefined, try to connect */) {
         this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect...`);
         const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
@@ -298,7 +300,7 @@ class WhatsAppBotEvo {
       } else if (state === 'TIMEOUT' && !isRetry) {
         this.logger.warn(`Instance ${this.instanceName} timed out. Retrying connection once...`);
         await sleep(5000);
-        await this._checkInstanceStatusAndConnect(true);
+        this._checkInstanceStatusAndConnect(true);
       } else {
         this.logger.error(`Instance ${this.instanceName} is in an unhandled state: ${state}. Manual intervention may be required.`);
         // Consider calling onDisconnected here if it's a definitively disconnected state
@@ -336,10 +338,10 @@ class WhatsAppBotEvo {
   }
 
   async handleWebsocket(data){
-    return await this._handleWebhook({websocket: true, body: data}, {sendStatus: () => 0 });
+    return this._handleWebhook({websocket: true, body: data}, {sendStatus: () => 0 });
   }
   async _handleWebhook(req, res) {
-    // console.log(req.params);
+    // this.logger.info(req.params);
     // const botIdFromPath = req.params.botId;
     // if (botIdFromPath !== this.id) {
     //   this.logger.warn(`Webhook received for unknown botId ${botIdFromPath}. Ignoring.`);
@@ -361,7 +363,7 @@ class WhatsAppBotEvo {
           const connectionState = payload.data?.state;
           this.logger.info(`[${this.id}] Connection update: ${connectionState}`);
           if (connectionState === 'CONNECTED') {
-            await this._onInstanceConnected();
+            this._onInstanceConnected();
           } else if (['CLOSE', 'DISCONNECTED', 'LOGGED_OUT', 'TIMEOUT', 'CONFLICT'].includes(connectionState)) {
             this._onInstanceDisconnected(connectionState);
           }
@@ -377,11 +379,14 @@ class WhatsAppBotEvo {
                 break;
             }
 
-            const formattedMessage = await this.formatMessageFromEvo(incomingMessageData);
-            if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
-              //console.log("Disparando onMessage", formattedMessage);
-              this.eventHandler.onMessage(this, formattedMessage);
-            }
+            this.formatMessageFromEvo(incomingMessageData).then(formattedMessage => {
+              if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
+                this.eventHandler.onMessage(this, formattedMessage);
+              }
+            }).catch(e => {
+              this.logger(`[messages.upsert] Erro formatando mensagem`,incomingMessageData, e, "-----");
+            })
+
           }
           break;
         
@@ -404,7 +409,7 @@ class WhatsAppBotEvo {
           const groupUpdateData = payload.data;
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
              this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
-             await this._handleGroupParticipantsUpdate(groupUpdateData);
+             this._handleGroupParticipantsUpdate(groupUpdateData);
           }
           break;
 
@@ -426,9 +431,25 @@ class WhatsAppBotEvo {
   }
 
   getMessageFromCache(id){
-    console.log("buscando msg no cache");
+    this.logger.info("buscando msg no cache");
     if(id){
       return this.messageCache.find(m => m.key.id == id);
+    } else {
+      return null;
+    }
+  }
+
+  putContactInCache(data){
+    console.log(`[putContactInCache] ${data}`);
+    this.contactCache.push(data);
+    if(this.contactCache.length > this.maxCacheSize){
+      this.contactCache.shift();
+    }
+  }
+
+  getContactFromCache(id){
+    if(id){
+      return this.contactCache.find(m => m.number == id);
     } else {
       return null;
     }
@@ -440,238 +461,232 @@ class WhatsAppBotEvo {
     return data;
   }
 
-  async formatMessageFromEvo(evoMessageData) {
-    console.log(JSON.stringify(evoMessageData, null, "\t"));
-    try {
-      const key = evoMessageData.key;
-      const waMessage = evoMessageData.message; // The actual message content part
-      if (!key || !waMessage) {
-        this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
-        return null;
-      }
-
-      const chatId = key.remoteJid;
-      const isGroup = chatId.endsWith('@g.us');
-      const author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid; // Added evoMessageData.author as a potential source
-      const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
-      
-      const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
-          ? evoMessageData.messageTimestamp 
-          : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now()/1000));
-      const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
-
-      this.loadReport.trackReceivedMessage(isGroup, responseTime, chatId); // From original bot
-
-      let type = 'unknown';
-      let content = null;
-      let caption = null;
-      let mediaInfo = null; // To store { url, mimetype, filename, data (base64 if downloaded) }
-
-      // Determine message type and content
-      if (waMessage.conversation) {
-        type = 'text';
-        content = waMessage.conversation;
-      } else if (waMessage.extendedTextMessage) {
-        type = 'text';
-        content = waMessage.extendedTextMessage.text;
-        // Quoted message context can be found in waMessage.extendedTextMessage.contextInfo
-        // caption = waMessage.extendedTextMessage.contextInfo?.quotedMessage?.conversation etc.
-        // For now, focusing on direct content.
-      } else if (waMessage.imageMessage) {
-        type = 'image';
-        caption = waMessage.imageMessage.caption;
-        mediaInfo = {
-          isMessageMedia: true,
-          mimetype: waMessage.imageMessage.mimetype || 'image/jpeg',
-          url: waMessage.imageMessage.url, 
-          filename: waMessage.imageMessage.fileName || `image-${key.id}.${mime.extension(waMessage.imageMessage.mimetype || 'image/jpeg') || 'jpg'}`,
-          _evoMediaDetails: waMessage.imageMessage 
-        };
-        content = mediaInfo;
-      } else if (waMessage.videoMessage) {
-        type = 'video';
-        caption = waMessage.videoMessage.caption; // As per your original code; example didn't have it.
-        mediaInfo = {
-          isMessageMedia: true,
-          mimetype: waMessage.videoMessage.mimetype || 'video/mp4',
-          url: waMessage.videoMessage.url,
-          filename: waMessage.videoMessage.fileName || `video-${key.id}.${mime.extension(waMessage.videoMessage.mimetype || 'video/mp4') || 'mp4'}`,
-          seconds: waMessage.videoMessage.seconds,
-          _evoMediaDetails: waMessage.videoMessage
-        };
-        content = mediaInfo;
-      } else if (waMessage.audioMessage) {
-        type = waMessage.audioMessage.ptt ? 'ptt' : 'audio';
-        mediaInfo = {
-          isMessageMedia: true,
-          mimetype: waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg'), // Adjusted default for ptt
-          url: waMessage.audioMessage.url,
-          filename: `audio-${key.id}.${mime.extension(waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg')) || (waMessage.audioMessage.ptt ? 'ogg' : 'mp3')}`,
-          seconds: waMessage.audioMessage.seconds,
-          ptt: waMessage.audioMessage.ptt,
-          _evoMediaDetails: waMessage.audioMessage
-        };
-        content = mediaInfo;
-      } else if (waMessage.documentMessage) {
-        type = 'document';
-        caption = waMessage.documentMessage.title || waMessage.documentMessage.fileName; // Use title first, then fileName
-        mediaInfo = {
-          isMessageMedia: true,
-          mimetype: waMessage.documentMessage.mimetype || 'application/octet-stream',
-          url: waMessage.documentMessage.url,
-          filename: waMessage.documentMessage.fileName || `document-${key.id}${waMessage.documentMessage.mimetype ? '.' + (mime.extension(waMessage.documentMessage.mimetype) || '') : ''}`.replace(/\.$/,''), // Fallback filename with extension if possible
-          title: waMessage.documentMessage.title,
-          _evoMediaDetails: waMessage.documentMessage
-        };
-        content = mediaInfo;
-      } else if (waMessage.stickerMessage) {
-        type = 'sticker';
-        mediaInfo = {
-          isMessageMedia: true,
-          mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
-          url: waMessage.stickerMessage.url,
-          filename: `sticker-${key.id}.webp`, // Stickers are typically webp
-          _evoMediaDetails: waMessage.stickerMessage
-        };
-        content = mediaInfo;
-      } else if (waMessage.locationMessage) {
-        type = 'location';
-        content = {
-          isLocation: true,
-          latitude: waMessage.locationMessage.degreesLatitude,
-          longitude: waMessage.locationMessage.degreesLongitude,
-          name: waMessage.locationMessage.name,
-          address: waMessage.locationMessage.address,
-          description: waMessage.locationMessage.name || waMessage.locationMessage.address, // Kept original logic
-          jpegThumbnail: waMessage.locationMessage.jpegThumbnail, // Added jpegThumbnail
-          // url: waMessage.locationMessage.url // Example does not contain this
-        };
-      } else if (waMessage.contactMessage) {
-        type = 'contact';
-        content = {
-            isContact: true,
-            displayName: waMessage.contactMessage.displayName,
-            vcard: waMessage.contactMessage.vcard,
-            _evoContactDetails: waMessage.contactMessage
-        };
-     } else if (waMessage.contactsArrayMessage) {
-        type = 'contacts_array';
-        content = {
-            displayName: waMessage.contactsArrayMessage.displayName,
-            contacts: waMessage.contactsArrayMessage.contacts.map(contact => ({
-                isContact: true,
-                displayName: contact.displayName, // Assuming this structure for individual contacts
-                vcard: contact.vcard            // Assuming this structure
-            })),
-            _evoContactsArrayDetails: waMessage.contactsArrayMessage
-        };
-      } 
-      else if(waMessage.reactionMessage){
-        /*{
-          key: {
-            remoteJid: '120363159906314570@g.us',
-            fromMe: true,
-            id: '3EB0886FA796121797C45C',
-            participant: '555596424307@s.whatsapp.net'
-          },
-          text: '❤️',
-          senderTimestampMs: '1748465143000'
-        }*/
-
-        const reactionData = waMessage.reactionMessage;
-        if (reactionData && reactionData.key && !reactionData.key.fromMe) {
-            if(reactionData.text !== ""){
-              this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
-              await this.reactionHandler.processReaction(this, {
-                reaction: reactionData.text,
-                senderId: reactionData.key.participant.split("@")[0]+"@c.us",
-                msgId: {_serialized: reactionData.key.id}
-              });
-            }
+  formatMessageFromEvo(evoMessageData) {
+    // Explicitly return a new Promise
+    return new Promise(async (resolve, reject) => { // Executor function is async to use await inside
+      //this.logger.info(JSON.stringify(evoMessageData, null, "\t"));
+      try {
+        const key = evoMessageData.key;
+        const waMessage = evoMessageData.message; // The actual message content part
+        if (!key || !waMessage) {
+          this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
+          resolve(null); // Resolve with null
+          return;
         }
 
-        return null;
-      }
-      else {
-        this.logger.warn(`[${this.id}] Unhandled Evolution message type for ID ${key.id}:`, Object.keys(waMessage).join(', '));
-        content = `[Unsupported message type: ${Object.keys(waMessage).join(', ')}]`; // More informative
-        return null;
-      }
+        const chatId = key.remoteJid;
+        const isGroup = chatId.endsWith('@g.us');
+        // Added evoMessageData.author as a potential source
+        const author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
+        const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
+        
+        const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
+            ? evoMessageData.messageTimestamp 
+            : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now()/1000));
+        const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
 
-      const formattedMessage = {
-        id: key.id, // Adding message id to formatted message directly
-        group: isGroup ? chatId : null,
-        author: author.replace("@s.whatsapp.net", "@c.us"),
-        authorName: authorName,
-        type: type,
-        content: content, 
-        body: content,
-        caption: caption,
-        origin: {}, 
-        responseTime: responseTime,
-        timestamp: messageTimestamp, // Adding timestamp to formatted message
-        key: key, 
-        secret: evoMessageData.message?.messageContextInfo?.messageSecret,
-        hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
+        this.loadReport.trackReceivedMessage(isGroup, responseTime, chatId); // From original bot
 
-        getContact: async () => {
-            const contactIdToFetch = isGroup ? (key.participant || author) : author;
-            return await this.getContactDetails(contactIdToFetch);
-        },
-        getChat: async () => {
-            return await this.getChatDetails(chatId);
-        },
-        delete: async (forEveryone = true) => { 
-            return await this.deleteMessage(key);
-        },
-        downloadMedia: async () => { // Deve retornar MessageMedia
-            if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
-                const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
-                  // Optionally update mediaInfo or content with the base64 data if needed persistently
-                  // For example: if (downloadedMedia) mediaInfo.data = downloadedMedia;
-                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, filename: mediaInfo.filename, source: 'file', isMessageMedia: true }; // MessageMedia compatible
-            }
-            this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
-            return null;
-        }
-      };
-      
-      if (['image', 'video', 'sticker'].includes(type)) {
-          // Baixar conteudo pra colocar no content
-          // TALVEZ UM GARGALO ANALISAR BEM
-          try {
-            const media = await formattedMessage.downloadMedia();
-            if (media) {
-                //formattedMessage.content = {formattedMessage.content, ...media};
-                formattedMessage.content = media;
-            }
-          } catch (dlError) {
-              this.logger.error(`[${this.id}] Failed to pre-download media for NSFW check:`, dlError);
+        let type = 'unknown';
+        let content = null;
+        let caption = null;
+        let mediaInfo = null; // To store { url, mimetype, filename, data (base64 if downloaded) }
+
+        // Determine message type and content
+        if (waMessage.conversation) {
+          type = 'text';
+          content = waMessage.conversation;
+        } else if (waMessage.extendedTextMessage) {
+          type = 'text';
+          content = waMessage.extendedTextMessage.text;
+        } else if (waMessage.imageMessage) {
+          type = 'image';
+          caption = waMessage.imageMessage.caption;
+          mediaInfo = {
+            isMessageMedia: true,
+            mimetype: waMessage.imageMessage.mimetype || 'image/jpeg',
+            url: waMessage.imageMessage.url, 
+            filename: waMessage.imageMessage.fileName || `image-${key.id}.${mime.extension(waMessage.imageMessage.mimetype || 'image/jpeg') || 'jpg'}`,
+            _evoMediaDetails: waMessage.imageMessage 
+          };
+          content = mediaInfo;
+        } else if (waMessage.videoMessage) {
+          type = 'video';
+          caption = waMessage.videoMessage.caption;
+          mediaInfo = {
+            isMessageMedia: true,
+            mimetype: waMessage.videoMessage.mimetype || 'video/mp4',
+            url: waMessage.videoMessage.url,
+            filename: waMessage.videoMessage.fileName || `video-${key.id}.${mime.extension(waMessage.videoMessage.mimetype || 'video/mp4') || 'mp4'}`,
+            seconds: waMessage.videoMessage.seconds,
+            _evoMediaDetails: waMessage.videoMessage
+          };
+          content = mediaInfo;
+        } else if (waMessage.audioMessage) {
+          type = waMessage.audioMessage.ptt ? 'ptt' : 'audio';
+          mediaInfo = {
+            isMessageMedia: true,
+            mimetype: waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg'),
+            url: waMessage.audioMessage.url,
+            filename: `audio-${key.id}.${mime.extension(waMessage.audioMessage.mimetype || (waMessage.audioMessage.ptt ? 'audio/ogg' : 'audio/mpeg')) || (waMessage.audioMessage.ptt ? 'ogg' : 'mp3')}`,
+            seconds: waMessage.audioMessage.seconds,
+            ptt: waMessage.audioMessage.ptt,
+            _evoMediaDetails: waMessage.audioMessage
+          };
+          content = mediaInfo;
+        } else if (waMessage.documentMessage) {
+          type = 'document';
+          caption = waMessage.documentMessage.title || waMessage.documentMessage.fileName;
+          mediaInfo = {
+            isMessageMedia: true,
+            mimetype: waMessage.documentMessage.mimetype || 'application/octet-stream',
+            url: waMessage.documentMessage.url,
+            filename: waMessage.documentMessage.fileName || `document-${key.id}${waMessage.documentMessage.mimetype ? '.' + (mime.extension(waMessage.documentMessage.mimetype) || '') : ''}`.replace(/\.$/,''),
+            title: waMessage.documentMessage.title,
+            _evoMediaDetails: waMessage.documentMessage
+          };
+          content = mediaInfo;
+        } else if (waMessage.stickerMessage) {
+          type = 'sticker';
+          mediaInfo = {
+            isMessageMedia: true,
+            mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
+            url: waMessage.stickerMessage.url,
+            filename: `sticker-${key.id}.webp`,
+            _evoMediaDetails: waMessage.stickerMessage
+          };
+          content = mediaInfo;
+        } else if (waMessage.locationMessage) {
+          type = 'location';
+          content = {
+            isLocation: true,
+            latitude: waMessage.locationMessage.degreesLatitude,
+            longitude: waMessage.locationMessage.degreesLongitude,
+            name: waMessage.locationMessage.name,
+            address: waMessage.locationMessage.address,
+            description: waMessage.locationMessage.name || waMessage.locationMessage.address,
+            jpegThumbnail: waMessage.locationMessage.jpegThumbnail,
+          };
+        } else if (waMessage.contactMessage) {
+          type = 'contact';
+          content = {
+              isContact: true,
+              displayName: waMessage.contactMessage.displayName,
+              vcard: waMessage.contactMessage.vcard,
+              _evoContactDetails: waMessage.contactMessage
+          };
+        } else if (waMessage.contactsArrayMessage) {
+          type = 'contacts_array';
+          content = {
+              displayName: waMessage.contactsArrayMessage.displayName,
+              contacts: waMessage.contactsArrayMessage.contacts.map(contact => ({
+                  isContact: true,
+                  displayName: contact.displayName, 
+                  vcard: contact.vcard
+              })),
+              _evoContactsArrayDetails: waMessage.contactsArrayMessage
+          };
+        } 
+        else if(waMessage.reactionMessage){
+          const reactionData = waMessage.reactionMessage;
+          if (reactionData && reactionData.key && !reactionData.key.fromMe) {
+              if(reactionData.text !== ""){
+                this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
+                this.reactionHandler.processReaction(this, { // await is used here
+                  reaction: reactionData.text,
+                  senderId: reactionData.key.participant.split("@")[0]+"@c.us",
+                  msgId: {_serialized: reactionData.key.id}
+                });
+              }
           }
+          resolve(null); // Resolve with null
+          return;
+        }
+        else {
+          this.logger.warn(`[${this.id}] Unhandled Evolution message type for ID ${key.id}:`, Object.keys(waMessage).join(', '));
+          content = `[Unsupported message type: ${Object.keys(waMessage).join(', ')}]`;
+          resolve(null); // Resolve with null
+          return;
+        }
+
+        const formattedMessage = {
+          id: key.id,
+          group: isGroup ? chatId : null,
+          author: author.replace("@s.whatsapp.net", "@c.us"),
+          authorName: authorName,
+          type: type,
+          content: content, 
+          body: content,
+          caption: caption,
+          origin: {}, 
+          responseTime: responseTime,
+          timestamp: messageTimestamp,
+          key: key, 
+          secret: evoMessageData.message?.messageContextInfo?.messageSecret,
+          hasMedia: (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)),
+
+          getContact: async () => {
+              const contactIdToFetch = isGroup ? (key.participant || author) : author;
+              return await this.getContactDetails(contactIdToFetch);
+          },
+          getChat: async () => {
+              return await this.getChatDetails(chatId);
+          },
+          delete: async (forEveryone = true) => { 
+              return await this.deleteMessage(key);
+          },
+          downloadMedia: async () => {
+              if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
+                  const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
+                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
+              }
+              this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
+              return null;
+          }
+        };
+        
+        if (['image', 'video', 'sticker'].includes(type)) {
+            try {
+              const media = await formattedMessage.downloadMedia(); // await is used here
+              if (media) {
+                  formattedMessage.content = media;
+              }
+            } catch (dlError) {
+                this.logger.error(`[${this.id}] Failed to pre-download media for NSFW check:`, dlError);
+            }
+        }
+
+        formattedMessage.origin = {
+          id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
+          // If this.sendReaction is async, this will correctly return a Promise
+          react: (emoji) => this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji), 
+          getContact: formattedMessage.getContact,
+          getChat: formattedMessage.getChat,
+          getQuotedMessage: async () => {
+            const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
+            return await this.getMessageFromCache(quotedMsgId);
+          },
+          body: content,
+          ...evoMessageData
+        };
+
+        this.putMessageInCache(formattedMessage);
+        resolve(formattedMessage); // Resolve with the formatted message
+
+      } catch (error) {
+        this.logger.error(`[${this.id}] Error formatting message from Evolution API:`, error, evoMessageData);
+        // To match original behavior of returning null on error (which means promise resolves with null)
+        resolve(null); 
+        // If you'd rather have the promise reject on error, use:
+        // reject(error); 
       }
-
-      formattedMessage.origin = {
-        id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
-        react: (emoji) => { return this.sendReaction(evoMessageData.key.remoteJid, evoMessageData.key.id, emoji) },
-        getContact: formattedMessage.getContact,
-        getChat: formattedMessage.getChat,
-        getQuotedMessage: async () => {
-          const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
-          return await this.getMessageFromCache(quotedMsgId);
-        },
-        body: content,
-        ...evoMessageData
-      },
-
-      this.putMessageInCache(formattedMessage);
-      return formattedMessage;
-
-    } catch (error) {
-      this.logger.error(`[${this.id}] Error formatting message from Evolution API:`, error, evoMessageData);
-      return null;
-    }
+    });
   }
   
+  shortJson(json, max = 30){
+    return JSON.stringify(payload, null, "\t").substring(0,max);
+  }
+
   /**
    * Downloads media content and returns it as a base64 string.
    * It prioritizes using the /chat/getBase64FromMediaMessage Evolution API endpoint.
@@ -699,7 +714,7 @@ class WhatsAppBotEvo {
    * @returns {Promise<string|null>} A promise that resolves to the base64 encoded media string, or null if download fails.
    */
   async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
-    this.logger.debug(`[${this.id}] Attempting to download media for: ${mediaInfo.filename} using messageKey:`, messageKey);
+    this.logger.debug(`[${this.id}] Attempting to download media for: ${mediaInfo.filename} using messageKey: ${this.shortJson(messageKey)}`);
 
     if (!messageKey || !messageKey.id || !messageKey.remoteJid) {
       this.logger.error(`[${this.id}] Crucial messageKey information (id, remoteJid) is missing. Cannot use /chat/getBase64FromMediaMessage.`);
@@ -718,7 +733,7 @@ class WhatsAppBotEvo {
         if (messageKey.participant) {
           payload.participant = messageKey.participant;
         }
-        this.logger.debug(`[${this.id}] Calling Evolution API POST endpoint: ${endpoint} with payload:`, payload);
+        this.logger.debug(`[${this.id}] Calling Evolution API POST endpoint: ${endpoint} with payload: ${this.shortJson(payload)}`);
 
         const response = await axios.post(endpoint, payload, {
           headers: {
@@ -880,7 +895,7 @@ class WhatsAppBotEvo {
 
 
       const response = await this.apiClient.post(endpoint, evoPayload);
-      console.log(`EVO- API posting, ${endpoint}`, evoPayload, response);
+      //this.logger.info(`EVO- API posting, ${endpoint}`, evoPayload, response);
 
       // Mimic whatsapp-web.js Message object structure for return (as much as useful)
       return {
@@ -1004,7 +1019,7 @@ class WhatsAppBotEvo {
           // Try to get Content-Type header if it's a direct download
           try {
               const headResponse = await axios.head(url);
-              console.log("mimetype do hedaer? ", headResponse);
+              this.logger.info("mimetype do hedaer? ", headResponse);
               mimetype = headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream';
           } catch(e) { /* ignore */ }
       }
@@ -1019,6 +1034,59 @@ class WhatsAppBotEvo {
   async getContactDetails(contactId) {
     if (!contactId) return null;
     try {
+      const number = contactId.split("@")[0];
+
+      let contato = this.getContactFromCache(number);
+      if(contato){
+        this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
+      } else {
+        this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
+        const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
+        if(profileData){
+          contato = {
+            isContact: false,
+            id: { _serialized: contactId },
+            name: profileData.name,
+            pushname: profileData.name,
+            number: number,
+            isUser: true,
+            status: profileData.status,
+            isBusiness: profileData.isBusiness,
+            picture: profileData.picture
+          };
+
+          this.putContactInCache(contato);
+          return contato;
+        } else {
+          this.logger.debug(`[getContactDetails][${this.id}] Não consegui pegar os dados para '${number}'`);
+          contato = {
+            isContact: false,
+            id: { _serialized: contactId },
+            name: `Nome ${contactId}`,
+            pushname: `Nome ${contactId}`,
+            number: contactId.split('@')[0],
+            isUser: true,
+            status: "",
+            isBusiness: false,
+            picture: ""
+          };
+        }
+      }
+
+      return contato;
+      /*
+      profileData
+      {
+        wuid: '555596792072@s.whatsapp.net',
+        name: 'moothz',
+        numberExists: true,
+        picture: 'https://pps.whatsapp.net/v/t61.24694-24/366408615_6228517803924212_5681812432108429726_n.jpg?ccb=11-4&oh=01_Q5Aa1gGsIN043_6xCmfA-TTP9uy_1ZSPWtWoZjCiQ1opre47HQ&oe=68458BB2&_nc_sid=5e03e0&_nc_cat=105',
+        status: { status: 'mude mesas', setAt: '2019-12-07T23:02:57.000Z' },
+        isBusiness: false
+      }
+      */
+      /*
+      // Aqui vem um array com todos os contatos do celular...
       this.logger.debug(`[${this.id}] Fetching contact details for: ${contactId}`);
       // Aqui vem um array com todos os contatos do celular...
       const contactsData = await this.apiClient.post(`/chat/findContacts`); // { where: {id: contactId} }
@@ -1046,13 +1114,70 @@ class WhatsAppBotEvo {
           isUser: true
         };
       }
+      */
     } catch (error) {
       this.logger.error(`[${this.id}] Failed to get contact details for ${contactId}:`, error);
       return { id: { _serialized: contactId }, name: contactId.split('@')[0], pushname: contactId.split('@')[0], number: contactId.split('@')[0], isUser: true, _isPartial: true }; // Basic fallback
     }
   }
 
-  
+  acceptInviteCode(inviteCode){
+    return new Promise(async (resolve, reject) => {
+      try{
+        this.logger.debug(`[acceptInviteCode][${this.instanceName}] '${inviteCode}'`);
+        const resp = await this.apiClient.get(`/group/acceptInviteCode`, { inviteCode });
+
+        resolve(resp.accepted);
+      } catch(e){
+        this.logger.warn(`[acceptInviteCode] Erro pegando invite info para '${inviteCode}'`);
+        reject(e);
+      }
+
+    });
+  }
+
+  inviteInfo(inviteCode){
+    return new Promise(async (resolve, reject) => {
+      try{
+        this.logger.debug(`[inviteInfo][${this.instanceName}] '${inviteCode}'`);
+        const inviteInfo = await this.apiClient.get(`/group/inviteInfo`, { inviteCode });
+        this.logger.info(`[inviteInfo] '${inviteCode}': ${JSON.stringify(inviteInfo)}`);
+
+        resolve(inviteInfo);
+      } catch(e){
+        this.logger.warn(`[inviteInfo] Erro pegando invite info para '${inviteCode}'`);
+        reject(e);
+      }
+
+    });
+  }
+
+  leaveGroup(groupJid){
+    try{
+      this.logger.debug(`[leaveGroup][${this.instanceName}] '${groupJid}'`);
+      this.apiClient.delete(`/group/leaveGroup`, { groupJid });
+    } catch(e){
+      this.logger.warn(`[leaveGroup] Erro saindo do grupo '${groupJid}'`, e);
+    }
+  }
+
+  updateProfilePicture(url){
+    try{
+      this.logger.debug(`[updateProfilePicture][${this.instanceName}] '${url}'`);
+      this.apiClient.post(`/chat/updateProfilePicture`, { picture: url });
+    } catch(e){
+      this.logger.warn(`[updateProfilePicture] Erro trocando imagem '${url}'`, e);
+    }
+  }
+
+  updateProfileStatus(status){
+    try{
+      this.logger.debug(`[updateProfileStatus][${this.instanceName}] '${status}'`);
+      this.apiClient.post(`/chat/updateProfileStatus`, { status });
+    } catch(e){
+      this.logger.warn(`[updateProfileStatus] Erro definindo status '${status}'`, status);
+    }
+  }
   async getChatDetails(chatId) {
     /*
 {
@@ -1090,7 +1215,12 @@ class WhatsAppBotEvo {
           id: { _serialized: groupData.id || chatId },
           name: groupData.subject,
           isGroup: true,
-          participants: groupData.participants, // Structure this as needed
+          participants: groupData.participants.map(p => {
+            return {
+              id: { _serialized: p.id.split("@")[0]+"@c.us" },
+              isAdmin: p.admin?.includes("admin") ?? false
+            }
+          }), // Structure this as needed
           // ... other group fields like description (subjectOwner, etc.)
           _rawEvoGroup: groupData
         };
