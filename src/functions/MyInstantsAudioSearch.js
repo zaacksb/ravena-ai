@@ -151,6 +151,19 @@ const commands = [
       error: "❌"
     },
     method: audioCommand
+  }),
+  new Command({
+    name: 'áudio',
+    hidden: true,
+    description: 'Busca um áudio no site MyInstants',
+    usage: '!audio <nome_do_áudio> <número>',
+    category: "busca",
+    reactions: {
+      before: "⏳",
+      after: "🔊",
+      error: "❌"
+    },
+    method: audioCommand
   })
 ];
 

@@ -17,7 +17,7 @@ class LLMService {
     this.deepseekKey = config.deepseekKey || process.env.DEEPSEEK_API_KEY;
     this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234/v1';
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
-    this.localModel = "gemma-3-4b-it-qat";
+    this.localModel = "qwen3-8b";
     
     /*  
     this.logger.debug('LLMService inicializado com configuração:', {
@@ -300,12 +300,19 @@ class LLMService {
           temperature: options.temperature || 0.7
         });
 
-        return await this.getCompletionFromSpecificProvider(options);
+        let response = await this.getCompletionFromSpecificProvider(options);
+        response = response.replace(/<think>.*?<\/think>/gs,"").trim();
+
+        return response;
       } 
       // Caso contrário, tente múltiplos provedores em sequência
       else {
         this.logger.debug('Nenhum provedor específico solicitado, tentando múltiplos provedores em sequência');
-        return await this.getCompletionFromProviders(options);
+
+        let response =  await this.getCompletionFromProviders(options);
+        response = response.replace(/<think>.*?<\/think>/gs,"").trim();
+
+        return response;
       }
     } catch (error) {
       this.logger.error('Erro ao obter completação:', error);

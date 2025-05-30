@@ -1,26 +1,33 @@
-const express = require('express');
-const axios = require('axios');
-const qrcode = require('qrcode-terminal');
-const path =require('path');
-const fs = require('fs'); // For createMedia, etc.
-const mime = require('mime-types'); // For createMedia
-
-const EvolutionApiClient = require('./services/evolutionApiClient'); // Adjust path if needed
-const Database = require('./utils/Database');
-const Logger = require('./utils/Logger');
-const LoadReport = require('./LoadReport');
-const ReactionsHandler = require('./ReactionsHandler');
-const MentionHandler = require('./MentionHandler');
-const InviteSystem = require('./InviteSystem');
-const StreamSystem = require('./StreamSystem'); // Will need significant review for Evo API context
-const LLMService = require('./services/LLMService');
-const AdminUtils = require('./utils/AdminUtils');
-const CacheManager = require('./services/CacheManager');
-const ReturnMessage = require('./models/ReturnMessage'); // Assuming it's in the same directory structure
-const { io } = require("socket.io-client");
 const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
+const qrcode = require('qrcode-terminal');
+const { randomBytes } = require('crypto');
+const ffmpeg = require('fluent-ffmpeg');
+const { promisify } = require('util');
+const express = require('express');
+const mime = require('mime-types');
+const axios = require('axios');
+const path =require('path');
+const fs = require('fs');
+const { io } = require("socket.io-client");
 
+const EvolutionApiClient = require('./services/evolutionApiClient');
+const CacheManager = require('./services/CacheManager');
+const ReturnMessage = require('./models/ReturnMessage');
+const ReactionsHandler = require('./ReactionsHandler');
+const LLMService = require('./services/LLMService');
+const MentionHandler = require('./MentionHandler');
+const AdminUtils = require('./utils/AdminUtils');
+const InviteSystem = require('./InviteSystem');
+const StreamSystem = require('./StreamSystem');
+const Database = require('./utils/Database');
+const LoadReport = require('./LoadReport');
+const Logger = require('./utils/Logger');
+
+// Utils
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const writeFileAsync = promisify(fs.writeFile);
+const readFileAsync = promisify(fs.readFile);
+const unlinkAsync = promisify(fs.unlink);
 
 class WhatsAppBotEvo {
   /**
@@ -166,12 +173,95 @@ class WhatsAppBotEvo {
     }
   }
 
+  async toGif(inputContent) {
+    let inputPath = inputContent;
+    let isTempFile = false;
+    const tempId = randomBytes(16).toString('hex'); // Generate a unique ID for temp files
+    const tempInputPath = path.join(__dirname, `${tempId}_input.mp4`); // __dirname might need adjustment based on your project structure
+    const tempOutputPath = path.join(__dirname, `${tempId}_output.gif`);
+
+    try {
+      // Check if inputContent is base64 or URL
+      if (!inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
+        // Assume it's base64, decode and write to a temporary file
+        const base64Data = inputContent.includes(',') ? inputContent.split(',')[1] : inputContent;
+        const buffer = Buffer.from(base64Data, 'base64');
+        await writeFileAsync(tempInputPath, buffer);
+        inputPath = tempInputPath;
+        isTempFile = true;
+        this.logger.info('[toGif] Input is base64, saved to temporary file:', tempInputPath);
+      } else {
+        this.logger.info('[toGif] Input is a URL:', inputPath);
+      }
+
+      this.logger.info('[toGif] Starting GIF conversion for:', inputPath);
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .outputOptions([
+            '-vf', 'fps=20,scale=512:-1:flags=lanczos', // Example: 10 fps, 320px width, maintain aspect ratio
+            '-loop', '0' // 0 for infinite loop, -1 for no loop, N for N loops
+          ])
+          .toFormat('gif')
+          .on('end', () => {
+            this.logger.info('[toGif] GIF conversion finished.');
+            resolve();
+          })
+          .on('error', (err) => {
+            this.logger.error('[toGif] Error during GIF conversion:', err.message);
+            reject(err);
+          })
+          .save(tempOutputPath);
+      });
+
+      this.logger.info('[toGif] GIF saved to temporary file:', tempOutputPath);
+
+      // Read the generated GIF and convert to base64
+      const gifBuffer = await readFileAsync(tempOutputPath);
+      const base64Gif = gifBuffer.toString('base64');
+      this.logger.info('[toGif] GIF converted to base64.');
+
+      return `data:image/gif;base64,${base64Gif}`;
+
+    } catch (error) {
+      this.logger.error('[toGif] Error in toGif function:', error);
+      throw error; // Re-throw the error to be caught by the caller
+    } finally {
+      // Clean up temporary files
+      if (isTempFile && fs.existsSync(tempInputPath)) {
+        try {
+          await unlinkAsync(tempInputPath);
+          this.logger.info('[toGif] Temporary input file deleted:', tempInputPath);
+        } catch (e) {
+          this.logger.error('[toGif] Error deleting temporary input file:', tempInputPath, e.message);
+        }
+      }
+      if (fs.existsSync(tempOutputPath)) {
+        try {
+          await unlinkAsync(tempOutputPath);
+          this.logger.info('[toGif] Temporary output file deleted:', tempOutputPath);
+        } catch (e) {
+          this.logger.error('[toGif] Error deleting temporary output file:', tempOutputPath, e.message);
+        }
+      }
+    }
+  }
+
   recoverFromCache(messageId){
     return new Promise(async (resolve, reject) => {
       try{
-        const msg = await this.cacheManager.getMessageFromCache(messageId);
-        const recovered = await this.formatMessageFromEvo(msg.evoMessageData); // Pra recriar os métodos
-        resolve(recovered);
+        if(!messageId){
+          resolve(null);
+        } else {
+          const msg = await this.cacheManager.getMessageFromCache(messageId);
+          const recovered = await this.formatMessageFromEvo(msg?.evoMessageData); // Pra recriar os métodos
+          if(!recovered){
+            this.logger.warn(`[recoverFromCache] A msg '${messageId}' do cache não tinha evoMessageData?`, msg);
+            resolve(msg);
+          } else {
+            resolve(recovered);
+          }
+        }
       } catch(e){
         this.logger.error(`[recoverFromCache] Erro recuperando msg '${messageId}'`, e);
         reject(e);
@@ -424,7 +514,7 @@ class WhatsAppBotEvo {
           // Marca msg como enviada, não faço ideia qual os status, não tem no doc
           // talvez venha em outro evento...
           if(incomingSentMessageData.status != "PENDING"){
-            console.log(`======STATUS====== ${incomingSentMessageData.status} ======STATUS=====`);
+            this.logger.info(`======STATUS====== ${incomingSentMessageData.status} ======STATUS=====`);
           }
 
           if(incomingSentMessageData.status === "DELIVERY_ACK"){
@@ -540,8 +630,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     return new Promise(async (resolve, reject) => { // Executor function is async to use await inside
       //this.logger.info(JSON.stringify(evoMessageData, null, "\t"));
       try {
-        const key = evoMessageData.key;
-        const waMessage = evoMessageData.message; // The actual message content part
+        const key = evoMessageData?.key;
+        const waMessage = evoMessageData?.message; // The actual message content part
         if (!key || !waMessage) {
           this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
           resolve(null);
@@ -882,7 +972,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
 
       // Não usar o formato completo: `data:${content.mimetype};base64,${content.data}`
-      const formattedContent = (content.data && content.data?.length > 10) ? content.data : content.url;
+      let formattedContent = (content.data && content.data?.length > 10) ? content.data : content.url;
 
       // Cada tipo de mensagem tem um endpoint diferente
       let endpoint = null;
@@ -906,7 +996,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           evoPayload.fileName = content.filename || `media.${mime.extension(content.mimetype) || 'bin'}`;
         }
 
+
         if (options.sendMediaAsSticker){
+          if(mediaType == 'video'){
+            formattedContent = await this.toGif(formattedContent);
+          }
           mediaType = 'sticker';
           endpoint = '/message/sendSticker';
           this.logger.debug(`[sendMessage] ${endpoint}`);
@@ -925,7 +1019,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           evoPayload.presence = "recording";
         } 
 
-        if (options.sendVideoAsGif && mediaType === 'video') evoPayload.isGif = true;
+        if (options.sendVideoAsGif && mediaType === 'video'){
+          formattedContent = await this.toGif(formattedContent);
+          evoPayload.isGif = true;
+        } 
+
         if (options.isViewOnce) evoPayload.viewOnce = true;
         evoPayload.mediatype = mediaType;
         //evoPayload.mimetype = content.mimetype;
@@ -1366,7 +1464,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async _handleGroupParticipantsUpdate(groupUpdateData) {
-    console.log(groupUpdateData);
+    this.logger.info(groupUpdateData);
 
     const groupId = groupUpdateData.id;
     const action = groupUpdateData.action;

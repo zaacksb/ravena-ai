@@ -53,7 +53,6 @@ async function aiCommand(bot, message, args, group) {
   }
 
   if (question.length < 5) {
-    logger.debug('Comando ai chamado sem pergunta');
     return new ReturnMessage({
       chatId: chatId,
       content: 'Por favor, forneça uma pergunta. Exemplo: !ai Qual é a capital da França?',
@@ -63,11 +62,11 @@ async function aiCommand(bot, message, args, group) {
     });
   }
   
-  logger.debug(`Comando ai com pergunta: ctx: ${ctxContent}, \n Prompt: '${question}'`);
+  //logger.debug(`Comando ai com pergunta: ctx: ${ctxContent}, \n Prompt: '${question}'`);
   
   // Obtém resposta da IA
   try {
-    logger.debug('Tentando obter completação LLM');
+    logger.debug('Tentando obter resposta do LLM');
     const response = await llmService.getCompletion({
       prompt: question,
       systemContext: ctxContent
