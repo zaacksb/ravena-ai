@@ -201,7 +201,10 @@ ${formattedMessages}
 Uma mensagem curta para interagir:`;
     
     // Obtém interação do LLM
-    const interaction = await llmService.getCompletion({ prompt: prompt });
+    const interaction = await llmService.getCompletion({ 
+      provider: "local",
+      prompt: prompt
+    });
     
     if (!interaction) {
       return new ReturnMessage({

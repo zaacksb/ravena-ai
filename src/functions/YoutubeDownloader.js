@@ -138,9 +138,7 @@ async function processYoutubeReaction(bot, message, emoji) {
           chatId: chatId,
           content: media,
           options: {
-            caption: result.legenda
-          },
-          options: {
+            caption: result.legenda,
             quotedMessageId: message.origin.id._serialized
           }
         });
@@ -377,9 +375,7 @@ async function ytCommand(bot, message, args, group) {
           chatId: chatId,
           content: media,
           options: {
-            caption: result.legenda
-          },
-          options: {
+            caption: result.legenda,
             quotedMessageId: message.origin.id._serialized
           }
         });
@@ -490,9 +486,7 @@ async function srCommand(bot, message, args, group) {
           chatId: chatId,
           content: media,
           options: {
-            caption: result.legenda
-          },
-          options: {
+            caption: result.legenda,
             quotedMessageId: message.origin.id._serialized
           }
         });

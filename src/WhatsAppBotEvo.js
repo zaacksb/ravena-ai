@@ -465,6 +465,8 @@ class WhatsAppBotEvo {
           // Simular que um membro foi add
           const groupUpsertData = payload.data[0];
           groupUpsertData.action = "add";
+          groupUpsertData.sender = payload.sender;
+          groupUpsertData.isBotJoining = true; // Pra saber se não foi o bot add no grupo
           if (groupUpsertData && groupUpsertData.id && groupUpsertData.action && groupUpsertData.participants) {
              this._handleGroupParticipantsUpdate(groupUpsertData);
           }
@@ -485,6 +487,7 @@ sender: '555596424307@s.whatsapp.net',
 apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           }*/
           const groupUpdateData = payload.data;
+          groupUpsertData.isBotJoining = false;
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
              this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
              this._handleGroupParticipantsUpdate(groupUpdateData);
@@ -1357,7 +1360,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
     const groupId = groupUpdateData.id;
     const action = groupUpdateData.action;
-    const participants = groupUpdateData.participants; // Array of JIDs
+    const participants = groupUpdateData.isBotJoining ? [{ id: `${this.phoneNumber}@s.whatsapp.net`, admin: null }] : groupUpdateData.participants; // Array of JIDs
 
     try {
         let groupName;
@@ -1368,8 +1371,17 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           const groupDetails = await this.getChatDetails(groupId);
           groupName = groupDetails?.name || groupId;
         }
-        const responsibleContact = await this.getContactDetails(groupUpdateData.author) ?? {id: groupUpdateData.author.split("@")[0]+"@c.us", name: "Admin do Grupo"};
-        for (const uid of participants) {
+
+        let gUpdAuthor;
+        if(groupUpdateData.author){
+          (typeof groupUpdateData.author === "object") ? groupUpdateData.author?.id : groupUpdateData.author;
+        } else {
+          gUpdAuthor = groupUpdateData.owner ?? "123456789@c.us";
+        }
+        
+        const responsibleContact = await this.getContactDetails(gUpdAuthor) ?? {id: gUpdAuthor.split("@")[0]+"@c.us", name: "Admin do Grupo"};
+
+        for (const uid of participants) { // Dispara 1x para cada participant add
             const userId = (typeof uid === "object") ? uid.id : uid;
             const userContact = await this.getContactDetails(userId);
             const eventData = {

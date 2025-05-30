@@ -349,7 +349,7 @@ class LLMService {
         return response.choices[0].message.content;
         
       case 'local':
-        response = await this.openAICompletion({ ...options, useLocal: true });
+        response = await this.openAICompletion({ ...options, useLocal: true, model: "hermes-3-llama-3.1-8b"});
         if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
           this.logger.error('Resposta inválida da API Local:', response);
           return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
