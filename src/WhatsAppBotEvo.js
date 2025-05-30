@@ -52,6 +52,7 @@ class WhatsAppBotEvo {
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
 
     this.redisURL = options.redisURL;
+    this.redisDB = options.redisDB || 0;
     this.redisTTL = options.redisTTL || 604800;
     this.maxCacheSize = 3000;
 
@@ -60,9 +61,10 @@ class WhatsAppBotEvo {
     this.contactCache = [];
     this.sentMessagesCache = [];
     this.cacheManager = new CacheManager(
-      this.redisURL,      
+      this.redisURL,     
+      this.redisDB,    
       this.redisTTL,
-      this.maxCacheSize   // e.g., 100 or from your bot's config
+      this.maxCacheSize 
     );
 
     if (!this.evolutionApiUrl || !this.evolutionApiKey || !this.instanceName || !this.webhookHost) {

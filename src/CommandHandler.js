@@ -8,6 +8,7 @@ const SuperAdmin = require('./commands/SuperAdmin');
 const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
 const ReturnMessage = require('./models/ReturnMessage');
 const AdminUtils = require('./utils/AdminUtils');
+const CacheManager = require('./services/CacheManager');
 
 class CommandHandler {
   constructor() {
