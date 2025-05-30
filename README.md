@@ -9,7 +9,10 @@
 RavenaBot é um bot para WhatsApp que vem sendo desenvolvido há quase 4 anos, apenas como uma brincadeira/hobby. Começou como um bot da twitch (pra aprender um pouco da API deles com python) e depois foi integrado ao WhatsApp (pra aprender sobre nodejs) - virando um _spaghetti code_ absurdo, aí veio a ideia de refazer todo o código do zero, mas com uma ajudinha especial dos LLM (pra ver o estado atual de criação de código assistido por IA).
 O foco deste bot é a utilização do mesmo em grupos, onde ele pode notificar status das lives, responder comandos com utilidades (!clima, !gpt, ..,), criar comandos personalizados do grupo (como nightbot, StreamElements, etc.).
 
-Este bot foi implemetado utilizando o [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js), que manipula o WhatsAppWeb através de um navegador controlado pelo puppeteer.
+Este bot foi implemetado utilizando duas tecnologias:
+- [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js): Manipula o WhatsAppWeb através de um navegador controlado pelo puppeteer, fácil de configurar, mas com muitas mensagens fica com delay, trava e/ou desconecta. **Recomendo** *muito* utilizar ele, pela facilidade de configurar.
+- [EvoutionAPI](github.com/EvolutionAPI/evolution-api): Os bots ficam logados no Evolution que utiliza o [Baileys](https://github.com/WhiskeySockets/Baileys), direto no websocket do whatsapp. Extremamente rápido e não dá delays (até agora), mais difícil de implementar
+
 Bots deste tipo **não são permitidos**, então não use em seu número principal - compre um chip só pra isso.
 
 
@@ -38,7 +41,7 @@ Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratui
 
 Lista completa do que já foi feito [aqui](docs/TODO.md)
 
-- [ ] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
+- [x] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
   - [x] Implementar wrappers pra todos os métodos do client usados
   - [x] Implementar wrappers pra todos os métodos do chat usados
   - [x] Implementar wrappers pra todos os métodos da Message usados
@@ -54,22 +57,25 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
   - [x] originReaction
   - [x] Testar todos os comandos
   - [x] setMessagesAdminsOnly
+  - [x] Cache de Msgs e Contatos do Redis
+  - [x] Evento send.message pra saber se foi enviada
+  - [ ] Block contatos
   - [ ] Eventos de connection
-  - [ ] Evento send.message pra saber se foi enviada
   - [ ] Enviar GIF
-  - [ ] cache com redis (incluir msgs do bot)
+  - [ ] Sticker Animado
+- [ ] Melhorias com redis
+  - [ ] Cache para !resumo e !interagir
+  - [ ] Cooldowns
 - [x] Melhor explicação da implementação do bot no README
 - [x] Fix Riot API
 - [x] Novo Jogo: Geoguesser
 - [x] Comandos sem prefixos no grupo
+- [x] Usar LLM pra gerar ajuda sobre os comandos (!ia como faço pra configurar twitch?)
+- [x] Novo Jogo: Stop/Adedonha
 - [ ] Add !info
-- [ ] Fix: SIGINT/SIGTERM não estão chegando/sendo executados
 - [ ] Bot tentando notificar sem estar nos grupos
-- [ ] Stickers quadrados videos não envia (client.sendMessage vs ffmpeg)
-- [ ] Novo Jogo: Stop/Adedonha
 - [ ] Novo Jogo: Anagrama
 - [ ] Novo Comando: busca no youtube
-- [ ] Comando: !ajuda [topico], usar LLM pra gerar ajuda sobre os comandos
 - [ ] Downloader de SocialMedias (Insta, TikTok - dificil pois bloqueiam)
 
 ## 🔧 Como hospedar sua própria ravena

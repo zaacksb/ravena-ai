@@ -64,26 +64,13 @@ class SuperAdmin {
   }
 
   async testeMsg(bot, message, args) {
+    const chatId = message.group || message.author;
     try{
+
       const resMsgValida = await bot.sendReturnMessages(new ReturnMessage({
-        chatId: bot.grupoLogs,
-        content: `Essa tem que chegar`
+        chatId: chatId,
+        content: `\`\`\`\n${JSON.stringify(message, null, "  ")}\`\`\``
       }));
-
-      const resMsgInvalida = await bot.sendReturnMessages(new ReturnMessage({
-        chatId: "120363046150405528@g.us",
-        content: `Essa tem que chegar`
-      }));
-
-      this.logger.debug(`[testeMsg] resMsgValida => `,resMsgValida[0]);
-      this.logger.debug(`[testeMsg] resMsgInvalida => `, resMsgInvalida[0]);
-
-      const infoResMsgValida = await resMsgValida[0].getInfo();
-      const infoResMsgInvalida = await resMsgInvalida[0].getInfo();
-
-      this.logger.debug(`[testeMsg] INFOresMsgValida => `,infoResMsgValida);
-      this.logger.debug(`[testeMsg] INFOresMsgInvalida => `, infoResMsgInvalida);
-
 
     } catch (error) {
       this.logger.error('Erro no comando testeMsg:', error);

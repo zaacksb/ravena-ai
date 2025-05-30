@@ -140,7 +140,7 @@ class WhatsAppBotEvo {
         return this.inviteInfo(arg);
       },
       getMessageById: async (messageId) => {
-        return await this.cacheManager.getMessageFromCache(messageId);
+        return await this.recoverFromCache(messageId);
       },
       setStatus: (arg) => {
         this.updateProfileStatus(arg);
@@ -164,6 +164,19 @@ class WhatsAppBotEvo {
         }
       }
     }
+  }
+
+  recoverFromCache(messageId){
+    return new Promise(async (resolve, reject) => {
+      try{
+        const msg = await this.cacheManager.getMessageFromCache(messageId);
+        const recovered = await this.formatMessageFromEvo(msg.evoMessageData); // Pra recriar os métodos
+        resolve(recovered);
+      } catch(e){
+        this.logger.error(`[recoverFromCache] Erro recuperando msg '${messageId}'`, e);
+        reject(e);
+      }
+    });
   }
 
   async initialize() {
@@ -352,7 +365,7 @@ class WhatsAppBotEvo {
     // }
 
     const payload = req.body;
-    this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
+    //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
     this.lastMessageReceived = Date.now();
 
     if (this.shouldDiscardMessage() && payload.event === 'messages.upsert') { // Only discard messages, not connection events
@@ -499,14 +512,13 @@ sender: '555596424307@s.whatsapp.net',
 apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           }*/
           const groupUpdateData = payload.data;
-          groupUpsertData.isBotJoining = false;
+          groupUpdateData.isBotJoining = false;
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
              this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
              this._handleGroupParticipantsUpdate(groupUpdateData);
           }
           break;
 
-        // Add other event cases: 'groups.update' (for subject changes etc.)
         default:
           this.logger.debug(`[${this.id}] Unhandled webhook event: ${payload.event}`);
       }
@@ -518,11 +530,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
   async formatMessage(data){
     // Usada no ReactionsHandler pq a message que vem lá era do wwebjs
-    // Agora o getMessageFromCache já retorna a mensagem formatada, não precisa formatar de novo
+    // Agora o cache já retorna a mensagem formatada, não precisa formatar de novo
     return data;
   }
 
-  formatMessageFromEvo(evoMessageData) {
+
+  formatMessageFromEvo(evoMessageData, skipCache = false) {
     // Explicitly return a new Promise
     return new Promise(async (resolve, reject) => { // Executor function is async to use await inside
       //this.logger.info(JSON.stringify(evoMessageData, null, "\t"));
@@ -531,11 +544,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         const waMessage = evoMessageData.message; // The actual message content part
         if (!key || !waMessage) {
           this.logger.warn(`[${this.id}] Incomplete Evolution message data for formatting:`, evoMessageData);
-          resolve(null); // Resolve with null
+          resolve(null);
         }
 
         const chatId = key.remoteJid;
         const isGroup = chatId.endsWith('@g.us');
+        let isSentMessage = false;
         // Added evoMessageData.author as a potential source
         let author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
 
@@ -545,6 +559,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
 
         if(evoMessageData.event === "send.message"){
+          isSentMessage = true;
           author = evoMessageData.sender.split("@")[0]+"@c.us";
         } else {
           // send.message é evento de enviadas, então se não for, recebeu uma
@@ -668,17 +683,22 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
                 });
               }
           }
-          resolve(null); // Resolve with null
+          resolve(null);
           return;
         }
         else {
-          this.logger.warn(`[${this.id}] Unhandled Evolution message type for ID ${key.id}:`, Object.keys(waMessage).join(', '));
-          content = `[Unsupported message type: ${Object.keys(waMessage).join(', ')}]`;
-          resolve(null); // Resolve with null
+          if(!isSentMessage){
+            this.logger.warn(`[${this.id}] Unhandled Evolution message type:`, Object.keys(waMessage).join(', '));
+          }
+          resolve(null);
           return;
         }
 
+        const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []).map(m => m.split("@")[0]+"@c.us");
+
+
         const formattedMessage = {
+          evoMessageData: evoMessageData, // pra ser recuperada no cache
           id: key.id,
           fromMe: evoMessageData.key.fromMe,
           group: isGroup ? chatId : null,
@@ -688,6 +708,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           type: type,
           content: content, 
           body: content,
+          mentions: mentions,
           caption: caption,
           origin: {}, 
           responseTime: responseTime,
@@ -727,7 +748,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
             }
         }
 
+
         formattedMessage.origin = {
+          mentionedIds: formattedMessage.mentions,
           id: { _serialized: `${evoMessageData.key.remoteJid}_${evoMessageData.key.fromMe}_${evoMessageData.key.id}`},
           author: formattedMessage.author,
           from: formattedMessage.from,
@@ -737,7 +760,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           getChat: formattedMessage.getChat,
           getQuotedMessage: async () => {
             const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
-            return await this.cacheManager.getMessageFromCache(quotedMsgId);
+            return await this.recoverFromCache(quotedMsgId);
           },
           delete: async () => {
             return this.deleteMessageByKey(evoMessageData.key);
@@ -746,7 +769,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           ...evoMessageData
         };
 
-        this.cacheManager.putMessageInCache(formattedMessage);
+        if(!skipCache){
+          this.cacheManager.putMessageInCache(formattedMessage);
+        }
         resolve(formattedMessage); // Resolve with the formatted message
 
       } catch (error) {
@@ -764,7 +789,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
-    this.logger.debug(`[${this.id}] Attempting to download media for: ${mediaInfo.filename} using messageKey: ${this.shortJson(messageKey)}`);
+    this.logger.debug(`[${this.id}] Download media for: ${mediaInfo.filename}`);
 
     if (!messageKey || !messageKey.id || !messageKey.remoteJid) {
       this.logger.error(`[${this.id}] Crucial messageKey information (id, remoteJid) is missing. Cannot use /chat/getBase64FromMediaMessage.`);
@@ -783,7 +808,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         if (messageKey.participant) {
           payload.participant = messageKey.participant;
         }
-        this.logger.debug(`[${this.id}] Calling Evolution API POST endpoint: ${endpoint} with payload: ${this.shortJson(payload)}`);
+        //this.logger.debug(`[${this.id}] Calling Evolution API POST endpoint: ${endpoint} with payload: ${this.shortJson(payload)}`);
 
         const response = await axios.post(endpoint, payload, {
           headers: {
@@ -1089,9 +1114,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       const number = contactId.split("@")[0];
 
       let contato = await this.cacheManager.getContactFromCache(number);
-      if(contato){
-        this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`, contato);
-      } else {
+        //this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
+      if(!contato){
         this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
         const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
         if(profileData){
@@ -1327,7 +1351,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           this.logger.warn(`[${this.id}] Cannot send reaction, not connected.`);
           return;
       }
-      this.logger.debug(`[${this.id}] Sending reaction '"${reaction}"' to message ${messageId} in chat ${chatId}`);
+      this.logger.debug(`[${this.id}] Sending reaction '"${reaction}"' in chat ${chatId}`);
       try {
           const payload = {
                 key: { remoteJid: chatId, id: messageId, fromMe: false }, 
