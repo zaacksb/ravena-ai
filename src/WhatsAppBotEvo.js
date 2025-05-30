@@ -15,6 +15,7 @@ const InviteSystem = require('./InviteSystem');
 const StreamSystem = require('./StreamSystem'); // Will need significant review for Evo API context
 const LLMService = require('./services/LLMService');
 const AdminUtils = require('./utils/AdminUtils');
+const CacheManager = require('./services/CacheManager');
 const ReturnMessage = require('./models/ReturnMessage'); // Assuming it's in the same directory structure
 const { io } = require("socket.io-client");
 const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
@@ -50,10 +51,19 @@ class WhatsAppBotEvo {
     this.webhookHost = options.webhookHost; // e.g., from cloudflared tunnel
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
 
+    this.redisURL = options.redisURL;
+    this.redisTTL = options.redisTTL || 604800;
+    this.maxCacheSize = 3000;
+
+
     this.messageCache = [];
     this.contactCache = [];
     this.sentMessagesCache = [];
-    this.maxCacheSize = 3000;
+    this.cacheManager = new CacheManager(
+      this.redisURL,      
+      this.redisTTL,
+      this.maxCacheSize   // e.g., 100 or from your bot's config
+    );
 
     if (!this.evolutionApiUrl || !this.evolutionApiKey || !this.instanceName || !this.webhookHost) {
         const errMsg = 'WhatsAppBotEvo: evolutionApiUrl, evolutionApiKey, instanceName, and webhookHost are required!';
@@ -127,8 +137,8 @@ class WhatsAppBotEvo {
       getInviteInfo: (arg) => {
         return this.inviteInfo(arg);
       },
-      getMessageById: (arg) => {
-        return this.getMessageFromCache(arg);
+      getMessageById: async (messageId) => {
+        return await this.cacheManager.getMessageFromCache(messageId);
       },
       setStatus: (arg) => {
         this.updateProfileStatus(arg);
@@ -403,7 +413,7 @@ class WhatsAppBotEvo {
           }
 
           if(incomingSentMessageData.status === "DELIVERY_ACK"){
-            this.sentMessagesCache.push(incomingSentMessageData.key);
+            this.cacheManager.putSentMessageInCache(incomingSentMessageData.key); // Vai ser usado pra ver se a mensagem foi enviada
           }
           break;
 
@@ -504,37 +514,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     res.sendStatus(200);
   }
 
-  putMessageInCache(data){
-    this.messageCache.push(data);
-    if(this.messageCache.length > this.maxCacheSize){
-      this.messageCache.shift();
-    }
-  }
-
-  getMessageFromCache(id){
-    //console.log("buscando msg no cache", id, "----------", this.messageCache, "----------");
-    if(id){
-      return this.messageCache.find(m => m.key.id == id);
-    } else {
-      return null;
-    }
-  }
-
-  putContactInCache(data){
-    this.contactCache.push(data);
-    if(this.contactCache.length > this.maxCacheSize){
-      this.contactCache.shift();
-    }
-  }
-
-  getContactFromCache(id){
-    if(id){
-      return this.contactCache.find(m => m.number == id);
-    } else {
-      return null;
-    }
-  }
-
   async formatMessage(data){
     // Usada no ReactionsHandler pq a message que vem lá era do wwebjs
     // Agora o getMessageFromCache já retorna a mensagem formatada, não precisa formatar de novo
@@ -558,17 +537,22 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         // Added evoMessageData.author as a potential source
         let author = isGroup ? (evoMessageData.author || key.participant || key.remoteJid) : key.remoteJid;
 
-        if(evoMessageData.event === "send.message"){
-          author = evoMessageData.sender.split("@")[0]+"@c.us";
-        }
-        const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
-        
         const messageTimestamp = typeof evoMessageData.messageTimestamp === 'number' 
             ? evoMessageData.messageTimestamp 
             : (typeof evoMessageData.messageTimestamp === 'string' ? parseInt(evoMessageData.messageTimestamp, 10) : Math.floor(Date.now()/1000));
         const responseTime = Math.max(0, this.getCurrentTimestamp() - messageTimestamp);
 
-        this.loadReport.trackReceivedMessage(isGroup, responseTime, chatId); // From original bot
+        if(evoMessageData.event === "send.message"){
+          author = evoMessageData.sender.split("@")[0]+"@c.us";
+        } else {
+          // send.message é evento de enviadas, então se não for, recebeu uma
+          this.loadReport.trackReceivedMessage(isGroup, responseTime, author);
+        }
+        const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
+        
+        
+
+        
 
         let type = 'unknown';
         let content = null;
@@ -751,7 +735,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           getChat: formattedMessage.getChat,
           getQuotedMessage: async () => {
             const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
-            return await this.getMessageFromCache(quotedMsgId);
+            return await this.cacheManager.getMessageFromCache(quotedMsgId);
           },
           delete: async () => {
             return this.deleteMessageByKey(evoMessageData.key);
@@ -760,7 +744,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           ...evoMessageData
         };
 
-        this.putMessageInCache(formattedMessage);
+        this.cacheManager.putMessageInCache(formattedMessage);
         resolve(formattedMessage); // Resolve with the formatted message
 
       } catch (error) {
@@ -1102,9 +1086,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     try {
       const number = contactId.split("@")[0];
 
-      let contato = this.getContactFromCache(number);
+      let contato = await this.cacheManager.getContactFromCache(number);
       if(contato){
-        this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
+        this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`, contato);
       } else {
         this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
         const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
@@ -1121,7 +1105,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
             picture: profileData.picture
           };
 
-          this.putContactInCache(contato);
+          this.cacheManager.putContactInCache(contato);
           return contato;
         } else {
           this.logger.debug(`[getContactDetails][${this.id}] Não consegui pegar os dados para '${number}'`);
@@ -1374,7 +1358,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         let gUpdAuthor;
         if(groupUpdateData.author){
-          (typeof groupUpdateData.author === "object") ? groupUpdateData.author?.id : groupUpdateData.author;
+          gUpdAuthor = (typeof groupUpdateData.author === "object") ? groupUpdateData.author?.id : groupUpdateData.author;
         } else {
           gUpdAuthor = groupUpdateData.owner ?? "123456789@c.us";
         }

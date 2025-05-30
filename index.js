@@ -94,6 +94,8 @@ async function main() {
         evoInstanceName: evolutionAPI ? rBot.nome : undefined,
         evolutionApiUrl: evolutionAPI ? process.env.EVOLUTION_API_URL : undefined,
         evolutionApiKey: evolutionAPI ? process.env.EVOLUTION_API_KEY : undefined,
+        redisURL: evolutionAPI ? process.envCACHE_REDIS_URI : undefined,
+        redisTTL: evolutionAPI ? process.envCACHE_REDIS_TTL : undefined,
         webhookHost: evolutionAPI ? process.env.EVO_WEBHOOK_HOST : undefined,
         webhookPort: evolutionAPI ? process.env.EVO_WEBHOOK_PORT : undefined
       });

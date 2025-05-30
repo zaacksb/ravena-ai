@@ -16,7 +16,8 @@ class LLMService {
     this.googleKey = config.googleKey || process.env.GOOGLE_API_KEY;
     this.deepseekKey = config.deepseekKey || process.env.DEEPSEEK_API_KEY;
     this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234/v1';
-    this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 10000;
+    this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
+    this.localModel = "gemma-3-4b-it-qat";
     
     /*  
     this.logger.debug('LLMService inicializado com configuração:', {
@@ -349,7 +350,7 @@ class LLMService {
         return response.choices[0].message.content;
         
       case 'local':
-        response = await this.openAICompletion({ ...options, useLocal: true, model: "hermes-3-llama-3.1-8b"});
+        response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
         if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
           this.logger.error('Resposta inválida da API Local:', response);
           return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
@@ -396,7 +397,7 @@ class LLMService {
       //   return response.choices[0].message.content;
       // }},
       { name: 'local', method: async () => {
-        const response = await this.openAICompletion({ ...options, useLocal: true, model: "hermes-3-llama-3.1-8b"});
+        const response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
         return response.choices[0].message.content;
       }}
     ];
