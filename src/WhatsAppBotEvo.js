@@ -8,6 +8,7 @@ const mime = require('mime-types');
 const axios = require('axios');
 const path =require('path');
 const fs = require('fs');
+const os = require('os');
 const { io } = require("socket.io-client");
 
 const EvolutionApiClient = require('./services/evolutionApiClient');
@@ -173,12 +174,320 @@ class WhatsAppBotEvo {
     }
   }
 
+  async convertToSquareWebPImage(base64ImageContent) {
+    let inputPath = ''; // Will be set to the path of the temporary input file
+    let isTempInputFile = false;
+    const tempId = randomBytes(16).toString('hex');
+    
+    // Use system's temporary directory for better portability
+    const tempDirectory = os.tmpdir();
+    // Using a generic extension like .tmp as ffmpeg will auto-detect the input format (JPG/PNG)
+    const tempInputPath = path.join(tempDirectory, `${tempId}_input.tmp`); 
+    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.webp`);
+
+    try {
+      // Validate and decode base64 input
+      if (!base64ImageContent || typeof base64ImageContent !== 'string') {
+        throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
+      }
+
+      this.logger.info('[toSquareWebPImage] Input is base64. Decoding and saving to temporary file...');
+      // Remove potential data URI prefix (e.g., "data:image/png;base64,")
+      const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
+      
+      if (!base64Data) {
+        throw new Error('Invalid base64ImageContent: Empty data after stripping prefix.');
+      }
+
+      const buffer = Buffer.from(base64Data, 'base64');
+      await writeFileAsync(tempInputPath, buffer);
+      inputPath = tempInputPath;
+      isTempInputFile = true;
+      this.logger.info('[toSquareWebPImage] Base64 input saved to temporary file:', tempInputPath);
+      
+      this.logger.info('[toSquareWebPImage] Starting square WebP image conversion for:', inputPath);
+
+      const targetSize = 512; // Target dimension for the square output
+
+      // ffmpeg filter to:
+      // 1. Scale the image to fit within targetSize x targetSize, preserving aspect ratio.
+      // 2. Pad the scaled image to targetSize x targetSize, centering it.
+      //    The padding color is set to transparent (black@0.0).
+      const videoFilter = `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0`;
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .outputOptions([
+            '-vf', videoFilter,       // Apply the scaling and padding filter
+            '-c:v', 'libwebp',        // Set the codec to libwebp
+            '-lossless', '0',         // Use lossy compression (0 for lossy, 1 for lossless). Lossy is often preferred for stickers for smaller file size.
+            '-q:v', '80',             // Quality for lossy WebP (0-100). Adjust for balance. Higher is better quality/larger file.
+            '-compression_level', '6',// Compression effort (0-6). Higher means more compression (smaller size) but slower.
+            // No animation-specific options like -loop, fps, etc.
+          ])
+          .toFormat('webp') // Output format
+          .on('end', () => {
+            this.logger.info('[toSquareWebPImage] Square WebP image conversion finished.');
+            resolve();
+          })
+          .on('error', (err) => {
+            let ffmpegCommand = '';
+            // fluent-ffmpeg might expose the command it tried to run in err.ffmpegCommand or similar
+            if (typeof err.spawnargs !== 'undefined') { // Check common property for spawn arguments
+                ffmpegCommand = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
+            }
+            this.logger.error(`[toSquareWebPImage] Error during WebP image conversion: ${err.message}. ${ffmpegCommand}`, err.stack);
+            reject(err);
+          })
+          .save(tempOutputPath);
+      });
+
+      this.logger.info('[toSquareWebPImage] Square WebP image saved to temporary file:', tempOutputPath);
+
+      // Read the generated WebP and convert to base64
+      const webpBuffer = await readFileAsync(tempOutputPath);
+      const base64WebP = webpBuffer.toString('base64');
+      this.logger.info('[toSquareWebPImage] Square WebP image converted to base64.');
+
+      return base64WebP; // Return raw base64 string
+
+    } catch (error) {
+      this.logger.error('[toSquareWebPImage] Error in convertToSquareWebPImage function:', error.message, error.stack);
+      throw error; // Re-throw the error to be caught by the caller
+    } finally {
+      // Clean up temporary files
+      if (isTempInputFile && fs.existsSync(tempInputPath)) {
+        try {
+          await unlinkAsync(tempInputPath);
+          this.logger.info('[toSquareWebPImage] Temporary input file deleted:', tempInputPath);
+        } catch (e) {
+          this.logger.error('[toSquareWebPImage] Error deleting temporary input file:', tempInputPath, e.message);
+        }
+      }
+      if (fs.existsSync(tempOutputPath)) { // Check existence before unlinking
+        try {
+          await unlinkAsync(tempOutputPath);
+          this.logger.info('[toSquareWebPImage] Temporary output file deleted:', tempOutputPath);
+        } catch (e) {
+          this.logger.error('[toSquareWebPImage] Error deleting temporary output file:', tempOutputPath, e.message);
+        }
+      }
+    }
+  }
+
+  async convertToSquareAnimatedGif(inputContent) {
+    let inputPath = inputContent;
+    let isTempInputFile = false;
+    const tempId = randomBytes(16).toString('hex');
+    
+    const tempInputDirectory = os.tmpdir();
+    const tempInputPath = path.join(tempInputDirectory, `${tempId}_input.tmp`); 
+    const tempOutputPath = path.join(tempInputDirectory, `${tempId}_output.gif`); // Output will be .gif
+
+    try {
+      if (inputContent && !inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
+        this.logger.info('[toSquareAnimatedGif] Input is base64. Decoding and saving to temporary file...');
+        const base64Data = inputContent.includes(',') ? inputContent.split(',')[1] : inputContent;
+        const buffer = Buffer.from(base64Data, 'base64');
+        await writeFileAsync(tempInputPath, buffer);
+        inputPath = tempInputPath;
+        isTempInputFile = true;
+        this.logger.info('[toSquareAnimatedGif] Base64 input saved to temporary file:', tempInputPath);
+      } else if (inputContent && (inputContent.startsWith('http://') || inputContent.startsWith('https://'))) {
+        this.logger.info('[toSquareAnimatedGif] Input is a URL:', inputPath);
+        // ffmpeg can handle URLs directly
+      } else {
+        throw new Error('Invalid inputContent provided. Must be a URL or base64 string.');
+      }
+
+      this.logger.info('[toSquareAnimatedGif] Starting square animated GIF conversion for:', inputPath);
+
+      const targetSize = 512;
+      const fps = 15; // WhatsApp tends to prefer 10-20 FPS for GIFs. 15 is a good compromise.
+
+      // Complex filter for scaling, padding, and GIF palette generation for transparency
+      // 1. Set FPS
+      // 2. Scale to fit targetSize, preserve aspect ratio
+      // 3. Pad to targetSize, center, use transparent background (black@0.0)
+      // 4. Generate a palette optimized for GIF transparency and animation
+      // 5. Apply the palette
+      const videoFilter = 
+        `fps=${fps},` +
+        `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,` +
+        `pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,` + // color=transparent also works for some ffmpeg versions
+        `split[s0][s1];[s0]palettegen=stats_mode=diff:max_colors=250:reserve_transparent=on[p];[s1][p]paletteuse=dither=bayer:alpha_threshold=128`;
+        // `max_colors=250` (max 256 for GIF, leaving some for safety/transparency)
+        // `reserve_transparent=on` is crucial for transparent backgrounds in GIFs.
+        // `stats_mode=diff` is often better for animations than 'full'.
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .outputOptions([
+            '-vf', videoFilter,
+            '-loop', '0',         // 0 for infinite loop
+            // GIF-specific options are mostly handled by the palettegen/paletteuse filters
+            // and .toFormat('gif')
+          ])
+          .toFormat('gif')
+          .on('end', () => {
+            this.logger.info('[toSquareAnimatedGif] Square animated GIF conversion finished.');
+            resolve();
+          })
+          .on('error', (err) => {
+            let ffmpegCommandDetails = '';
+            if (err.ffmpegCommand) { // fluent-ffmpeg might provide this
+                ffmpegCommandDetails = `FFmpeg command: ${err.ffmpegCommand}`;
+            } else if (err.spawnargs) {
+                ffmpegCommandDetails = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
+            }
+            this.logger.error(`[toSquareAnimatedGif] Error during GIF conversion: ${err.message}. ${ffmpegCommandDetails}`, err.stack);
+            reject(err);
+          })
+          .save(tempOutputPath);
+      });
+
+      this.logger.info('[toSquareAnimatedGif] Square animated GIF saved to temporary file:', tempOutputPath);
+
+      const gifBuffer = await readFileAsync(tempOutputPath);
+      
+      // Check file size - WhatsApp has limits for GIFs (often around 1MB, but can vary)
+      const fileSizeInMB = gifBuffer.length / (1024 * 1024);
+      this.logger.info(`[toSquareAnimatedGif] Output GIF file size: ${fileSizeInMB.toFixed(2)} MB`);
+      if (fileSizeInMB > 1.5) { // Example threshold, adjust as needed
+          this.logger.warn(`[toSquareAnimatedGif] WARNING: Output GIF size is ${fileSizeInMB.toFixed(2)} MB, which might be too large for WhatsApp.`);
+      }
+
+      const base64Gif = gifBuffer.toString('base64');
+      this.logger.info('[toSquareAnimatedGif] Square animated GIF converted to base64.');
+
+      return base64Gif;
+
+    } catch (error) {
+      this.logger.error('[toSquareAnimatedGif] Error in convertToSquareAnimatedGif function:', error.message, error.stack);
+      throw error;
+    } finally {
+      if (isTempInputFile && fs.existsSync(tempInputPath)) {
+        try {
+          await unlinkAsync(tempInputPath);
+          this.logger.info('[toSquareAnimatedGif] Temporary input file deleted:', tempInputPath);
+        } catch (e) {
+          this.logger.error('[toSquareAnimatedGif] Error deleting temporary input file:', tempInputPath, e.message);
+        }
+      }
+      if (fs.existsSync(tempOutputPath)) {
+        try {
+          await unlinkAsync(tempOutputPath);
+          this.logger.info('[toSquareAnimatedGif] Temporary output file deleted:', tempOutputPath);
+        } catch (e) {
+          this.logger.error('[toSquareAnimatedGif] Error deleting temporary output file:', tempOutputPath, e.message);
+        }
+      }
+    }
+  }
+
+  async convertToAnimatedWebP(inputContent) {
+    let inputPath = inputContent;
+    let isTempInputFile = false;
+    const tempId = randomBytes(16).toString('hex');
+    
+    const tempDirectory = os.tmpdir();
+    const tempInputPath = path.join(tempDirectory, `${tempId}_input.tmp`); 
+    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.webp`);
+
+    try {
+      if (inputContent && !inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
+        this.logger.info('[toAnimatedWebP] Input is base64. Decoding and saving to temporary file...');
+        const base64Data = inputContent.includes(',') ? inputContent.split(',')[1] : inputContent;
+        const buffer = Buffer.from(base64Data, 'base64');
+        await writeFileAsync(tempInputPath, buffer);
+        inputPath = tempInputPath;
+        isTempInputFile = true;
+        this.logger.info('[toAnimatedWebP] Base64 input saved to temporary file:', tempInputPath);
+      } else if (inputContent && (inputContent.startsWith('http://') || inputContent.startsWith('https://'))) {
+        this.logger.info('[toAnimatedWebP] Input is a URL:', inputPath);
+      } else {
+        throw new Error('Invalid inputContent provided. Must be a URL or base64 string.');
+      }
+
+      this.logger.info('[toAnimatedWebP] Starting square animated WebP conversion for:', inputPath);
+
+      // Define the target square dimensions
+      const targetSize = 512;
+
+      // Construct the complex video filter string
+      // 1. Set FPS
+      // 2. Scale to fit within targetSize x targetSize, preserving aspect ratio (lanczos for quality)
+      // 3. Pad to targetSize x targetSize, center content, fill with transparent background
+      // 4. Generate and use a palette for better WebP quality and transparency handling
+      const videoFilter = `fps=20,scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,split[s0][s1];[s0]palettegen=max_colors=250:reserve_transparent=on[p];[s1][p]paletteuse=dither=bayer:alpha_threshold=128`;
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .outputOptions([
+            '-vf', videoFilter,
+            '-loop', '0',
+            '-c:v', 'libwebp',
+            '-lossless', '0',
+            '-q:v', '75', // Quality for lossy WebP (0-100)
+            '-compression_level', '6', // Compression level (0-6)
+            '-preset', 'default',
+            '-an', // Remove audio
+            '-vsync', 'cfr', // Constant frame rate
+          ])
+          .toFormat('webp')
+          .on('end', () => {
+            this.logger.info('[toAnimatedWebP] Square animated WebP conversion finished.');
+            resolve();
+          })
+          .on('error', (err) => {
+            let ffmpegCommand = '';
+            if (err.ffmpegCommand) {
+                ffmpegCommand = `FFmpeg command: ${err.ffmpegCommand}`;
+            }
+            this.logger.error(`[toAnimatedWebP] Error during square WebP conversion: ${err.message}. ${ffmpegCommand}`, err.stack);
+            reject(err);
+          })
+          .save(tempOutputPath);
+      });
+
+      this.logger.info('[toAnimatedWebP] Square animated WebP saved to temporary file:', tempOutputPath);
+
+      const webpBuffer = await readFileAsync(tempOutputPath);
+      const base64WebP = webpBuffer.toString('base64');
+      this.logger.info('[toAnimatedWebP] Square animated WebP converted to base64.');
+
+      return base64WebP;
+
+    } catch (error) {
+      this.logger.error('[toAnimatedWebP] Error in convertToAnimatedWebP function:', error.message, error.stack);
+      throw error;
+    } finally {
+      if (isTempInputFile && fs.existsSync(tempInputPath)) {
+        try {
+          await unlinkAsync(tempInputPath);
+          this.logger.info('[toAnimatedWebP] Temporary input file deleted:', tempInputPath);
+        } catch (e) {
+          this.logger.error('[toAnimatedWebP] Error deleting temporary input file:', tempInputPath, e.message);
+        }
+      }
+      if (fs.existsSync(tempOutputPath)) {
+        try {
+          await unlinkAsync(tempOutputPath);
+          this.logger.info('[toAnimatedWebP] Temporary output file deleted:', tempOutputPath);
+        } catch (e) {
+          this.logger.error('[toAnimatedWebP] Error deleting temporary output file:', tempOutputPath, e.message);
+        }
+      }
+    }
+  }
+
   async toGif(inputContent) {
     let inputPath = inputContent;
     let isTempFile = false;
+    const tempDirectory = os.tmpdir();
     const tempId = randomBytes(16).toString('hex'); // Generate a unique ID for temp files
-    const tempInputPath = path.join(__dirname, `${tempId}_input.mp4`); // __dirname might need adjustment based on your project structure
-    const tempOutputPath = path.join(__dirname, `${tempId}_output.gif`);
+    const tempInputPath = path.join(tempDirectory, `${tempId}_input.mp4`);
+    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.gif`);
 
     try {
       // Check if inputContent is base64 or URL
@@ -994,9 +1303,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       if(options.evoReply){
         evoPayload.quoted = options.evoReply;
       }
+
       if(options.mentions && options.mentions.length > 0){
         evoPayload.mentioned = options.mentions.map(s => s.split('@')[0]);
       }
+
       if(options.quotedMsgId){
         // quotedMessageId: message.origin.id._serialized
         // Esse id serialized é xxx_xxx_key.id
@@ -1009,7 +1320,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
 
 
-      // Não usar o formato completo: `data:${content.mimetype};base64,${content.data}`
+      // Não usar o formato completo, apenas os dados `data:${content.mimetype};base64,${content.data}`
       let formattedContent = (content.data && content.data?.length > 10) ? content.data : content.url;
 
       // Cada tipo de mensagem tem um endpoint diferente
@@ -1034,17 +1345,21 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           evoPayload.fileName = content.filename || `media.${mime.extension(content.mimetype) || 'bin'}`;
         }
 
-
         if (options.sendMediaAsSticker){
-          if(mediaType == 'video'){
-            formattedContent = await this.toGif(formattedContent);
+          if(mediaType == 'video' || mediaType == 'gif'){
+            // Converter pra aceitar sticker animado
+            formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
+          } else {
+            // Essa lib estica as imagens de stickers, mas quero preservar como era antes
+            formattedContent = await this.convertToSquareWebPImage(formattedContent);
           }
-          mediaType = 'sticker';
+          //mediaType = 'sticker';
           endpoint = '/message/sendSticker';
           this.logger.debug(`[sendMessage] ${endpoint}`);
           evoPayload.sticker = formattedContent;
 
-          if ((options.stickerAuthor || options.stickerName || options.stickerCategories)) {
+          // Nao tem na evo? desabilitar
+          if (false && (options.stickerAuthor || options.stickerName || options.stickerCategories)) {
               if(options.stickerName) evoPayload.pack = options.stickerName;
               if(options.stickerAuthor) evoPayload.author = options.stickerAuthor;
               if(options.stickerCategories) evoPayload.categories = options.stickerCategories;
@@ -1058,17 +1373,17 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         } 
 
         if (options.sendVideoAsGif && mediaType === 'video'){
-          formattedContent = await this.toGif(formattedContent);
-          evoPayload.isGif = true;
+          formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
+          //evoPayload.gifPlayback = true;
         } 
 
         if (options.isViewOnce) evoPayload.viewOnce = true;
-        evoPayload.mediatype = mediaType;
-        //evoPayload.mimetype = content.mimetype;
 
         if(options.caption && options.caption.length > 0){
           evoPayload.caption = options.caption;
         }
+
+        //evoPayload.mediatype = mediaType;
         
         if(!evoPayload.sticker && !evoPayload.audio){ // sticker e audio no endpoint não usam o 'media'
           evoPayload.media = formattedContent;
@@ -1248,49 +1563,66 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
     let contactId = (typeof cid === "object") ? cid.id : cid;
     try {
-      const number = contactId.split("@")[0];
+      let contato;
+      if(contactId.includes("@lid")){ // COisas misteriosas
+        this.logger.debug(`[getContactDetails][${this.id}] IGNORING contact with LID: ${contactId}`);
+        contato = {
+          isContact: false,
+          id: { _serialized: contactId },
+          name: `Pessoa Misteriosa`,
+          pushname: `Pessoa Misteriosa`,
+          number: contactId.split('@')[0],
+          isUser: true,
+          status: "",
+          isBusiness: false,
+          picture: ""
+        };
+      } else {
+        const number = contactId.split("@")[0];
+        contato = await this.recoverContactFromCache(number);
 
-      let contato = await this.recoverContactFromCache(number);
-        //this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
-      if(!contato){
-        this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
-        const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
-        if(profileData){
-          contato = {
-            isContact: false,
-            id: { _serialized: contactId },
-            name: profileData.name,
-            pushname: profileData.name,
-            number: number,
-            isUser: true,
-            status: profileData.status,
-            isBusiness: profileData.isBusiness,
-            picture: profileData.picture,
-            block: async () => {
-              return await this.setCttBlockStatus(number, "block");
-            },
-            unblock: async () => {
-              return await this.setCttBlockStatus(number, "unblock");
-            }
-          };
+        if(!contato){
+          this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
+          const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
+          if(profileData){
+            contato = {
+              isContact: false,
+              id: { _serialized: contactId },
+              name: profileData.name,
+              pushname: profileData.name,
+              number: number,
+              isUser: true,
+              status: profileData.status,
+              isBusiness: profileData.isBusiness,
+              picture: profileData.picture,
+              block: async () => {
+                return await this.setCttBlockStatus(number, "block");
+              },
+              unblock: async () => {
+                return await this.setCttBlockStatus(number, "unblock");
+              }
+            };
 
-          this.cacheManager.putContactInCache(contato);
-          return contato;
-        } else {
-          this.logger.debug(`[getContactDetails][${this.id}] Não consegui pegar os dados para '${number}'`);
-          contato = {
-            isContact: false,
-            id: { _serialized: contactId },
-            name: `Nome ${contactId}`,
-            pushname: `Nome ${contactId}`,
-            number: contactId.split('@')[0],
-            isUser: true,
-            status: "",
-            isBusiness: false,
-            picture: ""
-          };
+            this.cacheManager.putContactInCache(contato);
+            return contato;
+          } else {
+            this.logger.debug(`[getContactDetails][${this.id}] Não consegui pegar os dados para '${contactId}'`);
+            contato = {
+              isContact: false,
+              id: { _serialized: contactId },
+              name: `Pessoa Misteriosa`,
+              pushname: `Pessoa Misteriosa`,
+              number: contactId.split('@')[0],
+              isUser: true,
+              status: "",
+              isBusiness: false,
+              picture: ""
+            };
+          }
         }
       }
+      
+      //this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
 
       return contato;
       /*
