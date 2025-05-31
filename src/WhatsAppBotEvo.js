@@ -147,7 +147,7 @@ class WhatsAppBotEvo {
         return this.inviteInfo(arg);
       },
       getMessageById: async (messageId) => {
-        return await this.recoverFromCache(messageId);
+        return await this.recoverMsgFromCache(messageId);
       },
       setStatus: (arg) => {
         this.updateProfileStatus(arg);
@@ -221,7 +221,7 @@ class WhatsAppBotEvo {
       const base64Gif = gifBuffer.toString('base64');
       this.logger.info('[toGif] GIF converted to base64.');
 
-      return `data:image/gif;base64,${base64Gif}`;
+      return base64Gif; // 'data:image/gif;base64,' não inclui
 
     } catch (error) {
       this.logger.error('[toGif] Error in toGif function:', error);
@@ -247,7 +247,7 @@ class WhatsAppBotEvo {
     }
   }
 
-  recoverFromCache(messageId){
+  recoverMsgFromCache(messageId){
     return new Promise(async (resolve, reject) => {
       try{
         if(!messageId){
@@ -256,14 +256,42 @@ class WhatsAppBotEvo {
           const msg = await this.cacheManager.getMessageFromCache(messageId);
           const recovered = await this.formatMessageFromEvo(msg?.evoMessageData); // Pra recriar os métodos
           if(!recovered){
-            this.logger.warn(`[recoverFromCache] A msg '${messageId}' do cache não tinha evoMessageData?`, msg);
+            this.logger.warn(`[recoverMsgFromCache] A msg '${messageId}' do cache não tinha evoMessageData?`, msg);
             resolve(msg);
           } else {
             resolve(recovered);
           }
         }
       } catch(e){
-        this.logger.error(`[recoverFromCache] Erro recuperando msg '${messageId}'`, e);
+        this.logger.error(`[recoverMsgFromCache] Erro recuperando msg '${messageId}'`, e);
+        reject(e);
+      }
+    });
+  }
+
+  recoverContactFromCache(number){
+    return new Promise(async (resolve, reject) => {
+      try{
+        if(!number){
+          resolve(null);
+        } else {
+          const contact = await this.cacheManager.getContactFromCache(number);
+          
+          if(contact){
+            contact.block = async () => {
+              return await this.setCttBlockStatus(contact.number, "block");
+            };
+            contact.unblock = async () => {
+              return await this.setCttBlockStatus(contact.number, "unblock");
+            };
+
+            resolve(contact);
+          } else {
+            resolve(null);
+          }
+        }
+      } catch(e){
+        this.logger.error(`[recoverContactFromCache] Erro recuperando contato '${number}'`, e);
         reject(e);
       }
     });
@@ -850,7 +878,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           getChat: formattedMessage.getChat,
           getQuotedMessage: async () => {
             const quotedMsgId = evoMessageData.contextInfo?.quotedMessage ? evoMessageData.contextInfo?.stanzaId : null;
-            return await this.recoverFromCache(quotedMsgId);
+            return await this.recoverMsgFromCache(quotedMsgId);
           },
           delete: async () => {
             return this.deleteMessageByKey(evoMessageData.key);
@@ -969,6 +997,16 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       if(options.mentions && options.mentions.length > 0){
         evoPayload.mentioned = options.mentions.map(s => s.split('@')[0]);
       }
+      if(options.quotedMsgId){
+        // quotedMessageId: message.origin.id._serialized
+        // Esse id serialized é xxx_xxx_key.id
+        const mentionedKey = options.quotedMsgId.split("_")[2]; 
+        if(mentionedKey){
+          evoPayload.quoted = { key: { id: mentionedKey } };
+        } else {
+          this.logger.info(`[sendMessage] quotedMsgId: ${options.quotedMsgId}, não tem key?`);
+        }
+      }
 
 
       // Não usar o formato completo: `data:${content.mimetype};base64,${content.data}`
@@ -1063,7 +1101,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         evoPayload.values = content.pollOptions;
       } else {
         this.logger.error(`[${this.id}] sendMessage: Unhandled content type for Evolution API. Content:`, content);
-        throw new Error('Unhandled content type for Evolution API');
+        //throw new Error('Unhandled content type for Evolution API');
+        return;
       }
 
 
@@ -1211,7 +1250,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     try {
       const number = contactId.split("@")[0];
 
-      let contato = await this.cacheManager.getContactFromCache(number);
+      let contato = await this.recoverContactFromCache(number);
         //this.logger.debug(`[getContactDetails][${this.id}] Dados do cache para '${number}'`);
       if(!contato){
         this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
@@ -1226,7 +1265,13 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
             isUser: true,
             status: profileData.status,
             isBusiness: profileData.isBusiness,
-            picture: profileData.picture
+            picture: profileData.picture,
+            block: async () => {
+              return await this.setCttBlockStatus(number, "block");
+            },
+            unblock: async () => {
+              return await this.setCttBlockStatus(number, "unblock");
+            }
           };
 
           this.cacheManager.putContactInCache(contato);
@@ -1293,6 +1338,21 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       this.logger.error(`[${this.id}] Failed to get contact details for ${contactId}:`, error);
       return { id: { _serialized: contactId }, name: contactId.split('@')[0], pushname: contactId.split('@')[0], number: contactId.split('@')[0], isUser: true, _isPartial: true }; // Basic fallback
     }
+  }
+
+  setCttBlockStatus(ctt, blockStatus){
+    return new Promise(async (resolve, reject) => {
+      try{
+        this.logger.debug(`[setCttBlockStatus][${this.instanceName}] '${ctt}' => '${blockStatus}'`);
+        const resp = await this.apiClient.post(`/message/updateBlockStatus`, { number: ctt, status: blockStatus });
+
+        resolve(resp.accepted);
+      } catch(e){
+        this.logger.warn(`[setCttBlockStatus] Erro setando blockStatus ${blockStatus} para '${ct}'`);
+        reject(e);
+      }
+
+    });
   }
 
   acceptInviteCode(inviteCode){

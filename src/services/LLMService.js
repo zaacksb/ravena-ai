@@ -301,7 +301,7 @@ class LLMService {
         });
 
         let response = await this.getCompletionFromSpecificProvider(options);
-        response = response.replace(/<think>.*?<\/think>/gs,"").trim();
+        response = response.replace(/<think>.*?<\/think>/gs, "").trim().replace(/^"|"$/g, ""); // Remove tags de think e frase entre aspas
 
         return response;
       } 
@@ -310,7 +310,7 @@ class LLMService {
         this.logger.debug('Nenhum provedor específico solicitado, tentando múltiplos provedores em sequência');
 
         let response =  await this.getCompletionFromProviders(options);
-        response = response.replace(/<think>.*?<\/think>/gs,"").trim();
+        response = response.replace(/<think>.*?<\/think>/gs, "").trim().replace(/^"|"$/g, ""); // Remove tags de think e frase entre aspas
 
         return response;
       }

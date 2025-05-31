@@ -85,6 +85,3 @@ module.exports = {
     start,
     organizeLogs // Exposing organizeLogs allows for manual triggering if needed
 };
-
-
-organizeLogs();
