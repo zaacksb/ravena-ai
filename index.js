@@ -52,6 +52,8 @@ async function main() {
 
     let redisDbAtual = 0;
     for(let rBot of rBots){
+      if(!rBot.enabled) continue;
+      
       const newRBot = new WhatsAppBot({
         id: rBot.nome,
         phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
@@ -95,13 +97,15 @@ async function main() {
         
         // EvolutionAPI
         evoInstanceName: evolutionAPI ? rBot.nome : undefined,
+        evolutionWS: evolutionAPI ? process.env.EVOLUTION_WS : undefined,
         evolutionApiUrl: evolutionAPI ? process.env.EVOLUTION_API_URL : undefined,
         evolutionApiKey: evolutionAPI ? process.env.EVOLUTION_API_KEY : undefined,
         redisURL: evolutionAPI ? process.env.CACHE_REDIS_URI : undefined,
         redisTTL: evolutionAPI ? process.env.CACHE_REDIS_TTL : undefined,
         redisDB: evolutionAPI ? redisDbAtual : undefined,
+        useWebsocket: evolutionAPI ? rBot.useWebsocket : process.env.EVO_USE_WEBSOCKET,
         webhookHost: evolutionAPI ? process.env.EVO_WEBHOOK_HOST : undefined,
-        webhookPort: evolutionAPI ? process.env.EVO_WEBHOOK_PORT : undefined
+        webhookPort: evolutionAPI ? rBot.webhookPort : process.env.EVO_WEBHOOK_PORT
       });
       
       newRBot.initialize();

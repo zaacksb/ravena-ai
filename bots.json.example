@@ -1,9 +1,12 @@
 [
    {
+    "enabled": true,
     "nome": "ravenabot",
     "numero": "559912345678",
     "ignorePV": false,
     "ignoreInvites": false,
-    "customPrefix": "!"
+    "customPrefix": "!",
+    "webhookPort": 3450,
+    "useWebsocket": true
    }
 ]

@@ -51,8 +51,8 @@ class WhatsAppBotEvo {
     this.eventHandler = options.eventHandler;
     this.prefix = options.prefix || process.env.DEFAULT_PREFIX || '!';
     this.logger = new Logger(`bot-evo-${this.id}`);
-    
-    this.websocket = true;
+    this.websocket = options.useWebsocket ?? false;
+    this.evolutionWS = options.evolutionWS;
     this.evolutionApiUrl = options.evolutionApiUrl;
     this.evolutionApiKey = options.evolutionApiKey;
     this.instanceName = options.evoInstanceName;
@@ -708,7 +708,10 @@ class WhatsAppBotEvo {
   }
 
   async initialize() {
-    this.logger.info(`Initializing Evolution API bot instance ${this.id} (Evo Instance: ${this.instanceName}@${this.webhookPort})`);
+    const wsUrl = `${this.evolutionWS}/${this.instanceName}`;
+
+    const instanceDesc = this.websocket ? `Websocket to ${wsUrl}` : `Webhook on ${this.instanceName}:${this.webhookPort}`; 
+    this.logger.info(`Initializing Evolution API bot instance ${this.id} (Evo Instance: ${instanceDesc})`);
     this.database.registerBotInstance(this);
     this.startupTime = Date.now();
 
@@ -716,7 +719,7 @@ class WhatsAppBotEvo {
       // 1. Setup Webhook Server OR Websocket connection
       if(this.websocket){
         this.logger.info(`Usar websocket`);
-        const socket = io(`wss://evo-ravena.moothz.win/${this.instanceName}`, {
+        const socket = io(wsUrl, {
           transports: ['websocket']
         });
 
@@ -743,6 +746,25 @@ class WhatsAppBotEvo {
 
           this.handleWebsocket(data);
         });
+
+        /*
+{
+  event: 'contacts.update',
+  instance: 'ravena5',
+  data: {
+    remoteJid: '120363419136690677@g.us',
+    pushName: 'thur',
+    profilePicUrl: 'https://pps.whatsapp.net/v/t61.24694-24/491873879_682709417977241_6996710407633107392_n.jpg?ccb=11-4&oh=01_Q5Aa1gEbquJJ4ACmZNCLVVM5GVC7ovHNTLYASKJklr9nYWBMEQ&oe=68496F52&_nc_sid=5e03e0&_nc_cat=105',
+    instanceId: '73edb4c1-ba23-4b09-b7d0-cf54da0a0eb6'
+  },
+  server_url: 'http://localhost:7654',
+  date_time: '2025-06-01T11:08:25.047Z',
+  sender: '555591537296@s.whatsapp.net',
+}
+*/
+        // socket.on('contacts.update', (data) => {
+        //   this.logger.info('contacts.update', data);
+        // });
 
         socket.on('send.message', (data) => {
           this.handleWebsocket(data);
@@ -820,9 +842,9 @@ class WhatsAppBotEvo {
       this.logger.info(`Instance ${this.instanceName} state: ${instanceDetails?.instance?.state}`, instanceDetails?.instance);
 
       const state = (instanceDetails?.instance?.state ?? "error").toUpperCase();
-      if (state === 'CONNECTED') {
+      if (state === 'CONNECTED' || state === 'OPEN') { // open não era pra ser
         this._onInstanceConnected();
-      } else if (state === 'OPEN' || state === 'CONNECTING' || state === 'PAIRING' || !state /* if undefined, try to connect */) {
+      } else if (state === 'CONNECTING' || state === 'PAIRING' || !state /* if undefined, try to connect */) {
         this.logger.info(`Instance ${this.instanceName} is not connected (state: ${state}). Attempting to connect...`);
         const connectData = await this.apiClient.get(`/instance/connect`, {number: this.phoneNumber});
 
@@ -996,7 +1018,7 @@ class WhatsAppBotEvo {
       subjectTime: 1748560136,
       size: 2,
       creation: 1745262897,
-      owner: '555596792072@s.whatsapp.net',
+      owner: '555598273712@s.whatsapp.net',
       desc: 'canal para inscritos na twitch do muutiz',
       descId: '8F5C7FE14D2F39D2',
       restrict: false,
@@ -1006,7 +1028,7 @@ class WhatsAppBotEvo {
       joinApprovalMode: false,
       memberAddMode: true,
       participants: [Array],
-      author: '555596792072@s.whatsapp.net'
+      author: '555598273712@s.whatsapp.net'
     }
   ],
   server_url: 'http://localhost:4567',
@@ -1030,7 +1052,7 @@ event: 'group-participants.update',
 instance: 'ravena-testes',
 data: {
   id: '120363402005217365@g.us',
-  author: '555596792072@s.whatsapp.net',
+  author: '555598273712@s.whatsapp.net',
   participants: [ '559591146078@s.whatsapp.net' ],
   action: 'remove'
 },
@@ -1729,7 +1751,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       /*
       profileData
       {
-        wuid: '555596792072@s.whatsapp.net',
+        wuid: '555598273712@s.whatsapp.net',
         name: 'moothz',
         numberExists: true,
         picture: 'https://pps.whatsapp.net/v/t61.24694-24/366408615_6228517803924212_5681812432108429726_n.jpg?ccb=11-4&oh=01_Q5Aa1gGsIN043_6xCmfA-TTP9uy_1ZSPWtWoZjCiQ1opre47HQ&oe=68458BB2&_nc_sid=5e03e0&_nc_cat=105',
