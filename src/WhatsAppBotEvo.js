@@ -11,7 +11,7 @@ const fs = require('fs');
 const os = require('os');
 const { io } = require("socket.io-client");
 
-const EvolutionApiClient = require('./services/evolutionApiClient');
+const EvolutionApiClient = require('./services/EvolutionApiClient');
 const CacheManager = require('./services/CacheManager');
 const ReturnMessage = require('./models/ReturnMessage');
 const ReactionsHandler = require('./ReactionsHandler');
