@@ -275,6 +275,107 @@ class WhatsAppBotEvo {
     }
   }
 
+  async convertToSquarePNGImage(base64ImageContent) {
+    let inputPath = ''; // Will be set to the path of the temporary input file
+    let isTempInputFile = false;
+    const tempId = randomBytes(16).toString('hex');
+    
+    // Use system's temporary directory for better portability
+    const tempDirectory = os.tmpdir();
+    // Using a generic extension like .tmp as ffmpeg will auto-detect the input format (JPG/PNG)
+    const tempInputPath = path.join(tempDirectory, `${tempId}_input.tmp`); 
+    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.webp`);
+
+    try {
+      // Validate and decode base64 input
+      if (!base64ImageContent || typeof base64ImageContent !== 'string') {
+        throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
+      }
+
+      this.logger.info('[convertToSquarePNGImage] Input is base64. Decoding and saving to temporary file...');
+      // Remove potential data URI prefix (e.g., "data:image/png;base64,")
+      const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
+      
+      if (!base64Data) {
+        throw new Error('Invalid base64ImageContent: Empty data after stripping prefix.');
+      }
+
+      const buffer = Buffer.from(base64Data, 'base64');
+      await writeFileAsync(tempInputPath, buffer);
+      inputPath = tempInputPath;
+      isTempInputFile = true;
+      this.logger.info('[convertToSquarePNGImage] Base64 input saved to temporary file:', tempInputPath);
+      
+      this.logger.info('[convertToSquarePNGImage] Starting square PNG image conversion for:', inputPath);
+
+      const targetSize = 512; // Target dimension for the square output
+
+      // ffmpeg filter to:
+      // 1. Scale the image to fit within targetSize x targetSize, preserving aspect ratio.
+      // 2. Pad the scaled image to targetSize x targetSize, centering it.
+      //    The padding color is set to transparent (black@0.0).
+      const videoFilter = `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0`;
+
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+          .outputOptions([
+            '-vf', videoFilter,       // Apply the scaling and padding filter
+            '-c:v', 'libwebp',        // Set the codec to libwebp
+            '-lossless', '0',         // Use lossy compression (0 for lossy, 1 for lossless). Lossy is often preferred for stickers for smaller file size.
+            '-q:v', '80',             // Quality for lossy WebP (0-100). Adjust for balance. Higher is better quality/larger file.
+            '-compression_level', '6',// Compression effort (0-6). Higher means more compression (smaller size) but slower.
+            // No animation-specific options like -loop, fps, etc.
+          ])
+          .toFormat('webp') // Output format
+          .on('end', () => {
+            this.logger.info('[convertToSquarePNGImage] Square PNG image conversion finished.');
+            resolve();
+          })
+          .on('error', (err) => {
+            let ffmpegCommand = '';
+            // fluent-ffmpeg might expose the command it tried to run in err.ffmpegCommand or similar
+            if (typeof err.spawnargs !== 'undefined') { // Check common property for spawn arguments
+                ffmpegCommand = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
+            }
+            this.logger.error(`[toSquareWebPImage] Error during WebP image conversion: ${err.message}. ${ffmpegCommand}`, err.stack);
+            reject(err);
+          })
+          .save(tempOutputPath);
+      });
+
+      this.logger.info('[convertToSquarePNGImage] Square PNG image saved to temporary file:', tempOutputPath);
+
+      // Read the generated WebP and convert to base64
+      const webpBuffer = await readFileAsync(tempOutputPath);
+      const base64WebP = webpBuffer.toString('base64');
+      this.logger.info('[convertToSquarePNGImage] Square PNG image converted to base64.');
+
+      return base64WebP; // Return raw base64 string
+
+    } catch (error) {
+      this.logger.error('[convertToSquarePNGImage] Error in convertToSquarePNGImage function:', error.message, error.stack);
+      throw error; // Re-throw the error to be caught by the caller
+    } finally {
+      // Clean up temporary files
+      if (isTempInputFile && fs.existsSync(tempInputPath)) {
+        try {
+          await unlinkAsync(tempInputPath);
+          this.logger.info('[convertToSquarePNGImage] Temporary input file deleted:', tempInputPath);
+        } catch (e) {
+          this.logger.error('[convertToSquarePNGImage] Error deleting temporary input file:', tempInputPath, e.message);
+        }
+      }
+      if (fs.existsSync(tempOutputPath)) { // Check existence before unlinking
+        try {
+          await unlinkAsync(tempOutputPath);
+          this.logger.info('[convertToSquarePNGImage] Temporary output file deleted:', tempOutputPath);
+        } catch (e) {
+          this.logger.error('[convertToSquarePNGImage] Error deleting temporary output file:', tempOutputPath, e.message);
+        }
+      }
+    }
+  }
+
   async convertToSquareAnimatedGif(inputContent) {
     let inputPath = inputContent;
     let isTempInputFile = false;
@@ -1351,7 +1452,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
             formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
           } else {
             // Essa lib estica as imagens de stickers, mas quero preservar como era antes
-            formattedContent = await this.convertToSquareWebPImage(formattedContent);
+            formattedContent = await this.convertToSquarePNGImage(formattedContent);
           }
           //mediaType = 'sticker';
           endpoint = '/message/sendSticker';
@@ -1383,7 +1484,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           evoPayload.caption = options.caption;
         }
 
-        //evoPayload.mediatype = mediaType;
+        evoPayload.mediatype = mediaType;
         
         if(!evoPayload.sticker && !evoPayload.audio){ // sticker e audio no endpoint não usam o 'media'
           evoPayload.media = formattedContent;
