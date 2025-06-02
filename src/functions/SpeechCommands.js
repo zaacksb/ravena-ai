@@ -22,6 +22,8 @@ const llmService = new LLMService({});
 const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
 const allTalkAPI = process.env.ALLTALK_API || 'http://localhost:7851/';
 
+const runOn = process.env.WHISPER_USE_GPU ? "" : "--device cpu";
+
 const whisperPath = process.env.WHISPER;
 
 // Definição dos personagens para TTS
@@ -48,7 +50,7 @@ fs.mkdir(tempDir, { recursive: true })
     logger.error('Erro ao criar diretório temporário:', error);
   });
 
-logger.info(`Módulo SpeechCommands carregado, whisperPath: ${whisperPath}`);
+logger.info(`Módulo SpeechCommands carregado, whisperPath: ${whisperPath} ${runOn}`);
 
 /**
  * Obtém mídia da mensagem
@@ -334,7 +336,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
     
     // Execute whisper diretamente
     // Usar o modelo large-v3-turbo e definir o idioma para português
-    const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo --language pt --output_dir "${tempDir}" --output_format txt`;
+    const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo ${runOn} --language pt --output_dir "${tempDir}" --output_format txt`;
     
     logger.debug(`[speechToText] Executando comando: ${whisperCommand}`);
     
