@@ -391,10 +391,10 @@ class LLMService {
   async getCompletionFromProviders(options) {
     // Lista de provedores para tentar em ordem
     const providers = [
-      { name: 'gemini', method: async () => {
-        const response = await this.geminiCompletion(options);
-        return response.candidates[0].content.parts[0].text;
-      }},
+      // { name: 'gemini', method: async () => {
+      //   const response = await this.geminiCompletion(options);
+      //   return response.candidates[0].content.parts[0].text;
+      // }},
       // { name: 'deepseek-r1', method: async () => {
       //   const response = await this.deepseekCompletion({...options, version: 'v1'});
       //   return response.choices[0].message.content;
