@@ -390,7 +390,7 @@ async function runTests() {
     await new Promise(resolve => setTimeout(resolve, 5000));
     logger.info('sending');
 
-    await simulator.simulateTextMessage(testUser, testGroup, '!presente');
+    await simulator.simulateTextMessage(testUser, testGroup, '!metar SBPA');
 
   
     //logger.info('joining');    
