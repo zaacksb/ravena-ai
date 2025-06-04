@@ -3,12 +3,8 @@ require('dotenv').config();
 
 const evolutionAPI = process.env.USE_EVOLUTION ?? false;
 
-let WhatsAppBot;
-if(evolutionAPI){
-  WhatsAppBot = require('./src/WhatsAppBotEvo');
-} else {
-  WhatsAppBot = require('./src/WhatsAppBot');
-}
+const WhatsAppBotEvo = require('./src/WhatsAppBotEvo');
+const WhatsAppBot = require('./src/WhatsAppBot');
 
 const EventHandler = require('./src/EventHandler');
 const Logger = require('./src/utils/Logger');
@@ -54,67 +50,96 @@ async function main() {
     for(let rBot of rBots){
       if(!rBot.enabled) continue;
       
-      const newRBot = new WhatsAppBot({
-        id: rBot.nome,
-        phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
-        eventHandler: eventHandler,
-        stabilityMonitor: stabilityMonitor,
-        prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
-        otherBots: rBots.map(rB => rB.numero),
-        // Configurações de puppeteer
-        puppeteerOptions: {
-          executablePath: chromePath || undefined,
-          args: [
-            '--no-sandbox', 
-            '--disable-setuid-sandbox', 
-            '--disable-extensions', 
-            '--disable-gpu', 
-            '--disable-accelerated-2d-canvas', 
-            '--no-first-run', 
-            '--no-zygote', 
-            '--disable-dev-shm-usage',
-            '--disable-session-crashed-bubble',
-            '--start-maximized',
-            '--disable-prompt-on-repost',
-            '--disable-beforeunload',
-            '--disable-features=InfiniteSessionRestore',
-            `--window-name=${rBot.nome}`
+      let newRBot;
+      if(rBot.useEvo){
+        logger.info(`Inicializando '${rBot.nome}' como evolutionAPI`);
+        newRBot = new WhatsAppBotEvo({
+          id: rBot.nome,
+          phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+          eventHandler: eventHandler,
+          stabilityMonitor: stabilityMonitor,
+          prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
+          otherBots: rBots.map(rB => rB.numero),
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
+          ignorePV: rBot.ignorePV ?? false,
+          ignoreInvites: rBot.ignoreInvites ?? false,
 
-          ],
-          headless: headlessMode
-        },
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
-        ignorePV: rBot.ignorePV ?? false,
-        ignoreInvites: rBot.ignoreInvites ?? false,
-        // IDs dos grupos para notificações da comunidade
-        grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
-        grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
-        grupoInvites: rBot.grupoInvites ?? process.env.GRUPO_INVITES,
-        grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
-        grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
-        linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
-        linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS,
-        
-        // EvolutionAPI
-        evoInstanceName: evolutionAPI ? rBot.nome : undefined,
-        evolutionWS: evolutionAPI ? process.env.EVOLUTION_WS : undefined,
-        evolutionApiUrl: evolutionAPI ? process.env.EVOLUTION_API_URL : undefined,
-        evolutionApiKey: evolutionAPI ? process.env.EVOLUTION_API_KEY : undefined,
-        redisURL: evolutionAPI ? process.env.CACHE_REDIS_URI : undefined,
-        redisTTL: evolutionAPI ? process.env.CACHE_REDIS_TTL : undefined,
-        redisDB: evolutionAPI ? redisDbAtual : undefined,
-        useWebsocket: evolutionAPI ? rBot.useWebsocket : process.env.EVO_USE_WEBSOCKET,
-        webhookHost: evolutionAPI ? process.env.EVO_WEBHOOK_HOST : undefined,
-        webhookPort: evolutionAPI ? rBot.webhookPort : process.env.EVO_WEBHOOK_PORT
-      });
-      
-      newRBot.initialize();
-      await sleep(500);
-      botInstances.push(newRBot);
-      redisDbAtual++;
-      if(redisDbAtual === 6){ // Skip 6 usado no Evo
-        redisDbAtual = 7;
+          // IDs dos grupos para notificações da comunidade
+          grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
+          grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
+          grupoInvites: rBot.grupoInvites ?? process.env.GRUPO_INVITES,
+          grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
+          grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
+          linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
+          linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS,
+          
+          // EvolutionAPI
+          evoInstanceName: rBot.nome,
+          evolutionWS: process.env.EVOLUTION_WS,
+          evolutionApiUrl: process.env.EVOLUTION_API_URL,
+          evolutionApiKey: process.env.EVOLUTION_API_KEY,
+          redisURL: process.env.CACHE_REDIS_URI,
+          redisTTL: process.env.CACHE_REDIS_TTL,
+          redisDB: redisDbAtual,
+          useWebsocket: rBot.useWebsocket ?? process.env.EVO_USE_WEBSOCKET,
+          webhookHost: process.env.EVO_WEBHOOK_HOST,
+          webhookPort: rBot.webhookPort ?? process.env.EVO_WEBHOOK_PORT
+        });
+
+        redisDbAtual++;
+        if(redisDbAtual === 6){ // Skip 6 usado no Evo
+          redisDbAtual = 7;
+        }
+
+        newRBot.initialize();
+      } else {
+        logger.info(`Inicializando '${rBot.nome}' como whatsapp-web.js`);
+        newRBot = new WhatsAppBot({
+          id: rBot.nome,
+          phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
+          eventHandler: eventHandler,
+          stabilityMonitor: stabilityMonitor,
+          prefix: rBot.customPrefix || process.env.DEFAULT_PREFIX || '!',
+          otherBots: rBots.map(rB => rB.numero),
+          // Configurações de puppeteer
+          puppeteerOptions: {
+            executablePath: chromePath || undefined,
+            args: [
+              '--no-sandbox', 
+              '--disable-setuid-sandbox', 
+              '--disable-extensions', 
+              '--disable-gpu', 
+              '--disable-accelerated-2d-canvas', 
+              '--no-first-run', 
+              '--no-zygote', 
+              '--disable-dev-shm-usage',
+              '--disable-session-crashed-bubble',
+              '--start-maximized',
+              '--disable-prompt-on-repost',
+              '--disable-beforeunload',
+              '--disable-features=InfiniteSessionRestore',
+              `--window-name=${rBot.nome}`
+
+            ],
+            headless: headlessMode
+          },
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0",
+          ignorePV: rBot.ignorePV ?? false,
+          ignoreInvites: rBot.ignoreInvites ?? false,
+          // IDs dos grupos para notificações da comunidade
+          grupoEstabilidade: rBot.grupoEstabilidade ?? process.env.GRUPO_ESTABILIDADE,
+          grupoLogs: rBot.grupoLogs ?? process.env.GRUPO_LOGS,
+          grupoInvites: rBot.grupoInvites ?? process.env.GRUPO_INVITES,
+          grupoAvisos: rBot.grupoAvisos ?? process.env.GRUPO_AVISOS,
+          grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
+          linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
+          linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS
+        });
+        newRBot.initialize();
+        await sleep(500);
       }
+      
+      botInstances.push(newRBot);
     }
     
 
