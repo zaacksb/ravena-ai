@@ -891,7 +891,6 @@ class WhatsAppBotEvo {
 
     const payload = req.body;
     //this.logger.debug(`[${this.id}] ${socket ? 'Websocket' : 'Webhook'} received: Event: ${payload.event}, Instance: ${payload.instance}`, payload.data?.key?.id || payload.data?.id);
-    this.lastMessageReceived = Date.now();
 
     if (this.shouldDiscardMessage() && payload.event === 'messages.upsert') { // Only discard messages, not connection events
       this.logger.debug(`[${this.id}] Discarding webhook message during initial ${this.id} startup period.`);
@@ -958,6 +957,7 @@ class WhatsAppBotEvo {
           break;
 
         case 'messages.upsert':
+          this.lastMessageReceived = Date.now();
           const incomingMessageData = Array.isArray(payload.data) ? payload.data[0] : payload.data;
           if (incomingMessageData && incomingMessageData.key) {
             // Basic filtering (from original bot)
