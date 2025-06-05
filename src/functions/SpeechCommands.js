@@ -457,7 +457,7 @@ async function processAutoSTT(bot, message, group) {
     
     const idChat = message.group ?? message.author;
     // Pula se não for mensagem de voz/áudio
-    if (message.type !== 'voice' && message.type !== 'audio') {
+    if (message.type !== 'voice' && message.type !== 'audio' && message.type !== 'ptt') {
       return false;
     }
     
