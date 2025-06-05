@@ -59,22 +59,17 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
   - [x] setMessagesAdminsOnly
   - [x] Cache de Msgs e Contatos do Redis
   - [x] Evento send.message pra saber se foi enviada
-  - [ ] Block contatos
+  - [x] Enviar GIF
+  - [ ] Block/unblock contatos
   - [ ] Eventos de connection
-  - [ ] Enviar GIF
   - [ ] Sticker Animado
 - [ ] Melhorias com redis
   - [ ] Cache para !resumo e !interagir
   - [ ] Cooldowns
-- [x] Melhor explicação da implementação do bot no README
-- [x] Fix Riot API
-- [x] Novo Jogo: Geoguesser
-- [x] Comandos sem prefixos no grupo
-- [x] Usar LLM pra gerar ajuda sobre os comandos (!ia como faço pra configurar twitch?)
-- [x] Novo Jogo: Stop/Adedonha
-- [ ] Add !info
+- [ ] Add !g-resetFaladores
 - [ ] Bot tentando notificar sem estar nos grupos
 - [ ] Novo Jogo: Anagrama
+- [ ] FIx Reactions
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok - dificil pois bloqueiam)
 
@@ -88,7 +83,7 @@ Sem isso, não vai dar pra rodar o bot.
 * Um servidor capaz de rodar o nodejs e todas as dependências
 * Um celular com whatsapp ativo (NÃO USE O SEU CHIP!)
 * [Node.js](https://nodejs.org/)
-* [Google Chrome](https://www.google.com/chrome/): Para poder enviar vídeos é necessário o Chrome
+* [Google Chrome](https://www.google.com/chrome/): Para poder enviar vídeos é necessário o Chrome (somente para whatsapp-web.js)
 * [FFmpeg](https://ffmpeg.org/download.html): (para processamento de áudio e vídeo)
 
 ### Requisitos Recomendados

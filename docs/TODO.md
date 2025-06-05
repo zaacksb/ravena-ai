@@ -73,10 +73,6 @@
     - [x] Não permitir mudar fixedCommands
     - [x] Coisas dos jogos, no código dos jogos
 - [x] Add alguns checks do modelo Command direto no executeFixedCommand (isAdmin, etc.)
-
-
-
-## ✅ TODO-FIX
 - [X] Fix respostas LLM não chegarem pelo OpenRouter
 - [X] Fix boas vindas enviando mesmo sem setar
 - [x] Fix emojis e reações que o claude criou estranhos
@@ -113,8 +109,6 @@
     - [ ] Gerador de código de mockup para os tutoriais
     - [ ] Tutoriais
 - [x] Fix reset do ranking de pesca
-
-## ✅ TODO-Extras
 - [x] Interface web para status dos bots
     - [x] Interface web para administração
 - [x] Emoji Kitchen
@@ -122,3 +116,4 @@
 - [x] Novo Jogo: Pinto
 - [x] Novo Comando: Msgs anônimas
 - [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
+## ✅ TODO-FIX
