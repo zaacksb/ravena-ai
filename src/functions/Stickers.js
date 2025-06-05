@@ -493,12 +493,14 @@ async function squareStickerCommand(bot, message, args, group, cropType) {
         stickerName: stickerName,
         quotedMessageId: quotedMessageId
       }
-    }),
+    })];
+    /*
+    ,
     new ReturnMessage({
       chatId: chatId,
       content: processedMedia
     })
-    ];
+    */
   } catch (error) {
     logger.error(`Erro ao criar sticker quadrado (${cropType}):`, error);
     

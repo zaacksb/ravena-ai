@@ -6,6 +6,7 @@ const { promisify } = require('util');
 const express = require('express');
 const mime = require('mime-types');
 const axios = require('axios');
+const sharp = require('sharp');
 const path =require('path');
 const fs = require('fs');
 const os = require('os');
@@ -276,15 +277,8 @@ class WhatsAppBotEvo {
   }
 
   async convertToSquarePNGImage(base64ImageContent) {
-    let inputPath = ''; // Will be set to the path of the temporary input file
-    let isTempInputFile = false;
+    // tempId can still be useful for logging traceability, even without temp files
     const tempId = randomBytes(16).toString('hex');
-    
-    // Use system's temporary directory for better portability
-    const tempDirectory = os.tmpdir();
-    // Using a generic extension like .tmp as ffmpeg will auto-detect the input format (JPG/PNG)
-    const tempInputPath = path.join(tempDirectory, `${tempId}_input.tmp`); 
-    const tempOutputPath = path.join(tempDirectory, `${tempId}_output.webp`);
 
     try {
       // Validate and decode base64 input
@@ -292,87 +286,68 @@ class WhatsAppBotEvo {
         throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
       }
 
-      this.logger.info('[convertToSquarePNGImage] Input is base64. Decoding and saving to temporary file...');
-      // Remove potential data URI prefix (e.g., "data:image/png;base64,")
+      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Input is base64. Decoding...`);
       const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
-      
+
       if (!base64Data) {
         throw new Error('Invalid base64ImageContent: Empty data after stripping prefix.');
       }
 
-      const buffer = Buffer.from(base64Data, 'base64');
-      await writeFileAsync(tempInputPath, buffer);
-      inputPath = tempInputPath;
-      isTempInputFile = true;
-      this.logger.info('[convertToSquarePNGImage] Base64 input saved to temporary file:', tempInputPath);
-      
-      this.logger.info('[convertToSquarePNGImage] Starting square PNG image conversion for:', inputPath);
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Base64 decoded to buffer. Input buffer length: ${imageBuffer.length}`);
 
       const targetSize = 512; // Target dimension for the square output
+      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Starting square PNG image conversion with Sharp. Target size: ${targetSize}x${targetSize}`);
 
-      // ffmpeg filter to:
-      // 1. Scale the image to fit within targetSize x targetSize, preserving aspect ratio.
-      // 2. Pad the scaled image to targetSize x targetSize, centering it.
-      //    The padding color is set to transparent (black@0.0).
-      const videoFilter = `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0`;
+      // 1. Resize the image to fit within targetSize, preserving aspect ratio.
+      //    'sharp.fit.inside' is equivalent to ffmpeg's 'force_original_aspect_ratio=decrease'.
+      //    'withoutEnlargement: true' ensures images smaller than targetSize are not scaled up.
+      //    'kernel: sharp.kernel.lanczos3' uses Lanczos3 for high-quality resizing.
+      const resizedImageBuffer = await sharp(imageBuffer)
+        .resize({
+          width: targetSize,
+          height: targetSize,
+          fit: sharp.fit.inside,
+          withoutEnlargement: true,
+          kernel: sharp.kernel.lanczos3,
+        })
+        .toBuffer(); // Get the resized image as a buffer
 
-      await new Promise((resolve, reject) => {
-        ffmpeg(inputPath)
-          .outputOptions([
-            '-vf', videoFilter,       // Apply the scaling and padding filter
-            '-c:v', 'libwebp',        // Set the codec to libwebp
-            '-lossless', '0',         // Use lossy compression (0 for lossy, 1 for lossless). Lossy is often preferred for stickers for smaller file size.
-            '-q:v', '80',             // Quality for lossy WebP (0-100). Adjust for balance. Higher is better quality/larger file.
-            '-compression_level', '6',// Compression effort (0-6). Higher means more compression (smaller size) but slower.
-            // No animation-specific options like -loop, fps, etc.
-          ])
-          .toFormat('webp') // Output format
-          .on('end', () => {
-            this.logger.info('[convertToSquarePNGImage] Square PNG image conversion finished.');
-            resolve();
-          })
-          .on('error', (err) => {
-            let ffmpegCommand = '';
-            // fluent-ffmpeg might expose the command it tried to run in err.ffmpegCommand or similar
-            if (typeof err.spawnargs !== 'undefined') { // Check common property for spawn arguments
-                ffmpegCommand = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
-            }
-            this.logger.error(`[toSquareWebPImage] Error during WebP image conversion: ${err.message}. ${ffmpegCommand}`, err.stack);
-            reject(err);
-          })
-          .save(tempOutputPath);
-      });
+      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Image resized with Sharp.`);
 
-      this.logger.info('[convertToSquarePNGImage] Square PNG image saved to temporary file:', tempOutputPath);
+      // 2. Create a new transparent square canvas and composite the resized image onto it.
+      //    The 'gravity: sharp.gravity.center' option will center the resized image.
+      //    The background '{ r: 0, g: 0, b: 0, alpha: 0 }' makes the padding transparent.
+      const finalImageBuffer = await sharp({
+        create: {
+          width: targetSize,
+          height: targetSize,
+          channels: 4, // 4 channels for RGBA (to support transparency)
+          background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
+        }
+      })
+      .composite([{
+        input: resizedImageBuffer,    // The buffer of the resized image
+        gravity: sharp.gravity.center // Center the image on the new canvas
+      }])
+      .png({
+        // PNG specific options for compression:
+        compressionLevel: 6, // zlib compression level (0-9), default is 6. Higher is smaller but slower.
+        adaptiveFiltering: true // Use adaptive row filtering for potentially smaller file size.
+      })
+      .toBuffer();
 
-      // Read the generated WebP and convert to base64
-      const webpBuffer = await readFileAsync(tempOutputPath);
-      const base64WebP = webpBuffer.toString('base64');
-      this.logger.info('[convertToSquarePNGImage] Square PNG image converted to base64.');
+      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Square PNG image created and composited with Sharp.`);
 
-      return base64WebP; // Return raw base64 string
+      // Convert the final image buffer to a base64 string
+      const base64Png = finalImageBuffer.toString('base64');
+      this.logger.info(`[convertToSquarePNGImage] [${tempId}] Final PNG image converted to base64.`);
+
+      return base64Png; // Return raw base64 string
 
     } catch (error) {
-      this.logger.error('[convertToSquarePNGImage] Error in convertToSquarePNGImage function:', error.message, error.stack);
+      this.logger.error(`[convertToSquarePNGImage] [${tempId}] Error during Sharp processing: ${error.message}`, error.stack);
       throw error; // Re-throw the error to be caught by the caller
-    } finally {
-      // Clean up temporary files
-      if (isTempInputFile && fs.existsSync(tempInputPath)) {
-        try {
-          await unlinkAsync(tempInputPath);
-          this.logger.info('[convertToSquarePNGImage] Temporary input file deleted:', tempInputPath);
-        } catch (e) {
-          this.logger.error('[convertToSquarePNGImage] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-      if (fs.existsSync(tempOutputPath)) { // Check existence before unlinking
-        try {
-          await unlinkAsync(tempOutputPath);
-          this.logger.info('[convertToSquarePNGImage] Temporary output file deleted:', tempOutputPath);
-        } catch (e) {
-          this.logger.error('[convertToSquarePNGImage] Error deleting temporary output file:', tempOutputPath, e.message);
-        }
-      }
     }
   }
 
@@ -1472,10 +1447,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           if(mediaType == 'video' || mediaType == 'gif'){
             // Converter pra aceitar sticker animado
             formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
+            mediaType = "image"; // Teste
           } else {
             // Essa lib estica as imagens de stickers, mas quero preservar como era antes
             formattedContent = await this.convertToSquarePNGImage(formattedContent);
           }
+
           //mediaType = 'sticker';
           endpoint = '/message/sendSticker';
           this.logger.debug(`[sendMessage] ${endpoint}`);
@@ -1497,7 +1474,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         if (options.sendVideoAsGif && mediaType === 'video'){
           formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
-          //evoPayload.gifPlayback = true;
+          mediaType = "image"; // GIF precisa ser enviado como imagem
         } 
 
         if (options.isViewOnce) evoPayload.viewOnce = true;
