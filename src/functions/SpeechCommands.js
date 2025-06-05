@@ -475,7 +475,8 @@ async function processAutoSTT(bot, message, group) {
     logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no chat ${idChat}`);
     
     // Salva áudio em arquivo temporário
-    const audioPath = await saveMediaToTemp(message.content, 'ogg');
+    const media = await message.downloadMedia();
+    const audioPath = await saveMediaToTemp(media, 'ogg');
     
     // Converte para formato WAV para melhor compatibilidade
     const wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
