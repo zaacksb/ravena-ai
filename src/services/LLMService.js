@@ -50,7 +50,7 @@ class LLMService {
       this.logger.debug('Enviando solicitação para API OpenRouter:', { 
         model: options.model || 'google/gemini-2.0-flash-exp:free',
         promptLength: options.prompt.length,
-        maxTokens: options.maxTokens || 1000
+        maxTokens: options.maxTokens || 5000
       });
 
       const response = await axios.post(
@@ -60,7 +60,7 @@ class LLMService {
           messages: [
             { role: 'user', content: options.prompt }
           ],
-          max_tokens: options.maxTokens || 1000,
+          max_tokens: options.maxTokens || 5000,
           temperature: options.temperature || 0.7
         },
         {
@@ -181,7 +181,7 @@ class LLMService {
         model: model,
         version: options.version || 'v3',
         promptLength: options.prompt.length,
-        maxTokens: options.maxTokens || 1000
+        maxTokens: options.maxTokens || 5000
       });
 
       const response = await axios.post(
@@ -191,7 +191,7 @@ class LLMService {
           messages: [
             { role: 'user', content: options.prompt }
           ],
-          max_tokens: options.maxTokens || 1000,
+          max_tokens: options.maxTokens || 5000,
           temperature: options.temperature || 0.7
         },
         {
@@ -243,7 +243,7 @@ class LLMService {
         endpoint,
         model: options.model || 'gpt-3.5-turbo',
         promptLength: options.prompt.length,
-        maxTokens: options.maxTokens || 1000 
+        maxTokens: options.maxTokens || 5000 
       });
 
       const ctxInclude = options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz";
@@ -253,10 +253,10 @@ class LLMService {
         {
           model: options.model || 'gpt-3.5-turbo',
           messages: [
-            //{ role: 'system', content: options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz" },
-            { role: 'user', content: `${ctxInclude} ${options.prompt}` }
+            { role: 'system', content: ctxInclude },
+            { role: 'user', content: options.prompt }
           ],
-          max_tokens: options.maxTokens || 1000,
+          max_tokens: options.maxTokens || 5000,
           temperature: options.temperature || 0.7
         },
         {
