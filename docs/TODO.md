@@ -116,4 +116,26 @@
 - [x] Novo Jogo: Pinto
 - [x] Novo Comando: Msgs anônimas
 - [x] Nova função Streams: Alterar imagem do grupo quando fica on/off
-## ✅ TODO-FIX
+
+## ✅ MIGRAÇÃO para EvolutionAPI
+
+- [x] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
+  - [x] Implementar wrappers pra todos os métodos do client usados
+  - [x] Implementar wrappers pra todos os métodos do chat usados
+  - [x] Implementar wrappers pra todos os métodos da Message usados
+  - [x] Aceitar convites
+  - [x] Sair de grupo
+  - [x] Alterar Status
+  - [x] Recebendo mensagens
+  - [x] Enviando mensagens
+  - [x] Apagando mensagens
+  - [x] Fix get Contact
+  - [x] Troca titulos do grupo
+  - [x] Verifica se é admin
+  - [x] originReaction
+  - [x] Testar todos os comandos
+  - [x] setMessagesAdminsOnly
+  - [x] Cache de Msgs e Contatos do Redis
+  - [x] Evento send.message pra saber se foi enviada
+  - [x] Enviar GIF
+  - [x] Block/unblock contatos

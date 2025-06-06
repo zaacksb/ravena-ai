@@ -42,34 +42,15 @@ Se você quer interagir com o bot e testar ele, eu disponibilizo o mesmo _gratui
 Lista completa do que já foi feito [aqui](docs/TODO.md)
 
 - [x] Migrar do **whatsapp-web.js** pro **EvolutionAPI**
-  - [x] Implementar wrappers pra todos os métodos do client usados
-  - [x] Implementar wrappers pra todos os métodos do chat usados
-  - [x] Implementar wrappers pra todos os métodos da Message usados
-  - [x] Aceitar convites
-  - [x] Sair de grupo
-  - [x] Alterar Status
-  - [x] Recebendo mensagens
-  - [x] Enviando mensagens
-  - [x] Apagando mensagens
-  - [x] Fix get Contact
-  - [x] Troca titulos do grupo
-  - [x] Verifica se é admin
-  - [x] originReaction
-  - [x] Testar todos os comandos
-  - [x] setMessagesAdminsOnly
-  - [x] Cache de Msgs e Contatos do Redis
-  - [x] Evento send.message pra saber se foi enviada
-  - [x] Enviar GIF
-  - [x] Block/unblock contatos
-  - [ ] Eventos de connection
   - [ ] Sticker Animado
+  - [ ] Eventos de connection
 - [ ] Melhorias com redis
   - [ ] Cache para !resumo e !interagir
   - [ ] Cooldowns
+- [x] Fix Reactions
+- [x] Bot tentando notificar sem estar nos grupos
 - [ ] Add !g-resetFaladores
-- [ ] Bot tentando notificar sem estar nos grupos
 - [ ] Novo Jogo: Anagrama
-- [ ] FIx Reactions
 - [ ] Novo Comando: busca no youtube
 - [ ] Downloader de SocialMedias (Insta, TikTok - dificil pois bloqueiam)
 
