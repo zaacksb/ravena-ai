@@ -72,12 +72,19 @@ async function aiCommand(bot, message, args, group) {
       systemContext: ctxContent
     });
     
-    logger.debug('Resposta LLM obtida', response);
+    logger.debug('Resposta LLM obtida, processando variaveis', response);
+
+    let processedResponse;
+    try{
+      processedResponse = await bot.eventHandler.commandHandler.variableProcessor.process(response, {message, group, command: false, options: {}, bot });
+    } catch(e){
+      processedResponse = response;
+    }
     
     // Retorna a resposta da IA
     return new ReturnMessage({
       chatId: chatId,
-      content: response,
+      content: processedResponse,
       options: {
         quotedMessageId: message.origin.id._serialized
       }
