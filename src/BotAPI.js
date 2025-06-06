@@ -611,6 +611,48 @@ class BotAPI {
       res.sendFile(filePath); 
     });
 
+    // Groups !enviar public data
+    this.app.get('/getData/:groupId/:variable', (req, res) => {  
+        const { groupId, variable } = req.params;  
+
+        res.setHeader('Content-Type', 'application/json');
+
+        this.logger.info(`[getData] => '${variable}'@'${groupId}'`);  
+
+        if(groupId.length > 10 && groupId.endsWith("@g.us")){
+          const filePath = path.join(this.database.databasePath, `data-share`, `${groupId}.json`);
+
+          fs.access(filePath).then(async ()=> {
+            fs.readFile(filePath, 'utf8').then(data => {
+              const groupDataShare = JSON.parse(data);
+
+              if(groupDataShare[variable]){
+                const dados = groupDataShare[variable].shift();
+
+                if(groupDataShare[variable].length == 0){
+                  delete groupDataShare[variable];
+                }
+
+                fs.writeFile(filePath, JSON.stringify(groupDataShare ?? {}, null, "\t"), "utf8");
+
+                if(dados){
+                  return res.status(200).send(JSON.stringify({restantes: groupDataShare[variable]?.length ?? 0, dados}));
+                } else {
+                  return res.status(200).send(JSON.stringify({restantes: 0, dados: null}));
+                }
+              } else {
+                return res.status(404).send(JSON.stringify({erro: `'${variable}' indisponivel para '${groupId}'`}));
+              }
+            });
+          }).catch(() => {  
+            return res.status(404).send(JSON.stringify({erro: `Nenhum dado disponível para '${groupId}'`}));
+          });  
+        } else {
+          return res.status(400).send(JSON.stringify({erro: `'${groupId}' não é válido`}));
+        }
+    });
+
+
 
     this.app.get('/media/:platform/:channel/:event/:type', async (req, res) => {  
         const { platform, channel, event, type } = req.params;  
