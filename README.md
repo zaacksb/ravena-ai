@@ -60,7 +60,7 @@ Lista completa do que já foi feito [aqui](docs/TODO.md)
   - [x] Cache de Msgs e Contatos do Redis
   - [x] Evento send.message pra saber se foi enviada
   - [x] Enviar GIF
-  - [ ] Block/unblock contatos
+  - [x] Block/unblock contatos
   - [ ] Eventos de connection
   - [ ] Sticker Animado
 - [ ] Melhorias com redis
