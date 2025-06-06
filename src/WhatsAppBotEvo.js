@@ -1776,7 +1776,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     return new Promise(async (resolve, reject) => {
       try{
         this.logger.debug(`[setCttBlockStatus][${this.instanceName}] '${ctt}' => '${blockStatus}'`);
-        const resp = await this.apiClient.post(`/message/updateBlockStatus`, { number: ctt, status: blockStatus });
+        const resp = await this.apiClient.post(`/chat/updateBlockStatus`, { number: ctt, status: blockStatus });
 
         resolve(resp.accepted);
       } catch(e){
