@@ -8,6 +8,118 @@ const Database = require('../utils/Database');
 const logger = new Logger('data-share');
 const database = Database.getInstance();
 
+/*
+
+Pra mandar dados do grupo pra fora.
+Exemplo de função no google sheets:
+
+function fetchDataRavena(groupId, variable, startCell) {
+  // Validate inputs
+  if (!groupId || !variable || !startCell) {
+    SpreadsheetApp.getUi().alert("Error", "Please provide groupId, variable, and startCell.", SpreadsheetApp.getUi().ButtonSet.OK);
+    return "Error: Missing parameters.";
+  }
+
+  const url = `https://ravena.moothz.win/getData/${encodeURIComponent(groupId)}/${encodeURIComponent(variable)}`;
+  let sheet;
+  let startRow;
+  let startCol;
+
+  try {
+    // Determine the sheet and cell coordinates
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let range;
+    if (startCell.includes("!")) {
+      range = ss.getRange(startCell);
+      sheet = range.getSheet();
+    } else {
+      sheet = ss.getActiveSheet();
+      range = sheet.getRange(startCell);
+    }
+    startRow = range.getRow();
+    startCol = range.getColumn();
+
+    // Make the HTTP GET request
+    const options = {
+      'method': 'get',
+      'contentType': 'application/json',
+      'muteHttpExceptions': true // Important to catch HTTP errors gracefully
+    };
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseBody = response.getContentText();
+
+    if (responseCode === 200) {
+      const jsonResponse = JSON.parse(responseBody);
+      const dataToPlace = jsonResponse.dados; // Assuming your API returns { "dados": "some_value", "restantes": N }
+
+      if (dataToPlace === null || dataToPlace === undefined) {
+        sheet.getRange(startRow, startCol).setValue(''); // Clear the cell or set empty if data is null/undefined
+        return "Data was null or undefined; cell cleared.";
+      }
+
+      // Check if dataToPlace is a string and contains commas (potential CSV)
+      if (typeof dataToPlace === 'string' && dataToPlace.includes(',')) {
+        const values = dataToPlace.split(',').map(item => item.trim()); // Split and trim whitespace
+        // Prepare a 2D array for setValues: [[val1, val2, val3]]
+        const rowData = [values];
+        const targetRange = sheet.getRange(startRow, startCol, 1, values.length);
+        targetRange.setValues(rowData);
+        return `CSV data placed starting at ${startCell}. Items: ${values.length}.`;
+      } else {
+        // Not CSV or not a string, place directly
+        sheet.getRange(startRow, startCol).setValue(dataToPlace);
+        return `Data placed in ${startCell}.`;
+      }
+    } else if (responseCode === 404) {
+      const errorResponse = JSON.parse(responseBody);
+      Logger.log(`Error ${responseCode}: ${errorResponse.erro || responseBody}`);
+      sheet.getRange(startRow, startCol).setValue(`Error: ${errorResponse.erro || 'Data not found'}`);
+      return `Error: ${errorResponse.erro || 'Data not found'}`;
+    } else {
+      Logger.log(`Error ${responseCode}: ${responseBody}`);
+      sheet.getRange(startRow, startCol).setValue(`HTTP Error ${responseCode}`);
+      return `HTTP Error ${responseCode}: ${responseBody}`;
+    }
+  } catch (e) {
+    Logger.log(`Exception: ${e.toString()}\nStack: ${e.stack}`);
+    // Attempt to write error to cell if sheet and startCell were resolved
+    if (sheet && startRow && startCol) {
+      try {
+        sheet.getRange(startRow, startCol).setValue(`Script Error: ${e.message}`);
+      } catch (innerErr) {
+        Logger.log(`Could not write error to cell: ${innerErr.toString()}`);
+      }
+    }
+    return `Script Error: ${e.message}`;
+  }
+}
+
+function testFetchDataRavena() {
+  // Example usage:
+  // Replace 'yourGroupId@g.us', 'yourVariable', and 'Sheet1!A1' with actual test values.
+  const groupId = "testgroup@g.us"; // Example groupId
+  const variable = "frutas";       // Example variable that might return "banana,melao,cenoura"
+  const startCell = "Sheet1!A1";   // Example start cell
+
+  const result1 = fetchDataRavena(groupId, variable, startCell);
+  Logger.log(result1);
+
+  const variableSingle = "cidade"; // Example variable that might return "São Paulo"
+  const startCellSingle = "Sheet1!B5";
+
+  const result2 = fetchDataRavena(groupId, variableSingle, startCellSingle);
+  Logger.log(result2);
+
+  // Example for a variable that might not exist or return null
+  const variableNull = "nonexistent";
+  const startCellNull = "Sheet1!C10";
+  const result3 = fetchDataRavena(groupId, variableNull, startCellNull);
+  Logger.log(result3);
+}
+
+*/
+
 /**
  * Stores a value in a variable specific to the group.
  * Command: !share <variableName> <data to store>
