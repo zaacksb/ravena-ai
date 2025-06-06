@@ -86,7 +86,7 @@ async function shareVariable(bot, message, args, group) {
     // Write the updated data back to the JSON file
     await fs.writeFile(filePath, JSON.stringify(groupDataShare, null, "\t"), "utf8");
 
-    const response = `✅ Dado salvo em '${variableName}'.\nTotal de itens agora: ${groupDataShare[variableName].length}.`;
+    const response = `✅ Dado salvo em '${variableName}'.\nTotal de itens agora: ${groupDataShare[variableName].length}.\n\n> ${process.env.BOT_DOMAIN ?? ""}/getData/${group.id}/${variableName}`;
 
     return new ReturnMessage({
       chatId: chatId,
