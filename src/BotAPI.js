@@ -627,15 +627,19 @@ class BotAPI {
               const groupDataShare = JSON.parse(data);
 
               if(groupDataShare[variable]){
-                const dados = groupDataShare[variable].shift();
-
-                if(groupDataShare[variable].length == 0){
-                  delete groupDataShare[variable];
-                }
-
-                fs.writeFile(filePath, JSON.stringify(groupDataShare ?? {}, null, "\t"), "utf8");
+                const dados = groupDataShare[variable][0];
 
                 if(dados){
+                  // Remove daqui a 30 segundos
+                  setTimeout((gds, vari, fP)=> {
+                    gds[vari].shift();
+                    if(gds[vari].length == 0){
+                      delete gds[vari];
+                    }
+
+                    fs.writeFile(fP, JSON.stringify(gds ?? {}, null, "\t"), "utf8");
+                  }, 30000, groupDataShare, variable, filePath);
+
                   return res.status(200).send(JSON.stringify({restantes: groupDataShare[variable]?.length ?? 0, dados}));
                 } else {
                   return res.status(200).send(JSON.stringify({restantes: 0, dados: null}));

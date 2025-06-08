@@ -54,7 +54,7 @@ class MentionHandler {
         const chatId = message.group || message.author;
         const returnMessage = new ReturnMessage({
           chatId: chatId,
-          content: "Olá! Como posso te ajudar? Se quiser saber meus comandos, envie !cmd",
+          content: "Olá! Como posso te ajudar? Você pode tirar dúvida de quais comandos eu tenho e também como usar eles, com exemplos, é só pedir! Se quiser saber meus comandos, envie !cmd",
           reactions: {
             after: this.reactions.after
           }

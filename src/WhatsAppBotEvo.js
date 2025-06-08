@@ -722,23 +722,9 @@ class WhatsAppBotEvo {
           this.handleWebsocket(data);
         });
 
-        /*
-{
-  event: 'contacts.update',
-  instance: 'ravena5',
-  data: {
-    remoteJid: '120363419136690677@g.us',
-    pushName: 'thur',
-    profilePicUrl: 'https://pps.whatsapp.net/v/t61.24694-24/491873879_682709417977241_6996710407633107392_n.jpg?ccb=11-4&oh=01_Q5Aa1gEbquJJ4ACmZNCLVVM5GVC7ovHNTLYASKJklr9nYWBMEQ&oe=68496F52&_nc_sid=5e03e0&_nc_cat=105',
-    instanceId: '73edb4c1-ba23-4b09-b7d0-cf54da0a0eb6'
-  },
-  server_url: 'http://localhost:7654',
-  date_time: '2025-06-01T11:08:25.047Z',
-  sender: '555591537296@s.whatsapp.net',
-}
-*/
         // socket.on('contacts.update', (data) => {
-        //   this.logger.info('contacts.update', data);
+        //    this.logger.info('contacts.update', data);
+        //    this.handleWebsocket(data);
         // });
 
         socket.on('send.message', (data) => {
@@ -1041,6 +1027,30 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
              this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
              this._handleGroupParticipantsUpdate(groupUpdateData);
+          }
+          break;
+/*
+{
+  event: 'contacts.update',
+  instance: 'ravena5',
+  data: {
+    remoteJid: '120363419136690677@g.us',
+    pushName: 'thur',
+    profilePicUrl: 'https://pps.whatsapp.net/v/t61.24694-24/491873879_682709417977241_6996710407633107392_n.jpg?ccb=11-4&oh=01_Q5Aa1gEbquJJ4ACmZNCLVVM5GVC7ovHNTLYASKJklr9nYWBMEQ&oe=68496F52&_nc_sid=5e03e0&_nc_cat=105',
+    instanceId: '73edb4c1-ba23-4b09-b7d0-cf54da0a0eb6'
+  },
+  server_url: 'http://localhost:7654',
+  date_time: '2025-06-01T11:08:25.047Z',
+  sender: '555591537296@s.whatsapp.net',
+}
+*/
+        case 'contacts.update':
+          if(Array.isArray(payload.data)){
+            for(const cttData of payload.data){
+              if(cttData.pushname){ // Atualiza só se veio o nome, se não não tem sentido
+                updateContact(cttData);
+              }
+            }
           }
           break;
 
@@ -1635,6 +1645,30 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     }
   }
 
+  async updateContact(contactData){
+    // TODO
+    // O evento vem com @g.us... não vem o numero da pessoa, só se for no PV
+    const contato = {
+      isContact: false,
+      id: { _serialized: contactData },
+      name: profileData.name,
+      pushname: profileData.name,
+      number: number,
+      isUser: true,
+      status: profileData.status,
+      isBusiness: profileData.isBusiness,
+      picture: profileData.picture,
+      block: async () => {
+        return await this.setCttBlockStatus(number, "block");
+      },
+      unblock: async () => {
+        return await this.setCttBlockStatus(number, "unblock");
+      }
+    };
+
+    this.cacheManager.putContactInCache(contato);
+  }
+
   // Essa ode alterar pra mandar a URL e o Evolution se vira
   async createMediaFromURL(url, options = { unsafeMime: true }) {
     try {
@@ -1776,7 +1810,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     return new Promise(async (resolve, reject) => {
       try{
         this.logger.debug(`[setCttBlockStatus][${this.instanceName}] '${ctt}' => '${blockStatus}'`);
-        const resp = await this.apiClient.post(`/message/updateBlockStatus`, { number: ctt, status: blockStatus });
+        const resp = await this.apiClient.post(`/chat/updateBlockStatus`, { number: ctt, status: blockStatus });
 
         resolve(resp.accepted);
       } catch(e){
