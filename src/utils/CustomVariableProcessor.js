@@ -361,7 +361,7 @@ class CustomVariableProcessor {
               const mentionContact = await context.bot.client.getContactById(fallbackNumber);
               mentionName = `@${mentionContact.number || mentionContact.id.user}`;
 
-              return { fallbackNumber, mentionName, mentionContact };
+              return { mentionId: fallbackNumber, mentionName, mentionContact };
           } else {
             if (context.bot && context.message.group) {
               try {
@@ -471,6 +471,7 @@ class CustomVariableProcessor {
             // Substitui apenas a primeira ocorrência restante
             text = text.replace(/{mentionOuEu}/, mentionName);
           }
+
           // Adiciona à lista de menções para notificação
           if (mentionId) {
             this.logger.debug(`[processContextVariables] mentionOuEu: ${mentionId}, ${mentionName}`);
