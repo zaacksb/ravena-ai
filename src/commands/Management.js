@@ -4870,8 +4870,10 @@ async setWelcomeMessage(bot, message, args, group) {
         { name: "{nomeCanal}", description: "Nome do grupo (mesmo que {group})" },
         { name: "{nomeGrupo}", description: "Nome do grupo (mesmo que {group})" },
         { name: "{contador}", description: "Número de vezes que o comando foi executado" },
-        { name: "{mention}", description: "Nome da pessoa mencionada em mensagem citada" },
-        { name: "{mention-número@c.us}", description: "Menciona usuário específico" }
+        { name: "{mention}", description: "Marca a pessoa mencionada (na própria mensage, na mensagem resposta ou alguém aleatório). A cada ocorrência pega um mention diferente" },
+        { name: "{singleMention}", description: "Igual ao {mention}, mas troca todas as ocorrências da variável pra mesma ao invés de escolher outro membro aleatório" },
+        { name: "{mentionOuEu}", description: "Igual ao {singleMention}, mas ao invés de escolher um membro aleatório caso não exista mention, marca quem enviou a mensagem" },
+        { name: "{mention-5511999999999@c.us}", description: "Menciona usuário específico" }
       ];
       
       // Lista de variáveis de API
