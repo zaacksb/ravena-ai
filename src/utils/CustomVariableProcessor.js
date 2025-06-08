@@ -306,7 +306,7 @@ class CustomVariableProcessor {
         const usedMentions = [];
         
         // Função para substituir cada ocorrência de {mention} com uma pessoa diferente
-        const replaceMention = async () => {
+        const replaceMention = async (fallbackNumber = false) => {
           let mentionId = null;
           let mentionName = null;
           
@@ -356,41 +356,28 @@ class CustomVariableProcessor {
             }
           }
           
-          // 3. Se não há mensagem citada ou já foi usada, seleciona um membro aleatório
-          if (context.bot && context.message.group) {
-            try {
-              // Obtém membros que ainda não foram usados
-              const chat = await context.bot.client.getChatById(context.message.group);
-              if (chat && chat.isGroup) {
-                // Filtra participantes para excluir o próprio bot e menções já usadas
-                const filteredParticipants = chat.participants.filter(
-                  p => p.id._serialized !== context.bot.client.info.wid._serialized && 
-                      !usedMentions.includes(p.id._serialized)
-                );
-                
-                if (filteredParticipants.length > 0) {
-                  // Seleciona um participante aleatório
-                  const randomIndex = Math.floor(Math.random() * filteredParticipants.length);
-                  const randomParticipant = filteredParticipants[randomIndex];
-                  
-                  mentionId = randomParticipant.id._serialized;
-                  
-                  // Obtém o objeto de contato
-                  const mentionContact = await context.bot.client.getContactById(mentionId);
-                  mentionName = `@${mentionContact.number || mentionContact.id.user}`;
-                  
-                  // Marca esta menção como usada
-                  usedMentions.push(mentionId);
-                  return { mentionId, mentionName, mentionContact };
-                } else if (chat.participants.length > 1) {
-                  // Se todos já foram usados, reseta e usa qualquer um exceto o bot
-                  const nonBotParticipants = chat.participants.filter(
-                    p => p.id._serialized !== context.bot.client.info.wid._serialized
+          // 3. Se não há mensagem citada ou já foi usada, seleciona um membro aleatório - a não ser que tenha um fallback especificado
+          if(fallbackNumber){
+              const mentionContact = await context.bot.client.getContactById(fallbackNumber);
+              mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+
+              return { fallbackNumber, mentionName, mentionContact };
+          } else {
+            if (context.bot && context.message.group) {
+              try {
+                // Obtém membros que ainda não foram usados
+                const chat = await context.bot.client.getChatById(context.message.group);
+                if (chat && chat.isGroup) {
+                  // Filtra participantes para excluir o próprio bot e menções já usadas
+                  const filteredParticipants = chat.participants.filter(
+                    p => p.id._serialized !== context.bot.client.info.wid._serialized && 
+                        !usedMentions.includes(p.id._serialized)
                   );
                   
-                  if (nonBotParticipants.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * nonBotParticipants.length);
-                    const randomParticipant = nonBotParticipants[randomIndex];
+                  if (filteredParticipants.length > 0) {
+                    // Seleciona um participante aleatório
+                    const randomIndex = Math.floor(Math.random() * filteredParticipants.length);
+                    const randomParticipant = filteredParticipants[randomIndex];
                     
                     mentionId = randomParticipant.id._serialized;
                     
@@ -398,12 +385,32 @@ class CustomVariableProcessor {
                     const mentionContact = await context.bot.client.getContactById(mentionId);
                     mentionName = `@${mentionContact.number || mentionContact.id.user}`;
                     
+                    // Marca esta menção como usada
+                    usedMentions.push(mentionId);
                     return { mentionId, mentionName, mentionContact };
+                  } else if (chat.participants.length > 1) {
+                    // Se todos já foram usados, reseta e usa qualquer um exceto o bot
+                    const nonBotParticipants = chat.participants.filter(
+                      p => p.id._serialized !== context.bot.client.info.wid._serialized
+                    );
+                    
+                    if (nonBotParticipants.length > 0) {
+                      const randomIndex = Math.floor(Math.random() * nonBotParticipants.length);
+                      const randomParticipant = nonBotParticipants[randomIndex];
+                      
+                      mentionId = randomParticipant.id._serialized;
+                      
+                      // Obtém o objeto de contato
+                      const mentionContact = await context.bot.client.getContactById(mentionId);
+                      mentionName = `@${mentionContact.number || mentionContact.id.user}`;
+                      
+                      return { mentionId, mentionName, mentionContact };
+                    }
                   }
                 }
+              } catch (err) {
+                this.logger.error('Erro ao obter membro aleatório do grupo:', err);
               }
-            } catch (err) {
-              this.logger.error('Erro ao obter membro aleatório do grupo:', err);
             }
           }
           
@@ -455,6 +462,29 @@ class CustomVariableProcessor {
             }
           }
         }
+
+        const selfMentionMatches = text.match(/{mentionOuEu}/g);
+        if (singleMentionMatches) {
+          // Todos pela mesma
+          const { mentionId, mentionName, mentionContact } = await replaceMention(context.message.author);
+          for (let i = 0; i < singleMentionMatches.length; i++) {
+            // Substitui apenas a primeira ocorrência restante
+            text = text.replace(/{mentionOuEu}/, mentionName);
+          }
+          // Adiciona à lista de menções para notificação
+          if (mentionId) {
+            this.logger.debug(`[processContextVariables] mentionOuEu: ${mentionId}, ${mentionName}`);
+            if (context.options && context.options.mentions){
+              if (!context.options.mentions.includes(mentionId)) {
+                context.options.mentions.push(mentionId);
+              }
+            } else if (context.options) {
+              context.options.mentions = [mentionId];
+            }
+          }
+        }
+
+
         
       } catch (error) {
         this.logger.error('Erro ao processar variável {mention}:', error);
