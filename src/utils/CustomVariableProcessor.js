@@ -464,10 +464,10 @@ class CustomVariableProcessor {
         }
 
         const selfMentionMatches = text.match(/{mentionOuEu}/g);
-        if (singleMentionMatches) {
+        if (selfMentionMatches) {
           // Todos pela mesma
           const { mentionId, mentionName, mentionContact } = await replaceMention(context.message.author);
-          for (let i = 0; i < singleMentionMatches.length; i++) {
+          for (let i = 0; i < selfMentionMatches.length; i++) {
             // Substitui apenas a primeira ocorrência restante
             text = text.replace(/{mentionOuEu}/, mentionName);
           }
