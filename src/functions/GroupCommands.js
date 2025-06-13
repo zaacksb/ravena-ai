@@ -66,7 +66,8 @@ async function mentionAllMembers(bot, message, args, group) {
       if(quotedMsg.hasMedia){
         logger.info(`[galera-midia] Mencionados ${mentions.length} membros no grupo ${message.group}`);    
 
-        const messageText = '🚨 Atenção pessoal! 🚨\n\n'+quotedMsg.body;
+        const quotedText = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body;
+        const messageText = '🚨 Atenção pessoal! 🚨\n\n'+quotedText;
         const attachmentData = await quotedMsg.downloadMedia();
 
         return new ReturnMessage({
@@ -79,8 +80,9 @@ async function mentionAllMembers(bot, message, args, group) {
         });
       } else {
 
-        logger.info(`[galera-texto] Mencionados ${mentions.length} membros no grupo ${message.group}`);    
-        const messageText = '🚨 Atenção pessoal! 🚨\n\n'+quotedMsg.body;
+        logger.info(`[galera-texto] Mencionados ${mentions.length} membros no grupo ${message.group}`);   
+        const quotedText = quotedMsg.content ?? quotedMsg.body;
+        const messageText = '🚨 Atenção pessoal! 🚨\n\n'+quotedText;
 
         return new ReturnMessage({
           chatId: message.group,
