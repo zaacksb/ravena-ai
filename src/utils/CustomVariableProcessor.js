@@ -14,6 +14,8 @@ class CustomVariableProcessor {
       variables: null,
       lastFetch: 0
     };
+
+    this.redditCache = {};
   }
 
   /**
@@ -55,13 +57,25 @@ class CustomVariableProcessor {
           }
         }
       }
+
+      let processedText = text;
+
+      // Verifica se é variável de reddit
+      const redditResult = await this.processRedditVariable(text, context);
+
+      if(redditResult){
+        if (redditResult.type === 'media') {
+            // Se retornou mídia, envia o payload diretamente
+            return redditResult.payload;
+        } else {
+          processedText = redditResult.text;
+        }
+      }
       
       // Carrega variáveis personalizadas se não estiverem em cache ou o cache estiver obsoleto
       if (!this.cache.variables || Date.now() - this.cache.lastFetch > 300000) { // 5 minutos
         await this.loadCustomVariables();
       }
-      
-      let processedText = text;
       
       // Processa variáveis de API (nova função)
       processedText = await this.processAPIRequest(processedText, context);
@@ -78,7 +92,6 @@ class CustomVariableProcessor {
       if (context) {
         processedText = await this.processContextVariables(processedText, context);
       }
-      
       
       // Processa variáveis dinâmicas de API
       processedText = await this.processDynamicVariables(processedText);
@@ -808,6 +821,103 @@ class CustomVariableProcessor {
     } catch (error) {
       this.logger.error(`Erro ao obter clima para ${location}:`, error);
       return `Dados de clima não disponíveis para ${location}`;
+    }
+  }
+
+
+  async processRedditVariable(text, context) {
+    // A regex agora busca por {reddit-xxx} dentro do texto recebido
+    const regex = /\{reddit-(.+?)\}/;
+    const match = text.match(regex);
+
+    if (!match) {
+        return false;
+    }
+
+    const fullVariable = match[0]; // Ex: "{reddit-memes}"
+    const subreddit = match[1];    // Ex: "memes"
+
+    try {
+        // 1. Busca os posts mais recentes via API do Reddit
+        const response = await axios.get(`https://www.reddit.com/r/${subreddit}/new.json?limit=100`);
+        const posts = response?.data?.data?.children;
+
+        if (!posts || posts.length === 0) {
+            const newText = text.replace(fullVariable, `Subreddit r/${subreddit} não foi encontrado ou não possui posts.`);
+            return { type: 'text', text: newText };
+        }
+
+        // 2. Gerencia o cache global
+        const groupId = context.group;
+        if (!this.redditCache[groupId]) this.redditCache[groupId] = {};
+        if (!this.redditCache[groupId][subreddit]) this.redditCache[groupId][subreddit] = [];
+
+        // 3. Filtra posts fixados e já enviados
+        let availablePosts = posts
+            .filter(p => !p.data.stickied)
+            .filter(p => !this.redditCache[groupId][subreddit].includes(p.data.id));
+
+        // 4. Se todos os posts já foram vistos, reseta o cache
+        if (availablePosts.length === 0 && posts.filter(p => !p.data.stickied).length > 0) {
+            this.redditCache[groupId][subreddit] = [];
+            availablePosts = posts.filter(p => !p.data.stickied);
+        }
+
+        // 5. Separa e seleciona a mídia com base na prioridade (Imagem > GIF > Vídeo)
+        const images = [], gifs = [], videos = [];
+        for (const post of availablePosts) {
+            const { data } = post;
+            const url = data.url_overridden_by_dest;
+            const hint = data.post_hint;
+            if (!url) continue;
+
+            if (hint === 'image' && (url.endsWith('.jpg') || url.endsWith('.png'))) images.push(post);
+            else if (hint === 'image' && (url.endsWith('.gif') || url.endsWith('.gifv'))) gifs.push(post);
+            else if ((data.is_video || hint === 'hosted:video') && data?.media?.reddit_video?.fallback_url) {
+                videos.push(post);
+            }
+        }
+        
+        const selectRandom = (arr) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
+        let selectedPost, mediaUrl, mediaType;
+
+        if (selectedPost = selectRandom(images)) {
+            mediaUrl = selectedPost.data.url_overridden_by_dest;
+            mediaType = 'image';
+        } else if (selectedPost = selectRandom(gifs)) {
+            mediaUrl = selectedPost.data.url_overridden_by_dest;
+            mediaType = 'image';
+        } else if (selectedPost = selectRandom(videos)) {
+            mediaUrl = selectedPost.data.media.reddit_video.fallback_url;
+            mediaType = 'video';
+        }
+        
+
+
+        // 6. Cria o MessageMedia e retorna o payload
+        if (selectedPost && mediaUrl && mediaType) {
+            const media = await context.bot.createMediaFromURL(mediaUrl);
+
+            // Hijack as options pra fazer legenda
+            context.options.caption = `🖼️ [${selectedPost.data.subreddit_name_prefixed}] _${selectedPost.data.title}_
+> ${selectedPost.data.ups} 👍 ${selectedPost.data.downs} 👎
+> reddit.com/${selectedPost.data.permalink}`; // > reddit.com/u/${selectedPost.data.author}
+
+            if (media) {
+                this.redditCache[groupId][subreddit].push(selectedPost.data.id);                
+                // Retorna um tipo 'media' para indicar que a mensagem inteira deve ser este anexo
+                return { type: 'media', payload: media };
+            }
+        }
+        
+        // Se nenhuma mídia foi encontrada ou a criação do MessageMedia falhou
+        const errorText = `Nenhuma mídia (imagem/gif/vídeo) recente encontrada em r/${subreddit}.`;
+        return { type: 'text', text: text.replace(fullVariable, errorText) };
+
+    } catch (error) {
+        console.error(`[RedditVariable] Erro ao processar r/${subreddit}:`, error.message);
+        const errorText = `Subreddit r/${subreddit} não foi encontrado.`;
+        return { type: 'text', text: text.replace(fullVariable, errorText) };
     }
   }
 }

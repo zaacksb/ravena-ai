@@ -1135,9 +1135,8 @@ class CommandHandler {
         bot  // Incluindo o bot no contexto para processar variáveis de arquivo
       });
 
-      this.logger.debug(`Processada resposta: '${processedResponse}', options ${JSON.stringify(options)}`);
-      
-      // NOVA FUNCIONALIDADE: Verifica se a resposta é um comando embutido
+      this.logger.debug(`Processando resposta: '${processedResponse}', options ${JSON.stringify(options)}`);
+    
       if (processedResponse && typeof processedResponse === 'object' && processedResponse.type === 'embedded-command') {
         this.logger.info(`Executando comando embutido: ${processedResponse.command}`);
         
@@ -1198,7 +1197,8 @@ class CommandHandler {
         return returnMessages;
       }
       
-      // Verifica se a resposta é um objeto MessageMedia (caso de variável {file-...})
+      // Verifica se a resposta é um objeto MessageMedia (caso de variável {file-...}, api de arquivo como {reddit-})
+      console.log(processedResponse, typeof processedResponse);
       if (processedResponse && typeof processedResponse === 'object' && processedResponse.mimetype) {
         this.logger.debug(`Enviando resposta de mídia para comando ${command.startsWith} (via variável file)`);
         

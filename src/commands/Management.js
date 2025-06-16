@@ -4878,6 +4878,7 @@ async setWelcomeMessage(bot, message, args, group) {
       
       // Lista de variáveis de API
       const apiVariables = [
+        { name: "{reddit-XXXX}", description: "Busca mídia em um subreddit" },
         { name: "{API#GET#TEXT#url}", description: "Faz uma requisição GET e retorna o texto" },
         { name: "{API#GET#JSON#url\ntemplate}", description: "Faz uma requisição GET e formata o JSON" },
         { name: "{API#POST#TEXT#url?param=valor}", description: "Faz uma requisição POST com parâmetros" }
