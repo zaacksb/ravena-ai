@@ -830,12 +830,19 @@ class CustomVariableProcessor {
     const regex = /\{reddit-(.+?)\}/;
     const match = text.match(regex);
 
+    // Se a variável não for encontrada, retorna o texto original para continuar o processamento.
     if (!match) {
-        return false;
+        return { type: 'text', text: text };
     }
 
-    const fullVariable = match[0]; // Ex: "{reddit-memes}"
-    const subreddit = match[1];    // Ex: "memes"
+    const fullVariable = match[0]; // Ex: "{reddit-memes-funny-coolthings}"
+    
+    // Separa os subreddits especificados pelo caractere '-'
+    const subredditOptions = match[1].split('-'); // Ex: ['memes', 'funny', 'coolthings']
+    
+    // Escolhe um subreddit aleatório da lista fornecida
+    const subreddit = subredditOptions[Math.floor(Math.random() * subredditOptions.length)];
+
 
     try {
         // 1. Busca os posts mais recentes via API do Reddit
@@ -901,7 +908,7 @@ class CustomVariableProcessor {
             // Hijack as options pra fazer legenda
             context.options.caption = `🖼️ [${selectedPost.data.subreddit_name_prefixed}] _${selectedPost.data.title}_
 > ${selectedPost.data.ups} 👍 ${selectedPost.data.downs} 👎
-> reddit.com/${selectedPost.data.permalink}`; // > reddit.com/u/${selectedPost.data.author}
+> reddit.com/${selectedPost.data.permalink}`; // > reddit.com/u/${selectedPost.data.author
 
             if (media) {
                 this.redditCache[groupId][subreddit].push(selectedPost.data.id);                
