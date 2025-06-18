@@ -5251,7 +5251,9 @@ async setWelcomeMessage(bot, message, args, group) {
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `Horários permitidos para o comando '${commandName}' definidos: das ${startTime} às ${endTime}.`
+      content: `🕰️ Horários para o comando _${commandName}_:
+* 🟢 *Habilitado*: ${startTime} às ${endTime}
+* 🔴 *Desabilitado*: ${endTime} às ${startTime}`
     });
   }
 
