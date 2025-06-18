@@ -164,12 +164,14 @@ async function jogarRoletaRussa(bot, message, args, group) {
     const userId = message.author;
     
     // Obtém o nome do jogador
-    let userName = "Jogador";
-    try {
-      const contact = await message.origin.getContact();
-      userName = contact.pushname || contact.name || "Jogador";
-    } catch (error) {
-      logger.error('Erro ao obter contato:', error);
+    let userName = message.authorName ?? "";
+    if(userName.length == 0){
+      try {
+        const contact = await message.origin.getContact();
+        userName = contact.pushname || contact.name || "Jogador";
+      } catch (error) {
+        logger.error('Erro ao obter contato:', error);
+      }
     }
     
     // Carrega dados da roleta

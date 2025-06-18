@@ -1100,6 +1100,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           // send.message é evento de enviadas, então se não for, recebeu uma
           this.loadReport.trackReceivedMessage(isGroup, responseTime, author);
         }
+
+
         const authorName = evoMessageData.pushName || author.split('@')[0]; // pushName is often sender's name
         
         
@@ -1239,7 +1241,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           group: isGroup ? chatId : null,
           from: isGroup ? chatId : author,
           author: author.replace("@s.whatsapp.net", "@c.us"),
+          name: authorName,
           authorName: authorName,
+          pushname: authorName,
           type: type,
           content: content, 
           body: content,
@@ -1254,8 +1258,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
           getContact: async () => {
               const contactIdToFetch = isGroup ? (key.participant || author) : author;
-              return await this.getContactDetails(contactIdToFetch);
+              return await this.getContactDetails(contactIdToFetch, authorName);
           },
+
           getChat: async () => {
               return await this.getChatDetails(chatId);
           },
@@ -1692,7 +1697,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
   
   // --- Placeholder/To be implemented based on Evo API specifics ---
-  async getContactDetails(cid) {
+  async getContactDetails(cid, prefetchedName = false) {
     if (!cid) return null;
 
     let contactId = (typeof cid === "object") ? cid.id : cid;
@@ -1722,8 +1727,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
             contato = {
               isContact: false,
               id: { _serialized: contactId },
-              name: profileData.name,
-              pushname: profileData.name,
+              name: profileData.name ?? prefetchedName,
+              pushname: profileData.name ?? prefetchedName,
               number: number,
               isUser: true,
               status: profileData.status,
