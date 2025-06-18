@@ -530,7 +530,7 @@ class Management {
           // Extrai o texto após o comando
           const prefixo = group.prefix || '!';
           commandTrigger = args[0];
-          const comandoCompleto = `${prefixo}g-addCmd ${commandTrigger}`;
+          const comandoCompleto = `${prefixo}g-addCmdReply ${commandTrigger}`;
           bodyTexto = message.origin.body.substring(message.origin.body.indexOf(comandoCompleto) + comandoCompleto.length).trim();
         } else {
           this.logger.info(`[addCmdReply] Não consegui pegar o body de mensagem, vou usar os args mesmo.`);
