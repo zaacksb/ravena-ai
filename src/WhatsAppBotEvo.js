@@ -1233,6 +1233,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []).map(m => m.split("@")[0]+"@c.us");
 
+        const isLid = (evoMessageData.key.remoteJid.includes('@lid') && evoMessageData.key.senderPn);
+        const senderPn = isLid ? evoMessageData.key.senderPn : false; // quando vem @lid precisa pegar esse senderPn (evo 2.3.0)
+
+        if(isLid){
+          this.logger.info(`[${this.id}][LID_WARNING] LID detectado. PN? ${JSON.stringify(senderPn)}\n---${JSON.stringify(evoMessageData)}\n---`);
+        }
 
         const formattedMessage = {
           evoMessageData: evoMessageData, // pra ser recuperada no cache
@@ -1258,7 +1264,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
           getContact: async () => {
               const contactIdToFetch = isGroup ? (key.participant || author) : author;
-              return await this.getContactDetails(contactIdToFetch, authorName);
+              return await this.getContactDetails(contactIdToFetch, senderPn, authorName);
           },
 
           getChat: async () => {
@@ -1697,13 +1703,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
   
   // --- Placeholder/To be implemented based on Evo API specifics ---
-  async getContactDetails(cid, prefetchedName = false) {
+  async getContactDetails(cid, senderPn, prefetchedName = false) {
     if (!cid) return null;
 
-    let contactId = (typeof cid === "object") ? cid.id : cid;
     try {
       let contato;
-      if(contactId.includes("@lid")){ // COisas misteriosas
+      /*if(contactId.includes("@lid")){ // Consertado na evo 2.3.0
         this.logger.debug(`[getContactDetails][${this.id}] IGNORING contact with LID: ${contactId}`);
         contato = {
           isContact: false,
@@ -1717,47 +1722,57 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           picture: ""
         };
       } else {
-        const number = contactId.split("@")[0];
-        contato = await this.recoverContactFromCache(number);
+      */
 
-        if(!contato){
-          this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
-          const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
-          if(profileData){
-            contato = {
-              isContact: false,
-              id: { _serialized: contactId },
-              name: profileData.name ?? prefetchedName,
-              pushname: profileData.name ?? prefetchedName,
-              number: number,
-              isUser: true,
-              status: profileData.status,
-              isBusiness: profileData.isBusiness,
-              picture: profileData.picture,
-              block: async () => {
-                return await this.setCttBlockStatus(number, "block");
-              },
-              unblock: async () => {
-                return await this.setCttBlockStatus(number, "unblock");
-              }
-            };
+      let contactId = (typeof cid === "object") ? cid.id : cid;
 
-            this.cacheManager.putContactInCache(contato);
-            return contato;
-          } else {
-            this.logger.debug(`[getContactDetails][${this.id}] Não consegui pegar os dados para '${contactId}'`);
-            contato = {
-              isContact: false,
-              id: { _serialized: contactId },
-              name: `Pessoa Misteriosa`,
-              pushname: `Pessoa Misteriosa`,
-              number: contactId.split('@')[0],
-              isUser: true,
-              status: "",
-              isBusiness: false,
-              picture: ""
-            };
-          }
+      const isLid = contactId.includes("@lid") && senderPn;
+      contactId = isLid ? senderPn : contactId;
+
+      const number = contactId.split("@")[0];
+      contato = await this.recoverContactFromCache(number);
+
+      if(isLid){
+        this.logger.debug(`[getContactDetails][${this.id}][DEBUG_LID] ${JSON.stringify(cid)}, senderPn: ${JSON.stringify(senderPn)}`);
+      }
+
+      if(!contato){
+        this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);
+        const profileData = await this.apiClient.post(`/chat/fetchProfile`, {number});
+        if(profileData){
+          contato = {
+            isContact: false,
+            id: { _serialized: contactId },
+            name: profileData.name ?? prefetchedName,
+            pushname: profileData.name ?? prefetchedName,
+            number: number,
+            isUser: true,
+            status: profileData.status,
+            isBusiness: profileData.isBusiness,
+            picture: profileData.picture,
+            block: async () => {
+              return await this.setCttBlockStatus(number, "block");
+            },
+            unblock: async () => {
+              return await this.setCttBlockStatus(number, "unblock");
+            }
+          };
+
+          this.cacheManager.putContactInCache(contato);
+          return contato;
+        } else {
+          this.logger.debug(`[getContactDetails][${this.id}] Não consegui pegar os dados para '${contactId}'`);
+          contato = {
+            isContact: false,
+            id: { _serialized: contactId },
+            name: `Pessoa Misteriosa`,
+            pushname: `Pessoa Misteriosa`,
+            number: contactId.split('@')[0],
+            isUser: true,
+            status: "",
+            isBusiness: false,
+            picture: ""
+          };
         }
       }
       
@@ -2019,10 +2034,18 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         }
         
         const responsibleContact = await this.getContactDetails(gUpdAuthor) ?? {id: gUpdAuthor.split("@")[0]+"@c.us", name: "Admin do Grupo"};
+        if(gUpdAuthor.includes("@lid")){
+          this.logger.info(`[_handleGroupParticipantsUpdate][LID_WARNING] gUpdAuthor é um @lid: ${gUpdAuthor}, ${JSON.stringify(groupUpdateData)}`);
+        }
 
         for (const uid of participants) { // Dispara 1x para cada participant add
             const userId = (typeof uid === "object") ? uid.id : uid;
             const userContact = await this.getContactDetails(userId);
+
+            if(gUpdAuthor.includes("@lid")){
+              this.logger.info(`[_handleGroupParticipantsUpdate][LID_WARNING] userId adicionado é um @lid: ${userId}, ${JSON.stringify(participants)}`);
+            }
+
             const eventData = {
                 group: { id: groupId, name: groupName },
                 user: { id: userId.split('@')[0]+"@c.us", name: userContact?.name || userId.split('@')[0] },
