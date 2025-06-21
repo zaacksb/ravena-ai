@@ -72,6 +72,7 @@ async function main() {
           grupoInteracao: rBot.grupoInteracao ?? process.env.GRUPO_INTERACAO,
           linkGrupao: rBot.linkGrupao ?? process.env.LINK_GRUPO_INTERACAO,
           linkAvisos: rBot.linkAvisos ?? process.env.LINK_GRUPO_AVISOS,
+          notificarDonate: rBot.notificarDonate ?? false, // Apenas um dos bots deve notificar donate
           
           // EvolutionAPI
           evoInstanceName: rBot.nome,

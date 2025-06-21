@@ -1073,7 +1073,7 @@ class BotAPI {
       const pinDuration = 600 + extraPinTime; // Base de 10 minutos + tempo extra
       
       // Apenas um dos bots devem enviar msg sobre donate
-      const bot = this.bots[3];
+      const bot = this.bots.find(b => b.notificarDonate) ?? this.bots[Math.floor(Math.random() * this.bots.length)];
 
       //for (const bot of this.bots) {
         // Primeiro notifica o grupo de logs

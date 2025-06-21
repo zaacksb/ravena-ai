@@ -59,6 +59,7 @@ class WhatsAppBotEvo {
     this.instanceName = options.evoInstanceName;
     this.webhookHost = options.webhookHost; // e.g., from cloudflared tunnel
     this.webhookPort = options.webhookPort || process.env.WEBHOOK_PORT_EVO || 3000;
+    this.notificarDonate = options.notificarDonate;
 
     this.redisURL = options.redisURL;
     this.redisDB = options.redisDB || 0;

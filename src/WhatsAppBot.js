@@ -37,6 +37,7 @@ class WhatsAppBot {
     this.safeMode = options.safeMode !== undefined ? options.safeMode : (process.env.SAFE_MODE === 'true');
     this.puppeteerOptions = options.puppeteerOptions || {};
     this.otherBots = options.otherBots || [];
+    this.notificarDonate = options.notificarDonate;
     
     // Novas propriedades para notificações de grupos da comunidade
     this.ignorePV = options.ignorePV || false;
