@@ -401,7 +401,7 @@ class Management {
         });
       }
     } else {
-      bodyTexto = quotedMsg.body ?? quotedMsg._data.body;
+      bodyTexto = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body;
     }
     
 
@@ -545,7 +545,7 @@ class Management {
         });
       }
     } else {
-      bodyTexto = quotedMsg.body ?? quotedMsg._data.body;
+      bodyTexto = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body;
     }
     
 
@@ -877,19 +877,20 @@ async setWelcomeMessage(bot, message, args, group) {
   
   // Verifica se a mensagem é uma resposta a outra mensagem
   const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
-  
+  const quotedText = quotedMsg?.caption ?? quotedMsg?.content ?? quotedMsg?.body ?? false;
+
   // Se tiver mensagem citada, usa o corpo dela
-  if (quotedMsg && quotedMsg.body) {
+  if (quotedMsg && quotedText) {
     // Atualiza mensagem de boas-vindas do grupo
     if (!group.greetings) {
       group.greetings = {};
     }
-    group.greetings.text = quotedMsg.body;
+    group.greetings.text = quotedText;
     await this.database.saveGroup(group);
     
     return new ReturnMessage({
       chatId: group.id,
-      content: `Mensagem de boas-vindas atualizada para: ${quotedMsg.body}`
+      content: `Mensagem de boas-vindas atualizada para: ${quotedText}`
     });
   } 
   // Se tiver argumentos, usa o corpo da mensagem completa
@@ -958,19 +959,20 @@ async setWelcomeMessage(bot, message, args, group) {
     
     // Verifica se a mensagem é uma resposta a outra mensagem
     const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
+    const quotedText = quotedMsg?.caption ?? quotedMsg?.content ?? quotedMsg?.body ?? false;
     
     // Se tiver mensagem citada, usa o corpo dela
-    if (quotedMsg && quotedMsg.body) {
+    if (quotedMsg && quotedText) {
       // Atualiza mensagem de despedida do grupo
       if (!group.farewells) {
         group.farewells = {};
       }
-      group.farewells.text = quotedMsg.body;
+      group.farewells.text = quotedText;
       await this.database.saveGroup(group);
       
       return new ReturnMessage({
         chatId: group.id,
-        content: `Mensagem de despedida atualizada para: ${quotedMsg.body}`
+        content: `Mensagem de despedida atualizada para: ${quotedText}`
       });
     } 
     // Se tiver argumentos, usa o corpo da mensagem completa
@@ -2166,7 +2168,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Create media configuration
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
       };
       
       // For media messages, add the media type
@@ -2282,7 +2284,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Create media configuration
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
       };
       
       // For media messages, add the media type
@@ -2920,7 +2922,7 @@ async setWelcomeMessage(bot, message, args, group) {
     try {
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
       };
       
       if (quotedMsg.hasMedia) {
@@ -3028,7 +3030,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Similar media handling as in setKickOnlineMedia but for offConfig
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
       };
       
       if (quotedMsg.hasMedia) {
@@ -3537,7 +3539,7 @@ async setWelcomeMessage(bot, message, args, group) {
     try {
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
       };
       
       if (quotedMsg.hasMedia) {
@@ -4365,7 +4367,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Create media configuration
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
       };
       
       // For media messages, add the media type

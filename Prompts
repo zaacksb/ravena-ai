@@ -2352,7 +2352,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555194211823@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: true,
     id: '3EB04D0156F066730F5DD6'
   },
@@ -2380,7 +2380,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555194211823@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: true,
     id: '3EB01FCFF7095EEE5AB62A'
   },
@@ -2421,7 +2421,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: '3EB0721487F418DE6D5707'
   },
@@ -2465,7 +2465,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: '5B30F7F6A7517D5F011A4C5CE6F48E79'
   },
@@ -2505,7 +2505,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: '46411355DFA3B0519DCA30B9CF78C189'
   },
@@ -2547,7 +2547,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: '3EB02E5263DBBB76414C36'
   },
@@ -2590,7 +2590,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: 'F5E3B808295A4A3F4C92660F8C0DC5D0'
   },
@@ -2623,7 +2623,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: '8656A355F7A729CA51E9CAAA8B6539D3'
   },
@@ -2658,7 +2658,7 @@ json
 ```
 {
   key: {
-    remoteJid: '555596776611@s.whatsapp.net',
+    remoteJid: '5512345676@s.whatsapp.net',
     fromMe: false,
     id: '4683BF02BAD63D4398EB340B04F654D8'
   },

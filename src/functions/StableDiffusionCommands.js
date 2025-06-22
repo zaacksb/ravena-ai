@@ -44,7 +44,10 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
   const quotedMsg = await message.origin.getQuotedMessage().catch(() => null);
   let prompt = args.join(' ');
   if(quotedMsg){  
-    prompt += " "+quotedMsg.body;
+    const quotedText = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body;
+    if(quotedText){
+      prompt += " "+quotedText;
+    }
   }
 
   if (prompt.length < 4) {

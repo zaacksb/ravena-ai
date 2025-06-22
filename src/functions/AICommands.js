@@ -46,8 +46,10 @@ async function aiCommand(bot, message, args, group) {
   if(quotedMsg){
     // Tem mensagem marcada, junta o conteudo (menos que tenha vindo de reação)
     if(!message.originReaction){
-      if(quotedMsg.body.length > 10){
-        question += `\n\n${quotedMsg.body}`;
+      const quotedText = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body;
+
+      if(quotedText.length > 10){
+        question += `\n\n${quotedText}`;
       }
     }
   }

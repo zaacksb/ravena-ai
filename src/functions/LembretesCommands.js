@@ -230,7 +230,7 @@ async function criarLembrete(bot, message, args, group) {
       userId: message.author,
       data: dataLembrete.getTime(),
       dataFormatada: formatarData(dataLembrete),
-      mensagem: quotedMsg.body || '',
+      mensagem: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || "",
       criadoEm: Date.now(),
       ativo: true,
       hasMedia: false,

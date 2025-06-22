@@ -131,8 +131,9 @@ async function emojiKitchenCommand(bot, message, args, group) {
     if (!emojis && message.origin) {
       try {
         const quotedMsg = await message.origin.getQuotedMessage();
-        if (quotedMsg && quotedMsg.body) {
-          emojis = extractFirstTwoEmojis(quotedMsg.body);
+        const quotedText = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body;
+        if (quotedMsg && quotedText) {
+          emojis = extractFirstTwoEmojis(quotedText);
         }
       } catch (error) {
         logger.error('Erro ao processar mensagem citada:', error);

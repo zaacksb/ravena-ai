@@ -379,7 +379,7 @@ async function handleTranslation(bot, message, args, group) {
           });
         }
         
-        textToTranslate = quotedMsg.body;
+        textToTranslate = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || "";
         //quotedText = `Original: "${textToTranslate}"\n\n`;
       } catch (error) {
         logger.error('Erro ao obter mensagem citada:', error);

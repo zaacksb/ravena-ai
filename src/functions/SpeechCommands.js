@@ -147,7 +147,8 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     let text = args.join(' ');
 
     if(quotedMsg){  
-      text += " "+quotedMsg.body;
+      const quotedText = quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body;
+      text += " "+quotedText;
     }
 
     if (text.length < 1) {
