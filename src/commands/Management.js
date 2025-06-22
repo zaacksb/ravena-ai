@@ -2168,7 +2168,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Create media configuration
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
       };
       
       // For media messages, add the media type
@@ -2284,7 +2284,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Create media configuration
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
       };
       
       // For media messages, add the media type
@@ -2922,7 +2922,7 @@ async setWelcomeMessage(bot, message, args, group) {
     try {
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
       };
       
       if (quotedMsg.hasMedia) {
@@ -3030,7 +3030,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Similar media handling as in setKickOnlineMedia but for offConfig
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
       };
       
       if (quotedMsg.hasMedia) {
@@ -3539,7 +3539,7 @@ async setWelcomeMessage(bot, message, args, group) {
     try {
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
       };
       
       if (quotedMsg.hasMedia) {
@@ -4367,7 +4367,7 @@ async setWelcomeMessage(bot, message, args, group) {
       // Create media configuration
       const mediaConfig = {
         type: "text",
-        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body || ""
+        content: quotedMsg.caption ?? quotedMsg.content ?? quotedMsg.body ?? quotedMsg._data.body ?? ""
       };
       
       // For media messages, add the media type
