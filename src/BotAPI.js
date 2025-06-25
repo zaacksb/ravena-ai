@@ -1079,7 +1079,7 @@ class BotAPI {
         // Primeiro notifica o grupo de logs
         if (bot.grupoLogs) {
           try {
-            await bot.sendMessage(bot.grupoLogs, donationMsg);
+            await bot.sendMessage(bot.grupoLogs, donationMsg, {marcarTodos: true});
           } catch (error) {
             this.logger.error(`Erro ao enviar notificação de doação para grupoLogs (${bot.grupoLogs}):`, error);
           }
@@ -1088,7 +1088,7 @@ class BotAPI {
         // Notifica o grupo de avisos
         if (bot.grupoAvisos) {
           try {
-            const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg);
+            const sentMsg = await bot.sendMessage(bot.grupoAvisos, donationMsg, {marcarTodos: true});
             
             // Tenta fixar a mensagem
             try {
@@ -1106,7 +1106,7 @@ class BotAPI {
         // Notifica o grupo de interação
         if (bot.grupoInteracao) {
           try {
-            const sentMsg = await bot.sendMessage(bot.grupoInteracao, donationMsg);
+            const sentMsg = await bot.sendMessage(bot.grupoInteracao, donationMsg, {marcarTodos: true});
             
             // Tenta fixar a mensagem
             try {

@@ -1424,8 +1424,14 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         evoPayload.quoted = options.evoReply;
       }
 
-      if(options.mentions && options.mentions.length > 0){
-        evoPayload.mentioned = options.mentions.map(s => s.split('@')[0]);
+
+      // Ou marca todos com a API do EVO ou menciona manual alguns
+      if(options.marcarTodos){
+        evoPayload.mentionEveryOne = true;
+      } else {
+        if(options.mentions && options.mentions.length > 0){
+          evoPayload.mentioned = options.mentions.map(s => s.split('@')[0]);
+        }
       }
 
       if(options.quotedMsgId){
