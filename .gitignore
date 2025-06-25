@@ -201,3 +201,5 @@ data/qrcode_ravenagold.png
 .baileys_auth/ravenatestes/auth_info_baileys/app-state-sync-key-AAAAAJ32.json
 /.baileys_auth
 /data/data-share
+data/kick-token.json
+data/cooldowns.json

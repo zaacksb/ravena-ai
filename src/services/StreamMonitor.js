@@ -35,8 +35,12 @@ class StreamMonitor extends EventEmitter {
     this.channels = [];
     this.streamStatuses = {};
     this.twitchToken = null;
+    this.kickToken = null; // Added for Kick token
     this.twitchClientId = process.env.TWITCH_CLIENT_ID;
     this.twitchClientSecret = process.env.TWITCH_CLIENT_SECRET;
+    this.kickClientId = process.env.KICK_CLIENT_ID;
+    this.kickClientSecret = process.env.KICK_CLIENT_SECRET;
+
     this.pollingInterval = 60000*3; // 3 minute default polling interval
     this.pollingIntervalBatches = 30000; // between batches
     this.pollingTimers = {
@@ -269,67 +273,104 @@ class StreamMonitor extends EventEmitter {
       const tokenFilePath = path.join(this.database.databasePath, "twitch-token.json");
       
       // Check if we have a saved token that's still valid
-      try {
-        // Check if token file exists
-        await fs.accessSync(tokenFilePath);
-        
-        // Read token file
-        const tokenData = JSON.parse(await fs.readFileSync(tokenFilePath, 'utf8'));
-        
-        // If token is less than 15 days old, reuse it
-        const now = Date.now();
-        const tokenAge = now - tokenData.timestamp;
-        const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
-        
-        if (tokenAge < fifteenDaysMs && tokenData.access_token) {
-          this.logger.info('Using existing Twitch token (less than 15 days old)');
-          this.twitchToken = tokenData.access_token;
-          return this.twitchToken;
-        }
-      } catch (err) {
-        this.logger.log(err);
-        // File doesn't exist or can't be read/parsed - we'll get a new token
-        this.logger.debug('No valid token file found, requesting new Twitch token');
+      if (fs.existsSync(tokenFilePath)) {
+          const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
+          // If token is less than 15 days old, reuse it
+          const now = Date.now();
+          const tokenAge = now - tokenData.timestamp;
+          const fifteenDaysMs = 15 * 24 * 60 * 60 * 1000;
+          
+          if (tokenAge < fifteenDaysMs && tokenData.access_token) {
+              this.logger.info('Using existing Twitch token (less than 15 days old)');
+              this.twitchToken = tokenData.access_token;
+              return this.twitchToken;
+          }
       }
       
       // Request a new token
       this.logger.info(`Requesting new Twitch API token`);
       
-      // Using the correct format - put credentials in request body
       const response = await axios.post('https://id.twitch.tv/oauth2/token', {
         client_id: this.twitchClientId,
         client_secret: this.twitchClientSecret,
         grant_type: 'client_credentials',
       });
       
-      if (response.status !== 200 && response.data){
-        this.logger.error(`Twitch Token response ${JSON.stringify(response.data)}`);
-      }
       if (response.status === 200 && response.data && response.data.access_token) {
-        // Save the token with timestamp
         const tokenData = {
           ...response.data,
           timestamp: Date.now()
         };
-        
-        // Make sure directory exists
-        const tokenDir = path.dirname(tokenFilePath);
-        await fs.mkdirSync(tokenDir, { recursive: true });
-        
-        // Save token to file
-        await fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData, null, 2), 'utf8');
+        fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData, null, 2), 'utf8');
         
         this.twitchToken = response.data.access_token;
         this.logger.info('Successfully obtained and saved new Twitch token');
         return this.twitchToken;
       } else {
-        throw new Error(`Unexpected response: ${JSON.stringify(response.data)}`);
+        this.logger.error(`Unexpected Twitch token response: ${JSON.stringify(response.data)}`);
+        return null;
       }
     } catch (error) {
-      this.logger.error(`Error refreshing Twitch token (${this.twitchClientId}, ${this.twitchClientSecret}):`, error.message);
+      this.logger.error(`Error refreshing Twitch token: ${error.message}`);
       return null;
     }
   }
+
+  /**
+   * Refresh the Kick API token or load existing token if still valid
+   * @private
+   * @returns {Promise<string|null>} - The valid token or null on error
+   */
+  async _refreshKickToken() {
+    try {
+        const tokenFilePath = path.join(this.database.databasePath, "kick-token.json");
+
+        // Check if we have a saved, unexpired token
+        if (fs.existsSync(tokenFilePath)) {
+            const tokenData = JSON.parse(fs.readFileSync(tokenFilePath, 'utf8'));
+            if (tokenData.expires_at && Date.now() < tokenData.expires_at) {
+                this.logger.info('Using existing Kick token.');
+                this.kickToken = tokenData.access_token;
+                return this.kickToken;
+            }
+        }
+
+        // Request a new token
+        this.logger.info(`Requesting new Kick API token`);
+        
+        const params = new URLSearchParams();
+        params.append('grant_type', 'client_credentials');
+        params.append('client_id', this.kickClientId);
+        params.append('client_secret', this.kickClientSecret);
+
+        const response = await axios.post('https://id.kick.com/oauth/token', params, {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        });
+
+        if (response.status === 200 && response.data && response.data.access_token) {
+            const tokenData = {
+                ...response.data,
+                // Calculate expiration time (expires_in is in seconds)
+                expires_at: Date.now() + (response.data.expires_in * 1000)
+            };
+            fs.writeFileSync(tokenFilePath, JSON.stringify(tokenData, null, 2), 'utf8');
+            
+            this.kickToken = response.data.access_token;
+            this.logger.info('Successfully obtained and saved new Kick token.');
+            return this.kickToken;
+        } else {
+            this.logger.error(`Unexpected Kick token response: ${JSON.stringify(response.data)}`);
+            return null;
+        }
+    } catch (error) {
+        const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+        this.logger.error(`Error refreshing Kick token (${this.kickClientId}): ${errorMessage}`);
+        return null;
+    }
+  }
+
 
   shuffle (array){ 
     for (let i = array.length - 1; i > 0; i--) { 
@@ -610,59 +651,97 @@ class StreamMonitor extends EventEmitter {
   async _pollKickChannels() {
     const kickChannels = this.channels.filter(c => c.source.toLowerCase() === 'kick');
     if (kickChannels.length === 0) return;
-    
-    for (const channel of kickChannels) {
-      try {
-        // Kick doesn't have an official API, so we'll scrape the channel page
-        const response = await axios.get(`https://kick.com/api/v1/channels/${channel.name}`);
-        const channelData = response.data;
-        const channelKey = `kick:${channel.name.toLowerCase()}`;
-        const isLiveNow = channelData.livestream !== null;
-        const wasLive = this.streamStatuses[channelKey]?.isLive || false;
-        
-        // Create or update status
-        if (!this.streamStatuses[channelKey]) {
-          this.streamStatuses[channelKey] = {
-            isLive: isLiveNow,
-            lastChecked: new Date().toISOString()
-          };
-        } else {
-          this.streamStatuses[channelKey].isLive = isLiveNow;
-          this.streamStatuses[channelKey].lastChecked = new Date().toISOString();
-        }
-        
-        // Add stream details if live
-        if (isLiveNow && channelData.livestream) {
-          this.streamStatuses[channelKey].title = channelData.livestream.session_title;
-          this.streamStatuses[channelKey].thumbnail = channelData.livestream.thumbnail?.url || 
-                                                     channelData.user?.profile_pic || '';
-          this.streamStatuses[channelKey].viewerCount = channelData.livestream.viewer_count;
-          this.streamStatuses[channelKey].startedAt = channelData.livestream.created_at;
-        }
-        
-        // Emit events for status changes
-        if (isLiveNow && !wasLive) {
-          this.emit('streamOnline', {
-            platform: 'kick',
-            channelName: channel.name,
-            title: channelData.livestream.session_title,
-            game: channelData.livestream.categories[0].name,
-            thumbnail: channelData.livestream.thumbnail?.url || 
-                      channelData.user?.profile_pic || '',
-            viewerCount: channelData.livestream.viewer_count,
-            startedAt: channelData.livestream.created_at
-          });
-        } else if (!isLiveNow && wasLive) {
-          this.emit('streamOffline', {
-            platform: 'kick',
-            channelName: channel.name
-          });
-        }
-      } catch (error) {
-        this.logger.error(`Error polling Kick channel ${channel.name}:`, error.message);
-      }
+
+    // Ensure we have a valid token
+    if (!this.kickToken) {
+        const token = await this._refreshKickToken();
+        if (!token) return; // Can't proceed without a token
     }
-    
+
+    // Split channels into batches (using 100 as a safe limit)
+    const channelBatches = [];
+    for (let i = 0; i < kickChannels.length; i += 100) {
+        channelBatches.push(kickChannels.slice(i, i + 100));
+    }
+
+    this.logger.info(`Polling ${kickChannels.length} Kick channels in ${channelBatches.length} batches.`);
+
+    for (const batch of channelBatches) {
+        try {
+            const slugs = batch.map(c => c.name).join(",");
+            const kickRequestParameters = {
+                headers: {
+                    'Authorization': `Bearer ${this.kickToken}`,
+                    'Accept': 'application/json'
+                }
+            };
+
+            console.log(slugs, kickRequestParameters);
+            const response = await axios.get(`https://api.kick.com/public/v1/channels?slug=${slugs}`, kickRequestParameters);
+
+            if (response.status === 200 && response.data) {
+                const liveData = new Map(response.data.data.map(ch => [ch.slug.toLowerCase(), ch]));
+                console.log(response.data);
+                console.log(liveData);
+
+                // Update status for all channels in the batch
+                for (const channel of batch) {
+                    const channelKey = `kick:${channel.name.toLowerCase()}`;
+                    const channelData = liveData.get(channel.name.toLowerCase());
+                    const isLiveNow = !!(channelData && channelData.stream && channelData.stream.is_live);
+                    const wasLive = this.streamStatuses[channelKey]?.isLive || false;
+
+                    // Create or update status
+                    if (!this.streamStatuses[channelKey]) {
+                        this.streamStatuses[channelKey] = {};
+                    }
+                    this.streamStatuses[channelKey].isLive = isLiveNow;
+                    this.streamStatuses[channelKey].lastChecked = new Date().toISOString();
+
+                    // Add stream details if live
+                    if (isLiveNow) {
+                        const stream = channelData.stream;
+                        this.streamStatuses[channelKey].title = stream.stream_title;
+                        this.streamStatuses[channelKey].thumbnail = stream.thumbnail;
+                        this.streamStatuses[channelKey].viewerCount = stream.viewer_count;
+                        this.streamStatuses[channelKey].startedAt = stream.start_time;
+                    }
+
+                    // Emit events for status changes
+                    if (isLiveNow && !wasLive) {
+                        const stream = channelData.stream;
+                        this.emit('streamOnline', {
+                            platform: 'kick',
+                            channelName: channelData.slug,
+                            title: stream.stream_title,
+                            game: channelData.category ? channelData.category.name : 'Unknown',
+                            thumbnail: stream.thumbnail,
+                            viewerCount: stream.viewer_count,
+                            startedAt: stream.start_time
+                        });
+                    } else if (!isLiveNow && wasLive) {
+                        this.emit('streamOffline', {
+                            platform: 'kick',
+                            channelName: channel.name
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 401) {
+                this.logger.warn('Kick token unauthorized. Refreshing token for next poll.');
+                // Force a refresh on the next cycle by clearing the current token
+                this.kickToken = null; 
+                await this._refreshKickToken();
+            } else {
+                const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+                this.logger.error(`Error polling Kick channels: ${errorMessage}`);
+            }
+        }
+        // Add a small delay between batches to avoid rate limiting
+        await sleep(1000);
+    }
+
     this._saveDatabase();
   }
 
@@ -1052,50 +1131,69 @@ class StreamMonitor extends EventEmitter {
       if (channelArray.length === 0) {
         return Array.isArray(channels) ? [] : null;
       }
-      
-      // Busca o status de cada canal
-      const results = [];
-      
-      for (const channelName of channelArray) {
-        try {
-          // Kick não tem API oficial, então raspamos a página do canal
-          const response = await axios.get(`https://kick.com/api/v1/channels/${channelName}`);
-          const channelData = response.data;
-          const isLiveNow = channelData.livestream !== null;
-          
-          // Cria o objeto de status
-          const status = {
-            platform: 'kick',
-            channelName: channelName,
-            displayName: channelData.user?.username || channelName,
-            isLive: isLiveNow,
-            lastChecked: new Date().toISOString()
-          };
-          
-          // Adiciona detalhes da stream se estiver online
-          if (isLiveNow && channelData.livestream) {
-            status.title = channelData.livestream.session_title;
-            status.game = channelData.livestream.categories.length > 0 
-                        ? channelData.livestream.categories[0].name 
-                        : 'Desconhecido';
-            status.thumbnail = channelData.livestream.thumbnail?.url || 
-                              channelData.user?.profile_pic || '';
-            status.viewerCount = channelData.livestream.viewer_count;
-            status.startedAt = channelData.livestream.created_at;
+
+      // Ensure we have a valid token
+      if (!this.kickToken) {
+          const token = await this._refreshKickToken();
+          if (!token) {
+              throw new Error('Could not get Kick token');
           }
-          
-          results.push(status);
+      }
+      
+      const results = [];
+      const batches = [];
+      for (let i = 0; i < channelArray.length; i += 100) {
+          batches.push(channelArray.slice(i, i + 100));
+      }
+
+      for (const batch of batches) {
+        try {
+            const slugs = batch.map(c => c.toLowerCase());
+            const response = await axios.get('https://api.kick.com/public/v1/channels', {
+                headers: {
+                    'Authorization': `Bearer ${this.kickToken}`,
+                    'Accept': 'application/json'
+                },
+                params: { slug }
+            });
+
+            const liveData = new Map(response.data.data.map(ch => [ch.slug.toLowerCase(), ch]));
+
+            for (const channelName of batch) {
+                const channelData = liveData.get(channelName.toLowerCase());
+                
+                if (!channelData) {
+                    results.push({
+                        platform: 'kick',
+                        channelName: channelName,
+                        isLive: false,
+                        error: 'Channel not found',
+                        lastChecked: new Date().toISOString()
+                    });
+                    continue;
+                }
+
+                const isLiveNow = !!(channelData.stream && channelData.stream.is_live);
+                const status = {
+                    platform: 'kick',
+                    channelName: channelData.slug,
+                    displayName: channelData.slug,
+                    isLive: isLiveNow,
+                    lastChecked: new Date().toISOString()
+                };
+
+                if (isLiveNow) {
+                    const stream = channelData.stream;
+                    status.title = stream.stream_title;
+                    status.game = channelData.category ? channelData.category.name : 'Unknown';
+                    status.thumbnail = stream.thumbnail;
+                    status.viewerCount = stream.viewer_count;
+                    status.startedAt = stream.start_time;
+                }
+                results.push(status);
+            }
         } catch (error) {
-          this.logger.error(`Erro ao obter status do Kick para ${channelName}:`, error.message);
-          
-          // Adiciona canal como não encontrado ou offline
-          results.push({
-            platform: 'kick',
-            channelName: channelName,
-            isLive: false,
-            error: error.message,
-            lastChecked: new Date().toISOString()
-          });
+            this.logger.error(`Error getting Kick status for ${batch.join(', ')}:`, error.message);
         }
       }
       
