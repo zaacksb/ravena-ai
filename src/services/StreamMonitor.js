@@ -664,7 +664,7 @@ class StreamMonitor extends EventEmitter {
         channelBatches.push(kickChannels.slice(i, i + 100));
     }
 
-    this.logger.info(`Polling ${kickChannels.length} Kick channels in ${channelBatches.length} batches.`);
+    this.logger.info(`[_pollKickChannels] Polling ${kickChannels.length} Kick channels in ${channelBatches.length} batches.`);
 
     for (const batch of channelBatches) {
         try {
@@ -676,13 +676,12 @@ class StreamMonitor extends EventEmitter {
                 }
             };
 
-            console.log(slugs, kickRequestParameters);
+            this.logger.info(`[_pollKickChannels] Slugs: '${slugs}'`);
             const response = await axios.get(`https://api.kick.com/public/v1/channels?slug=${slugs}`, kickRequestParameters);
 
             if (response.status === 200 && response.data) {
                 const liveData = new Map(response.data.data.map(ch => [ch.slug.toLowerCase(), ch]));
-                console.log(response.data);
-                console.log(liveData);
+                this.logger.info(`[_pollKickChannels] Response: '${JSON.stringify(liveData, null, '\t')}'`);
 
                 // Update status for all channels in the batch
                 for (const channel of batch) {
@@ -726,16 +725,18 @@ class StreamMonitor extends EventEmitter {
                         });
                     }
                 }
+            } else {
+              this.logger.warn(`[_pollKickChannels] Error? ${response.status}`);
             }
         } catch (error) {
             if (error.response && error.response.status === 401) {
-                this.logger.warn('Kick token unauthorized. Refreshing token for next poll.');
+                this.logger.warn('[_pollKickChannels] Kick token unauthorized. Refreshing token for next poll.');
                 // Force a refresh on the next cycle by clearing the current token
                 this.kickToken = null; 
                 await this._refreshKickToken();
             } else {
                 const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-                this.logger.error(`Error polling Kick channels: ${errorMessage}`);
+                this.logger.error(`[_pollKickChannels] Error polling Kick channels: ${errorMessage}`);
             }
         }
         // Add a small delay between batches to avoid rate limiting
