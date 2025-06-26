@@ -5,31 +5,31 @@ const Database = require("../utils/Database");
 const CustomVariableProcessor = require("../utils/CustomVariableProcessor");
 
 // Cria novo logger
-const logger = new Logger("biscoito-sorte");
+const logger = new Logger("cantada");
 
 const database = Database.getInstance();
 const variableProcessor = new CustomVariableProcessor();
 
 /**
- * Retorna uma frase aleatória da variável "biscoito-frases"
+ * Retorna uma cantada aleatória para uma pessoa aleatória
  * @param {WhatsAppBot} bot
  * @param {Object} message
  * @param {Array} args
  * @param {Object} group
  * @returns {Promise<ReturnMessage>}
  */
-async function biscoitoCommand(bot, message, args, group) {
+async function cantadaCommand(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   try {
     const customVariables = await database.getCustomVariables();
-    const frases = customVariables["biscoito-frases"];
+    const frases = customVariables["cantadas-ruins"];
 
     if (!frases || frases.length === 0) {
-      logger.warn("Nenhuma frase encontrada em 'biscoito-frases'");
+      logger.warn("Nenhuma frase encontrada em 'cantadas-ruins'");
       return new ReturnMessage({
         chatId,
-        content: "❌ Nenhuma frase de biscoito da sorte disponível no momento.",
+        content: "❌ Nenhuma cantada disponível no momento.",
         options: {
           quotedMessageId: message.origin?.id?._serialized,
           evoReply: message.origin
@@ -39,16 +39,16 @@ async function biscoitoCommand(bot, message, args, group) {
 
     const fraseIndex = Math.floor(Math.random() * frases.length);
     const options = {};
-    const fraseFinal = await variableProcessor.process(frases[fraseIndex], {
-      message,
-      group,
-      options,
-      bot
-    });
+    
+    // Processar a frase completa com as variáveis
+    const fraseFinal = await variableProcessor.process(
+      `💕 *{nomeAutor}* chegou em *{mention}* com: \n${frases[fraseIndex]}`,
+      { message, group, options, bot }
+    );
 
     return new ReturnMessage({
       chatId,
-      content: `🥠 ${fraseFinal}`,
+      content: fraseFinal,
       options: {
         quotedMessageId: message.origin?.id?._serialized,
         evoReply: message.origin,
@@ -57,10 +57,10 @@ async function biscoitoCommand(bot, message, args, group) {
     });
 
   } catch (err) {
-    logger.error("Erro ao gerar frase do biscoito:", err);
+    logger.error("Erro ao gerar cantada:", err);
     return new ReturnMessage({
       chatId,
-      content: "❌ Algo deu errado ao abrir o biscoito da sorte. Tente novamente mais tarde.",
+      content: "❌ Algo deu errado ao tentar a cantada. Tente novamente mais tarde.",
       options: {
         quotedMessageId: message.origin?.id?._serialized,
         evoReply: message.origin
@@ -69,34 +69,16 @@ async function biscoitoCommand(bot, message, args, group) {
   }
 }
 
-// Comandos registrados com nomes alternativos
+// Comandos registrados
 const commands = [
   new Command({
-    name: 'biscoito',
-    description: 'Abre um biscoito da sorte',
+    name: 'cantada',
+    description: 'Faz uma cantada para alguém do grupo',
     category: "zoeira",
     reactions: {
-      after: "🥠"
+      after: "💕"
     },
-    method: biscoitoCommand
-  }),
-  new Command({
-    name: 'biscoito-da-sorte',
-    hidden: true,
-    category: "zoeira",
-    reactions: {
-      after: "🥠"
-    },
-    method: biscoitoCommand
-  }),
-  new Command({
-    name: 'biscoito-sorte',
-    hidden: true,
-    category: "zoeira",
-    reactions: {
-      after: "🥠"
-    },
-    method: biscoitoCommand
+    method: cantadaCommand
   })
 ];
 
