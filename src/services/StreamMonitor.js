@@ -668,7 +668,7 @@ class StreamMonitor extends EventEmitter {
 
     for (const batch of channelBatches) {
         try {
-            const slugs = batch.map(c => `slug[]=${encodeURIComponent(c.name)}`).join("&");
+            const slugs = batch.map(c => `slug=${encodeURIComponent(c.name)}`).join("&");
 
             const kickRequestParameters = {
                 headers: {
