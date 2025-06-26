@@ -31,7 +31,8 @@ async function biscoitoCommand(bot, message, args, group) {
         chatId,
         content: "❌ Nenhuma frase de biscoito da sorte disponível no momento.",
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -50,6 +51,7 @@ async function biscoitoCommand(bot, message, args, group) {
       content: `🥠 ${fraseFinal}`,
       options: {
         quotedMessageId: message.origin?.id?._serialized,
+        evoReply: message.origin,
         ...options
       }
     });
@@ -60,7 +62,8 @@ async function biscoitoCommand(bot, message, args, group) {
       chatId,
       content: "❌ Algo deu errado ao abrir o biscoito da sorte. Tente novamente mais tarde.",
       options: {
-        quotedMessageId: message.origin?.id?._serialized
+        quotedMessageId: message.origin?.id?._serialized,
+        evoReply: message.origin
       }
     });
   }
