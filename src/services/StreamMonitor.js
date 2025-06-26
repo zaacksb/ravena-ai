@@ -1119,17 +1119,17 @@ class StreamMonitor extends EventEmitter {
     }
   }
 
-  /**
+ /**
    * Busca o status de streams no Kick sem necessidade de monitoramento prévio
    * @param {string|Array<string>} channels - Nome do canal ou array de nomes
    * @returns {Promise<Object|Array<Object>>} - Status da stream ou array de status
    */
   async getKickLiveStatus(channels) {
     try {
-      // Normaliza para array
+      // Normalize to array
       const channelArray = Array.isArray(channels) ? channels : [channels];
       
-      // Se não houver canais, retorna array vazio
+      // If no channels, return empty
       if (channelArray.length === 0) {
         return Array.isArray(channels) ? [] : null;
       }
@@ -1150,62 +1150,94 @@ class StreamMonitor extends EventEmitter {
 
       for (const batch of batches) {
         try {
-            const slugs = batch.map(c => c.toLowerCase());
-            const response = await axios.get('https://api.kick.com/public/v1/channels', {
+            // Manually construct the query string for slugs, like in _pollKickChannels
+            const slugsQuery = batch.map(c => `slug=${encodeURIComponent(c.toLowerCase())}`).join("&");
+
+            const response = await axios.get(`https://api.kick.com/public/v1/channels?${slugsQuery}`, {
                 headers: {
                     'Authorization': `Bearer ${this.kickToken}`,
                     'Accept': 'application/json'
-                },
-                params: { slug }
+                }
             });
+            
+            if (response.status === 200 && response.data && response.data.data) {
+              const liveData = new Map(response.data.data.map(ch => [ch.slug.toLowerCase(), ch]));
 
-            const liveData = new Map(response.data.data.map(ch => [ch.slug.toLowerCase(), ch]));
+              for (const channelName of batch) {
+                  const channelData = liveData.get(channelName.toLowerCase());
+                  
+                  if (!channelData) {
+                      results.push({
+                          platform: 'kick',
+                          channelName: channelName,
+                          isLive: false,
+                          error: 'Channel not found',
+                          lastChecked: new Date().toISOString()
+                      });
+                      continue;
+                  }
 
-            for (const channelName of batch) {
-                const channelData = liveData.get(channelName.toLowerCase());
-                
-                if (!channelData) {
+                  const isLiveNow = !!(channelData.stream && channelData.stream.is_live);
+                  const status = {
+                      platform: 'kick',
+                      channelName: channelData.slug,
+                      displayName: channelData.slug,
+                      isLive: isLiveNow,
+                      lastChecked: new Date().toISOString()
+                  };
+
+                  if (isLiveNow) {
+                      const stream = channelData.stream;
+                      status.title = channelData.stream_title;
+                      status.game = channelData.category ? channelData.category.name : 'Unknown';
+                      status.thumbnail = stream.thumbnail;
+                      status.viewerCount = stream.viewer_count;
+                      status.startedAt = stream.start_time;
+                  }
+                  results.push(status);
+              }
+            } else {
+                // Handle cases where status is not 200 but didn't throw
+                for (const channelName of batch) {
                     results.push({
                         platform: 'kick',
                         channelName: channelName,
                         isLive: false,
-                        error: 'Channel not found',
+                        error: `API returned status ${response.status}`,
                         lastChecked: new Date().toISOString()
                     });
-                    continue;
                 }
-
-                const isLiveNow = !!(channelData.stream && channelData.stream.is_live);
-                const status = {
-                    platform: 'kick',
-                    channelName: channelData.slug,
-                    displayName: channelData.slug,
-                    isLive: isLiveNow,
-                    lastChecked: new Date().toISOString()
-                };
-
-                if (isLiveNow) {
-                    const stream = channelData.stream;
-                    status.title = stream.stream_title;
-                    status.game = channelData.category ? channelData.category.name : 'Unknown';
-                    status.thumbnail = stream.thumbnail;
-                    status.viewerCount = stream.viewer_count;
-                    status.startedAt = stream.start_time;
-                }
-                results.push(status);
             }
         } catch (error) {
-            this.logger.error(`Error getting Kick status for ${batch.join(', ')}:`, error.message);
+            const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+            this.logger.error(`Error getting Kick status for batch ${batch.join(', ')}: ${errorMessage}`);
+            
+            if (error.response && error.response.status === 401) {
+                this.logger.warn('Kick token was unauthorized. It will be refreshed on the next call.');
+                this.kickToken = null; // Invalidate token
+            }
+
+            // Add error status for all channels in the failed batch
+            for (const channelName of batch) {
+              results.push({
+                platform: 'kick',
+                channelName: channelName,
+                isLive: false,
+                error: errorMessage,
+                lastChecked: new Date().toISOString()
+              });
+            }
         }
       }
       
-      // Retorna na mesma forma que a entrada (único objeto ou array)
+      // Return in the same format as the input (single object or array)
       return Array.isArray(channels) ? results : (results[0] || null);
     } catch (error) {
-      this.logger.error('Erro ao obter status do Kick:', error.message);
+      this.logger.error('Critical error in getKickLiveStatus:', error.message);
       return Array.isArray(channels) ? [] : null;
     }
   }
+
 
   /**
    * Busca estatísticas de streams populares em múltiplas plataformas
