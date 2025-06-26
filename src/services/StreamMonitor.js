@@ -736,7 +736,7 @@ class StreamMonitor extends EventEmitter {
                 await this._refreshKickToken();
             } else {
                 const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
-                this.logger.error(`[_pollKickChannels] Error polling Kick channels: ${errorMessage}`);
+                this.logger.error(`[_pollKickChannels] Error polling Kick channels: ${errorMessage}`, error);
             }
         }
         // Add a small delay between batches to avoid rate limiting
