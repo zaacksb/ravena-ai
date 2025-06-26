@@ -59,7 +59,8 @@ async function aiCommand(bot, message, args, group) {
       chatId: chatId,
       content: 'Por favor, forneça uma pergunta. Exemplo: !ai Qual é a capital da França?',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -88,7 +89,8 @@ async function aiCommand(bot, message, args, group) {
       chatId: chatId,
       content: processedResponse,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -97,7 +99,8 @@ async function aiCommand(bot, message, args, group) {
       chatId: chatId,
       content: 'Desculpe, encontrei um erro ao processar sua solicitação.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }

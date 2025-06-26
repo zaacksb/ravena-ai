@@ -211,7 +211,8 @@ async function apelidoCommand(bot, message, args, group) {
           chatId: group.id,
           content: `Seu apelido atual é: *${userNick}*`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       } else {
@@ -219,7 +220,8 @@ async function apelidoCommand(bot, message, args, group) {
           chatId: group.id,
           content: 'Você não tem um apelido definido.\nUse !apelido [apelido] para definir um.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -234,7 +236,8 @@ async function apelidoCommand(bot, message, args, group) {
         chatId: group.id,
         content: 'O apelido deve ter pelo menos 2 caracteres.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -247,7 +250,8 @@ async function apelidoCommand(bot, message, args, group) {
         chatId: group.id,
         content: `O apelido foi limitado a 20 caracteres: *${nickname}*`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -278,7 +282,8 @@ async function apelidoCommand(bot, message, args, group) {
       chatId: group.id,
       content: `Apelido definido: *${nickname}*`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
     });
   } catch (error) {

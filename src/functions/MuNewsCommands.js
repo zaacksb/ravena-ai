@@ -222,7 +222,8 @@ async function newsCommand(bot, message, args, group) {
               chatId: chatId,
               content: `❌ Formato de data não reconhecido. Tente usar formatos como "hoje", "ontem", "segunda-feira passada", "19/04/2025" ou "YYYY-MM-DD".\n\n${stringDatasDisponiveis}`,
               options: {
-                quotedMessageId: message.origin.id._serialized
+                quotedMessageId: message.origin.id._serialized,
+                evoReply: message.origin
               }
             });
           }
@@ -251,7 +252,8 @@ async function newsCommand(bot, message, args, group) {
           after: "📰"
         },
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     } catch (error) {
@@ -266,7 +268,8 @@ async function newsCommand(bot, message, args, group) {
           after: "⏰"
         },
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }

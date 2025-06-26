@@ -145,7 +145,8 @@ async function shareVariable(bot, message, args, group) {
         chatId: chatId,
         content: 'Formato incorreto. Use: `!share <variavel> <dado>`\nExemplo: `!share nomes João`\n\nOu apenas "!share nomes" mas marcando a mensagem com os dados',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -181,7 +182,8 @@ async function shareVariable(bot, message, args, group) {
           chatId: chatId,
           content: 'Ocorreu um erro ao ler o arquivo de dados. O arquivo pode estar corrompido.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -204,7 +206,8 @@ async function shareVariable(bot, message, args, group) {
       chatId: chatId,
       content: response,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
 
@@ -215,7 +218,8 @@ async function shareVariable(bot, message, args, group) {
       chatId: chatId,
       content: 'Ocorreu um erro inesperado ao compartilhar estes dados.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }

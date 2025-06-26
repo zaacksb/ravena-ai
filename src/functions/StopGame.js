@@ -173,7 +173,8 @@ async function startStopGame(bot, message, args, group) {
       chatId: groupId,
       content: startMessage,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     }));
     

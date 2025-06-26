@@ -39,7 +39,8 @@ async function stickerCommand(bot, message, args, group) {
           sendMediaAsSticker: true,
           stickerAuthor: "ravena",
           stickerName: stickerName,
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     } catch (error) {
@@ -78,7 +79,8 @@ async function stickerCommand(bot, message, args, group) {
         options: {
           sendMediaAsSticker: false,
           caption: "Mídia original do sticker",
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -99,7 +101,8 @@ async function stickerCommand(bot, message, args, group) {
           sendMediaAsSticker: true,
           stickerAuthor: "ravena",
           stickerName: stickerName,
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     } else {
@@ -561,7 +564,8 @@ async function processAutoSticker(bot, message, group) {
         sendMediaAsSticker: true,
         stickerAuthor: "ravena",
         stickerName: stickerName,
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     

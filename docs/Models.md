@@ -134,7 +134,8 @@ const response = new ReturnMessage({
   chatId: '123456789@g.us',
   content: 'Olá, grupo!',
   options: {
-    quotedMessageId: message.origin.id._serialized
+    quotedMessageId: message.origin.id._serialized,
+    evoReply: message.origin
   },
   reactions: {
     after: "✅"

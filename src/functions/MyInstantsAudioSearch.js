@@ -60,7 +60,8 @@ async function audioCommand(bot, message, args, group) {
         chatId,
         content: "🔇 Digite o nome do áudio para buscar no site MyInstants\n!audio nome do áudio",
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -78,7 +79,8 @@ async function audioCommand(bot, message, args, group) {
         chatId,
         content: `🔇 Nenhum áudio encontrado para "${query}".`,
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -89,7 +91,8 @@ async function audioCommand(bot, message, args, group) {
         chatId,
         content: `🔊 Resultados para "${query}":\n${preview}\n\nUse: !audio ${query} número_do_áudio para enviar o áudio desejado.\n\nExemplo: !audio ${query} 1`,
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -102,7 +105,8 @@ async function audioCommand(bot, message, args, group) {
         chatId,
         content: `❌ Número inválido, para '${query}' digite um número entre 1 e ${resultados.length}.\n!audio ${query} n`,
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -116,7 +120,8 @@ async function audioCommand(bot, message, args, group) {
         chatId,
         content: `▶️ _${resultado.title}_`,
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       }),
       new ReturnMessage({

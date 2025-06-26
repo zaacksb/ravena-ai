@@ -1168,6 +1168,7 @@ class CommandHandler {
             content: `Erro ao executar comando embutido: ${processedResponse.command}`,
             options: {
               quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+              evoReply: message.origin,
               ...options
             }
           });
@@ -1188,6 +1189,7 @@ class CommandHandler {
             options: {
               caption: mediaItem.caption,
               quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+              evoReply: message.origin,
               ...options
             },
             delay: i * 1000 // Adiciona delay de 1 segundo entre mensagens
@@ -1207,6 +1209,7 @@ class CommandHandler {
           content: processedResponse,
           options: {
             quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+            evoReply: message.origin,
             ...options
           }
         });
@@ -1233,6 +1236,7 @@ class CommandHandler {
               caption: caption || undefined,
               sendMediaAsSticker: mediaType === 'sticker',
               quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+              evoReply: message.origin,
               ...options
             }
           });
@@ -1253,6 +1257,7 @@ class CommandHandler {
           content: processedResponse,
           options: {
             quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+            evoReply: message.origin,
             ...options
           }
         });

@@ -104,7 +104,8 @@ async function buscarPlaca(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Não foi possível consultar a placa "${placa}". Tente novamente mais tarde.`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -114,7 +115,8 @@ async function buscarPlaca(bot, message, args, group) {
       chatId: chatId,
       content: resultado.msg,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       },
       reactions: {
         after: resultado.react || "🚘"
@@ -129,7 +131,8 @@ async function buscarPlaca(bot, message, args, group) {
       chatId: chatId,
       content: '❌ Erro ao consultar placa. Tente novamente mais tarde.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -356,7 +359,8 @@ async function consultarSiPt(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Não foi possível consultar a placa "${placa}" no SiPt. Tente novamente mais tarde.`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -366,7 +370,8 @@ async function consultarSiPt(bot, message, args, group) {
       chatId: chatId,
       content: resultados[0].msg,
       options: {
-        quotedMessageId: resultados[0].reply ? message.origin.id._serialized : undefined
+        quotedMessageId: resultados[0].reply ? message.origin.id._serialized : undefined,
+        evoReply: message.origin
       },
       reactions: {
         after: resultados[0].react || "🚘"
@@ -381,7 +386,8 @@ async function consultarSiPt(bot, message, args, group) {
       chatId: chatId,
       content: '❌ Erro ao consultar placa no SiPt. Tente novamente mais tarde.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }

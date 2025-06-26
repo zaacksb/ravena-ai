@@ -168,7 +168,8 @@ async function emojiKitchenCommand(bot, message, args, group) {
             sendMediaAsSticker: true,
             stickerAuthor: "ravena",
             stickerName: `Emojik: ${emojis[0]}+${emojis[1]}`,
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       } catch (error) {
@@ -202,7 +203,8 @@ async function emojiKitchenCommand(bot, message, args, group) {
           sendMediaAsSticker: true,
           stickerAuthor: "ravena",
           stickerName: `Emojik: ${emojis[0]}+${emojis[1]}`,
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     } catch (error) {
