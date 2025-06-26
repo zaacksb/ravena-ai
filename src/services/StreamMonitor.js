@@ -668,7 +668,8 @@ class StreamMonitor extends EventEmitter {
 
     for (const batch of channelBatches) {
         try {
-            const slugs = batch.map(c => c.name).join(",");
+            const slugs = batch.map(c => `slug[]=${encodeURIComponent(c.name)}`).join("&");
+
             const kickRequestParameters = {
                 headers: {
                     'Authorization': `Bearer ${this.kickToken}`,
@@ -677,7 +678,7 @@ class StreamMonitor extends EventEmitter {
             };
 
             this.logger.info(`[_pollKickChannels] Slugs: '${slugs}'`);
-            const response = await axios.get(`https://api.kick.com/public/v1/channels?slug=${slugs}`, kickRequestParameters);
+            const response = await axios.get(`https://api.kick.com/public/v1/channels?${slugs}`, kickRequestParameters);
 
             if (response.status === 200 && response.data) {
                 const liveData = new Map(response.data.data.map(ch => [ch.slug.toLowerCase(), ch]));
