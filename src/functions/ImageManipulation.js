@@ -245,7 +245,8 @@ async function handleRemoveBg(bot, message, args, group) {
       options: {
         caption: 'Fundo removido e salvo como arquivo',
         sendMediaAsDocument: true, // Envia como arquivo em vez de imagem
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -321,7 +322,8 @@ async function handleDistort(bot, message, args, group) {
       content: resultMedia,
       options: {
         caption: `Distorção aplicada (intensidade: ${intensity}%)`,
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -400,7 +402,8 @@ async function handleStickerBg(bot, message, args, group) {
         sendMediaAsSticker: true,
         stickerAuthor: "ravena",
         stickerName: stickerName,
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -471,7 +474,8 @@ async function handleArtisticEffect(bot, message, args, group, effect) {
       content: resultMedia,
       options: {
         caption: `Efeito ${effect} aplicado`,
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {

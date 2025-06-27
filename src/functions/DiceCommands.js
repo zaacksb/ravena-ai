@@ -71,7 +71,8 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
           chatId: chatId,
           content: 'Formato inválido. Use algo como: d20, 2d6, d8+3, 3d10-2',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -97,7 +98,8 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
           chatId: chatId,
           content: `⚠️ Número máximo de dados é ${MAX_DICE}.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         })
       );
@@ -110,7 +112,8 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
           chatId: chatId,
           content: `⚠️ Número máximo de faces é ${MAX_SIDES}.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         })
       );
@@ -204,7 +207,8 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
         chatId: chatId,
         content: resultMessage,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       })
     );
@@ -220,7 +224,8 @@ async function rollDice(bot, message, args, group, defaultSides = null) {
       chatId: chatId,
       content: '❌ Erro ao rolar dados. Por favor, tente novamente.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }

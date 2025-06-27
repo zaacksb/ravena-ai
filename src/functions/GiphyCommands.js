@@ -61,7 +61,8 @@ async function enviarGif(bot, message, args, group) {
           chatId: chatId,
           content: '❌ Não foi possível encontrar GIFs populares. Tente novamente mais tarde.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -91,7 +92,8 @@ async function enviarGif(bot, message, args, group) {
           chatId: chatId,
           content: `❌ Nenhum GIF encontrado para "${searchTerm}". Tente outra busca.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -203,7 +205,8 @@ async function enviarGif(bot, message, args, group) {
         caption: caption,
         sendMediaAsDocument: false,
         sendVideoAsGif: true, // IMPORTANTE: Define para enviar como GIF animado
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     
@@ -227,7 +230,8 @@ async function enviarGif(bot, message, args, group) {
       chatId: chatId,
       content: `❌ ${errorMessage}`,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }

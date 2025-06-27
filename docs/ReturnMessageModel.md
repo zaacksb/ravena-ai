@@ -55,7 +55,8 @@ async function myCommand(bot, message, args, group) {
     chatId: message.group || message.author,
     content: "Hello, world!",
     options: {
-      quotedMessageId: message.origin.id._serialized
+      quotedMessageId: message.origin.id._serialized,
+      evoReply: message.origin
     }
   });
   

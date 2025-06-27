@@ -27,7 +27,8 @@ async function buscarAnime(bot, message, args, group) {
         chatId: chatId,
         content: 'Por favor, forneça o nome de um anime para buscar. Exemplo: !anime Naruto',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -48,7 +49,8 @@ async function buscarAnime(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Não foi possível encontrar informações sobre "${nome}". Verifique se o nome está correto.`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -97,6 +99,7 @@ async function buscarAnime(bot, message, args, group) {
           content: media,
           options: {
             quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin,
             caption: mensagem
           }
         });
@@ -114,7 +117,8 @@ async function buscarAnime(bot, message, args, group) {
         chatId: chatId,
         content: mensagem,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -134,7 +138,8 @@ async function buscarAnime(bot, message, args, group) {
       chatId: chatId,
       content: `❌ ${errorMessage}`,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }

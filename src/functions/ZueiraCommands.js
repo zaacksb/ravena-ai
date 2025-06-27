@@ -26,6 +26,7 @@ async function handleComandoVariavelSimples(bot, message, args, group, variavel)
     content: fraseFinal,
     options: {
       quotedMessageId: message.origin.id._serialized,
+      evoReply: message.origin,
       ...options
     }
   });
@@ -44,6 +45,7 @@ async function presente(bot, message, args, group) {
     content: fraseFinal,
     options: {
       quotedMessageId: message.origin.id._serialized,
+      evoReply: message.origin,
       ...options
     }
   });

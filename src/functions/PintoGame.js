@@ -243,7 +243,8 @@ async function pintoCommand(bot, message, args, group) {
         chatId: message.author,
         content: 'Este jogo só pode ser jogado em grupos.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -264,7 +265,8 @@ async function pintoCommand(bot, message, args, group) {
         chatId: groupId,
         content: `⏳ ${userName}, você já realizou sua avaliação recentemente.\n\nPróxima avaliação disponível em ${cooldownStatus.daysUntil} dia(s), dia ${formatDate(cooldownStatus.nextAvailable)}.`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -336,7 +338,8 @@ async function pintoCommand(bot, message, args, group) {
       chatId: groupId,
       content: response,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -346,7 +349,8 @@ async function pintoCommand(bot, message, args, group) {
       chatId: message.group || message.author,
       content: '❌ Erro ao processar o comando. Por favor, tente novamente.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -454,7 +458,8 @@ async function pintoResetCommand(bot, message, args, group) {
         chatId: groupId,  
         content: '⛔ Apenas administradores podem resetar os dados do jogo.',  
         options: {  
-          quotedMessageId: message.origin.id._serialized  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }  
       })];  
     }  
@@ -468,7 +473,8 @@ async function pintoResetCommand(bot, message, args, group) {
         chatId: groupId,  
         content: '⚠️ Não há dados do jogo para este grupo.',  
         options: {  
-          quotedMessageId: message.origin.id._serialized  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }  
       })];  
     }  
@@ -493,7 +499,8 @@ async function pintoResetCommand(bot, message, args, group) {
         chatId: groupId,  
         content: `🔄 *Dados do Jogo Pinto Resetados*\n\nForam removidos dados de ${numJogadores} jogadores deste grupo.\n\nO ranking acima mostra como estava antes do reset.`,  
         options: {  
-          quotedMessageId: message.origin.id._serialized  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }  
       })  
     ];  

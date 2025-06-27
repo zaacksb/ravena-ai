@@ -994,7 +994,8 @@ async function fishCommand(bot, message, args, group) {
           after: "🎣"
         },
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -1125,7 +1126,8 @@ async function fishCommand(bot, message, args, group) {
             content: rareFishImage,
             options: {
               caption: fishMessage,
-              quotedMessageId: message.origin.id._serialized
+              quotedMessageId: message.origin.id._serialized,
+              evoReply: message.origin
             },
             reactions: {
               after: "🎣"
@@ -1145,7 +1147,8 @@ async function fishCommand(bot, message, args, group) {
         after: "🎣"
       },
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -1182,7 +1185,8 @@ async function myFishCommand(bot, message, args, group) {
         chatId,
         content: `🎣 ${userName}, você ainda não pescou nenhum peixe. Use !pescar para começar.`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -1265,7 +1269,8 @@ async function myFishCommand(bot, message, args, group) {
       chatId,
       content: fishMessage,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -1676,7 +1681,8 @@ async function showBaitsCommand(bot, message, args, group) {
       chatId,
       content: baitMessage,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -2052,7 +2058,8 @@ async function resetFishingDataCommand(bot, message, args, group) {
         chatId: message.author,  
         content: "❌ Este comando só pode ser usado em grupos.",  
         options: {  
-          quotedMessageId: message.origin.id._serialized  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }  
       });  
     }  
@@ -2064,7 +2071,8 @@ async function resetFishingDataCommand(bot, message, args, group) {
         chatId: message.group || message.author,  
         content: "❌ Este comando só pode ser usado por administradores do grupo.",  
         options: {  
-          quotedMessageId: message.origin.id._serialized  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }  
       });  
     }  
@@ -2078,7 +2086,8 @@ async function resetFishingDataCommand(bot, message, args, group) {
         chatId: message.group,  
         content: "ℹ️ Não há dados de pesca para este grupo.",  
         options: {  
-          quotedMessageId: message.origin.id._serialized  
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }  
       });  
     }  
@@ -2097,7 +2106,8 @@ async function resetFishingDataCommand(bot, message, args, group) {
       chatId: message.group,  
       content: `✅ Dados de pesca resetados com sucesso!\n\n${numPlayers} jogadores tiveram seus dados de pesca neste grupo apagados.`,  
       options: {  
-        quotedMessageId: message.origin.id._serialized  
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }  
     });  
   } catch (error) {  
@@ -2107,7 +2117,8 @@ async function resetFishingDataCommand(bot, message, args, group) {
       chatId: message.group || message.author,  
       content: '❌ Ocorreu um erro ao resetar os dados de pesca. Por favor, tente novamente.',  
       options: {  
-        quotedMessageId: message.origin.id._serialized  
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }  
     });  
   }  

@@ -41,7 +41,8 @@ async function buscarImdb(bot, message, args, group) {
         chatId: chatId,
         content: 'Por favor, forneça o nome de um filme ou série para buscar. Exemplo: !imdb Inception',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -66,7 +67,8 @@ async function buscarImdb(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Não foi possível encontrar "${nome}". Verifique se o nome está correto.`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -91,7 +93,8 @@ async function buscarImdb(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Erro ao buscar detalhes para "${nome}".`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -185,7 +188,8 @@ async function buscarImdb(bot, message, args, group) {
           content: media,
           options: {
             caption: mensagem,
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       } catch (imageError) {
@@ -195,7 +199,8 @@ async function buscarImdb(bot, message, args, group) {
           chatId: chatId,
           content: mensagem,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -205,7 +210,8 @@ async function buscarImdb(bot, message, args, group) {
         chatId: chatId,
         content: mensagem,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }

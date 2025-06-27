@@ -99,7 +99,8 @@ async function processYoutubeReaction(bot, message, emoji) {
       chatId: chatId,
       content: 'Baixando vídeo do YouTube...',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     
@@ -114,7 +115,8 @@ async function processYoutubeReaction(bot, message, emoji) {
           chatId: chatId,
           content: `Erro ao baixar vídeo: ${error.message}`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -139,7 +141,8 @@ async function processYoutubeReaction(bot, message, emoji) {
           content: media,
           options: {
             caption: result.legenda,
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -158,7 +161,8 @@ async function processYoutubeReaction(bot, message, emoji) {
           chatId: chatId,
           content: 'Erro ao enviar vídeo.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -307,7 +311,8 @@ async function ytCommand(bot, message, args, group) {
       chatId: chatId,
       content: 'Por favor, forneça um link do YouTube ou termo de busca. Exemplo: !yt https://youtu.be/dQw4w9WgXcQ ou !yt despacito',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
     });
   }
@@ -326,7 +331,8 @@ async function ytCommand(bot, message, args, group) {
       chatId: chatId,
       content: `🔍 Buscando: "${input}" no YouTube...`,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     }));
     
@@ -337,7 +343,8 @@ async function ytCommand(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Nenhum vídeo encontrado para: "${input}"`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -357,7 +364,8 @@ async function ytCommand(bot, message, args, group) {
           chatId: chatId,
           content: `Erro ao baixar vídeo: ${error.message}`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -376,7 +384,8 @@ async function ytCommand(bot, message, args, group) {
           content: media,
           options: {
             caption: result.legenda,
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -389,7 +398,8 @@ async function ytCommand(bot, message, args, group) {
           chatId: chatId,
           content: 'Erro ao enviar vídeo.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -418,7 +428,8 @@ async function srCommand(bot, message, args, group) {
       chatId: chatId,
       content: 'Por favor, forneça um link do YouTube ou termo de busca. Exemplo: !sr https://youtu.be/dQw4w9WgXcQ ou !sr despacito',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -437,7 +448,8 @@ async function srCommand(bot, message, args, group) {
       chatId: chatId,
       content: `🔍 Buscando: "${input}" no YouTube...`,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     }));
     
@@ -448,7 +460,8 @@ async function srCommand(bot, message, args, group) {
         chatId: chatId,
         content: `❌ Nenhum vídeo encontrado para: "${input}"`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -468,7 +481,8 @@ async function srCommand(bot, message, args, group) {
           chatId: chatId,
           content: `Erro ao baixar áudio: ${error.message}`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         
@@ -487,7 +501,8 @@ async function srCommand(bot, message, args, group) {
           content: media,
           options: {
             caption: result.legenda,
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
         

@@ -342,7 +342,8 @@ async function handleTranslation(bot, message, args, group) {
                  'Exemplo: !traduzir en Olá, mundo!\n' +
                  'Ou responda a uma mensagem com: !traduzir en',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -357,7 +358,8 @@ async function handleTranslation(bot, message, args, group) {
         content: `Idioma não reconhecido: "${args[0]}".\n` +
                  'Exemplo de idiomas suportados: en (inglês), es (espanhol), fr (francês), etc.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -374,7 +376,8 @@ async function handleTranslation(bot, message, args, group) {
             chatId,
             content: 'Por favor, responda a uma mensagem ou forneça um texto para traduzir.',
             options: {
-              quotedMessageId: message.origin.id._serialized
+              quotedMessageId: message.origin.id._serialized,
+              evoReply: message.origin
             }
           });
         }
@@ -387,7 +390,8 @@ async function handleTranslation(bot, message, args, group) {
           chatId,
           content: 'Erro ao obter a mensagem citada. Por favor, tente novamente.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -401,7 +405,8 @@ async function handleTranslation(bot, message, args, group) {
         chatId,
         content: 'Texto vazio. Por favor, forneça um texto para traduzir.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -417,7 +422,8 @@ async function handleTranslation(bot, message, args, group) {
       chatId,
       content: response,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {
@@ -466,7 +472,8 @@ async function processTranslationReaction(bot, message, args, group) {
       chatId,
       content: response,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   } catch (error) {

@@ -548,7 +548,8 @@ async function startGeoguesserGame(bot, message, args, group) {
         chatId: chatId,
         content: instructions,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         },
         delay: 1000
       }));
@@ -721,13 +722,13 @@ async function makeGuess(bot, message, args, group) {
         return new ReturnMessage({
           chatId: groupId,
           content: guessLoc, 
-          options: { quotedMessageId: message.origin.id._serialized }
+          options: { quotedMessageId: message.origin.id._serialized, evoReply: message.origin }
         });
       } else {
         return new ReturnMessage({
           chatId: groupId,
           content: `⚠️ ${userName}, sua adivinhação anterior de *${ (activeGames[groupId].guesses[existingGuessIndex].distance/1000).toFixed(2) }km* era melhor que esta de _${ (distance/1000).toFixed(2) }km_.`,
-          options: { quotedMessageId: message.origin.id._serialized }
+          options: { quotedMessageId: message.origin.id._serialized, evoReply: message.origin }
         });
       }
     } else {
@@ -739,7 +740,7 @@ async function makeGuess(bot, message, args, group) {
       return new ReturnMessage({
         chatId: groupId,
         content: guessLoc,
-        options: { quotedMessageId: message.origin.id._serialized }
+        options: { quotedMessageId: message.origin.id._serialized, evoReply: message.origin }
       });
     }
   } catch (error) {
@@ -922,13 +923,13 @@ async function processLocationMessage(bot, message) {
         return new ReturnMessage({
           chatId: groupId,
           content: `🔄 ${userName} atualizou sua adivinhação usando localização.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos (melhor que sua tentativa anterior)`,
-          options: { quotedMessageId: message.origin.id._serialized }
+          options: { quotedMessageId: message.origin.id._serialized, evoReply: message.origin }
         });
       } else {
         return new ReturnMessage({
           chatId: groupId,
           content: `⚠️ ${userName}, sua adivinhação anterior de *${(activeGames[groupId].guesses[existingGuessIndex].distance/1000).toFixed(2)}km* era melhor que esta de _${ (distance/1000).toFixed(2) }km_.`,
-          options: { quotedMessageId: message.origin.id._serialized }
+          options: { quotedMessageId: message.origin.id._serialized, evoReply: message.origin }
         });
       }
     } else {
@@ -938,7 +939,7 @@ async function processLocationMessage(bot, message) {
       return new ReturnMessage({
         chatId: groupId,
         content: `✅ ${userName} tentou adivinhar.\nDistância: ${(distance/1000).toFixed(2)} km\nPontuação: ${score} pontos`,
-        options: { quotedMessageId: message.origin.id._serialized }
+        options: { quotedMessageId: message.origin.id._serialized, evoReply: message.origin }
       });
     }
   } catch (error) {

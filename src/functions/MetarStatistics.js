@@ -41,7 +41,8 @@ async function metarCommand(bot, message, args, group) {
         chatId,
         content: "✈️ Informe o código ICAO do aeroporto. Exemplo: !metar SBGR",
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -54,7 +55,8 @@ async function metarCommand(bot, message, args, group) {
         chatId,
         content: `❌ Não foi possível encontrar o METAR para "${icao}".`,
         options: {
-          quotedMessageId: message.origin?.id?._serialized
+          quotedMessageId: message.origin?.id?._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -63,7 +65,8 @@ async function metarCommand(bot, message, args, group) {
       chatId,
       content: `🌤️ METAR para *${icao}*:\n\`\`\`\n${metar}\n\`\`\``,
       options: {
-        quotedMessageId: message.origin?.id?._serialized
+        quotedMessageId: message.origin?.id?._serialized,
+        evoReply: message.origin
       }
     });
 

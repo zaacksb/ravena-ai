@@ -215,7 +215,8 @@ async function handleGetAudio(bot, message, args, group) {
         content: outputMedia,
         options: {
           sendAudioAsVoice: false,
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       })
     );
@@ -301,7 +302,8 @@ async function handleGetVoice(bot, message, args, group) {
         content: outputMedia,
         options: {
           sendAudioAsVoice: true,
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       })
     );
@@ -408,7 +410,8 @@ async function handleVolumeAdjust(bot, message, args, group) {
         content: outputMedia,
         options: {
           sendAudioAsVoice: mediaType === 'voice',
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       })
     );

@@ -156,7 +156,8 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
         chatId: chatId,
         content: 'Por favor, forneça texto para converter em voz.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -170,7 +171,8 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
         chatId: chatId,
         content: '🔉 Sintetizando áudio, isso pode levar alguns segundos...',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       }));
     }
@@ -234,7 +236,8 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
       content: media,
       options: {
         sendAudioAsVoice: true,
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     
@@ -258,7 +261,8 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
       chatId: chatId,
       content: 'Erro ao gerar voz. Por favor, tente novamente.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -305,7 +309,8 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         chatId: chatId,
         content: 'Por favor, forneça um áudio ou mensagem de voz.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -319,7 +324,8 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         chatId: chatId,
         content: 'Por favor, forneça um áudio ou mensagem de voz.',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -369,7 +375,8 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         chatId: chatId,
         content: transcribedText,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
       
@@ -393,7 +400,8 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
       chatId: chatId,
       content: cleanupString(transcribedText?.trim() ?? ""),
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     
@@ -512,7 +520,8 @@ async function processAutoSTT(bot, message, group) {
         chatId: idChat,
         content: cleanupString(transcribedText?.trim() ?? ""),
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
       

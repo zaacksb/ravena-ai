@@ -332,7 +332,8 @@ async function handleWeatherCommand(bot, message, args, group) {
           chatId: chatId,
           content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -347,7 +348,8 @@ async function handleWeatherCommand(bot, message, args, group) {
           chatId: chatId,
           content: 'Por favor, forneça uma cidade ou responda a uma mensagem de localização. Exemplo: !clima São Paulo',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -367,7 +369,8 @@ async function handleWeatherCommand(bot, message, args, group) {
           chatId: chatId,
           content: `❌ Não foi possível encontrar a cidade: ${cityName}. Verifique o nome e tente novamente.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -385,7 +388,8 @@ async function handleWeatherCommand(bot, message, args, group) {
         chatId: chatId,
         content: weatherMessage,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       })
     );

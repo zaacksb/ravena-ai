@@ -36,7 +36,8 @@ async function searchAircraftRAB(bot, message, args, group) {
         chatId: chatId,
         content: 'Por favor, forneça a matrícula da aeronave. Exemplo: !rab PT-XYZ',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -67,7 +68,8 @@ async function searchAircraftRAB(bot, message, args, group) {
         chatId: chatId,
         content: `✈️ Consulta RAB - Matrícula '${marca}' não encontrada!`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     } 
@@ -97,7 +99,8 @@ async function searchAircraftRAB(bot, message, args, group) {
       chatId: chatId,
       content: retorno,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     
@@ -109,7 +112,8 @@ async function searchAircraftRAB(bot, message, args, group) {
       chatId: chatId,
       content: 'Erro ao consultar o Registro Aeronáutico Brasileiro. Por favor, tente novamente mais tarde.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -133,7 +137,8 @@ async function searchWeb(bot, message, args, group) {
         chatId: chatId,
         content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar tutorial javascript',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -209,7 +214,8 @@ async function searchWeb(bot, message, args, group) {
       chatId: chatId,
       content: resultsMessage,
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
     
@@ -222,7 +228,8 @@ async function searchWeb(bot, message, args, group) {
       chatId: chatId,
       content: 'Erro ao realizar busca na web. Por favor, tente novamente.',
       options: {
-        quotedMessageId: message.origin.id._serialized
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
       }
     });
   }
@@ -246,7 +253,8 @@ async function searchImages(bot, message, args, group) {
         chatId: chatId,
         content: 'Por favor, forneça uma consulta de busca. Exemplo: !buscar-img gatos fofos',
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       });
     }
@@ -267,7 +275,8 @@ async function searchImages(bot, message, args, group) {
         chatId: chatId,
         content: `🔍 Buscando imagens para "${query}"...`,
         options: {
-          quotedMessageId: message.origin.id._serialized
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
         }
       })
     );
@@ -296,7 +305,8 @@ async function searchImages(bot, message, args, group) {
           chatId: chatId,
           content: `Não foram encontradas imagens para "${query}". Tente outra consulta.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -334,7 +344,8 @@ async function searchImages(bot, message, args, group) {
               content: media,
               options: {
                 caption: `Resultado ${i + 1} para "${query}" | Fonte: Unsplash`,
-                quotedMessageId: message.origin.id._serialized
+                quotedMessageId: message.origin.id._serialized,
+                evoReply: message.origin
               },
               delay: i * 1500 // Adiciona um pequeno atraso entre imagens
             })
@@ -356,7 +367,8 @@ async function searchImages(bot, message, args, group) {
           chatId: chatId,
           content: `Erro ao processar imagens para "${query}". Tente novamente mais tarde.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -374,7 +386,8 @@ async function searchImages(bot, message, args, group) {
           chatId: chatId,
           content: `Limite de requisições de API excedido. Por favor, tente novamente mais tarde ou configure uma chave de API válida no arquivo .env (UNSPLASH_API_KEY=sua_chave_aqui).`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -414,6 +427,7 @@ async function searchImages(bot, message, args, group) {
               content: media,
               options: {
                 quotedMessageId: message.origin.id._serialized,
+                evoReply: message.origin,
                 caption: `Resultado ${i + 1} para "${query}"`
               },
               delay: i * 1000 // Adiciona um pequeno atraso entre imagens
@@ -432,7 +446,8 @@ async function searchImages(bot, message, args, group) {
           chatId: chatId,
           content: `Erro ao buscar imagens para "${query}". Tente novamente mais tarde.`,
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
         });
       }
@@ -445,7 +460,8 @@ async function searchImages(bot, message, args, group) {
       chatId: chatId,
       content: 'Erro ao realizar busca de imagens. Por favor, tente novamente.',
           options: {
-            quotedMessageId: message.origin.id._serialized
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
           }
     });
   }
