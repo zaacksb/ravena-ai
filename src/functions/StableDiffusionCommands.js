@@ -11,17 +11,30 @@ const nsfwPredict = NSFWPredict.getInstance();
 
 const LLMService = require('../services/LLMService');
 const llmService = new LLMService({});
+const sdWebUIToken = `Basic ${process.env.SDWEBUI_TOKEN ?? ""}`;
 
 //logger.info('Módulo StableDiffusionCommands carregado');
 
 // Configuração da API SD WebUI
 const API_URL = process.env.SDWEBUI_URL || 'http://localhost:7860';
+/* Parametros bons pra lightning
 const DEFAULT_PARAMS = {
   width: 832,
   height: 1216,
   steps: 10,
-  cfg_scale: 1,
+  cfg_scale: ,
   sampler_name: 'k_euler_a',
+  batch_size: 1,
+  n_iter: 1,
+  negative_prompt: "ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
+};
+*/
+const DEFAULT_PARAMS = {
+  width: 832,
+  height: 1216,
+  steps: 40,
+  cfg_scale: 2,
+  sampler_name: 'k_dpmpp_2m_sde',
   batch_size: 1,
   n_iter: 1,
   negative_prompt: "ass bum poop woman dick nsfw porn boobs tits vagina child kid gore infant"
@@ -103,7 +116,10 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     
     // Faz a requisição à API
     const response = await axios.post(`${API_URL}/sdapi/v1/txt2img`, payload, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Authorization': sdWebUIToken,
+        'Content-Type': 'application/json'
+      },
       timeout: 120000 // 2 minutos de timeout
     });
     

@@ -17,8 +17,8 @@ class LLMService {
     this.deepseekKey = config.deepseekKey || process.env.DEEPSEEK_API_KEY;
     this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234/v1';
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
-    this.localModel = "qwen3-8b";
-    
+    this.localModel = "mixtral-8x7b-instruct-v0.1-i1";
+    this.LMStudioToken = process.env.LMSTUDIO_TOKEN ?? "";
     /*  
     this.logger.debug('LLMService inicializado com configuração:', {
       hasOpenRouterKey: !!this.openRouterKey,
@@ -232,7 +232,7 @@ class LLMService {
         ? `${this.localEndpoint}/chat/completions` 
         : 'https://api.openai.com/v1/chat/completions';
       
-      const apiKey = options.useLocal ? 'lm-studio' : this.openAIKey;
+      const apiKey = options.useLocal ? `Basic ${this.LMStudioToken}` : `Bearer ${this.openAIKey}`;
       
       if (!options.useLocal && !this.openAIKey) {
         this.logger.error('Chave da API OpenAI não configurada');
@@ -261,7 +261,7 @@ class LLMService {
         },
         {
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': apiKey,
             'Content-Type': 'application/json'
           },
           timeout: options.timeout || this.apiTimeout
@@ -391,10 +391,14 @@ class LLMService {
   async getCompletionFromProviders(options) {
     // Lista de provedores para tentar em ordem
     const providers = [
-      // { name: 'gemini', method: async () => {
-      //   const response = await this.geminiCompletion(options);
-      //   return response.candidates[0].content.parts[0].text;
-      // }},
+      { name: 'local', method: async () => {
+        const response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
+        return response.choices[0].message.content;
+      }},
+      { name: 'gemini', method: async () => {
+        const response = await this.geminiCompletion(options);
+        return response.candidates[0].content.parts[0].text;
+      }}
       // { name: 'deepseek-r1', method: async () => {
       //   const response = await this.deepseekCompletion({...options, version: 'v1'});
       //   return response.choices[0].message.content;
@@ -403,10 +407,6 @@ class LLMService {
       //   const response = await this.deepseekCompletion({...options, version: 'v3'});
       //   return response.choices[0].message.content;
       // }},
-      { name: 'local', method: async () => {
-        const response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
-        return response.choices[0].message.content;
-      }}
     ];
 
     // Tenta cada provedor em sequência
