@@ -493,7 +493,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
  * @returns {Promise<boolean>} - Se a mensagem foi processada
  */
 async function processAutoSTT(bot, message, group) {
-  const idChat = message.group ?? message.author;
+  const chatId = message.group || message.author;
   let audioPath = null;
   let wavPath = null;
   let whisperOutputPath = null;
@@ -519,7 +519,7 @@ async function processAutoSTT(bot, message, group) {
       logger.error(`[processAutoSTT] Erro enviando notificação inicial`);
     }
 
-    logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no chat ${idChat}`);
+    logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no chat ${chatId}`);
 
     // Salva áudio em arquivo temporário
     const media = await message.downloadMedia();
@@ -615,7 +615,7 @@ async function processAutoSTT(bot, message, group) {
     if (transcribedText && !transcribedText.includes("Erro ao transcrever áudio")) {
       // Cria ReturnMessage com a transcrição
       const returnMessage = new ReturnMessage({
-        chatId: idChat,
+        chatId: chatId,
         content: cleanupString(transcribedText?.trim() ?? ""),
         options: {
           quotedMessageId: message.origin.id._serialized,
@@ -642,7 +642,7 @@ async function processAutoSTT(bot, message, group) {
         logger.error('[processAutoSTT] Melhoramento via LLM deu erro, ignorando.', llmError);
       }*/
     } else {
-      logger.warn(`[processAutoSTT] Transcrição vazia ou com erro para o chat ${idChat}`);
+      logger.warn(`[processAutoSTT] Transcrição vazia ou com erro para o chat ${chatId}`);
     }
 
     return true;
