@@ -388,7 +388,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
 
             if (result.status === 'complete') {
               finalResult = result;
-              transcribedText = result.transcription;
+              transcribedText = result.text;
               logger.info('\n✅ Transcrição Concluída!\n');
             } else if (result.status === 'error') {
               finalResult = result;
