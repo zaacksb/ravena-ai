@@ -290,7 +290,7 @@ function cleanupString(text) {
 }
 
 /**
- * Converte voz para texto usando o executável Whisper diretamente
+ * Converte voz para texto usando o executável Whisper diretamente ou via API
  * @param {WhatsAppBot} bot - Instância do bot
  * @param {Object} message - Dados da mensagem
  * @param {Array} args - Argumentos do comando
@@ -299,9 +299,12 @@ function cleanupString(text) {
  * @returns {Promise<ReturnMessage|Array<ReturnMessage>>} - ReturnMessage ou array de ReturnMessages
  */
 async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
+  const chatId = message.group || message.author;
+  let audioPath = null;
+  let wavPath = null;
+  let whisperOutputPath = null;
+
   try {
-    const chatId = message.group || message.author;
-    
     // Obtém mídia da mensagem
     const media = await getMediaFromMessage(message);
     if (!media) {
@@ -314,11 +317,11 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         }
       });
     }
-    
+
     // Verifica se a mídia é áudio
-    const isAudio = media.mimetype.startsWith('audio/') || 
+    const isAudio = media.mimetype.startsWith('audio/') ||
                    media.mimetype === 'application/ogg';
-    
+
     if (!isAudio) {
       return new ReturnMessage({
         chatId: chatId,
@@ -329,48 +332,103 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         }
       });
     }
-    
+
     logger.debug('[speechToText] Convertendo voz para texto');
-    
-    // Primeiro, envia mensagem de processamento
 
-    
+    // Envia mensagem de processamento
+    await bot.sendReturnMessages(new ReturnMessage({
+      chatId: chatId,
+      content: 'Transcrevendo áudio, isso pode levar alguns segundos...',
+      options: {
+        quotedMessageId: message.origin.id._serialized,
+        evoReply: message.origin
+      }
+    }));
+
     // Salva áudio em arquivo temporário
-    const audioPath = await saveMediaToTemp(media, 'ogg');
-    
-    // Converte para formato WAV para melhor compatibilidade
-    const wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
-    await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
-    
-    // Execute whisper diretamente
-    // Usar o modelo large-v3-turbo e definir o idioma para português
-    const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo ${runOn} --language pt --output_dir "${tempDir}" --output_format txt`;
-    
-    logger.debug(`[speechToText] Executando comando: ${whisperCommand}`);
-    
-    await execPromise(whisperCommand);
-    
-    // O arquivo de saída vai ter o mesmo nome que o arquivo de entrada mas com extensão .txt
-    const whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
-    
+    audioPath = await saveMediaToTemp(media, 'ogg');
 
-    logger.debug(`[speechToText] Lendo arquivo de saida: ${whisperOutputPath}`);
-    // Lê o texto transcrito
     let transcribedText = '';
-    try {
-      transcribedText = await fs.readFile(whisperOutputPath, 'utf8');
-      transcribedText = transcribedText.trim();
-    } catch (readError) {
-      logger.error('[speechToText] Erro ao ler arquivo de transcrição:', readError);
+
+    if (process.env.WHISPER_API_URL) {
+      // Use Whisper API
+      const WHISPER_API_URL = process.env.WHISPER_API_URL;
+      logger.debug(`[speechToText] Usando Whisper API: ${WHISPER_API_URL}`);
+
+      try {
+        const audioBuffer = await fs.readFile(audioPath);
+        const requestBody = {
+          audioData: audioBuffer.toString('base64'),
+          language: 'pt' // Assuming Portuguese as per local execution
+        };
+
+        const postResponse = await axios.post(`${WHISPER_API_URL}/transcribe`, requestBody);
+        const { executionId, estimatedTranscriptionTime } = postResponse.data;
+
+        if (!executionId) {
+          throw new Error('A API não retornou um executionId.');
+        }
+
+        logger.info(`🚀 Processo de transcrição iniciado! ID de Execução: ${executionId}`);
+        logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
+        logger.info('Verificando o status...');
+
+        let finalResult = null;
+        let firstCheck = true;
+        while (!finalResult) {
+          const sleepTime = firstCheck ? estimatedTranscriptionTime * 1000 : 10000; // Aguarda o tempo estimado na primeira vez, depois 10 segundos
+          await new Promise(resolve => setTimeout(resolve, sleepTime));
+          firstCheck = false;
+
+          try {
+            const statusResponse = await axios.get(`${WHISPER_API_URL}/status/${executionId}`);
+            const result = statusResponse.data;
+
+            logger.debug(`[${new Date().toLocaleTimeString()}] Status atual: ${result.status}`);
+
+            if (result.status === 'complete') {
+              finalResult = result;
+              transcribedText = result.transcription;
+              logger.info('\n✅ Transcrição Concluída!\n');
+            } else if (result.status === 'error') {
+              finalResult = result;
+              throw new Error(`Ocorreu um erro durante a transcrição: ${result.error}`);
+            }
+          } catch (error) {
+            throw new Error(`Não foi possível obter o status da transcrição: ${error.message}`);
+          }
+        }
+      } catch (apiError) {
+        logger.error('[speechToText] Erro ao usar Whisper API:', apiError);
+        transcribedText = "Erro ao transcrever áudio via API. Por favor, tente novamente.";
+      }
+    } else {
+      // Existing local Whisper execution logic
+      wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
+      await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
+
+      const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo ${runOn} --language pt --output_dir "${tempDir}" --output_format txt`;
+
+      logger.debug(`[speechToText] Executando comando: ${whisperCommand}`);
+
+      await execPromise(whisperCommand);
+
+      whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
+
+      logger.debug(`[speechToText] Lendo arquivo de saida: ${whisperOutputPath}`);
+      try {
+        transcribedText = await fs.readFile(whisperOutputPath, 'utf8');
+        transcribedText = transcribedText.trim();
+      } catch (readError) {
+        logger.error('[speechToText] Erro ao ler arquivo de transcrição:', readError);
+      }
     }
 
     logger.debug(`[speechToText] LIDO arquivo de saida: '${transcribedText}'`);
-    
-    // Se a transcrição falhar ou estiver vazia, fornece uma mensagem útil
-    if (!transcribedText) {
+
+    if (!transcribedText || transcribedText.includes("Erro ao transcrever áudio")) {
       transcribedText = "Não foi possível transcrever o áudio. O áudio pode estar muito baixo ou pouco claro.";
-      
-      // Retorna a mensagem de erro
+
       const errorMessage = new ReturnMessage({
         chatId: chatId,
         content: transcribedText,
@@ -379,23 +437,10 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
           evoReply: message.origin
         }
       });
-      
-      // Limpa arquivos temporários
-      try {
-        await fs.unlink(audioPath);
-        await fs.unlink(wavPath);
-        if (await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
-          await fs.unlink(whisperOutputPath);
-        }
-        logger.debug('Arquivos temporários limpos');
-      } catch (cleanupError) {
-        logger.error('Erro ao limpar arquivos temporários:', cleanupError);
-      }
-      
+
       return errorMessage;
     }
-    
-    // Cria a ReturnMessage com a transcrição
+
     const returnMessage = new ReturnMessage({
       chatId: chatId,
       content: cleanupString(transcribedText?.trim() ?? ""),
@@ -404,50 +449,30 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         evoReply: message.origin
       }
     });
-    
+
     logger.info(`[speechToText] Resultado STT gerado com sucesso: ${transcribedText}`);
-    
-    // // Inicia processamento com LLM para melhoria do texto em paralelo, se habilitado
-    // if (optimizeWithLLM) {
-    //   try {
-    //     const improvedText = await llmService.getCompletion({
-    //       prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
-    //       provider: 'openrouter',
-    //       temperature: 0.7,
-    //       maxTokens: 300
-    //     });
-        
-    //     // Não vamos aguardar essa melhoria para retornar a mensagem inicial
-    //     logger.info(`[speechToText] Melhoramento via LLM recebido: ${improvedText}`);
-        
-    //     // Nota: Essa atualização da mensagem precisará ser feita no CommandHandler
-    //   } catch (llmError) {
-    //     logger.error('[speechToText] Melhoramento via LLM deu erro, ignorando.', llmError);
-    //   }
-    // }
-    
-    // Limpa arquivos temporários
-    try {
-      await fs.unlink(audioPath);
-      await fs.unlink(wavPath);
-      if (await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
-        await fs.unlink(whisperOutputPath);
-      }
-      logger.debug('Arquivos temporários limpos');
-    } catch (cleanupError) {
-      logger.error('Erro ao limpar arquivos temporários:', cleanupError);
-    }
-    
-    // Cria um array com a mensagem de processamento e a mensagem de resultado
+
     return returnMessage;
   } catch (error) {
-    logger.error('Erro na conversão de voz para texto:');
+    logger.error('Erro na conversão de voz para texto:', error);
     const chatId = message.group || message.author;
-    
+
     return new ReturnMessage({
       chatId: chatId,
       content: 'Erro ao transcrever áudio. Por favor, tente novamente.'
     });
+  } finally {
+    // Clean up temporary files in finally block to ensure they are always removed
+    try {
+      if (audioPath) await fs.unlink(audioPath);
+      if (wavPath) await fs.unlink(wavPath);
+      if (whisperOutputPath && await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
+        await fs.unlink(whisperOutputPath);
+      }
+      logger.debug('Arquivos temporários limpos no finally');
+    } catch (cleanupError) {
+      logger.error('Erro ao limpar arquivos temporários no finally:', cleanupError);
+    }
   }
 }
 
@@ -459,18 +484,21 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
  * @returns {Promise<boolean>} - Se a mensagem foi processada
  */
 async function processAutoSTT(bot, message, group) {
-  try {
+  const idChat = message.group ?? message.author;
+  let audioPath = null;
+  let wavPath = null;
+  let whisperOutputPath = null;
 
+  try {
     if(!message.group && bot.ignorePV){
        return false;
     }
-    
-    const idChat = message.group ?? message.author;
+
     // Pula se não for mensagem de voz/áudio
     if (message.type !== 'voice' && message.type !== 'audio' && message.type !== 'ptt') {
       return false;
     }
-    
+
     // Verifica se o auto-STT está habilitado para este grupo
     if (group && !group.autoStt) {
       return false;
@@ -481,40 +509,91 @@ async function processAutoSTT(bot, message, group) {
     } catch(e){
       logger.error(`[processAutoSTT] Erro enviando notificação inicial`);
     }
-    
+
     logger.debug(`[processAutoSTT] Processamento Auto-STT para mensagem no chat ${idChat}`);
-    
+
     // Salva áudio em arquivo temporário
     const media = await message.downloadMedia();
-    const audioPath = await saveMediaToTemp(media, 'ogg');
-    
-    // Converte para formato WAV para melhor compatibilidade
-    const wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
-    await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
-    
-    // Execute whisper diretamente
-    // Usar o modelo large-v3-turbo e definir o idioma para português
-    const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo --language pt --output_dir "${tempDir}" --output_format txt`;
-    
-    logger.debug(`[processAutoSTT] Executando comando: ${whisperCommand}`);
-    
-    await execPromise(whisperCommand);
-    
-    // O arquivo de saída vai ter o mesmo nome que o arquivo de entrada mas com extensão .txt
-    const whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
-    
-    logger.debug(`[processAutoSTT] Lendo arquivo de saida: ${whisperOutputPath}`);
-    // Lê o texto transcrito
+    audioPath = await saveMediaToTemp(media, 'ogg');
+
     let transcribedText = '';
-    try {
-      transcribedText = await fs.readFile(whisperOutputPath, 'utf8');
-      transcribedText = transcribedText.trim();
-    } catch (readError) {
-      logger.error('[processAutoSTT] Erro ao ler arquivo de transcrição:', readError);
+
+    if (process.env.WHISPER_API_URL) {
+      // Use Whisper API
+      const WHISPER_API_URL = process.env.WHISPER_API_URL;
+      logger.debug(`[processAutoSTT] Usando Whisper API: ${WHISPER_API_URL}`);
+
+      try {
+        const audioBuffer = await fs.readFile(audioPath);
+        const requestBody = {
+          audioData: audioBuffer.toString('base64'),
+          language: 'pt' // Assuming Portuguese as per local execution
+        };
+
+        const postResponse = await axios.post(`${WHISPER_API_URL}/transcribe`, requestBody);
+        const { executionId, estimatedTranscriptionTime } = postResponse.data;
+
+        if (!executionId) {
+          throw new Error('A API não retornou um executionId.');
+        }
+
+        logger.info(`🚀 Processo de transcrição iniciado! ID de Execução: ${executionId}`);
+        logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
+        logger.info('Verificando o status...');
+
+        let finalResult = null;
+        let firstCheck = true;
+        while (!finalResult) {
+          const sleepTime = firstCheck ? estimatedTranscriptionTime * 1000 : 3000; // Aguarda o tempo estimado na primeira vez, depois 3 segundos
+          await new Promise(resolve => setTimeout(resolve, sleepTime));
+          firstCheck = false;
+
+          try {
+            const statusResponse = await axios.get(`${WHISPER_API_URL}/status/${executionId}`);
+            const result = statusResponse.data;
+
+            logger.debug(`[${new Date().toLocaleTimeString()}] Status atual: ${result.status}`);
+
+            if (result.status === 'complete') {
+              finalResult = result;
+              transcribedText = result.text;
+              logger.info('✅ Transcrição Concluída!');
+            } else if (result.status === 'error') {
+              finalResult = result;
+              throw new Error(`Ocorreu um erro durante a transcrição: ${result.error}`);
+            }
+          } catch (error) {
+            throw new Error(`Não foi possível obter o status da transcrição: ${error.message}`);
+          }
+        }
+      } catch (apiError) {
+        logger.error('[processAutoSTT] Erro ao usar Whisper API:', apiError);
+        transcribedText = "Erro ao transcrever áudio via API.";
+      }
+    } else {
+      // Existing local Whisper execution logic
+      wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
+      await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
+
+      const whisperCommand = `"${whisperPath}" "${wavPath}" --model large-v3-turbo --language pt --output_dir "${tempDir}" --output_format txt`;
+
+      logger.debug(`[processAutoSTT] Executando comando: ${whisperCommand}`);
+
+      await execPromise(whisperCommand);
+
+      whisperOutputPath = wavPath.replace(/\.[^/.]+$/, '') + '.txt';
+
+      logger.debug(`[processAutoSTT] Lendo arquivo de saida: ${whisperOutputPath}`);
+      try {
+        transcribedText = await fs.readFile(whisperOutputPath, 'utf8');
+        transcribedText = transcribedText.trim();
+      } catch (readError) {
+        logger.error('[processAutoSTT] Erro ao ler arquivo de transcrição:', readError);
+      }
     }
-    
+
     // Se a transcrição for bem-sucedida, envia-a
-    if (transcribedText) {
+    if (transcribedText && !transcribedText.includes("Erro ao transcrever áudio")) {
       // Cria ReturnMessage com a transcrição
       const returnMessage = new ReturnMessage({
         chatId: idChat,
@@ -524,10 +603,10 @@ async function processAutoSTT(bot, message, group) {
           evoReply: message.origin
         }
       });
-      
+
       // Envia a mensagem
       await bot.sendReturnMessages(returnMessage);
-      
+
       logger.info(`[processAutoSTT] Resultado STT enviado com sucesso, processando via LLM uma melhoria para: ${transcribedText}`);
 
       // Tenta melhorar o texto com LLM (assíncrono)
@@ -536,31 +615,33 @@ async function processAutoSTT(bot, message, group) {
         const improvedText = await llmService.getCompletion({
           prompt: `Vou enviar no final deste prompt a transcrição de um áudio, coloque a pontuação mais adequada e formate corretamente maíusculas e minúsculas. Me retorne APENAS com a mensagem formatada: '${transcribedText}'`,
         });
-        
+
         logger.info(`[processAutoSTT] Melhoramento via LLM recebido: ${improvedText}`);
-        
+
         // Nota: Aqui seria necessário um método para editar a mensagem já enviada
       } catch (llmError) {
         logger.error('[processAutoSTT] Melhoramento via LLM deu erro, ignorando.', llmError);
       }*/
+    } else {
+      logger.warn(`[processAutoSTT] Transcrição vazia ou com erro para o chat ${idChat}`);
     }
-    
-    // Limpa arquivos temporários
-    try {
-      await fs.unlink(audioPath);
-      await fs.unlink(wavPath);
-      if (await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
-        await fs.unlink(whisperOutputPath);
-      }
-      logger.debug('Arquivos temporários limpos');
-    } catch (cleanupError) {
-      logger.error('Erro ao limpar arquivos temporários:', cleanupError);
-    }
-    
+
     return true;
   } catch (error) {
-    logger.error('Erro no auto-STT:');
+    logger.error('Erro no auto-STT:', error);
     return false;
+  } finally {
+    // Clean up temporary files in finally block to ensure they are always removed
+    try {
+      if (audioPath) await fs.unlink(audioPath);
+      if (wavPath) await fs.unlink(wavPath);
+      if (whisperOutputPath && await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
+        await fs.unlink(whisperOutputPath);
+      }
+      logger.debug('Arquivos temporários limpos no finally');
+    } catch (cleanupError) {
+      logger.error('Erro ao limpar arquivos temporários no finally:', cleanupError);
+    }
   }
 }
 
