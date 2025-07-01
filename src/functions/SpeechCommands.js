@@ -335,16 +335,6 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
 
     logger.debug('[speechToText] Convertendo voz para texto');
 
-    // Envia mensagem de processamento
-    await bot.sendReturnMessages(new ReturnMessage({
-      chatId: chatId,
-      content: 'Transcrevendo áudio, isso pode levar alguns segundos...',
-      options: {
-        quotedMessageId: message.origin.id._serialized,
-        evoReply: message.origin
-      }
-    }));
-
     // Salva áudio em arquivo temporário
     audioPath = await saveMediaToTemp(media, 'ogg');
 
@@ -363,7 +353,7 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         };
 
         const postResponse = await axios.post(`${WHISPER_API_URL}/transcribe`, requestBody);
-        const { executionId, estimatedTranscriptionTime } = postResponse.data;
+        const { executionId, audioDuration, estimatedTranscriptionTime } = postResponse.data;
 
         if (!executionId) {
           throw new Error('A API não retornou um executionId.');
@@ -373,10 +363,19 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
         logger.info('Verificando o status...');
 
+        bot.sendReturnMessages(new ReturnMessage({
+          chatId: chatId,
+          content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
+          }
+        }));
+
         let finalResult = null;
         let firstCheck = true;
         while (!finalResult) {
-          const sleepTime = firstCheck ? estimatedTranscriptionTime * 1000 : 10000; // Aguarda o tempo estimado na primeira vez, depois 10 segundos
+          const sleepTime = firstCheck ? estimatedTranscriptionTime * 1000 : 3000; // Aguarda o tempo estimado na primeira vez, depois 3 segundos
           await new Promise(resolve => setTimeout(resolve, sleepTime));
           firstCheck = false;
 
@@ -403,6 +402,16 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         transcribedText = "Erro ao transcrever áudio via API. Por favor, tente novamente.";
       }
     } else {
+      // Envia mensagem de processamento
+      bot.sendReturnMessages(new ReturnMessage({
+        chatId: chatId,
+        content: 'Transcrevendo áudio, isso pode levar alguns segundos...',
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      }));
+
       // Existing local Whisper execution logic
       wavPath = audioPath.replace(/\.[^/.]+$/, '') + '.wav';
       await execPromise(`"${ffmpegPath}" -i "${audioPath}" -ar 16000 -ac 1 "${wavPath}"`);
@@ -531,7 +540,7 @@ async function processAutoSTT(bot, message, group) {
         };
 
         const postResponse = await axios.post(`${WHISPER_API_URL}/transcribe`, requestBody);
-        const { executionId, estimatedTranscriptionTime } = postResponse.data;
+        const { executionId, audioDuration, estimatedTranscriptionTime } = postResponse.data;
 
         if (!executionId) {
           throw new Error('A API não retornou um executionId.');
@@ -540,6 +549,16 @@ async function processAutoSTT(bot, message, group) {
         logger.info(`🚀 Processo de transcrição iniciado! ID de Execução: ${executionId}`);
         logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
         logger.info('Verificando o status...');
+
+        bot.sendReturnMessages(new ReturnMessage({
+          chatId: chatId,
+          content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
+          options: {
+            quotedMessageId: message.origin.id._serialized,
+            evoReply: message.origin
+          }
+        }));
+
 
         let finalResult = null;
         let firstCheck = true;
