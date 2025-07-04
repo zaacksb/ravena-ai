@@ -194,11 +194,9 @@ async function interactWithConversation(bot, message, args, group) {
     const formattedMessages = formatMessagesForPrompt(recentMessages);
     
     // Cria prompt para LLM
-    const prompt = `Abaixo está uma conversa recente de um grupo de WhatsApp. Crie uma única mensagem curta para interagir com o grupo de forma natural, como se você entendesse o assunto e quisesse participar da conversa com algo relevante. Tente usar o mesmo tom e estilo informal que as pessoas estão usando. A mensagem deve ser curta e natural:
+    const prompt = `Responda apenas em português do brasil. A seguir anexei uma conversa recente de um grupo de WhatsApp. Crie uma única mensagem curta para interagir com o grupo de forma natural, como se você entendesse o assunto e quisesse participar da conversa com algo relevante. Tente usar o mesmo tom e estilo informal que as pessoas estão usando. A mensagem deve ser curta e natural:
 
-${formattedMessages}
-
-Uma mensagem curta para interagir:`;
+${formattedMessages}`;
     
     // Obtém interação do LLM
     const interaction = await llmService.getCompletion({ 
@@ -213,10 +211,14 @@ Uma mensagem curta para interagir:`;
       });
     }
     
+    // Verifica se teve mentions
+    const llmMentions = interaction.match(/@(\d{8,})/g)?.map(m => m.slice(1)) || [];
+
     // Envia a mensagem de interação
     return new ReturnMessage({
       chatId: message.group,
-      content: interaction
+      content: interaction,
+      mentions: llmMentions
     });
     
     logger.info(`Mensagem de interação enviada com sucesso para ${message.group}`);
