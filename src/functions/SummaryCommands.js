@@ -49,7 +49,7 @@ async function summarizeConversation(bot, message, args, group) {
     
     try {
       // Tenta obter mensagens diretamente do WhatsApp
-      const fetchedMessages = await chat.fetchMessages({ limit: 30 });
+      const fetchedMessages = await chat.fetchMessages({ limit: 30 }); // NÃO IMPLEMENTADO NA EVO
       
       if (fetchedMessages && fetchedMessages.length > 0) {
         recentMessages = await Promise.all(fetchedMessages.map(async (msg) => {
@@ -93,11 +93,6 @@ ${formattedMessages}
 
 Resumo:`;
     
-    // Envia uma mensagem de processamento antes
-    const processingMessage = new ReturnMessage({
-      chatId: message.group,
-      content: '🔍 Analisando a conversa...'
-    });
     
     // Obtém resumo do LLM
     const summary = await llmService.getCompletion({ prompt: prompt });
@@ -141,6 +136,8 @@ async function interactWithConversation(bot, message, args, group) {
         content: 'Este comando só pode ser usado em grupos.'
       });
     }
+
+    const retornarErro = args[0] ?? true;
     
     logger.info(`Gerando interação para o grupo ${message.group}`);
     
@@ -150,7 +147,7 @@ async function interactWithConversation(bot, message, args, group) {
     
     try {
       // Tenta obter mensagens diretamente do WhatsApp
-      const fetchedMessages = await chat.fetchMessages({ limit: 30 });
+      const fetchedMessages = await chat.fetchMessages({ limit: 30 }); // Não implementado na evo
       
       if (fetchedMessages && fetchedMessages.length > 0) {
         recentMessages = await Promise.all(fetchedMessages.map(async (msg) => {
@@ -177,18 +174,15 @@ async function interactWithConversation(bot, message, args, group) {
       recentMessages = await getRecentMessages(message.group);
     }
     
-    if (!recentMessages || recentMessages.length === 0) {
+    if ((!recentMessages || recentMessages.length === 0) && retornarErro) {
       return new ReturnMessage({
         chatId: message.group,
         content: 'Nenhuma mensagem recente para interagir.'
       });
+    } else {
+      return [];
     }
     
-    // Envia uma mensagem de processamento antes
-    const processingMessage = new ReturnMessage({
-      chatId: message.group,
-      content: '🔍 Analisando a conversa...'
-    });
     
     // Formata mensagens para prompt
     const formattedMessages = formatMessagesForPrompt(recentMessages);
@@ -199,16 +193,15 @@ async function interactWithConversation(bot, message, args, group) {
 ${formattedMessages}`;
     
     // Obtém interação do LLM
-    const interaction = await llmService.getCompletion({ 
-      provider: "local",
-      prompt: prompt
-    });
+    const interaction = await llmService.getCompletion({prompt: prompt});
     
-    if (!interaction) {
+    if (!interaction && retornarErro) {
       return new ReturnMessage({
         chatId: message.group,
         content: 'Falha ao gerar mensagem. Por favor, tente novamente.'
       });
+    } else {
+      return [];
     }
     
     // Verifica se teve mentions
@@ -224,10 +217,14 @@ ${formattedMessages}`;
     logger.info(`Mensagem de interação enviada com sucesso para ${message.group}`);
   } catch (error) {
     logger.error('Erro ao gerar interação:', error);
-    return new ReturnMessage({
-      chatId: message.group || message.author,
-      content: 'Erro ao gerar mensagem. Por favor, tente novamente.'
-    });
+    if(retornarErro){
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: 'Erro ao gerar mensagem. Por favor, tente novamente.'
+      });
+    } else {
+      return [];
+    }
   }
 }
 
@@ -253,7 +250,29 @@ async function storeMessage(message, group) {
     }
     
     // Adiciona nova mensagem
-    const textContent = message.type === 'text' ? message.content : message.caption;
+    let textContent = message.type === 'text' ? message.content : message.caption;
+
+    if(message.type === 'image'){
+      // Tenta interpretar a imagem usando Vision AI
+      if(message.content){
+        const completionOptions = {
+          prompt: "Analise a foto e retorne apenas uma sucinta descrição (em pt-BR) do que vê na imagem no formato, máximo 200 caracteres: Imagem[xxxx xxxx xxx]",
+          systemContext: "Você é um bot especialista em interpretação de imagens.",
+          provider: 'lmstudio',
+          image: message.content.data
+        };
+
+        //logger.info(`[storeMessage] Prompt: `, completionOptions);
+        const response = await llmService.getCompletion(completionOptions);
+
+
+        if(response && !response.includes("Não foi poss")){
+          textContent = message.caption ? `${response}\nLegenda: ${message.caption}` : response;
+          logger.info(`[storeMessage] Imagem interpretada: ${textContent}`);
+        }
+      }
+    }
+
     if (textContent) {
       // Obtém detalhes do contato
       let authorName = "Desconhecido";
@@ -315,6 +334,7 @@ async function getRecentMessages(groupId) {
 function formatMessagesForPrompt(messages) {
   return messages.map(msg => `${msg.author}: ${msg.text}`).join('\n');
 }
+
 
 // Lista de comandos usando a classe Command
 const commands = [

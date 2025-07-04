@@ -166,7 +166,7 @@ async function textToSpeech(bot, message, args, group, char = "ravena") {
     text = removeWhatsAppMarkup(text);
     
     const character = ttsCharacters.find(ttsC => ttsC.name === char);
-    if(text.length > 150){
+    if(text.length > 250){
       await bot.sendReturnMessages(new ReturnMessage({
         chatId: chatId,
         content: '🔉 Sintetizando áudio, isso pode levar alguns segundos...',
@@ -363,14 +363,18 @@ async function speechToText(bot, message, args, group, optimizeWithLLM = true) {
         logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
         logger.info('Verificando o status...');
 
-        bot.sendReturnMessages(new ReturnMessage({
-          chatId: chatId,
-          content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
-          options: {
-            quotedMessageId: message.origin.id._serialized,
-            evoReply: message.origin
-          }
-        }));
+        // Avisa só se for demorar um pouquinho a mais
+
+        if(estimatedTranscriptionTime > 15){
+          bot.sendReturnMessages(new ReturnMessage({
+            chatId: chatId,
+            content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
+            options: {
+              quotedMessageId: message.origin.id._serialized,
+              evoReply: message.origin
+            }
+          }));
+        }
 
         let finalResult = null;
         let firstCheck = true;
@@ -550,14 +554,15 @@ async function processAutoSTT(bot, message, group) {
         logger.info(`Tempo estimado para a primeira verificação: ${estimatedTranscriptionTime} segundos.`);
         logger.info('Verificando o status...');
 
-        bot.sendReturnMessages(new ReturnMessage({
-          chatId: chatId,
-          content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
-          options: {
-            quotedMessageId: message.origin.id._serialized,
-            evoReply: message.origin
-          }
-        }));
+        // No automático, não tem pq avisar sobre
+        // bot.sendReturnMessages(new ReturnMessage({
+        //   chatId: chatId,
+        //   content: `🔉 Transcrevendo áudio com _${audioDuration}s_, estimativa de _${estimatedTranscriptionTime}s_ até concluir.`,
+        //   options: {
+        //     quotedMessageId: message.origin.id._serialized,
+        //     evoReply: message.origin
+        //   }
+        // }));
 
 
         let finalResult = null;

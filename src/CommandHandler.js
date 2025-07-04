@@ -1325,7 +1325,7 @@ class CommandHandler {
               const interactCommand = this.fixedCommands.getCommand("interagir");
               this.logger.info(`[interagir] Acionando LLM-Interagir`);
 
-              await this.executeFixedCommand(bot, message, interactCommand, [], group);
+              await this.executeFixedCommand(bot, message, interactCommand, [false], group);
               return;
             } else {             
               const randomCommand = autoCommands[Math.floor(Math.random() * autoCommands.length)];
