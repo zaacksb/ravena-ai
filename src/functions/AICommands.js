@@ -54,10 +54,12 @@ async function aiCommand(bot, message, args, group) {
     }
   }
 
-  if (question.length < 5) {
+  const media = await getMediaFromMessage(message);
+
+  if (!media && question.length < 5) {
     return new ReturnMessage({
       chatId: chatId,
-      content: 'Por favor, forneça uma pergunta. Exemplo: !ai Qual é a capital da França?',
+      content: 'Por favor, forneça uma pergunta ou uma imagem com uma pergunta. Exemplo: !ai Qual é a capital da França?',
       options: {
         quotedMessageId: message.origin.id._serialized,
         evoReply: message.origin
@@ -67,15 +69,23 @@ async function aiCommand(bot, message, args, group) {
   
   //logger.debug(`Comando ai com pergunta: ctx: ${ctxContent}, \n Prompt: '${question}'`);
   
+  const completionOptions = {
+    prompt: question,
+    systemContext: ctxContent
+  };
+
+  if (media && media.data) {
+    logger.debug('[aiCommand] Comando AI com mídia detectada.');
+    completionOptions.provider = 'lmstudio';
+    completionOptions.image = media.data;
+  }
+
   // Obtém resposta da IA
   try {
-    logger.debug('Tentando obter resposta do LLM');
-    const response = await llmService.getCompletion({
-      prompt: question,
-      systemContext: ctxContent
-    });
+    logger.debug('[aiCommand] Tentando obter resposta do LLM', completionOptions);
+    const response = await llmService.getCompletion(completionOptions);
     
-    logger.debug('Resposta LLM obtida, processando variaveis', response);
+    logger.debug('[aiCommand] Resposta LLM obtida, processando variaveis', response);
 
     let processedResponse;
     try{
@@ -94,7 +104,7 @@ async function aiCommand(bot, message, args, group) {
       }
     });
   } catch (error) {
-    logger.error('Erro ao obter completação LLM:', error);
+    logger.error('[aiCommand] Erro ao obter completação LLM:', error);
     return new ReturnMessage({
       chatId: chatId,
       content: 'Desculpe, encontrei um erro ao processar sua solicitação.',
@@ -104,6 +114,33 @@ async function aiCommand(bot, message, args, group) {
       }
     });
   }
+}
+
+// Auxiliar para obter mídia da mensagem
+function getMediaFromMessage(message) {
+  return new Promise((resolve, reject) => {
+    // Se a mensagem tem mídia direta
+    if (message.type !== 'text') {
+      resolve(message.content);
+      return;
+    }
+    
+    // Tenta obter mídia da mensagem citada
+    message.origin.getQuotedMessage()
+      .then(quotedMsg => {
+        if (quotedMsg && quotedMsg.hasMedia) {
+          return quotedMsg.downloadMedia();
+        }
+        resolve(null);
+      })
+      .then(media => {
+        if (media) resolve(media);
+      })
+      .catch(error => {
+        logger.error('Erro ao obter mídia da mensagem citada:', error);
+        resolve(null);
+      });
+  });
 }
 
 const commands = [

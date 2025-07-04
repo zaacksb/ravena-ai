@@ -1,5 +1,7 @@
 const axios = require('axios');
 const Logger = require('../utils/Logger');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Serviço para interagir com APIs de LLM
@@ -15,7 +17,7 @@ class LLMService {
     this.openAIKey = config.openAIKey || process.env.OPENAI_API_KEY;
     this.googleKey = config.googleKey || process.env.GOOGLE_API_KEY;
     this.deepseekKey = config.deepseekKey || process.env.DEEPSEEK_API_KEY;
-    this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234/v1';
+    this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234';
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
     this.localModel = process.env.LOCAL_LLM_MODEL || "google/gemma-3-12b";
     this.LMStudioToken = process.env.LMSTUDIO_TOKEN ?? "";
@@ -281,10 +283,89 @@ class LLMService {
   }
 
   /**
+   * Envia uma solicitação de completação para o LM Studio usando a API /api/v0.
+   * Para entradas de imagem, é mais eficiente fornecer a imagem já em formato base64.
+   * @param {Object} options - Opções de solicitação
+   * @param {string} options.prompt - O texto do prompt
+   * @param {string} [options.model] - O modelo a usar (caminho do modelo no LM Studio)
+   * @param {number} [options.maxTokens=4096] - Número máximo de tokens a gerar
+   * @param {number} [options.temperature=0.7] - Temperatura de amostragem
+   * @param {string} [options.image] - Imagem para entrada de visão (em base64 ou caminho do arquivo).
+   * @param {string} [options.systemContext] - Contexto do sistema
+   * @returns {Promise<Object>} - A resposta da API
+   */
+  async lmstudioCompletion(options) {
+    try {
+      const endpoint = this.localEndpoint + '/api/v0/chat/completions';
+      
+      this.logger.debug('[lmstudioCompletion] Enviando solicitação para API LM Studio:', { 
+        endpoint,
+        model: options.model || 'local-model',
+        promptLength: options.prompt.length,
+        maxTokens: options.maxTokens || 4096,
+        image: !!options.image
+      });
+
+      const messages = [];
+      const systemContext = options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz";
+      messages.push({ role: 'system', content: systemContext });
+
+      const userMessage = { role: 'user' };
+
+      if (options.image) {
+        userMessage.content = [{ type: 'text', text: options.prompt }];
+        let image_url;
+
+        if (options.image.startsWith('data:image')) {
+          image_url = options.image;
+        } else if (fs.existsSync(options.image)) {
+          const fileContent = fs.readFileSync(options.image, 'base64');
+          const mimeType = path.extname(options.image).replace('.', '') || 'jpeg';
+          image_url = `data:image/${mimeType};base64,${fileContent}`;
+        } else {
+          image_url = `data:image/jpeg;base64,${options.image}`;
+        }
+        
+        userMessage.content.push({
+          type: 'image_url',
+          image_url: { url: image_url }
+        });
+      } else {
+        userMessage.content = options.prompt;
+      }
+
+      messages.push(userMessage);
+
+      const response = await axios.post(
+        endpoint,
+        {
+          model: options.model || this.localModel,
+          messages: messages,
+          max_tokens: options.maxTokens || 4096,
+          temperature: options.temperature || 0.7,
+          stream: false
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${this.LMStudioToken}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: options.timeout || this.apiTimeout
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      this.logger.error('Erro ao chamar API LM Studio:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Obtém completação de texto de qualquer LLM configurado
    * @param {Object} options - Opções de solicitação
    * @param {string} options.prompt - O texto do prompt
-   * @param {string} [options.provider='openai'] - O provedor a usar ('openai', 'gemini', 'deepseek', ou 'local')
+   * @param {string} [options.provider='openai'] - O provedor a usar ('openai', 'gemini', 'deepseek', 'lmstudio', ou 'local')
    * @param {string} [options.model] - O modelo a usar (específico do provedor)
    * @param {number} [options.maxTokens=1000] - Número máximo de tokens a gerar
    * @param {number} [options.temperature=0.7] - Temperatura de amostragem
@@ -360,6 +441,14 @@ class LLMService {
         response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
         if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
           this.logger.error('Resposta inválida da API Local:', response);
+          return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+        }
+        return response.choices[0].message.content;
+
+      case 'lmstudio':
+        response = await this.lmstudioCompletion(options);
+        if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+          this.logger.error('Resposta inválida da API LM Studio:', response);
           return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
         }
         return response.choices[0].message.content;
