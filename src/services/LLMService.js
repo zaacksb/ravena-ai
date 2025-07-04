@@ -411,6 +411,14 @@ class LLMService {
     let response;
     
     switch (options.provider) {
+      case 'lmstudio':
+        response = await this.lmstudioCompletion(options);
+        if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+          this.logger.error('Resposta inválida da API LM Studio:', response);
+          return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+        }
+        return response.choices[0].message.content;
+
       case 'gemini':
         response = await this.geminiCompletion(options);
         if (!response || !response.candidates || !response.candidates[0] || 
@@ -445,13 +453,6 @@ class LLMService {
         }
         return response.choices[0].message.content;
 
-      case 'lmstudio':
-        response = await this.lmstudioCompletion(options);
-        if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
-          this.logger.error('Resposta inválida da API LM Studio:', response);
-          return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
-        }
-        return response.choices[0].message.content;
         
       case 'openrouter':
         response = await this.openRouterCompletion(options);
@@ -480,8 +481,8 @@ class LLMService {
   async getCompletionFromProviders(options) {
     // Lista de provedores para tentar em ordem
     const providers = [
-      { name: 'local', method: async () => {
-        const response = await this.openAICompletion({ ...options, useLocal: true, model: this.localModel});
+      { name: 'lmstudio', method: async () => {
+        const response = await this.lmstudioCompletion(options);
         return response.choices[0].message.content;
       }},
       { name: 'gemini', method: async () => {
