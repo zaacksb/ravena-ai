@@ -39,7 +39,7 @@ async function aiCommand(bot, message, args, group) {
   const variaveisReturn = await bot.eventHandler.commandHandler.management.listVariables(bot, message, args, group);
   const variaveisList = variaveisReturn.content;
 
-  ctxContent += `\n\nEstes são todos os comandos que você pode processar:\n\n${cmdSimpleList}\n\nPara os comandos personalizados criados com g-addCmd, você pode usar variáveis:\n${variaveisList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube`;
+  ctxContent += `\n\n## Comandos que você pode processar:\n\n${cmdSimpleList}\n\nPara os comandos personalizados criados com g-addCmd, você pode usar variáveis:\n${variaveisList}\n\nEstes são os comandos usados apenas por administradores para gerenciarem seus grupos: ${cmdGerenciaSimplesList}\n\nSempre que for informar uma variável em um comando, use {} para encapsular ela, como {titulo}, {pessoa}. Quando o comando de gerencia pedir mídia, o comando deve ser enviado na legenda da foto/vídeo ou em resposta (reply) à mensagem que contém midia. Lembre o usuário que com o comando !g-painel algumas configurações do gerenciar são mais fáceis de fazer, como mensagem de boas vindas e canais da twitch/youtube`;
   
   let question = message.caption ?? message.content;
   const quotedMsg = await message.origin.getQuotedMessage();
@@ -55,7 +55,6 @@ async function aiCommand(bot, message, args, group) {
   }
 
   const media = await getMediaFromMessage(message);
-
   if (!media && question.length < 5) {
     return new ReturnMessage({
       chatId: chatId,
@@ -75,10 +74,26 @@ async function aiCommand(bot, message, args, group) {
   };
 
   if (media && media.data) {
-    logger.debug('[aiCommand] Comando AI com mídia detectada.');
-    completionOptions.provider = 'lmstudio';
-    completionOptions.image = media.data;
+    logger.debug(`[aiCommand] Comando AI com mídia detectada: ${media.mimetype}`);
+    if(media.mimetype.includes("image")){
+      completionOptions.provider = 'lmstudio';
+      completionOptions.image = media.data;
+      
+      // Quando interpretar imagens, usar um contexto diferente
+      const ctxPath = path.join(database.databasePath, 'textos', 'llm_context_images.txt');
+      completionOptions.systemContext = await fs.readFile(ctxPath, 'utf8') || "Você se chama ravenabot e deve inter esta imagem enviada no WhatsApp";
+    } else {
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `Ainda não processo este tipo de arquivo (${media.mimetype}) 😟 Consigo apenas analisar imagens!`,
+        options: {
+          quotedMessageId: message.origin.id._serialized,
+          evoReply: message.origin
+        }
+      });
+    }
   }
+
 
   // Obtém resposta da IA
   try {
