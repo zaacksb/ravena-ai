@@ -17,7 +17,7 @@ class LLMService {
     this.deepseekKey = config.deepseekKey || process.env.DEEPSEEK_API_KEY;
     this.localEndpoint = config.localEndpoint || process.env.LOCAL_LLM_ENDPOINT || 'http://localhost:1234/v1';
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
-    this.localModel = "mixtral-8x7b-instruct-v0.1-i1";
+    this.localModel = process.env.LOCAL_LLM_MODEL || "google/gemma-3-12b";
     this.LMStudioToken = process.env.LMSTUDIO_TOKEN ?? "";
     /*  
     this.logger.debug('LLMService inicializado com configuração:', {
