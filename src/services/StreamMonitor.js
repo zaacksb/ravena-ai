@@ -829,7 +829,7 @@ class StreamMonitor extends EventEmitter {
         
         // If it's not a channel ID format, try to resolve it
         if (!channelId.startsWith('UC')) {
-          this.logger.debug(`[getYtChannelID] ${channelId} não é ID, vou tentar buscar`);
+          //this.logger.debug(`[getYtChannelID] ${channelId} não é ID, vou tentar buscar`);
           channelId = await this.getYtChannelID(channelId) ?? channelId;
         }
 
