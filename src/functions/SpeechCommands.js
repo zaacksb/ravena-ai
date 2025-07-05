@@ -661,7 +661,7 @@ async function processAutoSTT(bot, message, group) {
       if (whisperOutputPath && await fs.access(whisperOutputPath).then(() => true).catch(() => false)) {
         await fs.unlink(whisperOutputPath);
       }
-      logger.debug('Arquivos temporários limpos no finally');
+      //logger.debug('Arquivos temporários limpos no finally');
     } catch (cleanupError) {
       logger.error('Erro ao limpar arquivos temporários no finally:', cleanupError);
     }
