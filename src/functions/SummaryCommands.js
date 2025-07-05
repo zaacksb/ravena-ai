@@ -266,7 +266,7 @@ async function storeMessage(message, group) {
         const response = await llmService.getCompletion(completionOptions);
 
 
-        if(response && !response.includes("Não foi poss")){
+        if(response && !response.includes("Não foi poss") && !response.includes("Ocorreu um erro")){
           textContent = message.caption ? `${response}\nLegenda: ${message.caption}` : response;
           logger.info(`[storeMessage] Imagem interpretada: ${textContent}`);
         }
