@@ -156,9 +156,9 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     // Verificar NSFW
     let isNSFW = false;
     try {
-      const nsfwResult = await nsfwPredict.detectNSFW(tempImagePath);
+      const nsfwResult = await nsfwPredict.detectNSFW(imageBase64);
       isNSFW = nsfwResult.isNSFW;
-      logger.info(`Imagem analisada: NSFW = ${isNSFW}, Scores: ${JSON.stringify(nsfwResult.scores)}`);
+      logger.info(`Imagem analisada: NSFW = ${isNSFW}, Reason: ${JSON.stringify(nsfwResult.reason)}`);
     } catch (nsfwError) {
       logger.error('Erro ao verificar NSFW:', nsfwError);
     }

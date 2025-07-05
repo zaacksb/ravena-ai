@@ -343,6 +343,7 @@ class LLMService {
           messages: messages,
           max_tokens: options.maxTokens || 4096,
           temperature: options.temperature || 0.7,
+          response_format: options.response_format ?? null,
           stream: false
         },
         {

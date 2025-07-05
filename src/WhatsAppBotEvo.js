@@ -1731,7 +1731,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       } else {
       */
 
-      let contactId = (typeof cid === "object") ? cid.id : cid;
+      let contactId = ((typeof cid === "object") ? cid.id : cid) ?? null;
 
       const isLid = contactId.includes("@lid") && senderPn;
       contactId = isLid ? senderPn : contactId;
@@ -1828,6 +1828,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
       */
     } catch (error) {
+      contactId = contactId ?? "0000000000@w";
       this.logger.error(`[${this.id}] Failed to get contact details for ${contactId}:`, error);
       return { id: { _serialized: contactId }, name: contactId.split('@')[0], pushname: contactId.split('@')[0], number: contactId.split('@')[0], isUser: true, _isPartial: true }; // Basic fallback
     }
