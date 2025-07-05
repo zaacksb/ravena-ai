@@ -178,9 +178,11 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
     const media = await bot.createMedia(tempImagePath);
     logger.info(media);
     
+    const filterNSFW = group?.filters?.nsfw ?? false;
+
     // Se a imagem for NSFW, envia um aviso antes
     if (isNSFW) {
-      if(group.filters.nsfw){
+      if(filterNSFW){
         returnMessages.push(new ReturnMessage({
           chatId: chatId,
           content: '🔞 A imagem gerada pode conter conteúdo potencialmente inadequado e este grupo está filtrando conteúdo NSFW, por isso o resultado não foi enviado.'
