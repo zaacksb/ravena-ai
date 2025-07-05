@@ -298,13 +298,6 @@ class LLMService {
     try {
       const endpoint = this.localEndpoint + '/api/v0/chat/completions';
       
-      this.logger.debug('[lmstudioCompletion] Enviando solicitação para API LM Studio:', { 
-        endpoint,
-        model: options.model || 'local-model',
-        promptLength: options.prompt.length,
-        maxTokens: options.maxTokens || 4096,
-        image: !!options.image
-      });
 
       const messages = [];
       const systemContext = options.systemContext ?? "Você é ravena, um bot de whatsapp criado por moothz";
@@ -336,6 +329,17 @@ class LLMService {
 
       messages.push(userMessage);
 
+      this.logger.debug('[lmstudioCompletion] Enviando solicitação para API LM Studio:', { 
+        endpoint,
+        model: options.model || 'local-model',
+        promptLength: options.prompt.length,
+        max_tokens: options.maxTokens || 4096,
+        temperature: options.temperature || 0.7,
+        image: options.image ? true : false,
+        response_format: options.response_format ?? null,
+        messages: messages,
+      });
+
       const response = await axios.post(
         endpoint,
         {
@@ -357,7 +361,7 @@ class LLMService {
 
       return response.data;
     } catch (error) {
-      this.logger.error('Erro ao chamar API LM Studio:', error.response ? error.response.data : error.message);
+      this.logger.error('Erro ao chamar API LM Studio:', error.message);
       throw error;
     }
   }

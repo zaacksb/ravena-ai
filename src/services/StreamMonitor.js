@@ -531,7 +531,7 @@ class StreamMonitor extends EventEmitter {
     const failedBatches = [];
     for (const batch of channelBatches) {
       bAt += 1;
-      this.logger.info(`[_pollTwitchChannels][${bAt}/${totalBatches}] Polling ${batch.length} channels...`);
+      //this.logger.info(`[_pollTwitchChannels][${bAt}/${totalBatches}] Polling ${batch.length} channels...`);
       try {
         // First get user IDs from login names
         const userResponse = await axios.get(
@@ -791,20 +791,20 @@ class StreamMonitor extends EventEmitter {
     const channelsIdCache = JSON.parse(fs.readFileSync(channelsIdCachePath, 'utf8')) ?? {};
     
     if(channelsIdCache[channel]){
-      this.logger.debug(`[getYtChannelID][cache] ${channel} => ${channelsIdCache[channel]}`);
+      //this.logger.debug(`[getYtChannelID][cache] ${channel} => ${channelsIdCache[channel]}`);
       return channelsIdCache[channel];
     }
 
     const chUrls = [`https://www.youtube.com/c/${channel}`, `https://www.youtube.com/@${channel}`];
     for(let chUrl of chUrls){
       try {
-        this.logger.debug(`[getYtChannelID] Tentando: ${chUrl}`);
+        //this.logger.debug(`[getYtChannelID] Tentando: ${chUrl}`);
         const resolveResponse = await axios.get(chUrl);
         
         let exID = this.extractChannelID(resolveResponse.data);
 
         if(exID){
-          this.logger.debug(`[getYtChannelID] Extraido ID do canal '${channel}': ${exID}`);
+          //this.logger.debug(`[getYtChannelID] Extraido ID do canal '${channel}': ${exID}`);
           channelsIdCache[channel] = exID;
           fs.writeFileSync(channelsIdCachePath, JSON.stringify(channelsIdCache, null, "\t"), 'utf8');
           return exID;
@@ -833,7 +833,7 @@ class StreamMonitor extends EventEmitter {
           channelId = await this.getYtChannelID(channelId) ?? channelId;
         }
 
-        this.logger.debug(`[_pollYoutubeChannels] Buscando videos para o channelID: ${channelId}`);
+        //this.logger.debug(`[_pollYoutubeChannels] Buscando videos para o channelID: ${channelId}`);
         
         // Get channel info and latest videos using RSS feed
         const response = await axios.get(
