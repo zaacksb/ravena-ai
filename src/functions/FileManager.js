@@ -1081,7 +1081,7 @@ const commands = [
     category: "arquivos",
     description: 'Lista as pastas e arquivos criadas no grupo/chat',
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📂"
     },
     method: listFiles
@@ -1092,7 +1092,7 @@ const commands = [
     description: 'Cria nova pasta',
     category: "arquivos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📁"
     },
     method: createFolder
@@ -1103,7 +1103,7 @@ const commands = [
     description: 'Envia arquivo para a pasta destino',
     category: "arquivos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📤"
     },
     method: uploadFile
@@ -1114,7 +1114,7 @@ const commands = [
     description: 'Apaga arquivo ou pasta',
     category: "arquivos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🗑️"
     },
     method: deleteFile
@@ -1125,7 +1125,7 @@ const commands = [
     description: 'Baixa arquivo ou pasta',
     category: "arquivos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📥"
     },
     method: downloadFile

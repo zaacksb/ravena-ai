@@ -2235,7 +2235,7 @@ const commands = [
     adminOnly: true,  
     cooldown: 10,  
     reactions: {  
-      before: "⏳",  
+      before: "⌛️",  
       after: "✅",  
       error: "❌"  
     },  

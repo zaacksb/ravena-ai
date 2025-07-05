@@ -547,7 +547,7 @@ const commands = [
     description: 'Baixa conteúdo de várias plataformas de mídia social',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },
@@ -560,7 +560,7 @@ const commands = [
     description: 'Baixa conteúdo do Instagram',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },
@@ -573,7 +573,7 @@ const commands = [
     description: 'Baixa conteúdo do TikTok',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },
@@ -586,7 +586,7 @@ const commands = [
     description: 'Baixa conteúdo do X (Twitter)',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },
@@ -599,7 +599,7 @@ const commands = [
     description: 'Baixa conteúdo do Twitter',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },

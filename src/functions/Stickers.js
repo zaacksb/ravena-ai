@@ -595,7 +595,7 @@ const commands = [
     cooldown: 0,
     reactions: {
       trigger: "🖼",
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -611,7 +611,7 @@ const commands = [
     cooldown: 0,
     reactions: {
       trigger: "🖼",
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -628,7 +628,7 @@ const commands = [
     cooldown: 0,
     reactions: {
       trigger: "🖼",
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -647,7 +647,7 @@ const commands = [
     cooldown: 0,
     reactions: {
       trigger: "🖼",
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -665,7 +665,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -682,7 +682,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -699,7 +699,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -716,7 +716,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -734,7 +734,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -751,7 +751,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -769,7 +769,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },
@@ -786,7 +786,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 0,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🖼",
       error: "❌"
     },

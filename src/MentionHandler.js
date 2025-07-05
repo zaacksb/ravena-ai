@@ -10,7 +10,7 @@ class MentionHandler {
     
     // Emoji de reação padrão para menções
     this.reactions = {
-      before: "⏳",
+      before: "⌛️",
       after: "🤖",
       error: "❌" 
     };

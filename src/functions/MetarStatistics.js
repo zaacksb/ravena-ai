@@ -87,7 +87,7 @@ const commands = [
     usage: '!metar <código_icao>',
     category: "busca",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🌤️",
       error: "❌"
     },

@@ -30,7 +30,7 @@ class Command {
     // Reações e feedback
     this.reactions = data.reactions || {
       trigger: false,                                // Emoji usado para ativar um comando
-      before: "⏳",                                 // Emoji usado antes da execução
+      before: "⌛️",                                 // Emoji usado antes da execução
       after: "✅",                                  // Emoji usado após execução bem-sucedida
       error: "❌"                                   // Emoji usado em caso de erro
     };

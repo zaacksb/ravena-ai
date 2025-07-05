@@ -88,7 +88,7 @@ async function processYoutubeReaction(bot, message, emoji) {
     
     // Envia reação de processamento
     try {
-      await message.origin.react('⏳');
+      await message.origin.react('⌛️');
     } catch (reactError) {
       logger.error('Erro ao reagir à mensagem:', reactError);
     }
@@ -531,7 +531,7 @@ const commands = [
     description: 'Baixa um vídeo do YouTube',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },
@@ -544,7 +544,7 @@ const commands = [
     description: 'Baixa um áudio do YouTube',
     category: "downloaders",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "✅",
       error: "❌"
     },

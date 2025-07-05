@@ -171,7 +171,7 @@ const commands = [
     group: "askia",
     reactions: {
       trigger: "🤖",
-      before: "⏳",
+      before: "⌛️",
       after: "🤖"
     },
     cooldown: 60,
@@ -184,7 +184,7 @@ const commands = [
     group: "askia",
     reactions: {
       trigger: "🤖",
-      before: "⏳",
+      before: "⌛️",
       after: "🤖"
     },
     cooldown: 60,
@@ -198,7 +198,7 @@ const commands = [
     group: "askia",
     reactions: {
       trigger: "🤖",
-      before: "⏳",
+      before: "⌛️",
       after: "🤖"
     },
     cooldown: 60,
@@ -212,7 +212,7 @@ const commands = [
     group: "askia",
     reactions: {
       trigger: "🤖",
-      before: "⏳",
+      before: "⌛️",
       after: "🤖"
     },
     cooldown: 60,

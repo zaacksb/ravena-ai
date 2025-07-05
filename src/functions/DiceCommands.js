@@ -242,7 +242,7 @@ for (const sides of COMMON_DICE) {
       group: "dices",
       description: `Rola um dado de X faces`,
       reactions: {
-        before: "⏳",
+        before: "⌛️",
         after: "🎲"
       },
       method: async (bot, message, args, group) => {
@@ -259,7 +259,7 @@ commands.push(
     description: 'Rola dados com padrão customizado (ex: 2d6+3)',
     category: "jogos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🎲"
     },
     method: async (bot, message, args, group) => {

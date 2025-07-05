@@ -269,7 +269,7 @@ const commands = [
     description: 'Busca e envia um GIF do Giphy',
     category: "busca",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📱"
     },
     method: enviarGif

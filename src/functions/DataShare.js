@@ -231,7 +231,7 @@ const commands = [
     description: 'Compartilhe dados com a API da ravena',
     category: "arquivos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "⬆️"
     },
     cooldown: 1,

@@ -192,7 +192,7 @@ const commands = [
     description: 'Busca informações na Wikipedia',
     category: "busca",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📚"
     },
     method: buscarWikipedia

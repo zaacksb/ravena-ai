@@ -490,7 +490,7 @@ const commands = [
     category: "utilidades",
     usage: '!traduzir [idioma] [texto] ou !traduzir [idioma] em resposta a uma mensagem',
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🌐",
       error: "❌"
     },

@@ -413,7 +413,7 @@ const commands = [
     description: 'Mostra o clima atual e previsão para uma localização',
     category: "utilidades",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "☀️",
       error: "❌"
     },

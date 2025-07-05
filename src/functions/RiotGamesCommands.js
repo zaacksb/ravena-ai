@@ -544,7 +544,7 @@ const commands = [
     description: 'Busca perfil de jogador de League of Legends',
     category: "jogos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🎮",
       error: "❌"
     },
@@ -556,7 +556,7 @@ const commands = [
     description: 'Busca perfil de jogador de Valorant',
     category: "jogos",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🔫",
       error: "❌"
     },

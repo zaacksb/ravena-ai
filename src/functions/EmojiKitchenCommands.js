@@ -235,7 +235,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 5, // 5 segundos entre usos
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🧪",
       error: "❌"
     },
@@ -250,7 +250,7 @@ const commands = [
     caseSensitive: false,
     cooldown: 5,
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🧪",
       error: "❌"
     },

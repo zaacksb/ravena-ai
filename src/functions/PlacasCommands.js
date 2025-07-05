@@ -402,7 +402,7 @@ const commands = [
     category: "busca",
     usage: "!placa ABC1234",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🚘"
     },
     method: buscarPlaca,
@@ -415,7 +415,7 @@ const commands = [
     usage: "!sipt ABC1234",
     aliases: ['instasipt'],
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🚘"
     },
     method: consultarSiPt

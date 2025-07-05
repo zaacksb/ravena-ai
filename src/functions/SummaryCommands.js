@@ -343,7 +343,7 @@ const commands = [
     description: 'Resume conversas recentes do grupo',
     category: 'ia',
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "📋"
     },
     method: summarizeConversation
@@ -355,7 +355,7 @@ const commands = [
     category: 'ia',
     reactions: {
       trigger: "🦜",
-      before: "⏳",
+      before: "⌛️",
       after: "💬"
     },
     method: interactWithConversation

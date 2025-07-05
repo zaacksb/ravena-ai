@@ -151,7 +151,7 @@ const commands = [
     usage: '!audio <nome_do_áudio> <número>',
     category: "busca",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🔊",
       error: "❌"
     },
@@ -164,7 +164,7 @@ const commands = [
     usage: '!audio <nome_do_áudio> <número>',
     category: "busca",
     reactions: {
-      before: "⏳",
+      before: "⌛️",
       after: "🔊",
       error: "❌"
     },
