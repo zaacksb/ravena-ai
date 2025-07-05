@@ -542,7 +542,7 @@ async function startGeoguesserGame(bot, message, args, group) {
         '- Envie sua localização pelo WhatsApp ou\n' +
         '- !geoguess nome do lugar\n' +
         '- !geoguess -20.123 -15.32\n\n' +
-        'Vocês tem *5 minutos* para adivinhar! ⏰';
+        'Vocês tem *5 minutos* para adivinhar! 😴';
       
       returnMessages.push(new ReturnMessage({
         chatId: chatId,
@@ -662,7 +662,7 @@ async function makeGuess(bot, message, args, group) {
       await endGame(bot, groupId);
       return new ReturnMessage({
         chatId: groupId,
-        content: '⏰ O tempo para esse jogo de Geoguesser acabou! Inicie um novo com !geoguesser'
+        content: '😴 O tempo para esse jogo de Geoguesser acabou! Inicie um novo com !geoguesser'
       });
     }
     
@@ -981,7 +981,7 @@ async function showGameStatus(bot, message, args, group) {
       await endGame(bot, groupId);
       return new ReturnMessage({
         chatId: groupId,
-        content: '⏰ O tempo para esse jogo de Geoguesser acabou! Inicie um novo com !geoguesser'
+        content: '😴 O tempo para esse jogo de Geoguesser acabou! Inicie um novo com !geoguesser'
       });
     }
     

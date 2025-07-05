@@ -401,7 +401,7 @@ class LLMService {
         return response;
       }
     } catch (error) {
-      this.logger.error('Erro ao obter completação:', error);
+      this.logger.error('Erro ao obter completação:', error.message);
       return "Ocorreu um erro ao gerar uma resposta. Por favor, tente novamente mais tarde.";
     }
   }

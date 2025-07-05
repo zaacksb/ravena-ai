@@ -604,7 +604,7 @@ async function dispararLembrete(bot, lembreteId) {
     }
     
     // Formata a mensagem do lembrete
-    const textoLembrete = `⏰ *LEMBRETE!*\n\n${lembrete.mensagem || ''}`;
+    const textoLembrete = `😴 *LEMBRETE!*\n\n${lembrete.mensagem || ''}`;
     
     // Usa ReturnMessage para enviar
     let returnMessage;
@@ -685,7 +685,7 @@ const commands = [
     category: "utilidades",
     reactions: {
       before: "⏳",
-      after: "⏰"
+      after: "😴"
     },
     needsQuotedMsg: true,
     method: criarLembrete

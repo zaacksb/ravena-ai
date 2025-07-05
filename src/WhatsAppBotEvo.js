@@ -1998,11 +1998,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
   async sendReaction(chatId, messageId, reaction) {
       // reaction can be an emoji string e.g. "👍" or "" to remove
+      
       if (!this.isConnected) {
           this.logger.warn(`[${this.id}] Cannot send reaction, not connected.`);
           return;
       }
-      this.logger.debug(`[${this.id}] Sending reaction '"${reaction}"' in chat ${chatId}`);
+      this.logger.debug(`[${this.id}] Sending reaction '${reaction}' in chat ${chatId}`);
       try {
           const payload = {
                 key: { remoteJid: chatId, id: messageId, fromMe: false }, 
@@ -2011,7 +2012,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           await this.apiClient.post(`/message/sendReaction`, payload);
           return true;
       } catch (error) {
-          this.logger.error(`[${this.id}] Failed to send reaction:`, error);
+          this.logger.error(`[${this.id}] Failed to send reaction '${reaction}':`, error);
           return false;
       }
   }

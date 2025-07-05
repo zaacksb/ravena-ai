@@ -265,7 +265,7 @@ async function newsCommand(bot, message, args, group) {
         chatId: chatId,
         content: `ℹ️ *MuNews não encontrada para ${formattedDate}*\n\nAs MuNews geralmente chegam entre 06:00 e 7:30 da manhã. Tente novamente mais tarde ou verifique a data informada.\n\n${stringDatasDisponiveis}`,
         reactions: {
-          after: "⏰"
+          after: "😴"
         },
         options: {
           quotedMessageId: message.origin.id._serialized,

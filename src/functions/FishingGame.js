@@ -822,7 +822,7 @@ async function fishCommand(bot, message, args, group) {
       // Só reage com emoji de relógio, sem mensagem
       try {
         setTimeout((mo) => {
-          mo.react("⏰");
+          mo.react("😴");
         }, 2000, message.origin);
       } catch (reactError) {
         logger.error('Erro ao reagir com emoji de relógio:', reactError);

@@ -189,7 +189,7 @@ async function startStopGame(bot, message, args, group) {
     setTimeout(async () => {
       if (activeGames[groupId]) {
         // Envia mensagem de que o tempo acabou
-        await bot.sendMessage(groupId, `⏰ Tempo esgotado para o jogo de Stop/Adedonha!\n\nAguarde, analisando respostas...`);
+        await bot.sendMessage(groupId, `😴 Tempo esgotado para o jogo de Stop/Adedonha!\n\nAguarde, analisando respostas...`);
         
         // Finaliza o jogo após um breve intervalo
         setTimeout((bt, gid) => {

@@ -245,7 +245,7 @@ class CommandHandler {
   async handleCooldownMessage(bot, message, command, groupId, cooldownInfo) {
     try {
       // Reage com emoji de relógio
-      await message.origin.react("⏰");
+      await message.origin.react("😴");
       
       // Verifica se já enviamos uma mensagem de cooldown para este comando recentemente
       const cooldownMsgKey = `${groupId}:${command.name || command}`;
