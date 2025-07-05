@@ -152,7 +152,7 @@ const commands = [
     description: 'Busca informações sobre um anime no MyAnimeList',
     category: "cultura",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🗾"
     },
     method: buscarAnime

@@ -139,7 +139,7 @@ async function interactWithConversation(bot, message, args, group) {
 
     const retornarErro = args[0] ?? true;
     
-    logger.info(`Gerando interação para o grupo ${message.group}`);
+    logger.info(`[interactWithConversation] Gerando interação para o grupo ${message.group}`);
     
     // Tenta buscar mensagens do histórico de chat
     const chat = await message.origin.getChat();
@@ -168,21 +168,26 @@ async function interactWithConversation(bot, message, args, group) {
         // Recorre a mensagens armazenadas
         recentMessages = await getRecentMessages(message.group);
       }
+
     } catch (fetchError) {
-      logger.error('Erro ao buscar mensagens do chat:', fetchError);
+      logger.error('[interactWithConversation] Erro ao buscar mensagens do chat:', fetchError);
       // Recorre a mensagens armazenadas
       recentMessages = await getRecentMessages(message.group);
     }
+
+    logger.info(`[interactWithConversation] Mensagens recentes: ${recentMessages.length}`);
     
-    if ((!recentMessages || recentMessages.length === 0) && retornarErro) {
-      return new ReturnMessage({
-        chatId: message.group,
-        content: 'Nenhuma mensagem recente para interagir.'
-      });
-    } else {
-      return [];
-    }
-    
+    if (!recentMessages || recentMessages.length === 0) {
+      if(retornarErro){
+        return new ReturnMessage({
+          chatId: message.group,
+          content: 'Nenhuma mensagem recente para interagir.'
+        });
+      } else {
+        return [];
+
+      }
+    } 
     
     // Formata mensagens para prompt
     const formattedMessages = formatMessagesForPrompt(recentMessages);
@@ -192,17 +197,21 @@ async function interactWithConversation(bot, message, args, group) {
 
 ${formattedMessages}`;
     
+    logger.info(`[interactWithConversation] Enviando prompt: ${prompt.substring(0, 500)}`);
+
     // Obtém interação do LLM
     const interaction = await llmService.getCompletion({prompt: prompt});
     
-    if (!interaction && retornarErro) {
-      return new ReturnMessage({
-        chatId: message.group,
-        content: 'Falha ao gerar mensagem. Por favor, tente novamente.'
-      });
-    } else {
-      return [];
-    }
+    if (!interaction) {
+      if(retornarErro){
+        return new ReturnMessage({
+          chatId: message.group,
+          content: 'Falha ao gerar mensagem. Por favor, tente novamente.'
+        });
+      } else {
+        return [];
+      }
+    } 
     
     // Verifica se teve mentions
     const llmMentions = interaction.match(/@(\d{8,})/g)?.map(m => m.slice(1)) || [];
@@ -343,7 +352,7 @@ const commands = [
     description: 'Resume conversas recentes do grupo',
     category: 'ia',
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "📋"
     },
     method: summarizeConversation
@@ -355,7 +364,7 @@ const commands = [
     category: 'ia',
     reactions: {
       trigger: "🦜",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "💬"
     },
     method: interactWithConversation

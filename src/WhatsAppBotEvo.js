@@ -954,6 +954,8 @@ class WhatsAppBotEvo {
                 break;
             }
 
+            incomingMessageData.event = "messages.upsert";
+            incomingMessageData.sender = payload.sender;
             this.formatMessageFromEvo(incomingMessageData).then(formattedMessage => {
               if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
                 if(!incomingMessageData.key.fromMe){ // Só rodo o onMessage s enão for msg do bot. preciso chamar o formatMessage pra elas serem formatadas e irem pro cache
@@ -1227,6 +1229,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         else {
           if(!isSentMessage){
             this.logger.warn(`[${this.id}] Unhandled Evolution message type:`, Object.keys(waMessage).join(', '));
+            this.logger.warn(`[${this.id}][ev-${evoMessageData.event}] Unhandled Evolution message type:`, waMessage);
           }
           resolve(null);
           return;
@@ -1999,6 +2002,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   async sendReaction(chatId, messageId, reaction) {
       // reaction can be an emoji string e.g. "👍" or "" to remove
       
+      // Sanitizar a string pra quela tenha só um emoji e apenas isso mais nada e nada mais
+      reaction = (reaction.match(/(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu) || [])[0] || "";
       if (!this.isConnected) {
           this.logger.warn(`[${this.id}] Cannot send reaction, not connected.`);
           return;

@@ -476,7 +476,7 @@ const commands = [
     aliases: ['google', 'search'],
     reactions: {
       trigger: "🔍",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔍"
     },
     method: searchWeb
@@ -488,7 +488,7 @@ const commands = [
     category: "busca",
     aliases: ['img', 'imagem'],
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🖼️"
     },
     method: searchImages
@@ -499,7 +499,7 @@ const commands = [
     description: 'Consultas ao Registro Aeronáutico Brasileiro',
     category: "busca",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✈️"
     },
     method: searchAircraftRAB

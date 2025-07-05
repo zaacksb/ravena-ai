@@ -248,7 +248,7 @@ const commands = [
     description: 'Busca informações sobre filmes ou séries no IMDB',
     category: "cultura",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🎬"
     },
     method: buscarImdb

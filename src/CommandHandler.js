@@ -29,7 +29,7 @@ class CommandHandler {
     
     // Emojis de reação padrão
     this.defaultReactions = {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✅",
       error: "❌" 
     };

@@ -517,7 +517,7 @@ async function processAutoSTT(bot, message, group) {
     }
 
     try{
-      await message.origin.react("⌛️");
+      await message.origin.react(process.env.LOADING_EMOJI ?? "🌀");
     } catch(e){
       logger.error(`[processAutoSTT] Erro enviando notificação inicial`);
     }
@@ -678,7 +678,7 @@ const commands = [
     needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
     reactions: {
       trigger: "👂",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "👂"
     },
     method: speechToText
@@ -691,7 +691,7 @@ const commands = [
     needsMedia: true, // Verificará mídia direta ou mídia de mensagem citada
     reactions: {
       trigger: "👂",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "👂"
     },
     method: speechToText
@@ -702,7 +702,7 @@ const commands = [
     category: "tts",
     reactions: {
       trigger: ["🗣️","🦇"],
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "ravena")
@@ -714,7 +714,7 @@ const commands = [
     category: "tts",
     reactions: {
       trigger: "👩",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "mulher")
@@ -725,7 +725,7 @@ const commands = [
     group: "ttsMulher",
     category: "tts",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "carioca")
@@ -737,7 +737,7 @@ const commands = [
     group: "ttsHomem",
     category: "tts",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "carioco")
@@ -750,7 +750,7 @@ const commands = [
     category: "tts",
     reactions: {
       trigger: "💋",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "sensual")
@@ -761,7 +761,7 @@ const commands = [
     category: "tts",
     group: "ttsHomem",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "sensuel")
@@ -774,7 +774,7 @@ const commands = [
     group: "ttsHomem",
     reactions: {
       trigger: "👨",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "homem")
@@ -785,7 +785,7 @@ const commands = [
     category: "tts",
     group: "ttsHomem",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "clint")
@@ -797,7 +797,7 @@ const commands = [
     category: "tts",
     group: "ttsHomem",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "morgan")
@@ -810,7 +810,7 @@ const commands = [
     category: "tts",
     reactions: {
       trigger: "🎙️",
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "narrador")

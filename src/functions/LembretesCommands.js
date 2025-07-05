@@ -674,7 +674,7 @@ const commands = [
     description: 'Lista os lembretes ativos',
     category: "utilidades",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "📋"
     },
     method: listarLembretes
@@ -684,7 +684,7 @@ const commands = [
     description: 'Configura um lembrete para uma data específica',
     category: "utilidades",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "😴"
     },
     needsQuotedMsg: true,
@@ -697,7 +697,7 @@ const commands = [
     description: 'Cancela um lembrete por ID',
     category: "utilidades",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🗑"
     },
     method: cancelarLembrete

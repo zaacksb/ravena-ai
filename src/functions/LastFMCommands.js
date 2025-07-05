@@ -233,7 +233,7 @@ async function lastfmCommand(bot, message, args, group) {
       chatId: chatId,
       content: `🔍 Buscando dados do perfil '${username}' no Last.fm...`,
       reactions: {
-        before: "⌛️"
+        before: process.env.LOADING_EMOJI ?? "🌀"
       }
     });
     
@@ -267,7 +267,7 @@ const commands = [
     category: "busca",
     group: "lastfm",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "📻",
       error: "❌"
     },
@@ -282,7 +282,7 @@ const commands = [
     category: "busca",
     group: "lastfm",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "📻",
       error: "❌"
     },

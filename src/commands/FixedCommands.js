@@ -52,7 +52,7 @@ class FixedCommands {
                 // Adiciona configuração de reação padrão se não fornecida
                 if (!cmd.reactions) {
                   cmd.reactions = {
-                    before: "⌛️",
+                    before: process.env.LOADING_EMOJI ?? "🌀",
                     after: "✅"
                   };
                 }

@@ -294,7 +294,7 @@ const commands = [
     usage: '!news [YYYY-MM-DD]',
     category: "utilidades",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "📰",
       error: "❌"
     },

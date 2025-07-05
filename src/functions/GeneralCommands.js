@@ -320,8 +320,8 @@ const commands = [
     category: "geral",
     hidden: "true",
     reactions: {
-      before: "⌛️",
-      after: "✅"
+      before: "🌀",
+      after: "🍭"
     },
     method: pingCommand
   }),

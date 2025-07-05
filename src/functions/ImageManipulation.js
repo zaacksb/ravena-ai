@@ -504,7 +504,7 @@ const commands = [
     group: "rremovebg",
     needsMedia: true,
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✂️",
       error: "❌"
     },
@@ -518,7 +518,7 @@ const commands = [
     group: "imageEffect",
     needsMedia: true,
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🌀",
       error: "❌"
     },
@@ -533,7 +533,7 @@ const commands = [
     aliases: ['sbg'],
     needsMedia: true,
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✂️",
       error: "❌"
     },
@@ -546,7 +546,7 @@ const commands = [
     group: "stickerbg",
     needsMedia: true,
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✂️",
       error: "❌"
     },
@@ -559,7 +559,7 @@ const commands = [
     group: "rremovebg",
     needsMedia: true,
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✂️",
       error: "❌"
     },
@@ -577,7 +577,7 @@ const commands = [
       group: "imageEffect",
       needsMedia: true,
       reactions: {
-        before: "⌛️",
+        before: process.env.LOADING_EMOJI ?? "🌀",
         after: "🎨",
         error: "❌"
       },

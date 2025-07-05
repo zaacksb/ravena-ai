@@ -497,7 +497,7 @@ async function startGeoguesserGame(bot, message, args, group) {
     const returnMessages = [];
 
 
-    bot.sendReturnMessages(new ReturnMessage({chatId: chatId, content: "🌎 *Inicializando _Geoguesser_*, aguarde as imagens! ⌛️"}));
+    bot.sendReturnMessages(new ReturnMessage({chatId: chatId, content: "🌎 *Inicializando _Geoguesser_*, aguarde as imagens! ⏳"}));
 
     try{
 

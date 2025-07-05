@@ -185,7 +185,7 @@ async function handleGetAudio(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: '⌛️ Processando áudio...'
+        content: '⏳ Processando áudio...'
       })
     );
     
@@ -272,7 +272,7 @@ async function handleGetVoice(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: '⌛️ Processando áudio...'
+        content: '⏳ Processando áudio...'
       })
     );
     
@@ -377,7 +377,7 @@ async function handleVolumeAdjust(bot, message, args, group) {
     returnMessages.push(
       new ReturnMessage({
         chatId: chatId,
-        content: `⌛️ Ajustando volume para ${volumeLevel}%...`
+        content: `⏳ Ajustando volume para ${volumeLevel}%...`
       })
     );
     
@@ -434,7 +434,7 @@ const commands = [
     description: 'Converte mídia para arquivo de áudio MP3',
     category: "áudio",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🎵",
       error: "❌"
     },
@@ -447,7 +447,7 @@ const commands = [
     description: 'Converte mídia para mensagem de voz',
     category: "áudio",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🎤",
       error: "❌"
     },
@@ -460,7 +460,7 @@ const commands = [
     description: 'Ajusta o volume da mídia (0-1000)',
     category: "áudio",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🔊",
       error: "❌"
     },

@@ -192,7 +192,7 @@ const commands = [
     description: 'Busca informações na Wikipedia',
     category: "busca",
     reactions: {
-      before: "⌛️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
       after: "📚"
     },
     method: buscarWikipedia
