@@ -76,6 +76,11 @@ async function aiCommand(bot, message, args, group) {
   if (media && media.data) {
     logger.debug(`[aiCommand] Comando AI com mídia detectada: ${media.mimetype}`);
     if(media.mimetype.includes("image")){
+
+      if(completionOptions.prompt.length < 4){
+        completionOptions.prompt = "Analise esta imagem e entregue um resumo detalhado"
+      }
+
       completionOptions.provider = 'lmstudio';
       completionOptions.image = media.data;
       

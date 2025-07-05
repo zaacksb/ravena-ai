@@ -329,27 +329,24 @@ class LLMService {
 
       messages.push(userMessage);
 
-      this.logger.debug('[lmstudioCompletion] Enviando solicitação para API LM Studio:', { 
-        endpoint,
-        model: options.model || 'local-model',
-        promptLength: options.prompt.length,
+
+      const queryOptions = {
+        model: options.model || this.localModel,
+        messages: messages,
         max_tokens: options.maxTokens || 4096,
         temperature: options.temperature || 0.7,
-        image: options.image ? true : false,
-        response_format: options.response_format ?? null,
-        messages: messages,
-      });
+        stream: false
+      };
 
+      this.logger.debug('[lmstudioCompletion] Enviando solicitação para API LM Studio:', queryOptions);
+
+      if(options.response_format){
+        queryOptions.response_format = options.response_format;
+      }
+      
       const response = await axios.post(
         endpoint,
-        {
-          model: options.model || this.localModel,
-          messages: messages,
-          max_tokens: options.maxTokens || 4096,
-          temperature: options.temperature || 0.7,
-          response_format: options.response_format ?? null,
-          stream: false
-        },
+        queryOptions,
         {
           headers: {
             'Authorization': `Bearer ${this.LMStudioToken}`,
