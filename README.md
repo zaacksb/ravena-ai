@@ -70,7 +70,6 @@ Sem isso, não vai dar pra rodar o bot.
 ### Requisitos Recomendados
 Para funções bastante utilizadas do bot
 
-* [Python 3.7+](https://www.python.org/downloads/): Para usar nsfw-detect
 * [ImageMagick](docs/ImageManipulation.md): Comandos de efeito em imagens
 * [faster-whisper](https://github.com/SYSTRAN/faster-whisper): Para transcrição de áudios _(speech-to-text)_ - fácil de usar, binaries prontos
 * [alltalk_tts](https://github.com/erew123/alltalk_tts/tree/alltalkbeta): Texto pra voz, ferramenta grátis e poderosa (dá até pra copiar voz dos outros!)
@@ -79,8 +78,6 @@ Para funções bastante utilizadas do bot
 
 ### Opcionais e Extras
 * [stable-diffusion-webui](https://github.com/AUTOMATIC1111/stable-diffusion-webui): Para gerar imagens com IA localmente
-* [nsfw-predict](https://github.com/GantMan/nsfw_model): Deteção de imagens 18+ (precisa do modelo abaixo)
-* [nsfw_mobilenet_v2_140_224.zip](https://github.com/GantMan/nsfw_model/releases/tag/1.1.0): Ótimo modelo free para detecção de imagens 18+
 * [API - Giphy](https://developers.giphy.com/): Para busca de GIFs
 * [API - OMDB](https://www.omdbapi.com/apikey.aspx): Para busca de informação de filmes (IMDB Free)
 * [API - Unsplash](https://unsplash.com/developers): Busca de Imagens
@@ -201,8 +198,6 @@ GRUPO_INTERACAO=1234678901234567890@g.us                # 3. Pegueo o ID de lá!
 WHISPER=C:/Apps/Faster-Whisper-XXL/faster-whisper-xxl.exe
 FFMPEG_PATH=C:/Apps/ffmpeg.exe
 CHROME_PATH=C:/Program Files/Google/Chrome/Application/chrome.exe
-NSFW_PREDICT_COMMAND=C:/Users/Voce/AppData/Local/Packages/Py.../LocalCache/local-packages/Python310/Scripts/nsfw-predict.exe
-NSFW_PREDICT_MODEL=C:/Apps/mobilenet_v2_140_224
 ```
 ## 🧩 Criando Novos Comandos
 
