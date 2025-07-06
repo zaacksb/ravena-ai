@@ -77,7 +77,7 @@ class CustomVariableProcessor {
         await this.loadCustomVariables();
       }
       
-      // Processa variáveis de API (nova função)
+      // Processa variáveis de API
       processedText = await this.processAPIRequest(processedText, context);
       
       // Processa variáveis de tempo e data

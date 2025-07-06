@@ -3,6 +3,7 @@ const Database = require('./utils/Database');
 const Group = require('./models/Group');
 const Logger = require('./utils/Logger');
 const AdminUtils = require('./utils/AdminUtils');
+const CustomVariableProcessor = require('./utils/CustomVariableProcessor');
 const LLMService = require('./services/LLMService');
 const SpeechCommands = require('./functions/SpeechCommands');
 const SummaryCommands = require('./functions/SummaryCommands');
@@ -20,6 +21,7 @@ class EventHandler {
     this.database = Database.getInstance();
     this.commandHandler = new CommandHandler();
     this.llmService = new LLMService({});
+    this.variableProcessor = new CustomVariableProcessor();
     this.nsfwPredict = NSFWPredict.getInstance();
     this.adminUtils = AdminUtils.getInstance();
     this.rankingMessages = RankingMessages;
@@ -775,6 +777,9 @@ class EventHandler {
           message = message.replace(/{plural_esao}/g, "é");
         }
         
+        // Processa variáveis
+        message = await this.variableProcessor.process(message, {message: false, group, options: {}, bot});
+
         return { message, mentions };
       }
       
