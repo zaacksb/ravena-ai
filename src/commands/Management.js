@@ -31,9 +31,9 @@ class Management {
         description: 'Faz com que comandos personalizados não precisem de prefixo'
       },
 
-      'setBemvindo': {
+      'setBoasvindas': {
         method: 'setWelcomeMessage',
-        description: 'Mensagem quando alguém entra no gurpo'
+        description: 'Mensagem quando alguém entra no grupo. Você pode usar as variáveis {pessoa} e {tituloGrupo}, além de todas as variáveis disponíveis em !g-variaveis, assim como no !g-addCmd'
       },
       'setDespedida': {
         method: 'setFarewellMessage',

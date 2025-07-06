@@ -505,41 +505,24 @@ class CustomVariableProcessor {
       }
     }
     
-    // Processa variáveis de menções específicas {mention-NUMERO@c.us}
-    const mentionMatches = text.matchAll(/{mention-([^}]+)}/g);
+    // Processa variáveis de menções específicas {mention-NUMERO}
+    const mentionMatches = text.matchAll(/\{mention-(\d+)/g);
     for (const match of Array.from(mentionMatches)) {
       const userIdToMention = match[1];
       
       // Verifica se o ID é válido
-      if (userIdToMention && userIdToMention.includes('@')) {
-        // Se estamos em um contexto de grupo e temos acesso ao bot
-        if (context.group && context.bot) {
-          try {
-            // Obtém informações do contato
-            const contact = await context.bot.client.getContactById(userIdToMention);
-            const contactName = contact.number || contact.pushname || contact.name || userIdToMention;
-            
-            // Adiciona à lista de menções para notificação
-            if (context.options && context.options.mentions) {
-              context.options.mentions.push(userIdToMention);
-            } else if (context.options) {
-              context.options.mentions = [userIdToMention];
-            }
-            
-            // Substitui a variável apenas pelo nome (a menção será processada pelo WhatsApp)
-            text = text.replace(match[0], `@${contactName}`);
-          } catch (error) {
-            this.logger.error(`Erro ao processar menção para ${userIdToMention}:`, error);
-            // Mantém a string original em caso de erro
-            text = text.replace(match[0], `@${userIdToMention.split('@')[0]}`);
-          }
-        } else {
-          // Substitui por uma versão básica se não temos acesso ao bot
-          text = text.replace(match[0], `@${userIdToMention.split('@')[0]}`);
+      if (userIdToMention && userIdToMention.length > 8 && userIdToMention.length < 15) {
+        text = text.replace(match[0]+"}", `@${userIdToMention.split('@')[0]}`);
+
+        if (context.options && context.options.mentions) {
+          context.options.mentions.push(userIdToMention);
+        } else if (context.options) {
+          context.options.mentions = [userIdToMention];
         }
+
       } else {
         // Remove a variável inválida
-        text = text.replace(match[0], '');
+        text = text.replace(match[0]+"}", '');
       }
     }
     

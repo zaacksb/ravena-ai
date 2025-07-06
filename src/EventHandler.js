@@ -626,7 +626,7 @@ class EventHandler {
             // Envia a mensagem de boas-vindas gerada
             if (groupWelcomeMessage) {
               this.logger.debug(`[groupJoin] LLM Welcome: ${groupWelcomeMessage}`);
-              bot.sendMessage(group.id, groupWelcomeMessage).catch(error => {
+              bot.senproedMessage(group.id, groupWelcomeMessage).catch(error => {
                 this.logger.error('Erro ao enviar mensagem de boas-vindas do grupo:', error);
               });
             }
@@ -688,7 +688,7 @@ class EventHandler {
       }
       
       if (group && group.farewells && !isBotLeaving) {
-        const farewell = this.processFarewellMessage(group, data.user);
+        const farewell = await this.processFarewellMessage(group, data.user, bot);
         if (farewell) {
           bot.sendMessage(data.group.id, farewell.message, { mentions: farewell.mentions }).catch(error => {
             this.logger.error('Erro ao enviar mensagem de despedida:', error);
@@ -727,15 +727,6 @@ class EventHandler {
       let quantidadePessoas = 1;
       let isPlural = false;
       let mentions = [];
-
-      /*
-      if (Array.isArray(user)) {
-        nomesPessoas = user.map(u => u.name || "Alguém").join(", ");
-        quantidadePessoas = user.length;
-        isPlural = quantidadePessoas > 1;
-      } else {
-        nomesPessoas = user.name || "Alguém";
-      }*/
 
        if (Array.isArray(user)) {
         numeroPessoas = user.map(u => `@${u.id.split('@')[0]}` || "@123456780").join(", ");
@@ -778,8 +769,14 @@ class EventHandler {
         }
         
         // Processa variáveis
-        message = await this.variableProcessor.process(message, {message: false, group, options: {}, bot});
+        const options = {};
+        message = await this.variableProcessor.process(message, {message: false, group, options, bot});
+        
+        if(options.mentions && options.mentions.length > 0){
+          mentions = mentions.concat(options.mentions);
+        }
 
+        mentions = [...new Set(mentions)]; // deixa unicos
         return { message, mentions };
       }
       
@@ -808,17 +805,39 @@ class EventHandler {
    * @param {Object} user - O usuário que saiu
    * @returns {string} - A mensagem de despedida
    */
-  processFarewellMessage(group, user) {
+  async processFarewellMessage(group, user, bot, chatData) {
     try {
       if (!group.farewells) return null;
       
       // Se despedida de texto
       if (group.farewells.text) {
+
+        // Obtém os dados completos do chat, se não fornecidos
+        if (!chatData) {
+          try {
+            // Tenta obter o chat para mais informações
+            chatData = await bot.client.getChatById(group.id);
+          } catch (error) {
+            this.logger.error('Erro ao obter dados do chat para despedidas:', error);
+          }
+        }
+
         // Substitui variáveis
         let message = group.farewells.text;
         message = message.replace(/{pessoa}/g, `@${user.id.split('@')[0]}`);
+        message = message.replace(/{tituloGrupo}/g, chatData?.name || "Grupo");
         
-        const mentions = [user.id];
+        // Processa variáveis
+        const options = {};
+        message = await this.variableProcessor.process(message, {message: false, group, options, bot});
+        
+        let mentions = [user.id];
+        if(options.mentions && options.mentions.length > 0){
+          mentions = mentions.concat(options.mentions);
+        }
+
+        mentions = [...new Set(mentions)]; // deixa unicos
+
         return { message, mentions };
       }
       
