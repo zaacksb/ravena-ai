@@ -4,6 +4,7 @@ const Logger = require('../utils/Logger');
 const Database = require('../utils/Database');
 const ReturnMessage = require('../models/ReturnMessage');
 const AdminUtils = require('../utils/AdminUtils');
+const { exec } = require('child_process');
 
 /**
  * Manipula comandos super admin (apenas para admins do sistema)
@@ -41,7 +42,8 @@ class SuperAdmin {
       'blockTudoList': {'method': 'blockTudoList', 'description': 'Sai de todos os grupos em comum com uma lista de pessoas e bloqueia todos os membros'},
       'unblockList': {'method': 'unblockList', 'description': 'Desbloqueia todos os contatos recebidos separados por vírgula'},
       'listaGruposPessoa': {'method': 'listaGruposPessoa', 'description': 'Lista todos os grupos em comum com uma pessoa'},
-      'blockTudoPessoa': {'method': 'blockTudoPessoa', 'description': 'Sai de todos os grupos em comum com uma pessoa e bloqueia todos os membros'}
+      'blockTudoPessoa': {'method': 'blockTudoPessoa', 'description': 'Sai de todos os grupos em comum com uma pessoa e bloqueia todos os membros'},
+      'wol': {'method': 'wakeOnLan', 'description': 'Envia pacote wake-on-lan na rede'}
     };
   }
 
@@ -61,6 +63,38 @@ class SuperAdmin {
    */
   isSuperAdmin(userId) {
     return this.adminUtils.isSuperAdmin(userId);
+  }
+
+  
+  async wakeOnLan(bot, message, args) {
+    
+    const chatId = message.group || message.author;
+    try{
+      if(args[0]){ // Mac tem 17 caracteres
+        const macAddress = args[0].trim();
+        if(macAddress.length === 17){
+          exec(`wakeonlan ${macAddress}`);
+          return new ReturnMessage({
+            chatId: message.group || message.author,
+            content: `✅ Sending magic packet to 255.255.255.255:9 with ${mac}`
+          });
+        } else {
+          return new ReturnMessage({
+            chatId: message.group || message.author,
+            content: `❌ Mac inválido '${macAddress}' (${macAddress.length})`
+          });
+        }
+
+      }
+
+    } catch (error) {
+      this.logger.error('Erro no comando wakeOnLan:', error);
+      
+      return new ReturnMessage({
+        chatId: message.group || message.author,
+        content: '❌ Erro ao processar comando.'
+      });
+    }
   }
 
   async testeMsg(bot, message, args) {
