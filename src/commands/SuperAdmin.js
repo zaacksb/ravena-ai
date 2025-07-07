@@ -76,7 +76,7 @@ class SuperAdmin {
           exec(`wakeonlan ${macAddress}`);
           return new ReturnMessage({
             chatId: message.group || message.author,
-            content: `✅ Sending magic packet to 255.255.255.255:9 with ${mac}`
+            content: `✅ Sending magic packet to 255.255.255.255:9 with ${macAddress}`
           });
         } else {
           return new ReturnMessage({
