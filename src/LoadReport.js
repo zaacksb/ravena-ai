@@ -134,7 +134,7 @@ class LoadReport {
         const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
         // Constrói string de status com informação de atraso médio
-        const status = `${loadEmoji} ${dateString} ${timeString} | ${report.messages.messagesPerHour}msg/h | delay: ${avgResponseTime.toFixed(1)}s | !cmd, !info | ravena.moothz.win`;
+        const status = `Envie !cmd | https://ravena.moothz.win | ${loadEmoji} ${dateString} ${timeString} | ${report.messages.messagesPerHour}msg/h`; //  | delay: ${avgResponseTime.toFixed(1)}s
         
         // Atualiza status do bot
         if (this.bot.client && this.bot.isConnected) {
