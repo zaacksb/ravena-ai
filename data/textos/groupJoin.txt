@@ -1,1 +1,4 @@
 🦇 Olá, grupo! Eu sou a *ravenabot* 🐦‍⬛️
+
+- *Site oficial:* https://ravena.moothz.win
+- Fique por dentro das atualizações enviando `!avisos` e `!grupao`
