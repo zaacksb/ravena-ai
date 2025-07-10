@@ -202,13 +202,13 @@ async function baixarVideoYoutube(idVideo, dadosSolicitante, videoHD=false, call
       const tituloVideo = videoInfo.title;
       logger.info(`[baixarVideoYoutube][${nomeVideoTemp}] Info do video '${videoInfo.id}': ${tituloVideo}, ${autorVideo}, ${videoInfo.duration}s.\nFazendo download para ${destinoVideo}`);
 
-      if(videoInfo.duration > 600){
-        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 10 minutos.`), null);
+      if(videoInfo.duration > 480){
+        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 8 minutos.`), null);
       } else {      
         videoCacheManager.downloadVideoWithCache(urlSafe, 
           { 
             o: destinoVideo,
-            f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<55M]+ba) / (bv*+ba/b)",
+            f: "(bv*[vcodec~='^((he|a)vc|h264)'][filesize<32M]+ba) / (bv*+ba/b)",
             remuxVideo: "mp4",
             recodeVideo: "mp4",
             audioFormat: "aac",
@@ -256,13 +256,13 @@ async function baixarMusicaYoutube(idVideo, dadosSolicitante, callback) {
       const autorVideo = videoInfo.uploader;
       const tituloVideo = videoInfo.title;
       logger.info(`[baixarMusicaYoutube][${nomeVideoTemp}] Info do video '${videoInfo.id}': ${tituloVideo}, ${autorVideo}, ${videoInfo.duration}s.\nFazendo download para ${destinoVideo}`);
-      if(videoInfo.duration > 600){
-        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 10 minutos.`), null);
+      if(videoInfo.duration > 480){
+        callback(new Error(`Atualmente, só consigo baixar vídeos/músicas de até 8 minutos.`), null);
       } else {      
         videoCacheManager.downloadMusicWithCache(urlSafe, 
           { 
             o: destinoVideo,
-            f: "ba",
+            f: "ba[filesize<2M]",
             audioFormat: "mp3",
             extractAudio: true,
             ffmpegLocation: process.env.FFMPEG_PATH,
