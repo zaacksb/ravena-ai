@@ -333,7 +333,7 @@ class LLMService {
       const queryOptions = {
         model: options.model || this.localModel,
         messages: messages,
-        max_tokens: options.maxTokens || 4096,
+        max_tokens: options.maxTokens || 8096,
         temperature: options.temperature || 0.7,
         stream: false
       };
