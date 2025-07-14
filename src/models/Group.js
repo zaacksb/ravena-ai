@@ -38,6 +38,7 @@ class Group {
     // Interacoes Auto
     this.interact = data.interact || {
       enabled: true,
+      useCmds: true,
       lastInteraction: 0,
       cooldown: 30,
       chance: 100,

@@ -1315,8 +1315,8 @@ class CommandHandler {
             // Atualiza último tempo de interação
             group.interact.lastInteraction = now;
             //this.database.saveGroup(group);
-
-            const autoCommands = customCommandsProcessar.filter(cmd => cmd.active && !cmd.deleted && !cmd.ignoreInteract);
+            
+            const autoCommands = group.interact.useCmds ? customCommandsProcessar.filter(cmd => cmd.active && !cmd.deleted && !cmd.ignoreInteract) : [];
             
             // 2 tipos de interação: Um usa o !interagir e outro pega comando custom do grupo
             // Se não tiver custom, sempre usar LLM

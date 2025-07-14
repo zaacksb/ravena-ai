@@ -142,6 +142,10 @@ class Management {
         method: 'toggleInteraction',
         description: 'Ativa/desativa interações automáticas do bot'
       },
+      'interagir-cmd': {
+        method: 'toggleCmdInteraction',
+        description: 'Ativa/desativa interações automáticas do bot usando comandos do grupo'
+      },
       'interagir-cd': {
         method: 'setInteractionCooldown',
         description: 'Define o tempo de espera entre interações automáticas'
@@ -4099,6 +4103,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (!group.interact) {
       group.interact = {
         enabled: false,
+        useCmds: true,
         chance: 100, // Padrão: 1%
         cooldown: 30, // Padrão: 30 minutos
         lastInteraction: 0
@@ -4128,6 +4133,51 @@ async setWelcomeMessage(bot, message, args, group) {
     });
   }
 
+  
+  /**
+   * Define que o bot use os comandos personalizados do grupo pra interagir
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @param {Object} group - Dados do grupo
+   * @returns {Promise<ReturnMessage>} Mensagem de retorno
+   */
+  async toggleCmdInteraction(bot, message, args, group) {
+    if (!group) {
+      return new ReturnMessage({
+        chatId: message.author,
+        content: 'Este comando só pode ser usado em grupos.'
+      });
+    }
+    
+    // Inicializa objeto de interação se não existir
+    if (!group.interact) {
+      group.interact = {
+        enabled: false,
+        useCmds: true,
+        chance: 100, // Padrão: 1%
+        cooldown: 30, // Padrão: 30 minutos
+        lastInteraction: 0
+      };
+    }
+    
+    // Atualiza cooldown
+    group.interact.useCmds = !group.interact.useCmds;
+    
+    // Salva mudanças
+    await this.database.saveGroup(group);
+
+    // Constrói mensagem de resposta
+    let response = group.interact.useCmds
+      ? '🛠 Interações automáticas com comandos personalizados **ativadas** para este grupo.\n\n'
+      : '🛠 Interações automáticas com comandos personalizados **desativadas** para este grupo.\n\n';
+    
+    return new ReturnMessage({
+      chatId: group.id,
+      content: response
+    });
+  }
+
   /**
    * Define o cooldown para interações automáticas
    * @param {WhatsAppBot} bot - Instância do bot
@@ -4148,6 +4198,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (!group.interact) {
       group.interact = {
         enabled: false,
+        useCmds: true,
         chance: 100, // Padrão: 1%
         cooldown: 30, // Padrão: 30 minutos
         lastInteraction: 0
@@ -4205,6 +4256,7 @@ async setWelcomeMessage(bot, message, args, group) {
     if (!group.interact) {
       group.interact = {
         enabled: false,
+        useCmds: true,
         chance: 100, // Padrão: 1%
         cooldown: 30, // Padrão: 30 minutos
         lastInteraction: 0
