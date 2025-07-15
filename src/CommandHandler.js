@@ -1053,7 +1053,7 @@ class CommandHandler {
         const returnMessages = [];
         
         for (const response of responses) {
-          const processedMessage = await this.processCustomCommandResponse(bot, message, response, command, group);
+          const processedMessage = await this.processCustomCommandResponse(bot, message, response, command, group, args);
           if (processedMessage) {
             returnMessages.push(processedMessage);
           }
@@ -1067,7 +1067,7 @@ class CommandHandler {
         const randomIndex = Math.floor(Math.random() * responses.length);
         this.logger.debug(`Enviando resposta aleatória (${randomIndex + 1}/${responses.length}) para o comando *${command.startsWith}*`);
         
-        const returnMessage = await this.processCustomCommandResponse(bot, message, responses[randomIndex], command, group);
+        const returnMessage = await this.processCustomCommandResponse(bot, message, responses[randomIndex], command, group, args);
         if (returnMessage) {
           await bot.sendReturnMessages(returnMessage);
         }
@@ -1121,7 +1121,7 @@ class CommandHandler {
    * @param {Group} group - O objeto do grupo
    * @returns {Promise<ReturnMessage|null>} - A mensagem de retorno processada
    */
-  async processCustomCommandResponse(bot, message, responseText, command, group) {
+  async processCustomCommandResponse(bot, message, responseText, command, group, args) {
     try {
       this.logger.debug(`Processando resposta para comando ${command.startsWith}: ${responseText.substring(0, 50)}${responseText.length > 50 ? '...' : ''}`);
       
@@ -1157,7 +1157,7 @@ class CommandHandler {
           const [embeddedCmd, ...embeddedArgs] = cmdText.trim().split(/\s+/);
           
           // Executamos o comando
-          await this.processCommand(bot, message, embeddedCmd, embeddedArgs, group, true);
+          await this.processCommand(bot, message, embeddedCmd, embeddedArgs.concat(args), group, true);
           
           return null; // Não continua o processamento normal
         } catch (embeddedError) {
@@ -1315,7 +1315,7 @@ class CommandHandler {
             // Atualiza último tempo de interação
             group.interact.lastInteraction = now;
             //this.database.saveGroup(group);
-            
+
             const autoCommands = group.interact.useCmds ? customCommandsProcessar.filter(cmd => cmd.active && !cmd.deleted && !cmd.ignoreInteract) : [];
             
             // 2 tipos de interação: Um usa o !interagir e outro pega comando custom do grupo
