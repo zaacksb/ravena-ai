@@ -1237,8 +1237,8 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         const mentions = (evoMessageData.contextInfo?.mentionedJid ?? []).map(m => m.split("@")[0]+"@c.us");
 
-        const isLid = (evoMessageData.key.remoteJid.includes('@lid') && evoMessageData.key.senderPn);
-        const senderPn = isLid ? evoMessageData.key.senderPn : false; // quando vem @lid precisa pegar esse senderPn (evo 2.3.0)
+        const isLid = ((evoMessageData.key.remoteJid.includes('@lid') || evoMessageData.key.participant?.includes('@lid')) && (evoMessageData.key.senderPn || evoMessageData.key.participantPn));
+        const senderPn = isLid ? (evoMessageData.key.participantPn ?? evoMessageData.key.senderPn) : false; // quando vem @lid precisa pegar esse senderPn ou participantPn se for group (evo 2.3.0)
 
         if(isLid){
           this.logger.info(`[${this.id}][LID_WARNING] LID detectado. PN? ${JSON.stringify(senderPn)}\n---${JSON.stringify(evoMessageData)}\n---`);
