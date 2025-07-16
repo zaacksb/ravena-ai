@@ -1242,6 +1242,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
         if(isLid){
           this.logger.info(`[${this.id}][LID_WARNING] LID detectado. PN? ${JSON.stringify(senderPn)}\n---${JSON.stringify(evoMessageData)}\n---`);
+          author = senderPn;
         }
 
         const formattedMessage = {
