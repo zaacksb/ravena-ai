@@ -517,14 +517,15 @@ class EventHandler {
       //console.log(`isBotJoining (${isBotJoining}}) = data.user.id (${data.user.id}) === bot.client.info.wid._serialized ${bot.client.info.wid._serialized}`);
       
       // Obtém ou cria grupo
-      const group = await this.getOrCreateGroup(data.group.id, data.group.name);
+      const nomeGrupo = data.group?.name?.replace(/[^a-zA-Z0-9 ]/g, '').replace(/(?:^\w|[A-Z]|\b\w)/g, (w, i) => i === 0 ? w.toLowerCase() : w.toUpperCase()).replace(/\s+/g, '') ?? null;
+      const group = await this.getOrCreateGroup(data.group.id, nomeGrupo);
       this.logger.debug(`Informações do grupo: ${JSON.stringify(group)}`);
       
       // Envia notificação para o grupo de logs
       if (bot.grupoLogs) {
         try {
           if(isBotJoining){
-            bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} entrou no grupo: ${data.group.name} (${data.group.id})\nQuem add: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
+            bot.sendMessage(bot.grupoLogs, `🚪 Bot ${bot.id} entrou no grupo: ${data.group.name} (${nomeGrupo}/${data.group.id})\nQuem add: ${data.responsavel.name}/${data.responsavel.id}`).catch(error => {
               this.logger.error('Erro ao enviar notificação de entrada no grupo para o grupo de logs:', error);
             });
           }
@@ -535,7 +536,7 @@ class EventHandler {
       
       if (isBotJoining) {
         // Caso 1: Bot entrou no grupo
-        this.logger.info(`Bot entrou no grupo ${data.group.name} (${data.group.id})`);
+        this.logger.info(`Bot entrou no grupo ${data.group.name} (${nomeGrupo}/${data.group.id})`);
         group.paused = false; // Sempre que o bot entra no grupo, tira o pause (para grupos em que saiu/foi removido)
         await this.database.saveGroup(group);
         
@@ -584,7 +585,7 @@ class EventHandler {
           llm_inviterInfo = ` '${foundInviter.authorName}'`;
         }
 
-        botInfoMessage += `\n\nO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando:- ${group.prefix}g-setName [novoNome].\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV: - ${group.prefix}g-manage ${group.name}`;
+        botInfoMessage += `\n\nO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando:- \`${group.prefix}g-setName [novoNome]\`.\n\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV: - ${group.prefix}g-manage ${group.name}`;
         
         // Se encontramos o autor do convite, adiciona-o como admin adicional
         if (foundInviter) {
