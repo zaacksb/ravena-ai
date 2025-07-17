@@ -585,7 +585,7 @@ class EventHandler {
           llm_inviterInfo = ` '${foundInviter.authorName}'`;
         }
 
-        botInfoMessage += `\n\nO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando:- \`${group.prefix}g-setName [novoNome]\`.\n\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV: - ${group.prefix}g-manage ${group.name}`;
+        botInfoMessage += `\n\nO nome do seu grupo foi definido como *${group.name}*, mas pode você pode alterar usando:- \`${group.prefix}g-setName [novoNome]\`.\n\nPara fazer a configuração do grupo sem poluir aqui, me envie no PV:\n- ${group.prefix}g-manage ${group.name}`;
         
         // Se encontramos o autor do convite, adiciona-o como admin adicional
         if (foundInviter) {
