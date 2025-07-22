@@ -174,7 +174,7 @@ const commands = [
       before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🤖"
     },
-    cooldown: 60,
+    cooldown: 5,
     method: aiCommand
   }),
   new Command({
@@ -187,7 +187,7 @@ const commands = [
       before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🤖"
     },
-    cooldown: 60,
+    cooldown: 5,
     method: aiCommand
   }), 
   new Command({
@@ -201,7 +201,7 @@ const commands = [
       before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🤖"
     },
-    cooldown: 60,
+    cooldown: 5,
     method: aiCommand
   }), 
   new Command({
@@ -215,7 +215,7 @@ const commands = [
       before: process.env.LOADING_EMOJI ?? "🌀",
       after: "🤖"
     },
-    cooldown: 60,
+    cooldown: 5,
     method: aiCommand
   })
 ];

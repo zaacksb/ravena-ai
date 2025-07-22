@@ -83,9 +83,8 @@ async function generateImage(bot, message, args, group, skipNotify = false) {
       }));
     }
 
-    const safetyQuestion = `Check if this image generation prompt is safe and appropriate: "${prompt}". 
-    Is it requesting explicit sexual content, child safety concerns? 
-    Answer only "SAFE" or "UNSAFE" followed by a brief reason.`;
+    const safetyQuestion = `Check if this image generation prompt is generating porn or nude content: "${prompt}". 
+    Your answer ((must)) include "SAFE" or "UNSAFE" followed by a brief reason. If it's related to child related content, include warning emojis in your reponse.`;
     
     const safetyResponse = await llmService.getCompletion({
       prompt: safetyQuestion
@@ -247,7 +246,7 @@ const commands = [
       before: process.env.LOADING_EMOJI ?? "🌀",
       after: "✨"
     },
-    cooldown: 30,
+    cooldown: 10,
     method: generateImage
   })
 ];
