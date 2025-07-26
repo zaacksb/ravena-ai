@@ -422,6 +422,8 @@ class StreamSystem {
       for (const mediaItem of config.media) {
         const returnMessage = await this.createEventNotification(group.id, mediaItem, eventData, channelConfig, mentions);
         if (returnMessage) {
+
+          console.log(returnMessage);
           returnMessages.push(returnMessage);
           
           // Cria uma cópia da mensagem para o grupo de logs se depuração estiver habilitada
@@ -740,7 +742,7 @@ class StreamSystem {
   async createEventNotification(groupId, mediaItem, eventData, channelConfig, mentions = []) {
     try {
 
-      this.logger.info(`[createEventNotification][${groupId}][${mediaItem}] ${JSON.stringify(eventData)}`);
+      this.logger.info(`[createEventNotification][${groupId}][${JSON.stringify(mediaItem)}] ${JSON.stringify(eventData)}`);
       // Trata diferentes tipos de mídia
       if (mediaItem.type === 'text') {
         // Processa variáveis no texto
@@ -786,7 +788,7 @@ class StreamSystem {
         const mediaPath = path.join(this.mediaPath, mediaItem.content);
         
         try {
-          const media = await this.bot.createMedia(mediaPath);
+          const media = mediaItem.content.startsWith("http") ? mediaItem.content : await this.bot.createMedia(mediaPath);
           
           // Processa variáveis de legenda
           let caption = mediaItem.caption || '';

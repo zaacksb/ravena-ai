@@ -4427,30 +4427,45 @@ async setWelcomeMessage(bot, message, args, group) {
       if (quotedMsg.hasMedia) {
         const media = await quotedMsg.downloadMedia();
         mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
-        
-        if (quotedMsg.type.toLowerCase() === "sticker") {
+        let fileExt = media.mimetype.split('/')[1];
+
+        // Sticker animado ou GIF PRECISAM ser uma url
+        let mediaUrl = false;
+        if (quotedMsg.type.toLowerCase() === "gif" || quotedMsg.type.toLowerCase() === "sticker") {
           mediaType = "sticker";
+          mediaUrl = await bot.convertToSquareAnimatedGif(media.data, true);
+        }
+
+        if (quotedMsg.type.toLowerCase() === "video" && ["!s", "sticker", "fig"].some(s => quotedMsg.caption.includes(s))){
+          // Caso especial: Converter o vídeo pr aum sticker se tiver na legenda
+          mediaType = "sticker";
+          mediaUrl = await bot.convertToSquareAnimatedGif(media.data, true);
         }
         if (quotedMsg.type.toLowerCase() === "voice") {
           mediaType = "voice";
         }
         
         // Save media file
-        let fileExt = media.mimetype.split('/')[1];
         if (fileExt.includes(";")) {
           fileExt = fileExt.split(";")[0];
         }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
+
         mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
+
+        if(mediaUrl){
+          mediaConfig.content = mediaUrl;
+        } else {
+          const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          const mediaDir = path.join(this.dataPath, 'media');
+          await fs.mkdir(mediaDir, { recursive: true });
+          
+          const filePath = path.join(mediaDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+          
+          mediaConfig.content = fileName;
+          mediaConfig.caption = quotedMsg.caption ?? "";
+        }
+        
       }
       
       // Initialize the config if it doesn't exist

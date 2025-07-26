@@ -352,7 +352,8 @@ class WhatsAppBotEvo {
     }
   }
 
-  async convertToSquareAnimatedGif(inputContent) {
+  async convertToSquareAnimatedGif(inputContent, keepFile = false) {
+    console.log("[convertToSquareAnimatedGif] ",inputContent.substring(0, 30));
     let inputPath = inputContent;
     let isTempInputFile = false;
     const tempId = randomBytes(16).toString('hex');
@@ -422,15 +423,17 @@ class WhatsAppBotEvo {
       this.logger.info('[toSquareAnimatedGif] Square animated GIF saved to:', outputPath);
 
       // Schedule file deletion
-      setTimeout(() => {
-        fs.unlink(outputPath, (err) => {
-          if (err) {
-            this.logger.error(`[toSquareAnimatedGif] Error deleting file ${outputPath}:`, err);
-          } else {
-            this.logger.info(`[toSquareAnimatedGif] Deleted file: ${outputPath}`);
-          }
-        });
-      }, 60000); 
+      if(!keepFile){
+        setTimeout(() => {
+          fs.unlink(outputPath, (err) => {
+            if (err) {
+              this.logger.error(`[toSquareAnimatedGif] Error deleting file ${outputPath}:`, err);
+            } else {
+              this.logger.info(`[toSquareAnimatedGif] Deleted file: ${outputPath}`);
+            }
+          });
+        }, 60000); 
+      }
 
       // Check file size - WhatsApp has limits for GIFs (often around 1MB, but can vary)
       const stats = fs.statSync(outputPath);
@@ -1397,7 +1400,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async sendMessage(chatId, content, options = {}) {
-    this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
+    this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content} / ${JSON.stringify(options)})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
     try {
       const isGroup = chatId.endsWith('@g.us');
       this.loadReport.trackSentMessage(isGroup); // From original bot
@@ -1448,24 +1451,29 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
 
       // Não usar o formato completo, apenas os dados `data:${content.mimetype};base64,${content.data}`
-      let formattedContent = (content.data && content.data?.length > 10) ? content.data : content.url;
+      let formattedContent = (content.data && content.data?.length > 10) ? content.data : (content.url ?? content);
 
       // Cada tipo de mensagem tem um endpoint diferente
       let endpoint = null;
-      if (typeof content === 'string') {
+      if (typeof content === 'string' && !options.sendMediaAsSticker) { // sticker pode vir URL, que é string
         endpoint = '/message/sendText';
         evoPayload.text = content;
         evoPayload.presence = "composing";
 
-      } else if (content instanceof MessageMedia || content.isMessageMedia) {
-        // Duck-typing for MessageMedia (original wwebjs or compatible like from createMedia)
+      } else if (content instanceof MessageMedia || content.isMessageMedia || options.sendMediaAsSticker) {
+
         endpoint = '/message/sendMedia';
-        this.logger.debug(`[sendMessage] ${endpoint}`);
+        this.logger.debug(`[sendMessage] ${endpoint} (${JSON.stringify(options)})`);
         
-        let mediaType = 'document';
-        if (content.mimetype.includes('image')) mediaType = 'image';
-        else if (content.mimetype.includes('mp4')) mediaType = 'video';
-        else if (content.mimetype.includes('audio') || content.mimetype.includes('ogg')) mediaType = 'audio';
+
+        let mediaType = 'image';
+
+        if(content.mimetype){
+          if (content.mimetype.includes('image')) mediaType = 'image';
+          else if (content.mimetype.includes('mp4')) mediaType = 'video';
+          else if (content.mimetype.includes('audio') || content.mimetype.includes('ogg')) mediaType = 'audio';
+        }
+
 
         if (options.sendMediaAsDocument){
           mediaType = 'document';
@@ -1473,26 +1481,20 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         }
 
         if (options.sendMediaAsSticker){
-          if(mediaType == 'video' || mediaType == 'gif'){
-            // Converter pra aceitar sticker animado
-            formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
-            mediaType = "image"; // Teste
-          } else {
-            // Essa lib estica as imagens de stickers, mas quero preservar como era antes
-            formattedContent = await this.convertToSquarePNGImage(formattedContent);
+          this.logger.debug(`[sendMessage] sendMediaAsSticker: ${formattedContent}`);
+          if(!formattedContent.startsWith("http")){
+            if(mediaType == 'video' || mediaType == 'gif'){
+              // Converter pra aceitar sticker animado
+              formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
+            } else {
+              // Essa lib estica as imagens de stickers, mas quero preservar como era antes
+              formattedContent = await this.convertToSquarePNGImage(formattedContent);
+            }
           }
-
-          //mediaType = 'sticker';
+          this.logger.debug("[sendMesage] cheguei aqui 6");
           endpoint = '/message/sendSticker';
           this.logger.debug(`[sendMessage] ${endpoint}`);
           evoPayload.sticker = formattedContent;
-
-          // Nao tem na evo? desabilitar
-          if (false && (options.stickerAuthor || options.stickerName || options.stickerCategories)) {
-              if(options.stickerName) evoPayload.pack = options.stickerName;
-              if(options.stickerAuthor) evoPayload.author = options.stickerAuthor;
-              if(options.stickerCategories) evoPayload.categories = options.stickerCategories;
-          }
         }
 
         if (options.sendAudioAsVoice || mediaType === 'audio'){
@@ -1610,25 +1612,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       
       let contentToSend = message.content;
       let options = { ...(message.options || {}) }; // Clone options
-
-      // // If content is a file path, use createMedia to prepare it
-      // if (typeof message.content === 'string' && (message.content.startsWith('./') || message.content.startsWith('/') || message.content.startsWith('C:'))) {
-      //     try {
-      //       // Check if it's likely a file path that exists
-      //       if (fs.existsSync(message.content)) {
-      //           contentToSend = await this.createMedia(message.content); // Returns { mimetype, data, filename }
-      //       } else {
-      //           // Treat as plain string if path doesn't exist
-      //       }
-      //     } catch (e) { /* ignore, treat as string */ }
-      // } else if (typeof message.content === 'string' && message.content.startsWith('http')) {
-      //     try {
-      //       // If options suggest it's media, try to create media from URL
-      //       if (options.media || options.sendMediaAsSticker || options.sendAudioAsVoice || options.sendVideoAsGif || options.sendMediaAsDocument) {
-      //           contentToSend = await this.createMediaFromURL(message.content); // Returns { mimetype, url, filename }
-      //       }
-      //     } catch (e) { /* ignore, treat as string */ }
-      // }
 
       try {
         const result = await this.sendMessage(message.chatId, contentToSend, options);
