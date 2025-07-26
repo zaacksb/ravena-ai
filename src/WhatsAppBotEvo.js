@@ -297,19 +297,19 @@ class WhatsAppBotEvo {
       const imageBuffer = Buffer.from(base64Data, 'base64');
       this.logger.info(`[convertToSquarePNGImage] [${tempId}] Base64 decoded to buffer. Input buffer length: ${imageBuffer.length}`);
 
-      const targetSize = 512; // Target dimension for the square output
+      const targetSize = 800; // Target dimension for the square output
       this.logger.info(`[convertToSquarePNGImage] [${tempId}] Starting square PNG image conversion with Sharp. Target size: ${targetSize}x${targetSize}`);
 
       // 1. Resize the image to fit within targetSize, preserving aspect ratio.
       //    'sharp.fit.inside' is equivalent to ffmpeg's 'force_original_aspect_ratio=decrease'.
-      //    'withoutEnlargement: true' ensures images smaller than targetSize are not scaled up.
+      //    'withoutEnlargement: false' ensures images smaller than targetSize ARE scaled up.
       //    'kernel: sharp.kernel.lanczos3' uses Lanczos3 for high-quality resizing.
       const resizedImageBuffer = await sharp(imageBuffer)
         .resize({
           width: targetSize,
           height: targetSize,
           fit: sharp.fit.inside,
-          withoutEnlargement: true,
+          withoutEnlargement: false, // Allow upscaling
           kernel: sharp.kernel.lanczos3,
         })
         .toBuffer(); // Get the resized image as a buffer
@@ -358,8 +358,15 @@ class WhatsAppBotEvo {
     const tempId = randomBytes(16).toString('hex');
     
     const tempInputDirectory = os.tmpdir();
-    const tempInputPath = path.join(tempInputDirectory, `${tempId}_input.tmp`); 
-    const tempOutputPath = path.join(tempInputDirectory, `${tempId}_output.gif`); // Output will be .gif
+    const tempInputPath = path.join(tempInputDirectory, `${tempId}_input.tmp`);
+    
+    // Define the output directory and ensure it exists
+    const outputDir = path.join(__dirname, '..', 'public', 'gifs');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const outputFileName = `${tempId}.gif`;
+    const outputPath = path.join(outputDir, outputFileName);
 
     try {
       if (inputContent && !inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
@@ -382,28 +389,17 @@ class WhatsAppBotEvo {
       const targetSize = 512;
       const fps = 15; // WhatsApp tends to prefer 10-20 FPS for GIFs. 15 is a good compromise.
 
-      // Complex filter for scaling, padding, and GIF palette generation for transparency
-      // 1. Set FPS
-      // 2. Scale to fit targetSize, preserve aspect ratio
-      // 3. Pad to targetSize, center, use transparent background (black@0.0)
-      // 4. Generate a palette optimized for GIF transparency and animation
-      // 5. Apply the palette
       const videoFilter = 
         `fps=${fps},` +
         `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,` +
-        `pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,` + // color=transparent also works for some ffmpeg versions
+        `pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,` +
         `split[s0][s1];[s0]palettegen=stats_mode=diff:max_colors=250:reserve_transparent=on[p];[s1][p]paletteuse=dither=bayer:alpha_threshold=128`;
-        // `max_colors=250` (max 256 for GIF, leaving some for safety/transparency)
-        // `reserve_transparent=on` is crucial for transparent backgrounds in GIFs.
-        // `stats_mode=diff` is often better for animations than 'full'.
 
       await new Promise((resolve, reject) => {
         ffmpeg(inputPath)
           .outputOptions([
             '-vf', videoFilter,
-            '-loop', '0',         // 0 for infinite loop
-            // GIF-specific options are mostly handled by the palettegen/paletteuse filters
-            // and .toFormat('gif')
+            '-loop', '0',
           ])
           .toFormat('gif')
           .on('end', () => {
@@ -412,7 +408,7 @@ class WhatsAppBotEvo {
           })
           .on('error', (err) => {
             let ffmpegCommandDetails = '';
-            if (err.ffmpegCommand) { // fluent-ffmpeg might provide this
+            if (err.ffmpegCommand) {
                 ffmpegCommandDetails = `FFmpeg command: ${err.ffmpegCommand}`;
             } else if (err.spawnargs) {
                 ffmpegCommandDetails = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
@@ -420,24 +416,33 @@ class WhatsAppBotEvo {
             this.logger.error(`[toSquareAnimatedGif] Error during GIF conversion: ${err.message}. ${ffmpegCommandDetails}`, err.stack);
             reject(err);
           })
-          .save(tempOutputPath);
+          .save(outputPath); // Save to the new permanent path
       });
 
-      this.logger.info('[toSquareAnimatedGif] Square animated GIF saved to temporary file:', tempOutputPath);
+      this.logger.info('[toSquareAnimatedGif] Square animated GIF saved to:', outputPath);
 
-      const gifBuffer = await readFileAsync(tempOutputPath);
-      
+      // Schedule file deletion
+      setTimeout(() => {
+        fs.unlink(outputPath, (err) => {
+          if (err) {
+            this.logger.error(`[toSquareAnimatedGif] Error deleting file ${outputPath}:`, err);
+          } else {
+            this.logger.info(`[toSquareAnimatedGif] Deleted file: ${outputPath}`);
+          }
+        });
+      }, 60000); 
+
       // Check file size - WhatsApp has limits for GIFs (often around 1MB, but can vary)
-      const fileSizeInMB = gifBuffer.length / (1024 * 1024);
+      const stats = fs.statSync(outputPath);
+      const fileSizeInMB = stats.size / (1024 * 1024);
       this.logger.info(`[toSquareAnimatedGif] Output GIF file size: ${fileSizeInMB.toFixed(2)} MB`);
       if (fileSizeInMB > 1.5) { // Example threshold, adjust as needed
           this.logger.warn(`[toSquareAnimatedGif] WARNING: Output GIF size is ${fileSizeInMB.toFixed(2)} MB, which might be too large for WhatsApp.`);
       }
 
-      const base64Gif = gifBuffer.toString('base64');
-      this.logger.info('[toSquareAnimatedGif] Square animated GIF converted to base64.');
-
-      return base64Gif;
+      const fileUrl = `${process.env.BOT_DOMAIN}/gifs/${outputFileName}`;
+      this.logger.info('[toSquareAnimatedGif] Returning URL:', fileUrl);
+      return fileUrl;
 
     } catch (error) {
       this.logger.error('[toSquareAnimatedGif] Error in convertToSquareAnimatedGif function:', error.message, error.stack);
@@ -449,14 +454,6 @@ class WhatsAppBotEvo {
           this.logger.info('[toSquareAnimatedGif] Temporary input file deleted:', tempInputPath);
         } catch (e) {
           this.logger.error('[toSquareAnimatedGif] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-      if (fs.existsSync(tempOutputPath)) {
-        try {
-          await unlinkAsync(tempOutputPath);
-          this.logger.info('[toSquareAnimatedGif] Temporary output file deleted:', tempOutputPath);
-        } catch (e) {
-          this.logger.error('[toSquareAnimatedGif] Error deleting temporary output file:', tempOutputPath, e.message);
         }
       }
     }
