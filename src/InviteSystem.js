@@ -45,6 +45,12 @@ class InviteSystem {
       // Verifica se a mensagem contém um link de convite do WhatsApp
       const inviteMatch = text.match(/chat.whatsapp.com\/([a-zA-Z0-9]{20,24})/i);
       if (!inviteMatch) return false;
+
+      const isBlocked = await this.database.isUserInviteBlocked(message.author.split('@')[0]);
+      if (isBlocked) {
+        this.logger.info(`Ignorando convite de usuário bloqueado: ${message.author}`);
+        return false;
+      }
       
       const inviteLink = inviteMatch[0];
       const inviteCode = inviteMatch[1];
