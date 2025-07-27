@@ -195,7 +195,7 @@ class WhatsAppBotEvo {
         throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
       }
 
-      this.logger.info('[toSquareWebPImage] Input is base64. Decoding and saving to temporary file...');
+      //this.logger.info('[toSquareWebPImage] Input is base64. Decoding and saving to temporary file...');
       // Remove potential data URI prefix (e.g., "data:image/png;base64,")
       const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
       
@@ -209,7 +209,7 @@ class WhatsAppBotEvo {
       isTempInputFile = true;
       this.logger.info('[toSquareWebPImage] Base64 input saved to temporary file:', tempInputPath);
       
-      this.logger.info('[toSquareWebPImage] Starting square WebP image conversion for:', inputPath);
+      //this.logger.info('[toSquareWebPImage] Starting square WebP image conversion for:', inputPath);
 
       const targetSize = 512; // Target dimension for the square output
 
@@ -756,7 +756,7 @@ class WhatsAppBotEvo {
         socket.on('messages.upsert', (data) => this.handleWebsocket(data));
 
         socket.on('group-participants.update', (data) => {
-          this.logger.info('group-participants.update', data);
+          //this.logger.info('group-participants.update', data);
 
           this.handleWebsocket(data);
         });
@@ -1078,7 +1078,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           const groupUpdateData = payload.data;
           groupUpdateData.isBotJoining = false;
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
-             this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
+             //this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
              this._handleGroupParticipantsUpdate(groupUpdateData);
           }
           break;
@@ -1397,7 +1397,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
-    this.logger.debug(`[${this.id}] Download media for: ${mediaInfo.filename}`);
+    //this.logger.debug(`[${this.id}] Download media for: ${mediaInfo.filename}`);
 
     if (!messageKey || !messageKey.id || !messageKey.remoteJid) {
       this.logger.error(`[${this.id}] Crucial messageKey information (id, remoteJid) is missing. Cannot use /chat/getBase64FromMediaMessage.`);
@@ -1429,10 +1429,10 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         // Process the response (same logic as before):
         if (response.data) {
           if (typeof response.data === 'string' && response.data.length > 100) {
-            this.logger.info(`[${this.id}] Media downloaded successfully as direct base64 string via Evolution API for: ${mediaInfo.filename}`);
+            this.logger.info(`[${this.id}] Media: ${mediaInfo.filename}`);
             return response.data;
           } else if (response.data.base64 && typeof response.data.base64 === 'string') {
-            this.logger.info(`[${this.id}] Media downloaded successfully (from base64 field) via Evolution API for: ${mediaInfo.filename}`);
+            this.logger.info(`[${this.id}] Media: ${mediaInfo.filename}`);
             writeFileAsync('teste.webp', Buffer.from(response.data.base64, 'base64'));
             return response.data.base64;
           } else {
@@ -1549,7 +1549,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
               formattedContent = await this.convertToSquarePNGImage(formattedContent);
             }
           }
-          this.logger.debug("[sendMesage] cheguei aqui 6");
           endpoint = '/message/sendSticker';
           this.logger.debug(`[sendMessage] ${endpoint}`);
           evoPayload.sticker = formattedContent;
@@ -1870,7 +1869,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
       */
     } catch (error) {
-      this.logger.error(`[${this.id}] Failed to get contact details.`, error);
+      this.logger.error(`[${this.id}] Failed to get contact ${cid ?? ""}/${senderPn ?? ""} details.`); //, error
       return { id: { _serialized: "000000000000@c.us" }, name: "000000000000", pushname: "000000000000", number: "000000000000", isUser: true, _isPartial: true }; // Basic fallback
     }
   }
