@@ -1,6 +1,7 @@
 const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { randomBytes } = require('crypto');
+const imagemagick = require('imagemagick');
 const ffmpeg = require('fluent-ffmpeg');
 const { promisify } = require('util');
 const express = require('express');
@@ -30,6 +31,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const writeFileAsync = promisify(fs.writeFile);
 const readFileAsync = promisify(fs.readFile);
 const unlinkAsync = promisify(fs.unlink);
+const convertAsync = promisify(imagemagick.convert);
 
 class WhatsAppBotEvo {
   /**
@@ -349,6 +351,46 @@ class WhatsAppBotEvo {
     } catch (error) {
       this.logger.error(`[convertToSquarePNGImage] [${tempId}] Error during Sharp processing: ${error.message}`, error.stack);
       throw error; // Re-throw the error to be caught by the caller
+    }
+  }
+
+  async convertAnimatedWebpToGif(base64Webp, keepFile = false) {
+    const tempId = randomBytes(8).toString('hex');
+    const tempDir = os.tmpdir();
+    const inputPath = path.join(tempDir, `${tempId}.webp`);
+    const outputFileName = `${tempId}.gif`;
+
+    // Output location: public/gifs
+    const outputDir = path.join(__dirname, '..', 'public', 'gifs');
+    fs.mkdirSync(outputDir, { recursive: true });
+    const outputPath = path.join(outputDir, outputFileName);
+
+    // Decode and save base64 WebP to temp file
+    const buffer = Buffer.from(base64Webp.split(',').pop(), 'base64');
+    await writeFileAsync(inputPath, buffer);
+
+    try {
+      // imagemagick.convert takes an array of args (like CLI)
+      await convertAsync([inputPath, outputPath]);
+
+      // Clean up input
+      await unlinkAsync(inputPath).catch(() => {});
+
+      // Return public file URL
+      const fileUrl = `${process.env.BOT_DOMAIN}/gifs/${outputFileName}`;
+
+      // Optionally delete GIF after 60s
+      if (!keepFile) {
+        setTimeout(() => {
+          fs.unlink(outputPath, () => {});
+        }, 60000);
+      }
+
+      return fileUrl;
+    } catch (err) {
+      await unlinkAsync(inputPath).catch(() => {});
+      console.error(`[convertAnimatedWebpToGif] ImageMagick error: ${err.message}`);
+      throw err;
     }
   }
 
@@ -956,6 +998,7 @@ class WhatsAppBotEvo {
 
             incomingMessageData.event = "messages.upsert";
             incomingMessageData.sender = payload.sender;
+            //console.log(incomingMessageData);
             this.formatMessageFromEvo(incomingMessageData).then(formattedMessage => {
               if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
                 if(!incomingMessageData.key.fromMe){ // Só rodo o onMessage s enão for msg do bot. preciso chamar o formatMessage pra elas serem formatadas e irem pro cache
@@ -1174,6 +1217,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           type = 'sticker';
           mediaInfo = {
             isMessageMedia: true,
+            isAnimated: waMessage.stickerMessage.isAnimated ?? false,
             mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
             url: waMessage.stickerMessage.url,
             filename: `sticker-${key.id}.webp`,
@@ -1281,7 +1325,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           downloadMedia: async () => {
               if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
                   const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
-                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
+                  let gif = false;
+                  if(mediaInfo.isAnimated){
+                    gif = await this.convertAnimatedWebpToGif(downloadedMedia);
+                    this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${gif}'`);
+                  }
+                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, gif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
               }
               this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
               return null;
@@ -1376,6 +1425,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
             return response.data;
           } else if (response.data.base64 && typeof response.data.base64 === 'string') {
             this.logger.info(`[${this.id}] Media downloaded successfully (from base64 field) via Evolution API for: ${mediaInfo.filename}`);
+            writeFileAsync('teste.webp', Buffer.from(response.data.base64, 'base64'));
             return response.data.base64;
           } else {
             this.logger.warn(`[${this.id}] Evolution API /chat/getBase64FromMediaMessage did not return expected base64 data for ${mediaInfo.filename}. Response data:`, response.data);
