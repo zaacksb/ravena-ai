@@ -1329,12 +1329,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           delete: async (forEveryone = true) => { 
               return this.deleteMessageByKey(evoMessageData.key);
           },
-          downloadMedia: async () => {
+          downloadMedia: async (opts = {}) => {
               if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
                   const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
                   let stickerGif = false;
                   if(mediaInfo.isAnimated){
-                    stickerGif = await this.convertAnimatedWebpToGif(downloadedMedia);
+                    stickerGif = await this.convertAnimatedWebpToGif(downloadedMedia, opts.keep ?? false);
                     this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${stickerGif}'`);
                   }
                   return { mimetype: mediaInfo.mimetype, data: downloadedMedia, stickerGif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };

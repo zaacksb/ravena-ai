@@ -422,7 +422,7 @@ class Management {
       this.logger.info(`tem mídia, baixando...`);
       const caption = quotedMsg.caption ?? quotedMsg._data?.caption;
       try {
-        const media = await quotedMsg.downloadMedia();
+        const media = await quotedMsg.downloadMedia({keep: true});
         let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
 
         if(quotedMsg.type.toLowerCase() == "sticker"){
@@ -581,7 +581,7 @@ class Management {
     // Trata mensagens de mídia
     if (quotedMsg?.hasMedia) {
       try {
-        const media = await quotedMsg.downloadMedia();
+        const media = await quotedMsg.downloadMedia({keep: true});
         let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
 
         if(quotedMsg.type.toLowerCase() == "sticker"){
@@ -4438,22 +4438,25 @@ async setWelcomeMessage(bot, message, args, group) {
       // For media messages, add the media type
       let mediaType = "text";
       if (quotedMsg.hasMedia) {
-        const media = await quotedMsg.downloadMedia();
+        const media = await quotedMsg.downloadMedia({keep: true});
         mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
         let fileExt = media.mimetype.split('/')[1];
 
         // Sticker animado ou GIF PRECISAM ser uma url
         let mediaUrl = false;
-        if (quotedMsg.type.toLowerCase() === "gif" || quotedMsg.type.toLowerCase() === "sticker") {
+
+        // GIF transformar em sticker animado
+        if (quotedMsg.type.toLowerCase() === "gif") {
           mediaType = "sticker";
           mediaUrl = await bot.convertToSquareAnimatedGif(media.data, true);
         }
 
-        if (quotedMsg.type.toLowerCase() === "video" && ["!s", "sticker", "fig"].some(s => quotedMsg.caption.includes(s))){
-          // Caso especial: Converter o vídeo pr aum sticker se tiver na legenda
+        if(media.stickerGif){
+          // Caso especial: sticker animado é URL
           mediaType = "sticker";
-          mediaUrl = await bot.convertToSquareAnimatedGif(media.data, true);
+          mediaUrl = media.stickerGif;
         }
+
         if (quotedMsg.type.toLowerCase() === "voice") {
           mediaType = "voice";
         }
