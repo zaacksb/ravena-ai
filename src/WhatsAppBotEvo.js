@@ -1266,7 +1266,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           const reactionData = waMessage.reactionMessage;
           if (reactionData && reactionData.key && !reactionData.key.fromMe) {
               if(reactionData.text !== ""){
-                this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
+                //this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
                 this.reactionHandler.processReaction(this, { // await is used here
                   reaction: reactionData.text,
                   senderId: reactionData.key?.participant ? reactionData.key.participant.split("@")[0]+"@c.us" : waMessage.sender, // waMessage.sender vem no send.message event
@@ -1278,10 +1278,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           return;
         }
         else {
+          /*
           if(!isSentMessage){
             this.logger.warn(`[${this.id}] Unhandled Evolution message type:`, Object.keys(waMessage).join(', '));
             this.logger.warn(`[${this.id}][ev-${evoMessageData.event}] Unhandled Evolution message type:`, waMessage);
-          }
+          }*/
           resolve(null);
           return;
         }
@@ -2017,7 +2018,13 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
     } catch (error) {
       this.logger.error(`[${this.id}] Failed to get chat details for ${chatId}:`, error);
-      return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: chatId.endsWith('@g.us'), _isPartial: true }; // Basic fallback
+      // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
+      // Se for contato, cria um placeholder pra não bugar algumas coisas
+      if(chatId.includes("@g")){
+        return null;
+      } else {
+        return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
+      }
     }
   }
 
