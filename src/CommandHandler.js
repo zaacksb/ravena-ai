@@ -1216,7 +1216,7 @@ class CommandHandler {
       }
       
       // Verifica se é uma resposta de mídia (formato: "{img-filename.png} Legenda\nlegenda 2...")
-      const mediaMatch = processedResponse.match(/^\{(audio|voice|image|video|document|sticker)-([^}]+)\}\s*(.*)/s);
+      const mediaMatch = processedResponse.match(/^\{(audio|voice|image|video|document|sticker|stickerGif)-([^}]+)\}\s*(.*)/s);
       
       if (mediaMatch) {
         const [, mediaType, fileName, caption] = mediaMatch;
@@ -1227,19 +1227,34 @@ class CommandHandler {
         this.logger.debug(`Enviando resposta de mídia (${mediaType}): ${mediaPath}`);
         
         try {
-          const media = await bot.createMedia(mediaPath);
-          
-          return new ReturnMessage({
-            chatId: message.group,
-            content: media,
-            options: {
-              caption: caption || undefined,
-              sendMediaAsSticker: mediaType === 'sticker',
-              quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
-              evoReply: message.origin,
-              ...options
-            }
-          });
+          if(mediaType === 'stickerGif'){
+            this.logger.debug(`[stickerGif] URL? ${fileName}`);
+
+            return new ReturnMessage({
+              chatId: message.group,
+              content: fileName,
+              options: {
+                sendMediaAsSticker: true,
+                quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+                evoReply: message.origin,
+                ...options
+              }
+            });
+          } else {
+            const media = await bot.createMedia(mediaPath);
+            
+            return new ReturnMessage({
+              chatId: message.group,
+              content: media,
+              options: {
+                caption: caption || undefined,
+                sendMediaAsSticker: mediaType === 'sticker',
+                quotedMessageId: command.reply ? message.origin.id._serialized : undefined,
+                evoReply: message.origin,
+                ...options
+              }
+            });
+          }
         } catch (error) {
           this.logger.error(`Erro ao enviar resposta de mídia (${mediaPath}):`, error.message ?? "xxx");
           

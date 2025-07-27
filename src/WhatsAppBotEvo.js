@@ -371,7 +371,14 @@ class WhatsAppBotEvo {
 
     try {
       // imagemagick.convert takes an array of args (like CLI)
-      await convertAsync([inputPath, outputPath]);
+      await convertAsync([
+        inputPath,
+        '-coalesce',
+        '-background', 'none',
+        '-alpha', 'on',
+        '-dispose', 'previous',
+        outputPath
+      ]);
 
       // Clean up input
       await unlinkAsync(inputPath).catch(() => {});
@@ -1325,12 +1332,12 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           downloadMedia: async () => {
               if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
                   const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
-                  let gif = false;
+                  let stickerGif = false;
                   if(mediaInfo.isAnimated){
-                    gif = await this.convertAnimatedWebpToGif(downloadedMedia);
-                    this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${gif}'`);
+                    stickerGif = await this.convertAnimatedWebpToGif(downloadedMedia);
+                    this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${stickerGif}'`);
                   }
-                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, gif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
+                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, stickerGif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
               }
               this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
               return null;

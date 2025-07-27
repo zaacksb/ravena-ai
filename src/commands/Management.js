@@ -428,31 +428,39 @@ class Management {
         if(quotedMsg.type.toLowerCase() == "sticker"){
           mediaType = "sticker";
         }
+
         if(quotedMsg.type.toLowerCase() == "voice"){
           mediaType = "voice";
         }
 
+        // 2 casos: sticker animado ou resto
+        // Sticker animado preciso salvar o gif na pasta public pra poder ser enviado
         
-        // Gera nome de arquivo com extensão apropriada
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")){
-          fileExt = fileExt.split(";")[0];
+        if(media.stickerGif){
+          this.logger.info(`Arquivo de mídia já existia como stickerGIF: ${media.stickerGif}`);
+          responseContent = `{stickerGif-${media.stickerGif}}`;
+        } else {
+          // Gera nome de arquivo com extensão apropriada
+          let fileExt = media.mimetype.split('/')[1];
+          if(fileExt.includes(";")){
+            fileExt = fileExt.split(";")[0];
+          }
+          const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          
+          // Cria diretório de mídia se não existir
+          const mediaDir = path.join(this.dataPath, 'media');
+          await fs.mkdir(mediaDir, { recursive: true });
+          
+          // Salva arquivo de mídia (sem base64 na resposta)
+          const filePath = path.join(mediaDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+          
+          this.logger.info(`Arquivo de mídia salvo para comando: ${filePath}`);
+
+          // Formata a resposta adequadamente para sendCustomCommandResponse
+          // Este é o formato: {mediaType-fileName} Caption
+          responseContent = `{${mediaType}-${fileName}}${caption ? ' ' + caption : ''}`;
         }
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        
-        // Cria diretório de mídia se não existir
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        // Salva arquivo de mídia (sem base64 na resposta)
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        this.logger.info(`Arquivo de mídia salvo para comando: ${filePath}`);
-        
-        // Formata a resposta adequadamente para sendCustomCommandResponse
-        // Este é o formato: {mediaType-fileName} Caption
-        responseContent = `{${mediaType}-${fileName}}${caption ? ' ' + caption : ''}`;
       } catch (error) {
         this.logger.error('Erro ao salvar mídia para comando personalizado:', error);
         return new ReturnMessage({
@@ -583,25 +591,30 @@ class Management {
           mediaType = "voice";
         }
         
-        // Gera nome de arquivo com extensão apropriada
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")){
-          fileExt = fileExt.split(";")[0];
+        if(media.stickerGif){
+          this.logger.info(`Arquivo de mídia já existia como stickerGIF: ${media.stickerGif}`);
+          responseContent = `{stickerGif-${media.stickerGif}}`;
+        } else {
+          // Gera nome de arquivo com extensão apropriada
+          let fileExt = media.mimetype.split('/')[1];
+          if(fileExt.includes(";")){
+            fileExt = fileExt.split(";")[0];
+          }
+          const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          
+          // Cria diretório de mídia se não existir
+          const mediaDir = path.join(this.dataPath, 'media');
+          await fs.mkdir(mediaDir, { recursive: true });
+          
+          // Salva arquivo de mídia
+          const filePath = path.join(mediaDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+          
+          this.logger.info(`Arquivo de mídia salvo para resposta de comando: ${filePath}`);
+          
+          // Formata a resposta adequadamente para sendCustomCommandResponse
+          responseContent = `{${mediaType}-${fileName}}${quotedMsg.caption ? ' ' + quotedMsg.caption : ''}`;
         }
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        
-        // Cria diretório de mídia se não existir
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        // Salva arquivo de mídia
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        this.logger.info(`Arquivo de mídia salvo para resposta de comando: ${filePath}`);
-        
-        // Formata a resposta adequadamente para sendCustomCommandResponse
-        responseContent = `{${mediaType}-${fileName}}${quotedMsg.caption ? ' ' + quotedMsg.caption : ''}`;
       } catch (error) {
         this.logger.error('Erro ao salvar mídia para resposta de comando personalizado:', error);
         return new ReturnMessage({
