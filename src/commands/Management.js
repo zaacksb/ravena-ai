@@ -1961,8 +1961,9 @@ async setWelcomeMessage(bot, message, args, group) {
     let defaultText = '';
     
     if (platform === 'twitch' || platform === 'kick') {
+      const domain = (platform === 'twitch') ? "tv" : "com";
       defaultText = `⚠️ ATENÇÃO!⚠️\n\n🌟 *${channelName}* ✨ está *online* streamando *{jogo}*!\n_{titulo}_\n\n` +
-                   `https://${platform}.tv/${channelName}`;
+                   `https://${platform}.${domain}/${channelName}`;
     } else if (platform === 'youtube') {
       defaultText = `*⚠️ Vídeo novo! ⚠️*\n\n*{author}:* *{title}* \n{link}`;
     }
