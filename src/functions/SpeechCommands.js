@@ -29,6 +29,7 @@ const whisperPath = process.env.WHISPER;
 // Definição dos personagens para TTS
 const ttsCharacters = [
   {"name": "ravena", "emoji": ["🗣","🦇"], "voice": "ravena_sample.wav"},
+  {"name": "rubao", "emoji": "🤠", "voice": "rubao.wav"},
   {"name": "mulher", "emoji": "👩", "voice": "female_01.wav"},
   {"name": "carioca", "voice": "female_02.wav"},
   {"name": "carioco", "voice": "male_02.wav"},
