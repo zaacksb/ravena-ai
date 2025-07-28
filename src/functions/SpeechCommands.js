@@ -815,6 +815,19 @@ const commands = [
       after: "🔊"
     },
     method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "narrador")
+  }),
+
+  new Command({
+    name: "tts-rubao",
+    description: `Converte texto para voz usando do Rubão do Pontaço`,
+    group: "ttsHomem",
+    category: "tts",
+    reactions: {
+      trigger: "🎙️",
+      before: process.env.LOADING_EMOJI ?? "🌀",
+      after: "🔊"
+    },
+    method: (bot, message, args, group) => textToSpeech(bot, message, args, group, "rubao")
   })
 ];
 
