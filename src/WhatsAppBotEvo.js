@@ -1,6 +1,7 @@
 const { Contact, LocalAuth, MessageMedia, Location, Poll } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { randomBytes } = require('crypto');
+const imagemagick = require('imagemagick');
 const ffmpeg = require('fluent-ffmpeg');
 const { promisify } = require('util');
 const express = require('express');
@@ -30,6 +31,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const writeFileAsync = promisify(fs.writeFile);
 const readFileAsync = promisify(fs.readFile);
 const unlinkAsync = promisify(fs.unlink);
+const convertAsync = promisify(imagemagick.convert);
 
 class WhatsAppBotEvo {
   /**
@@ -193,7 +195,7 @@ class WhatsAppBotEvo {
         throw new Error('Invalid base64ImageContent: Must be a non-empty string.');
       }
 
-      this.logger.info('[toSquareWebPImage] Input is base64. Decoding and saving to temporary file...');
+      //this.logger.info('[toSquareWebPImage] Input is base64. Decoding and saving to temporary file...');
       // Remove potential data URI prefix (e.g., "data:image/png;base64,")
       const base64Data = base64ImageContent.includes(',') ? base64ImageContent.split(',')[1] : base64ImageContent;
       
@@ -207,7 +209,7 @@ class WhatsAppBotEvo {
       isTempInputFile = true;
       this.logger.info('[toSquareWebPImage] Base64 input saved to temporary file:', tempInputPath);
       
-      this.logger.info('[toSquareWebPImage] Starting square WebP image conversion for:', inputPath);
+      //this.logger.info('[toSquareWebPImage] Starting square WebP image conversion for:', inputPath);
 
       const targetSize = 512; // Target dimension for the square output
 
@@ -297,19 +299,19 @@ class WhatsAppBotEvo {
       const imageBuffer = Buffer.from(base64Data, 'base64');
       this.logger.info(`[convertToSquarePNGImage] [${tempId}] Base64 decoded to buffer. Input buffer length: ${imageBuffer.length}`);
 
-      const targetSize = 512; // Target dimension for the square output
+      const targetSize = 800; // Target dimension for the square output
       this.logger.info(`[convertToSquarePNGImage] [${tempId}] Starting square PNG image conversion with Sharp. Target size: ${targetSize}x${targetSize}`);
 
       // 1. Resize the image to fit within targetSize, preserving aspect ratio.
       //    'sharp.fit.inside' is equivalent to ffmpeg's 'force_original_aspect_ratio=decrease'.
-      //    'withoutEnlargement: true' ensures images smaller than targetSize are not scaled up.
+      //    'withoutEnlargement: false' ensures images smaller than targetSize ARE scaled up.
       //    'kernel: sharp.kernel.lanczos3' uses Lanczos3 for high-quality resizing.
       const resizedImageBuffer = await sharp(imageBuffer)
         .resize({
           width: targetSize,
           height: targetSize,
           fit: sharp.fit.inside,
-          withoutEnlargement: true,
+          withoutEnlargement: false, // Allow upscaling
           kernel: sharp.kernel.lanczos3,
         })
         .toBuffer(); // Get the resized image as a buffer
@@ -352,14 +354,69 @@ class WhatsAppBotEvo {
     }
   }
 
-  async convertToSquareAnimatedGif(inputContent) {
+  async convertAnimatedWebpToGif(base64Webp, keepFile = false) {
+    const tempId = randomBytes(8).toString('hex');
+    const tempDir = os.tmpdir();
+    const inputPath = path.join(tempDir, `${tempId}.webp`);
+    const outputFileName = `${tempId}.gif`;
+
+    // Output location: public/gifs
+    const outputDir = path.join(__dirname, '..', 'public', 'gifs');
+    fs.mkdirSync(outputDir, { recursive: true });
+    const outputPath = path.join(outputDir, outputFileName);
+
+    // Decode and save base64 WebP to temp file
+    const buffer = Buffer.from(base64Webp.split(',').pop(), 'base64');
+    await writeFileAsync(inputPath, buffer);
+
+    try {
+      // imagemagick.convert takes an array of args (like CLI)
+      await convertAsync([
+        inputPath,
+        '-coalesce',
+        '-background', 'none',
+        '-alpha', 'on',
+        '-dispose', 'previous',
+        outputPath
+      ]);
+
+      // Clean up input
+      await unlinkAsync(inputPath).catch(() => {});
+
+      // Return public file URL
+      const fileUrl = `${process.env.BOT_DOMAIN}/gifs/${outputFileName}`;
+
+      // Optionally delete GIF after 60s
+      if (!keepFile) {
+        setTimeout(() => {
+          fs.unlink(outputPath, () => {});
+        }, 60000);
+      }
+
+      return fileUrl;
+    } catch (err) {
+      await unlinkAsync(inputPath).catch(() => {});
+      console.error(`[convertAnimatedWebpToGif] ImageMagick error: ${err.message}`);
+      throw err;
+    }
+  }
+
+  async convertToSquareAnimatedGif(inputContent, keepFile = false) {
+    console.log("[convertToSquareAnimatedGif] ",inputContent.substring(0, 30));
     let inputPath = inputContent;
     let isTempInputFile = false;
     const tempId = randomBytes(16).toString('hex');
     
     const tempInputDirectory = os.tmpdir();
-    const tempInputPath = path.join(tempInputDirectory, `${tempId}_input.tmp`); 
-    const tempOutputPath = path.join(tempInputDirectory, `${tempId}_output.gif`); // Output will be .gif
+    const tempInputPath = path.join(tempInputDirectory, `${tempId}_input.tmp`);
+    
+    // Define the output directory and ensure it exists
+    const outputDir = path.join(__dirname, '..', 'public', 'gifs');
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    const outputFileName = `${tempId}.gif`;
+    const outputPath = path.join(outputDir, outputFileName);
 
     try {
       if (inputContent && !inputContent.startsWith('http://') && !inputContent.startsWith('https://')) {
@@ -382,28 +439,17 @@ class WhatsAppBotEvo {
       const targetSize = 512;
       const fps = 15; // WhatsApp tends to prefer 10-20 FPS for GIFs. 15 is a good compromise.
 
-      // Complex filter for scaling, padding, and GIF palette generation for transparency
-      // 1. Set FPS
-      // 2. Scale to fit targetSize, preserve aspect ratio
-      // 3. Pad to targetSize, center, use transparent background (black@0.0)
-      // 4. Generate a palette optimized for GIF transparency and animation
-      // 5. Apply the palette
       const videoFilter = 
         `fps=${fps},` +
         `scale=${targetSize}:${targetSize}:force_original_aspect_ratio=decrease:flags=lanczos,` +
-        `pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,` + // color=transparent also works for some ffmpeg versions
+        `pad=${targetSize}:${targetSize}:(ow-iw)/2:(oh-ih)/2:color=black@0.0,` +
         `split[s0][s1];[s0]palettegen=stats_mode=diff:max_colors=250:reserve_transparent=on[p];[s1][p]paletteuse=dither=bayer:alpha_threshold=128`;
-        // `max_colors=250` (max 256 for GIF, leaving some for safety/transparency)
-        // `reserve_transparent=on` is crucial for transparent backgrounds in GIFs.
-        // `stats_mode=diff` is often better for animations than 'full'.
 
       await new Promise((resolve, reject) => {
         ffmpeg(inputPath)
           .outputOptions([
             '-vf', videoFilter,
-            '-loop', '0',         // 0 for infinite loop
-            // GIF-specific options are mostly handled by the palettegen/paletteuse filters
-            // and .toFormat('gif')
+            '-loop', '0',
           ])
           .toFormat('gif')
           .on('end', () => {
@@ -412,7 +458,7 @@ class WhatsAppBotEvo {
           })
           .on('error', (err) => {
             let ffmpegCommandDetails = '';
-            if (err.ffmpegCommand) { // fluent-ffmpeg might provide this
+            if (err.ffmpegCommand) {
                 ffmpegCommandDetails = `FFmpeg command: ${err.ffmpegCommand}`;
             } else if (err.spawnargs) {
                 ffmpegCommandDetails = `FFmpeg arguments: ${err.spawnargs.join(' ')}`;
@@ -420,24 +466,35 @@ class WhatsAppBotEvo {
             this.logger.error(`[toSquareAnimatedGif] Error during GIF conversion: ${err.message}. ${ffmpegCommandDetails}`, err.stack);
             reject(err);
           })
-          .save(tempOutputPath);
+          .save(outputPath); // Save to the new permanent path
       });
 
-      this.logger.info('[toSquareAnimatedGif] Square animated GIF saved to temporary file:', tempOutputPath);
+      this.logger.info('[toSquareAnimatedGif] Square animated GIF saved to:', outputPath);
 
-      const gifBuffer = await readFileAsync(tempOutputPath);
-      
+      // Schedule file deletion
+      if(!keepFile){
+        setTimeout(() => {
+          fs.unlink(outputPath, (err) => {
+            if (err) {
+              this.logger.error(`[toSquareAnimatedGif] Error deleting file ${outputPath}:`, err);
+            } else {
+              this.logger.info(`[toSquareAnimatedGif] Deleted file: ${outputPath}`);
+            }
+          });
+        }, 60000); 
+      }
+
       // Check file size - WhatsApp has limits for GIFs (often around 1MB, but can vary)
-      const fileSizeInMB = gifBuffer.length / (1024 * 1024);
+      const stats = fs.statSync(outputPath);
+      const fileSizeInMB = stats.size / (1024 * 1024);
       this.logger.info(`[toSquareAnimatedGif] Output GIF file size: ${fileSizeInMB.toFixed(2)} MB`);
       if (fileSizeInMB > 1.5) { // Example threshold, adjust as needed
           this.logger.warn(`[toSquareAnimatedGif] WARNING: Output GIF size is ${fileSizeInMB.toFixed(2)} MB, which might be too large for WhatsApp.`);
       }
 
-      const base64Gif = gifBuffer.toString('base64');
-      this.logger.info('[toSquareAnimatedGif] Square animated GIF converted to base64.');
-
-      return base64Gif;
+      const fileUrl = `${process.env.BOT_DOMAIN}/gifs/${outputFileName}`;
+      this.logger.info('[toSquareAnimatedGif] Returning URL:', fileUrl);
+      return fileUrl;
 
     } catch (error) {
       this.logger.error('[toSquareAnimatedGif] Error in convertToSquareAnimatedGif function:', error.message, error.stack);
@@ -449,14 +506,6 @@ class WhatsAppBotEvo {
           this.logger.info('[toSquareAnimatedGif] Temporary input file deleted:', tempInputPath);
         } catch (e) {
           this.logger.error('[toSquareAnimatedGif] Error deleting temporary input file:', tempInputPath, e.message);
-        }
-      }
-      if (fs.existsSync(tempOutputPath)) {
-        try {
-          await unlinkAsync(tempOutputPath);
-          this.logger.info('[toSquareAnimatedGif] Temporary output file deleted:', tempOutputPath);
-        } catch (e) {
-          this.logger.error('[toSquareAnimatedGif] Error deleting temporary output file:', tempOutputPath, e.message);
         }
       }
     }
@@ -707,7 +756,7 @@ class WhatsAppBotEvo {
         socket.on('messages.upsert', (data) => this.handleWebsocket(data));
 
         socket.on('group-participants.update', (data) => {
-          this.logger.info('group-participants.update', data);
+          //this.logger.info('group-participants.update', data);
 
           this.handleWebsocket(data);
         });
@@ -956,6 +1005,7 @@ class WhatsAppBotEvo {
 
             incomingMessageData.event = "messages.upsert";
             incomingMessageData.sender = payload.sender;
+            //console.log(incomingMessageData);
             this.formatMessageFromEvo(incomingMessageData).then(formattedMessage => {
               if (formattedMessage && this.eventHandler && typeof this.eventHandler.onMessage === 'function') {
                 if(!incomingMessageData.key.fromMe){ // Só rodo o onMessage s enão for msg do bot. preciso chamar o formatMessage pra elas serem formatadas e irem pro cache
@@ -1028,7 +1078,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           const groupUpdateData = payload.data;
           groupUpdateData.isBotJoining = false;
           if (groupUpdateData && groupUpdateData.id && groupUpdateData.action && groupUpdateData.participants) {
-             this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
+             //this.logger.info(`[${this.id}] Group participants update:`, groupUpdateData);
              this._handleGroupParticipantsUpdate(groupUpdateData);
           }
           break;
@@ -1174,6 +1224,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           type = 'sticker';
           mediaInfo = {
             isMessageMedia: true,
+            isAnimated: waMessage.stickerMessage.isAnimated ?? false,
             mimetype: waMessage.stickerMessage.mimetype || 'image/webp',
             url: waMessage.stickerMessage.url,
             filename: `sticker-${key.id}.webp`,
@@ -1215,7 +1266,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           const reactionData = waMessage.reactionMessage;
           if (reactionData && reactionData.key && !reactionData.key.fromMe) {
               if(reactionData.text !== ""){
-                this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
+                //this.logger.debug(`[${this.id}] Received reaction:`, reactionData);
                 this.reactionHandler.processReaction(this, { // await is used here
                   reaction: reactionData.text,
                   senderId: reactionData.key?.participant ? reactionData.key.participant.split("@")[0]+"@c.us" : waMessage.sender, // waMessage.sender vem no send.message event
@@ -1227,10 +1278,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           return;
         }
         else {
+          /*
           if(!isSentMessage){
             this.logger.warn(`[${this.id}] Unhandled Evolution message type:`, Object.keys(waMessage).join(', '));
             this.logger.warn(`[${this.id}][ev-${evoMessageData.event}] Unhandled Evolution message type:`, waMessage);
-          }
+          }*/
           resolve(null);
           return;
         }
@@ -1278,10 +1330,15 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           delete: async (forEveryone = true) => { 
               return this.deleteMessageByKey(evoMessageData.key);
           },
-          downloadMedia: async () => {
+          downloadMedia: async (opts = {}) => {
               if (mediaInfo && (mediaInfo.url || mediaInfo._evoMediaDetails)) {
                   const downloadedMedia = await this._downloadMediaAsBase64(mediaInfo, key, evoMessageData);
-                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
+                  let stickerGif = false;
+                  if(mediaInfo.isAnimated){
+                    stickerGif = await this.convertAnimatedWebpToGif(downloadedMedia, opts.keep ?? false);
+                    this.logger.debug(`[downloadMedia] isAnimated, gif salvo: '${stickerGif}'`);
+                  }
+                  return { mimetype: mediaInfo.mimetype, data: downloadedMedia, stickerGif, filename: mediaInfo.filename, source: 'file', isMessageMedia: true };
               }
               this.logger.warn(`[${this.id}] downloadMedia called for non-media or unfulfillable message:`, type, mediaInfo);
               return null;
@@ -1340,7 +1397,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async _downloadMediaAsBase64(mediaInfo, messageKey, evoMessageData) {
-    this.logger.debug(`[${this.id}] Download media for: ${mediaInfo.filename}`);
+    //this.logger.debug(`[${this.id}] Download media for: ${mediaInfo.filename}`);
 
     if (!messageKey || !messageKey.id || !messageKey.remoteJid) {
       this.logger.error(`[${this.id}] Crucial messageKey information (id, remoteJid) is missing. Cannot use /chat/getBase64FromMediaMessage.`);
@@ -1372,10 +1429,11 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         // Process the response (same logic as before):
         if (response.data) {
           if (typeof response.data === 'string' && response.data.length > 100) {
-            this.logger.info(`[${this.id}] Media downloaded successfully as direct base64 string via Evolution API for: ${mediaInfo.filename}`);
+            this.logger.info(`[${this.id}] Media: ${mediaInfo.filename}`);
             return response.data;
           } else if (response.data.base64 && typeof response.data.base64 === 'string') {
-            this.logger.info(`[${this.id}] Media downloaded successfully (from base64 field) via Evolution API for: ${mediaInfo.filename}`);
+            this.logger.info(`[${this.id}] Media: ${mediaInfo.filename}`);
+            writeFileAsync('teste.webp', Buffer.from(response.data.base64, 'base64'));
             return response.data.base64;
           } else {
             this.logger.warn(`[${this.id}] Evolution API /chat/getBase64FromMediaMessage did not return expected base64 data for ${mediaInfo.filename}. Response data:`, response.data);
@@ -1400,7 +1458,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
   }
 
   async sendMessage(chatId, content, options = {}) {
-    this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
+    this.logger.debug(`[${this.id}] sendMessage to ${chatId} (Type: ${typeof content} / ${JSON.stringify(options)})`); // , {content: typeof content === 'string' ? content.substring(0,30) : content, options}
     try {
       const isGroup = chatId.endsWith('@g.us');
       this.loadReport.trackSentMessage(isGroup); // From original bot
@@ -1451,24 +1509,29 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
 
 
       // Não usar o formato completo, apenas os dados `data:${content.mimetype};base64,${content.data}`
-      let formattedContent = (content.data && content.data?.length > 10) ? content.data : content.url;
+      let formattedContent = (content.data && content.data?.length > 10) ? content.data : (content.url ?? content);
 
       // Cada tipo de mensagem tem um endpoint diferente
       let endpoint = null;
-      if (typeof content === 'string') {
+      if (typeof content === 'string' && !options.sendMediaAsSticker) { // sticker pode vir URL, que é string
         endpoint = '/message/sendText';
         evoPayload.text = content;
         evoPayload.presence = "composing";
 
-      } else if (content instanceof MessageMedia || content.isMessageMedia) {
-        // Duck-typing for MessageMedia (original wwebjs or compatible like from createMedia)
+      } else if (content instanceof MessageMedia || content.isMessageMedia || options.sendMediaAsSticker) {
+
         endpoint = '/message/sendMedia';
-        this.logger.debug(`[sendMessage] ${endpoint}`);
+        this.logger.debug(`[sendMessage] ${endpoint} (${JSON.stringify(options)})`);
         
-        let mediaType = 'document';
-        if (content.mimetype.includes('image')) mediaType = 'image';
-        else if (content.mimetype.includes('mp4')) mediaType = 'video';
-        else if (content.mimetype.includes('audio') || content.mimetype.includes('ogg')) mediaType = 'audio';
+
+        let mediaType = 'image';
+
+        if(content.mimetype){
+          if (content.mimetype.includes('image')) mediaType = 'image';
+          else if (content.mimetype.includes('mp4')) mediaType = 'video';
+          else if (content.mimetype.includes('audio') || content.mimetype.includes('ogg')) mediaType = 'audio';
+        }
+
 
         if (options.sendMediaAsDocument){
           mediaType = 'document';
@@ -1476,26 +1539,19 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
         }
 
         if (options.sendMediaAsSticker){
-          if(mediaType == 'video' || mediaType == 'gif'){
-            // Converter pra aceitar sticker animado
-            formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
-            mediaType = "image"; // Teste
-          } else {
-            // Essa lib estica as imagens de stickers, mas quero preservar como era antes
-            formattedContent = await this.convertToSquarePNGImage(formattedContent);
+          this.logger.debug(`[sendMessage] sendMediaAsSticker: ${formattedContent}`);
+          if(!formattedContent.startsWith("http")){
+            if(mediaType == 'video' || mediaType == 'gif'){
+              // Converter pra aceitar sticker animado
+              formattedContent = await this.convertToSquareAnimatedGif(formattedContent);
+            } else {
+              // Essa lib estica as imagens de stickers, mas quero preservar como era antes
+              formattedContent = await this.convertToSquarePNGImage(formattedContent);
+            }
           }
-
-          //mediaType = 'sticker';
           endpoint = '/message/sendSticker';
           this.logger.debug(`[sendMessage] ${endpoint}`);
           evoPayload.sticker = formattedContent;
-
-          // Nao tem na evo? desabilitar
-          if (false && (options.stickerAuthor || options.stickerName || options.stickerCategories)) {
-              if(options.stickerName) evoPayload.pack = options.stickerName;
-              if(options.stickerAuthor) evoPayload.author = options.stickerAuthor;
-              if(options.stickerCategories) evoPayload.categories = options.stickerCategories;
-          }
         }
 
         if (options.sendAudioAsVoice || mediaType === 'audio'){
@@ -1613,25 +1669,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       
       let contentToSend = message.content;
       let options = { ...(message.options || {}) }; // Clone options
-
-      // // If content is a file path, use createMedia to prepare it
-      // if (typeof message.content === 'string' && (message.content.startsWith('./') || message.content.startsWith('/') || message.content.startsWith('C:'))) {
-      //     try {
-      //       // Check if it's likely a file path that exists
-      //       if (fs.existsSync(message.content)) {
-      //           contentToSend = await this.createMedia(message.content); // Returns { mimetype, data, filename }
-      //       } else {
-      //           // Treat as plain string if path doesn't exist
-      //       }
-      //     } catch (e) { /* ignore, treat as string */ }
-      // } else if (typeof message.content === 'string' && message.content.startsWith('http')) {
-      //     try {
-      //       // If options suggest it's media, try to create media from URL
-      //       if (options.media || options.sendMediaAsSticker || options.sendAudioAsVoice || options.sendVideoAsGif || options.sendMediaAsDocument) {
-      //           contentToSend = await this.createMediaFromURL(message.content); // Returns { mimetype, url, filename }
-      //       }
-      //     } catch (e) { /* ignore, treat as string */ }
-      // }
 
       try {
         const result = await this.sendMessage(message.chatId, contentToSend, options);
@@ -1832,7 +1869,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
       */
     } catch (error) {
-      this.logger.error(`[${this.id}] Failed to get contact details.`, error);
+      this.logger.error(`[${this.id}] Failed to get contact ${cid ?? ""}/${senderPn ?? ""} details.`); //, error
       return { id: { _serialized: "000000000000@c.us" }, name: "000000000000", pushname: "000000000000", number: "000000000000", isUser: true, _isPartial: true }; // Basic fallback
     }
   }
@@ -1980,7 +2017,13 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       }
     } catch (error) {
       this.logger.error(`[${this.id}] Failed to get chat details for ${chatId}:`, error);
-      return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: chatId.endsWith('@g.us'), _isPartial: true }; // Basic fallback
+      // Se estiver buscando grupo, retorna null pra saber que o bot não faz parte
+      // Se for contato, cria um placeholder pra não bugar algumas coisas
+      if(chatId.includes("@g")){
+        return null;
+      } else {
+        return { id: { _serialized: chatId }, name: chatId.split('@')[0], isGroup: false, _isPartial: true }; // Basic fallback
+      }
     }
   }
 

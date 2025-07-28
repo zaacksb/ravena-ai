@@ -31,7 +31,8 @@ class Database {
       commands: {},
       loadReports: false,
       donations: false,
-      pendingJoins: false
+      pendingJoins: false,
+      softblocks: false
     };
     
     // Cache para objetos de banco de dados
@@ -40,7 +41,8 @@ class Database {
       commands: {},
       loadReports: null,
       donations: null,
-      pendingJoins: null
+      pendingJoins: null,
+      softblocks: null
     };
     
     // Cria diretórios de banco de dados e backup se não existirem
@@ -432,6 +434,14 @@ class Database {
         this.saveJSONToFile(joinsPath, this.cache.pendingJoins);
         this.dirtyFlags.pendingJoins = false;
         this.logger.info('Joins pendentes persistidos no arquivo');
+      }
+
+      // Softblocks
+      if ((this.dirtyFlags.softblocks || force) && this.cache.softblocks) {
+        const softblocksPath = path.join(this.databasePath, 'soft-blocks.json');
+        this.saveJSONToFile(softblocksPath, this.cache.softblocks);
+        this.dirtyFlags.softblocks = false;
+        this.logger.info('Softblocks persistidos no arquivo');
       }
     } catch (error) {
       this.logger.error('Erro ao persistir dados em cache:', error);
@@ -1274,6 +1284,62 @@ class Database {
       return true;
     } catch (error) {
       this.logger.error('Erro ao remover join pendente:', error);
+      return false;
+    }
+  }
+
+  async getSoftblocks() {
+    try {
+      if (this.cache.softblocks) {
+        return this.cache.softblocks;
+      }
+      
+      const softblocksPath = path.join(this.databasePath, 'soft-blocks.json');
+      const softblocks = this.loadJSON(softblocksPath) || [];
+      
+      this.cache.softblocks = softblocks;
+      
+      return softblocks;
+    } catch (error) {
+      this.logger.error('Erro ao obter softblocks:', error);
+      return [];
+    }
+  }
+
+  async toggleUserInvites(phoneNumber, block) {
+    try {
+      const softblocks = await this.getSoftblocks();
+      const userIndex = softblocks.findIndex(u => u.numero === phoneNumber);
+
+      if (block) {
+        if (userIndex === -1) {
+          softblocks.push({ numero: phoneNumber, invites: true });
+        } else {
+          softblocks[userIndex].invites = true;
+        }
+      } else {
+        if (userIndex !== -1) {
+          softblocks.splice(userIndex, 1);
+        }
+      }
+
+      this.cache.softblocks = softblocks;
+      this.dirtyFlags.softblocks = true;
+
+      return true;
+    } catch (error) {
+      this.logger.error('Erro ao alternar bloqueio de convites do usuário:', error);
+      return false;
+    }
+  }
+
+  async isUserInviteBlocked(phoneNumber) {
+    try {
+      const softblocks = await this.getSoftblocks();
+      const user = softblocks.find(u => u.numero === phoneNumber);
+      return user ? user.invites : false;
+    } catch (error) {
+      this.logger.error('Erro ao verificar se o convite do usuário está bloqueado:', error);
       return false;
     }
   }

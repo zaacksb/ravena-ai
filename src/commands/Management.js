@@ -422,37 +422,45 @@ class Management {
       this.logger.info(`tem mídia, baixando...`);
       const caption = quotedMsg.caption ?? quotedMsg._data?.caption;
       try {
-        const media = await quotedMsg.downloadMedia();
+        const media = await quotedMsg.downloadMedia({keep: true});
         let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
 
         if(quotedMsg.type.toLowerCase() == "sticker"){
           mediaType = "sticker";
         }
+
         if(quotedMsg.type.toLowerCase() == "voice"){
           mediaType = "voice";
         }
 
+        // 2 casos: sticker animado ou resto
+        // Sticker animado preciso salvar o gif na pasta public pra poder ser enviado
         
-        // Gera nome de arquivo com extensão apropriada
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")){
-          fileExt = fileExt.split(";")[0];
+        if(media.stickerGif){
+          this.logger.info(`Arquivo de mídia já existia como stickerGIF: ${media.stickerGif}`);
+          responseContent = `{stickerGif-${media.stickerGif}}`;
+        } else {
+          // Gera nome de arquivo com extensão apropriada
+          let fileExt = media.mimetype.split('/')[1];
+          if(fileExt.includes(";")){
+            fileExt = fileExt.split(";")[0];
+          }
+          const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          
+          // Cria diretório de mídia se não existir
+          const mediaDir = path.join(this.dataPath, 'media');
+          await fs.mkdir(mediaDir, { recursive: true });
+          
+          // Salva arquivo de mídia (sem base64 na resposta)
+          const filePath = path.join(mediaDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+          
+          this.logger.info(`Arquivo de mídia salvo para comando: ${filePath}`);
+
+          // Formata a resposta adequadamente para sendCustomCommandResponse
+          // Este é o formato: {mediaType-fileName} Caption
+          responseContent = `{${mediaType}-${fileName}}${caption ? ' ' + caption : ''}`;
         }
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        
-        // Cria diretório de mídia se não existir
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        // Salva arquivo de mídia (sem base64 na resposta)
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        this.logger.info(`Arquivo de mídia salvo para comando: ${filePath}`);
-        
-        // Formata a resposta adequadamente para sendCustomCommandResponse
-        // Este é o formato: {mediaType-fileName} Caption
-        responseContent = `{${mediaType}-${fileName}}${caption ? ' ' + caption : ''}`;
       } catch (error) {
         this.logger.error('Erro ao salvar mídia para comando personalizado:', error);
         return new ReturnMessage({
@@ -573,7 +581,7 @@ class Management {
     // Trata mensagens de mídia
     if (quotedMsg?.hasMedia) {
       try {
-        const media = await quotedMsg.downloadMedia();
+        const media = await quotedMsg.downloadMedia({keep: true});
         let mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
 
         if(quotedMsg.type.toLowerCase() == "sticker"){
@@ -583,25 +591,30 @@ class Management {
           mediaType = "voice";
         }
         
-        // Gera nome de arquivo com extensão apropriada
-        let fileExt = media.mimetype.split('/')[1];
-        if(fileExt.includes(";")){
-          fileExt = fileExt.split(";")[0];
+        if(media.stickerGif){
+          this.logger.info(`Arquivo de mídia já existia como stickerGIF: ${media.stickerGif}`);
+          responseContent = `{stickerGif-${media.stickerGif}}`;
+        } else {
+          // Gera nome de arquivo com extensão apropriada
+          let fileExt = media.mimetype.split('/')[1];
+          if(fileExt.includes(";")){
+            fileExt = fileExt.split(";")[0];
+          }
+          const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          
+          // Cria diretório de mídia se não existir
+          const mediaDir = path.join(this.dataPath, 'media');
+          await fs.mkdir(mediaDir, { recursive: true });
+          
+          // Salva arquivo de mídia
+          const filePath = path.join(mediaDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+          
+          this.logger.info(`Arquivo de mídia salvo para resposta de comando: ${filePath}`);
+          
+          // Formata a resposta adequadamente para sendCustomCommandResponse
+          responseContent = `{${mediaType}-${fileName}}${quotedMsg.caption ? ' ' + quotedMsg.caption : ''}`;
         }
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        
-        // Cria diretório de mídia se não existir
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        // Salva arquivo de mídia
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
-        this.logger.info(`Arquivo de mídia salvo para resposta de comando: ${filePath}`);
-        
-        // Formata a resposta adequadamente para sendCustomCommandResponse
-        responseContent = `{${mediaType}-${fileName}}${quotedMsg.caption ? ' ' + quotedMsg.caption : ''}`;
       } catch (error) {
         this.logger.error('Erro ao salvar mídia para resposta de comando personalizado:', error);
         return new ReturnMessage({
@@ -4425,32 +4438,50 @@ async setWelcomeMessage(bot, message, args, group) {
       // For media messages, add the media type
       let mediaType = "text";
       if (quotedMsg.hasMedia) {
-        const media = await quotedMsg.downloadMedia();
+        const media = await quotedMsg.downloadMedia({keep: true});
         mediaType = media.mimetype.split('/')[0]; // 'image', 'audio', 'video', etc.
-        
-        if (quotedMsg.type.toLowerCase() === "sticker") {
+        let fileExt = media.mimetype.split('/')[1];
+
+        // Sticker animado ou GIF PRECISAM ser uma url
+        let mediaUrl = false;
+
+        // GIF transformar em sticker animado
+        if (quotedMsg.type.toLowerCase() === "gif") {
           mediaType = "sticker";
+          mediaUrl = await bot.convertToSquareAnimatedGif(media.data, true);
         }
+
+        if(media.stickerGif){
+          // Caso especial: sticker animado é URL
+          mediaType = "sticker";
+          mediaUrl = media.stickerGif;
+        }
+
         if (quotedMsg.type.toLowerCase() === "voice") {
           mediaType = "voice";
         }
         
         // Save media file
-        let fileExt = media.mimetype.split('/')[1];
         if (fileExt.includes(";")) {
           fileExt = fileExt.split(";")[0];
         }
-        
-        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-        const mediaDir = path.join(this.dataPath, 'media');
-        await fs.mkdir(mediaDir, { recursive: true });
-        
-        const filePath = path.join(mediaDir, fileName);
-        await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
-        
+
         mediaConfig.type = mediaType;
-        mediaConfig.content = fileName;
-        mediaConfig.caption = quotedMsg.caption ?? "";
+
+        if(mediaUrl){
+          mediaConfig.content = mediaUrl;
+        } else {
+          const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          const mediaDir = path.join(this.dataPath, 'media');
+          await fs.mkdir(mediaDir, { recursive: true });
+          
+          const filePath = path.join(mediaDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(media.data, 'base64'));
+          
+          mediaConfig.content = fileName;
+          mediaConfig.caption = quotedMsg.caption ?? "";
+        }
+        
       }
       
       // Initialize the config if it doesn't exist

@@ -38,6 +38,8 @@ class SuperAdmin {
       'restart': {'method': 'restartBot', 'description': 'Reinicia o bot'},
       'getGroupInfo': {'method': 'getGroupInfo', 'description': 'Dump de dados de grupo por nome cadastro'},
       'getMembros': {'method': 'getMembros', 'description': 'Lista todos os membros do grupo separados por admin e membros normais'},
+      'blockInvites': {'method': 'blockInvites', 'description': 'Bloqueia os invites dessa pessoa'},
+      'unblockInvites': {'method': 'unblockInvites', 'description': 'Bloqueia os invites dessa pessoa'},
       'blockList': {'method': 'blockList', 'description': 'Bloqueia todos os contatos recebidos separados por vírgula'},
       'blockTudoList': {'method': 'blockTudoList', 'description': 'Sai de todos os grupos em comum com uma lista de pessoas e bloqueia todos os membros'},
       'unblockList': {'method': 'unblockList', 'description': 'Desbloqueia todos os contatos recebidos separados por vírgula'},
@@ -445,6 +447,81 @@ class SuperAdmin {
     }
     
     return results;
+  }
+
+
+  /**
+   * Bloqueia convites de um usuário
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async blockInvites(bot, message, args){
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça um número de telefone para bloquear. Exemplo: !sa-block +5511999999999'
+        });
+      }
+      
+      // Processa o número para formato padrão (apenas dígitos)
+      let phoneNumber = args.join(" ").replace(/\D/g, '');
+      phoneNumber = phoneNumber.split("@")[0];
+      
+      await this.database.toggleUserInvites(phoneNumber, true);
+
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✅ Convites do número ${phoneNumber} bloqueados com sucesso.`
+      });
+  } 
+
+  /**
+   * Desbloqueia convites de um usuário
+   * @param {WhatsAppBot} bot - Instância do bot
+   * @param {Object} message - Dados da mensagem
+   * @param {Array} args - Argumentos do comando
+   * @returns {Promise<ReturnMessage>} - Retorna mensagem de sucesso ou erro
+   */
+  async unblockInvites(bot, message, args){
+      const chatId = message.group || message.author;
+      
+      // Verifica se o usuário é um super admin
+      if (!this.isSuperAdmin(message.author)) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: '⛔ Apenas super administradores podem usar este comando.'
+        });
+      }
+      
+      if (args.length === 0) {
+        return new ReturnMessage({
+          chatId: chatId,
+          content: 'Por favor, forneça um número de telefone para desbloquear. Exemplo: !sa-unblock +5511999999999'
+        });
+      }
+      
+      // Processa o número para formato padrão (apenas dígitos)
+      let phoneNumber = args.join(" ").replace(/\D/g, '');
+      phoneNumber = phoneNumber.split("@")[0];
+      
+      await this.database.toggleUserInvites(phoneNumber, false);
+
+      return new ReturnMessage({
+        chatId: chatId,
+        content: `✅ Convites do número ${phoneNumber} desbloqueados com sucesso.`
+      });
   }
 
 

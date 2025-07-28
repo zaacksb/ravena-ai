@@ -203,3 +203,6 @@ data/qrcode_ravenagold.png
 /data/data-share
 data/kick-token.json
 data/cooldowns.json
+data/soft-blocks.json
+data/yt-channelsID-cache.json
+/public/gifs
