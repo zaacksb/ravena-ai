@@ -175,15 +175,21 @@ async function fetchTopDonates() {
         if (!response.ok) {
             throw new Error('Erro ao buscar doações');
         }
-        const donations = await response.json();
+        let donations = await response.json();
         const donatesTextElement = document.getElementById('topDonatesText');
 
         if (donations.length > 0) {
+            // Ordena por valor e pega os top 15
+            donations = donations
+                .sort((a, b) => b.valor - a.valor)
+                .slice(0, 15);
+
             const text = donations
                 .map(d => `${d.nome}: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.valor)}`)
                 .join('  •  ');
+            
             // Repete o texto para garantir o preenchimento do banner
-            donatesTextElement.textContent = `🏆 TOP DONATES:  •  ${text}  •  `.repeat(5);
+            donatesTextElement.textContent = `🏆 TOP 15 DONATES:  •  ${text}  •  `.repeat(5);
         } else {
             donatesTextElement.textContent = '🏆 TOP DONATES: Nenhuma doação registrada ainda.';
         }

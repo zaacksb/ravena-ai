@@ -55,6 +55,7 @@ async function main() {
         logger.info(`Inicializando '${rBot.nome}' como evolutionAPI`);
         newRBot = new WhatsAppBotEvo({
           id: rBot.nome,
+          vip: rBot.vip ?? false,
           phoneNumber: rBot.numero, // Número de telefone para solicitar código de pareamento
           eventHandler: eventHandler,
           stabilityMonitor: stabilityMonitor,

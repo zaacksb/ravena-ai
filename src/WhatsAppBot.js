@@ -27,6 +27,7 @@ class WhatsAppBot {
    */
   constructor(options) {
     this.id = options.id;
+    this.vip = options.vip;
     this.phoneNumber = options.phoneNumber;
     this.eventHandler = options.eventHandler;
     this.prefix = options.prefix || process.env.DEFAULT_PREFIX || '!';
