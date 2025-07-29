@@ -121,7 +121,8 @@ class BotAPI {
               responseTime: {
                 avg: avgResponseTime,
                 max: maxResponseTime
-              }
+              },
+              vip: bot.vip || false // Adiciona a propriedade VIP
             };
           })
         });
@@ -140,7 +141,8 @@ class BotAPI {
             responseTime: {
               avg: 0,
               max: 0
-            }
+            },
+            vip: bot.vip || false
           }))
         });
       }
@@ -363,14 +365,25 @@ class BotAPI {
       }
     });
 
+    // Endpoint para Top Donates (modificado para privacidade)
     this.app.get('/top-donates', (req, res) => {
         const fs = require('fs');
         const donationsPath = path.join(this.database.databasePath, 'donations.json');
         if (fs.existsSync(donationsPath)) {
-            const donationsData = fs.readFileSync(donationsPath, 'utf8');
-            res.json(JSON.parse(donationsData));
+            try {
+                const donationsData = fs.readFileSync(donationsPath, 'utf8');
+                const donations = JSON.parse(donationsData);
+
+                // Mapeia para remover o campo 'numero' por privacidade
+                const publicDonations = donations.map(({ nome, valor }) => ({ nome, valor }));
+
+                res.json(publicDonations);
+            } catch (error) {
+                this.logger.error('Erro ao ler ou processar o arquivo de doações:', error);
+                res.status(500).json({ error: 'Erro ao processar doações' });
+            }
         } else {
-            res.status(404).json({ error: 'Donations file not found' });
+            res.status(404).json({ error: 'Arquivo de doações não encontrado' });
         }
     });
 

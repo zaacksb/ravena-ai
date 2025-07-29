@@ -95,7 +95,6 @@ function extractPhoneFromBotId(botId, bots) {
     }
     
     // Se não tiver nos metadados, tenta extrair do ID usando expressão regular
-    // Procura um padrão como "número" ou alguma outra lógica baseada no seu padrão de nomeação
     const phoneMatch = botId.match(/(\d{10,15})/);
     if (phoneMatch) {
         return phoneMatch[1];
@@ -103,8 +102,7 @@ function extractPhoneFromBotId(botId, bots) {
     
     // Se não conseguir extrair do ID, verifica se temos um mapeamento explícito
     const botPhoneMap = {
-        'ravena-testes': '555596424307', // Exemplo baseado no código do index.js
-        // Adicione outros mapeamentos conhecidos aqui
+        'ravena-testes': '555596424307', // Exemplo
     };
     
     return botPhoneMap[botId] || '';
@@ -154,12 +152,10 @@ async function fetchHealthData() {
 }
 
 function formatPhoneNumber(number) {
-  // Check if input is valid
   if (!number || typeof number !== 'string' || !/^\d+$/.test(number)) {
-    return 'Invalid phone number';
+    return 'Número inválido';
   }
 
-  // For Brazilian numbers format: +55 (XX) XXXXX-XXXX
   if (number.length >= 12 && number.startsWith('55')) {
     const countryCode = number.substring(0, 2);
     const areaCode = number.substring(2, 4);
@@ -169,8 +165,33 @@ function formatPhoneNumber(number) {
     return `+${countryCode} (${areaCode}) 9${prefix}-${suffix}`;
   } 
   
-  // Return original if format doesn't match expected pattern
   return number;
+}
+
+// Função para buscar e renderizar top doações
+async function fetchTopDonates() {
+    try {
+        const response = await fetch('/top-donates');
+        if (!response.ok) {
+            throw new Error('Erro ao buscar doações');
+        }
+        const donations = await response.json();
+        const donatesTextElement = document.getElementById('topDonatesText');
+
+        if (donations.length > 0) {
+            const text = donations
+                .map(d => `${d.nome}: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(d.valor)}`)
+                .join('  •  ');
+            // Repete o texto para garantir o preenchimento do banner
+            donatesTextElement.textContent = `🏆 TOP DONATES:  •  ${text}  •  `.repeat(5);
+        } else {
+            donatesTextElement.textContent = '🏆 TOP DONATES: Nenhuma doação registrada ainda.';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar top doações:', error);
+        const donatesTextElement = document.getElementById('topDonatesText');
+        donatesTextElement.textContent = '🏆 TOP DONATES: Erro ao carregar.';
+    }
 }
 
 // Função para renderizar os bots
@@ -188,24 +209,46 @@ function renderBots(data) {
     
     // Calcula o total de mensagens/hora de todos os bots
     let totalMsgsHr = 0;
-    
     data.bots.forEach(bot => {
         totalMsgsHr += Math.round(bot.msgsHr || 0);
     });
     
     // Cria o contador de mensagens total
     const msgsCounterDiv = document.getElementById('msgsCounter');
-    
     if (msgsCounterDiv) {
-        // Adiciona o contador de mensagens total
         msgsCounterDiv.innerHTML = `
             <span>Mensagens por Hora atual:</span>
             <span class="count">${totalMsgsHr} msgs/h</span>
         `;
     }
     
+    // Ordena os bots: VIP primeiro
+    data.bots.sort((a, b) => (b.vip === a.vip) ? 0 : b.vip ? -1 : 1);
+
+    let vipBotsRendered = false;
+    let nonVipBotsStarted = false;
+
     // Renderiza os cards de bot
     data.bots.forEach(bot => {
+        // Verifica se há bots VIP para renderizar o texto e separador
+        if (bot.vip) {
+            vipBotsRendered = true;
+        }
+
+        // Insere o separador e o texto se a transição de VIP para não-VIP ocorrer
+        if (vipBotsRendered && !bot.vip && !nonVipBotsStarted) {
+            const infoText = document.createElement('p');
+            infoText.className = 'vip-info-text';
+            infoText.textContent = 'Os bots vip e gold não recebem convites e não interagem no pv';
+            botContainer.appendChild(infoText);
+
+            const separator = document.createElement('hr');
+            separator.className = 'bot-separator';
+            botContainer.appendChild(separator);
+
+            nonVipBotsStarted = true;
+        }
+
         const minutesSinceLastMessage = getTimeSinceLastMessage(bot.lastMessageReceived);
         const statusEmoji = getStatusEmoji(minutesSinceLastMessage, bot.connected);
         const statusDesc = getStatusDescription(minutesSinceLastMessage, bot.connected);
@@ -214,7 +257,6 @@ function renderBots(data) {
         const msgsHr = Math.round(bot.msgsHr || 0);
         const msgActivityClass = getMessageActivityClass(msgsHr);
         
-        // Processa informações de tempo de resposta
         const avgResponseTime = bot.responseTime ? bot.responseTime.avg || 0 : 0;
         const maxResponseTime = bot.responseTime ? bot.responseTime.max || 0 : 0;
         const responseTimeClass = getResponseTimeClass(avgResponseTime);
@@ -222,21 +264,22 @@ function renderBots(data) {
         
         const botCard = document.createElement('div');
         botCard.className = 'bot-card';
+        if (bot.vip) {
+            botCard.classList.add('vip');
+        }
         
         let buttonsHtml = '';
         if (isAdminMode) {
             buttonsHtml = `
-                <div class="detail-item" style="margin-top: 15px; justify-content: center;">
-                    <button class="restart-button" id="restart-button" data-bot-id="${bot.id}">
-                        🔄 Reiniciar Bot
+                <div class="detail-item" style="margin-top: 15px; justify-content: center; gap: 10px;">
+                    <button class="restart-button" data-bot-id="${bot.id}">
+                        🔄 Reiniciar
                     </button>
-
-                    <button class="qr-button" id="qr-button" data-bot-id="${bot.id}">
+                    <button class="qr-button" data-bot-id="${bot.id}">
                         🔳 QRCode
                     </button>
                 </div>
             `;
-
         }
         
         botCard.innerHTML = `
@@ -250,10 +293,6 @@ function renderBots(data) {
                 <div class="status-indicator" title="${statusDesc}">${statusEmoji}</div>
             </div>
             <div class="bot-details">
-                <div class="detail-item">
-                    <span class="detail-label">Status:</span>
-                    <span class="detail-value">${bot.connected ? 'Conectado' : 'Desconectado'}</span>
-                </div>
                 <div class="detail-item">
                     <span class="detail-label">Última mensagem:</span>
                     <span class="detail-value tooltip-container">
@@ -290,18 +329,14 @@ function renderBots(data) {
         
         botContainer.appendChild(botCard);
         
-        // Adiciona evento ao botão de reinicialização se estivermos em modo admin
         if (isAdminMode) {
             const restartButton = botCard.querySelector('.restart-button');
             restartButton.addEventListener('click', () => openRestartModal(bot.id));
             const qrButton = botCard.querySelector('.qr-button');
             qrButton.addEventListener('click', () => openQRModal(bot.id));
-
         }
     });
 }
-
-// Função para abrir modal de reinicialização
 
 function openQRModal(botId){
     window.open(`/qrcode/${botId}`,"_new");
@@ -315,18 +350,15 @@ function openRestartModal(botId) {
     modal.style.display = 'flex';
 }
 
-// Função para fechar modal de reinicialização
 function closeRestartModal() {
     const modal = document.getElementById('restartModal');
     modal.style.display = 'none';
     
-    // Limpa campos
     document.getElementById('reason').value = '';
     document.getElementById('apiUser').value = '';
     document.getElementById('apiPassword').value = '';
 }
 
-// Função para reiniciar um bot
 async function restartBot() {
     const botId = document.getElementById('modalBotId').textContent;
     const reason = document.getElementById('reason').value || 'Reinicialização pelo painel web';
@@ -339,7 +371,6 @@ async function restartBot() {
     }
     
     try {
-        // Cria credenciais de autenticação básica
         const authHeader = 'Basic ' + btoa(`${apiUser}:${apiPassword}`);
         
         const response = await fetch(`/restart/${botId}`, {
@@ -359,10 +390,7 @@ async function restartBot() {
         const result = await response.json();
         alert(`Bot ${botId} está sendo reiniciado. ${result.message}`);
         
-        // Fecha o modal
         closeRestartModal();
-        
-        // Atualiza dados após alguns segundos
         setTimeout(fetchHealthData, 5000);
     } catch (error) {
         console.error('Erro ao reiniciar bot:', error);
@@ -371,8 +399,6 @@ async function restartBot() {
 }
 
 // Funções para a seção de análise de dados
-
-// Função para atualizar os filtros de bots para os gráficos
 function updateBotFilters(bots) {
     const botFiltersContainer = document.getElementById('botFilters');
     botFiltersContainer.innerHTML = '';
@@ -382,7 +408,6 @@ function updateBotFilters(bots) {
         return;
     }
     
-    // Se ainda não temos bots selecionados, seleciona todos por padrão
     if (selectedBots.length === 0) {
         selectedBots = bots.map(bot => bot.id);
     }
@@ -399,33 +424,24 @@ function updateBotFilters(bots) {
         
         botFiltersContainer.appendChild(filterItem);
         
-        // Adiciona evento de mudança para o checkbox
         const checkbox = filterItem.querySelector('input[type="checkbox"]');
         checkbox.addEventListener('change', () => {
             if (checkbox.checked) {
-                // Adiciona ao array se não existir
                 if (!selectedBots.includes(bot.id)) {
                     selectedBots.push(bot.id);
                 }
             } else {
-                // Remove do array
                 const index = selectedBots.indexOf(bot.id);
                 if (index !== -1) {
                     selectedBots.splice(index, 1);
                 }
             }
-            
-            // Atualiza os gráficos com os novos filtros
             fetchAnalyticsData();
         });
     });
 }
 
-// Processa dados analíticos
 function processAnalyticsData(data) {
-    console.log('Processando dados analíticos:', data);
-    
-    // Verifica se temos os dados necessários
     if (!data || !data.daily || !data.weekly || !data.monthly || !data.yearly) {
         console.error('Dados incompletos ou inválidos');
         return {
@@ -436,34 +452,26 @@ function processAnalyticsData(data) {
         };
     }
     
-    // Processa os dados diários (gráfico de horas)
     const processedDaily = {
         hours: data.daily.hours || Array.from({ length: 24 }, (_, i) => i),
         series: data.daily.series || []
     };
     
-    // Processa os dados semanais (gráfico de dias da semana)
     const processedWeekly = {
         days: data.weekly.days || ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
         series: data.weekly.series || []
     };
     
-    // Processa os dados mensais (gráfico de dias do mês)
     const processedMonthly = {
         days: data.monthly.days || Array.from({ length: 31 }, (_, i) => i + 1),
         series: data.monthly.series || []
     };
     
-    // Processa os dados anuais (gráfico de dias do ano)
     let yearlyDates = data.yearly.dates;
-    
-    // Se não temos datas definidas, mas temos dados nas séries,
-    // vamos criar datas fictícias baseadas no número de pontos
     if ((!yearlyDates || yearlyDates.length === 0) && data.yearly.series && data.yearly.series.length > 0) {
         const firstSeries = data.yearly.series[0];
         if (firstSeries && firstSeries.data) {
             const dataLength = firstSeries.data.length;
-            // Cria array de "Dia 1" até "Dia N"
             yearlyDates = Array.from({ length: dataLength }, (_, i) => `Dia ${i+1}`);
         }
     }
@@ -481,10 +489,8 @@ function processAnalyticsData(data) {
     };
 }
 
-// Função para buscar dados de análise
 async function fetchAnalyticsData() {
     try {
-        // Mostra loaders nos containeres de gráficos
         document.querySelectorAll('.chart-container').forEach(container => {
             container.innerHTML = `
                 <h3 class="chart-title">${container.querySelector('.chart-title')?.textContent || 'Carregando...'}</h3>
@@ -495,7 +501,6 @@ async function fetchAnalyticsData() {
             `;
         });
         
-        // Constrói a URL com os parâmetros de filtro
         const params = new URLSearchParams();
         params.append('period', activePeriod);
         selectedBots.forEach(botId => {
@@ -506,43 +511,25 @@ async function fetchAnalyticsData() {
         
         try {
             const response = await fetch(`/analytics?${params.toString()}`);
-            
             if (!response.ok) {
                 throw new Error(`Erro ao obter dados de análise: ${response.status}`);
             }
-            
             data = await response.json();
         } catch (error) {
             console.error('Erro na chamada principal, tentando fallback:', error);
-            
-            // Fallback para dados locais (apenas para desenvolvimento)
-            try {
-                const fallbackResponse = await fetch('/analytics_period=today.json');
-                if (!fallbackResponse.ok) {
-                    throw new Error('Arquivo de fallback não encontrado');
-                }
-                
-                data = await fallbackResponse.json();
-                console.log('Usando dados de fallback para visualização');
-            } catch (fallbackError) {
-                throw new Error(`Erro ao obter dados. Tentativa principal: ${error.message}. Fallback: ${fallbackError.message}`);
-            }
+            const fallbackResponse = await fetch('/analytics_period=today.json');
+            if (!fallbackResponse.ok) throw new Error('Arquivo de fallback não encontrado');
+            data = await fallbackResponse.json();
+            console.log('Usando dados de fallback para visualização');
         }
         
-        if (!data) {
-            throw new Error('Nenhum dado recebido');
-        }
+        if (!data) throw new Error('Nenhum dado recebido');
         
-        // Processa os dados recebidos para garantir compatibilidade
         const processedData = processAnalyticsData(data);
-        
-        // Renderiza os gráficos com os dados processados
         renderCharts(processedData);
         
     } catch (error) {
         console.error('Erro ao buscar dados de análise:', error);
-        
-        // Exibe mensagem de erro em todos os containers de gráficos
         document.querySelectorAll('.chart-container').forEach(container => {
             container.innerHTML = `
                 <h3 class="chart-title">${container.querySelector('.chart-title')?.textContent || 'Erro'}</h3>
@@ -555,313 +542,90 @@ async function fetchAnalyticsData() {
     }
 }
 
-// Função para renderizar os gráficos
 function renderCharts(data) {
-    // Configurações comuns do Highcharts
     const commonOptions = {
-        chart: {
-            backgroundColor: 'transparent',
-            style: {
-                fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
-            }
-        },
-        title: {
-            text: null
-        },
-        credits: {
-            enabled: false
-        },
-        exporting: {
-            enabled: true,
-            buttons: {
-                contextButton: {
-                    menuItems: ['downloadPNG', 'downloadJPEG', 'downloadPDF', 'downloadCSV']
-                }
-            }
-        },
-        legend: {
-            itemStyle: {
-                color: '#b7b7c5'
-            },
-            itemHoverStyle: {
-                color: '#04a9f0'
-            }
-        },
-        xAxis: {
-            labels: {
-                style: {
-                    color: '#b7b7c5'
-                }
-            },
-            lineColor: '#47486c',
-            tickColor: '#47486c'
-        },
-        yAxis: {
-            title: {
-                text: 'Mensagens',
-                style: {
-                    color: '#b7b7c5'
-                }
-            },
-            labels: {
-                style: {
-                    color: '#b7b7c5'
-                }
-            },
-            gridLineColor: 'rgba(71, 72, 108, 0.3)'
-        },
-        plotOptions: {
-            series: {
-                marker: {
-                    enabled: false
-                }
-            }
-        },
+        chart: { backgroundColor: 'transparent', style: { fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' } },
+        title: { text: null },
+        credits: { enabled: false },
+        exporting: { enabled: true, buttons: { contextButton: { menuItems: ['downloadPNG', 'downloadJPEG', 'downloadPDF', 'downloadCSV'] } } },
+        legend: { itemStyle: { color: '#b7b7c5' }, itemHoverStyle: { color: '#04a9f0' } },
+        xAxis: { labels: { style: { color: '#b7b7c5' } }, lineColor: '#47486c', tickColor: '#47486c' },
+        yAxis: { title: { text: 'Mensagens', style: { color: '#b7b7c5' } }, labels: { style: { color: '#b7b7c5' } }, gridLineColor: 'rgba(71, 72, 108, 0.3)' },
+        plotOptions: { series: { marker: { enabled: false } } },
         colors: ['#04a9f0', '#3e0ea7', '#47486c', '#b7b7c5', '#6a0dad', '#1e90ff']
     };
     
-    console.log('Dados processados para renderização:', data);
-    
-    // Renderiza o gráfico de média diária (por hora)
     renderDailyChart(data.daily, commonOptions);
-    
-    // Renderiza o gráfico de média semanal
     renderWeeklyChart(data.weekly, commonOptions);
-    
-    // Renderiza o gráfico de média mensal
     renderMonthlyChart(data.monthly, commonOptions);
-    
-    // Renderiza o gráfico anual
     renderYearlyChart(data.yearly, commonOptions);
 }
 
-// Função para renderizar o gráfico diário
 function renderDailyChart(data, commonOptions) {
     const container = document.getElementById('dailyMessageChart');
-    
     if (!data || !data.hours || !data.series || data.series.length === 0) {
-        container.innerHTML = `
-            <h3 class="chart-title">Média de Mensagens do Dia</h3>
-            <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
-        `;
+        container.innerHTML = `<h3 class="chart-title">Média de Mensagens do Dia</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
         return;
     }
-    
-    const chartOptions = {
-        ...commonOptions,
-        chart: {
-            ...commonOptions.chart,
-            type: 'spline'
-        },
-        xAxis: {
-            ...commonOptions.xAxis,
-            categories: data.hours,
-            title: {
-                text: 'Hora do Dia',
-                style: {
-                    color: '#b7b7c5'
-                }
-            }
-        },
-        tooltip: {
-            formatter: function() {
-                return `<b>${this.x}:00</b><br/>${this.series.name}: <b>${this.y}</b> msgs`;
-            },
-            backgroundColor: 'rgba(35, 6, 109, 0.9)',
-            style: {
-                color: '#fff'
-            },
-            borderWidth: 0
-        },
-        series: data.series
-    };
-    
-    Highcharts.chart(container, chartOptions);
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'spline' }, xAxis: { ...commonOptions.xAxis, categories: data.hours, title: { text: 'Hora do Dia', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>${this.x}:00</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
 }
 
-// Função para renderizar o gráfico semanal
 function renderWeeklyChart(data, commonOptions) {
     const container = document.getElementById('weeklyMessageChart');
-    
     if (!data || !data.days || !data.series || data.series.length === 0) {
-        container.innerHTML = `
-            <h3 class="chart-title">Média de Mensagens da Semana</h3>
-            <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
-        `;
+        container.innerHTML = `<h3 class="chart-title">Média de Mensagens da Semana</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
         return;
     }
-    
-    const chartOptions = {
-        ...commonOptions,
-        chart: {
-            ...commonOptions.chart,
-            type: 'column'
-        },
-        xAxis: {
-            ...commonOptions.xAxis,
-            categories: data.days,
-            title: {
-                text: 'Dia da Semana',
-                style: {
-                    color: '#b7b7c5'
-                }
-            }
-        },
-        tooltip: {
-            formatter: function() {
-                return `<b>${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`;
-            },
-            backgroundColor: 'rgba(35, 6, 109, 0.9)',
-            style: {
-                color: '#fff'
-            },
-            borderWidth: 0
-        },
-        series: data.series
-    };
-    
-    Highcharts.chart(container, chartOptions);
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'column' }, xAxis: { ...commonOptions.xAxis, categories: data.days, title: { text: 'Dia da Semana', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
 }
 
-// Função para renderizar o gráfico mensal
 function renderMonthlyChart(data, commonOptions) {
     const container = document.getElementById('monthlyMessageChart');
-    
     if (!data || !data.days || !data.series || data.series.length === 0) {
-        container.innerHTML = `
-            <h3 class="chart-title">Média de Mensagens do Mês</h3>
-            <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
-        `;
+        container.innerHTML = `<h3 class="chart-title">Média de Mensagens do Mês</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
         return;
     }
-    
-    const chartOptions = {
-        ...commonOptions,
-        chart: {
-            ...commonOptions.chart,
-            type: 'spline'
-        },
-        xAxis: {
-            ...commonOptions.xAxis,
-            categories: data.days,
-            title: {
-                text: 'Dia do Mês',
-                style: {
-                    color: '#b7b7c5'
-                }
-            }
-        },
-        tooltip: {
-            formatter: function() {
-                return `<b>Dia ${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`;
-            },
-            backgroundColor: 'rgba(35, 6, 109, 0.9)',
-            style: {
-                color: '#fff'
-            },
-            borderWidth: 0
-        },
-        series: data.series
-    };
-    
-    Highcharts.chart(container, chartOptions);
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'spline' }, xAxis: { ...commonOptions.xAxis, categories: data.days, title: { text: 'Dia do Mês', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>Dia ${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
 }
 
-// Função para renderizar o gráfico anual
 function renderYearlyChart(data, commonOptions) {
     const container = document.getElementById('yearlyMessageChart');
-    
     if (!data || (!data.dates || data.dates.length === 0) || !data.series || data.series.length === 0) {
-        container.innerHTML = `
-            <h3 class="chart-title">Total de Mensagens por Dia do Ano</h3>
-            <p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>
-        `;
+        container.innerHTML = `<h3 class="chart-title">Total de Mensagens por Dia do Ano</h3><p style="text-align: center; padding: 30px; color: #b7b7c5;">Nenhum dado disponível</p>`;
         return;
     }
-    
-    const chartOptions = {
-        ...commonOptions,
-        chart: {
-            ...commonOptions.chart,
-            type: 'areaspline',
-            zoomType: 'x'
-        },
-        xAxis: {
-            ...commonOptions.xAxis,
-            categories: data.dates,
-            labels: {
-                ...commonOptions.xAxis.labels,
-                // Rotaciona os rótulos para melhor legibilidade quando há muitos pontos
-                rotation: -45,
-                step: Math.ceil(data.dates.length / 30) // Exibe apenas alguns rótulos para não sobrecarregar
-            },
-            title: {
-                text: 'Data',
-                style: {
-                    color: '#b7b7c5'
-                }
-            }
-        },
-        tooltip: {
-            formatter: function() {
-                return `<b>${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`;
-            },
-            backgroundColor: 'rgba(35, 6, 109, 0.9)',
-            style: {
-                color: '#fff'
-            },
-            borderWidth: 0
-        },
-        series: data.series
-    };
-    
-    Highcharts.chart(container, chartOptions);
+    Highcharts.chart(container, { ...commonOptions, chart: { ...commonOptions.chart, type: 'areaspline', zoomType: 'x' }, xAxis: { ...commonOptions.xAxis, categories: data.dates, labels: { ...commonOptions.xAxis.labels, rotation: -45, step: Math.ceil(data.dates.length / 30) }, title: { text: 'Data', style: { color: '#b7b7c5' } } }, tooltip: { formatter: function() { return `<b>${this.x}</b><br/>${this.series.name}: <b>${this.y}</b> msgs`; }, backgroundColor: 'rgba(35, 6, 109, 0.9)', style: { color: '#fff' }, borderWidth: 0 }, series: data.series });
 }
 
-// Evento de carregamento da página
 document.addEventListener('DOMContentLoaded', () => {
-    // Verifica se estamos em modo admin
     checkAdminMode();
-    
-    // Carrega dados iniciais
+    fetchTopDonates();
     fetchHealthData();
     
-    // Configura os filtros de período para os gráficos
     const timeFilters = document.querySelectorAll('.time-filter');
     timeFilters.forEach(filter => {
         filter.addEventListener('click', () => {
-            // Remove a classe ativa de todos os filtros
             timeFilters.forEach(f => f.classList.remove('active'));
-            
-            // Adiciona a classe ativa ao filtro clicado
             filter.classList.add('active');
-            
-            // Atualiza o período ativo
             activePeriod = filter.dataset.period;
-            
-            // Busca novos dados
             fetchAnalyticsData();
         });
     });
     
-    // Carrega dados analíticos iniciais
     fetchAnalyticsData();
     
-    // Configura o botão de atualização
     const refreshButton = document.getElementById('refreshButton');
     if (refreshButton) {
         refreshButton.addEventListener('click', fetchHealthData);
     }
     
-    // Configura eventos do modal
     const cancelButton = document.getElementById('cancelRestart');
     const confirmButton = document.getElementById('confirmRestart');
-    
     if (cancelButton && confirmButton) {
         cancelButton.addEventListener('click', closeRestartModal);
         confirmButton.addEventListener('click', restartBot);
     }
     
-    // Atualiza automaticamente a cada 30 segundos
     setInterval(fetchHealthData, 30000);
+    setInterval(fetchTopDonates, 5 * 60 * 1000); // Atualiza doações a cada 5 minutos
 });

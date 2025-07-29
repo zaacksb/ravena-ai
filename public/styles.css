@@ -6,6 +6,7 @@
     --dark-bg: #05060d;
     --medium-gray: #47486c;
     --medium-dark-purple: #25224f;
+    --gold-color: #FFD700;
 }
 
 * {
@@ -48,6 +49,60 @@ h1 {
     text-shadow: 0 0 10px rgba(4, 169, 240, 0.5);
 }
 
+/* Estilos para os links sociais */
+.social-links {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.social-icon {
+    width: 40px;
+    height: 40px;
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+}
+
+.social-icon:hover {
+    opacity: 1;
+}
+
+/* Estilos para o banner de doações */
+.scrolling-banner-container {
+    width: 100%;
+    background-color: var(--dark-purple);
+    overflow: hidden;
+    padding: 10px 0;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.scrolling-banner {
+    display: flex;
+    align-items: center;
+}
+
+.scrolling-text {
+    white-space: nowrap;
+    color: var(--bright-blue);
+    font-weight: bold;
+    font-size: 1rem;
+    animation: scroll-left 45s linear infinite;
+    padding-left: 100%;
+}
+
+@keyframes scroll-left {
+    0% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
 .status-section, .analytics-section {
     background-color: var(--medium-dark-purple);
     border-radius: 8px;
@@ -69,11 +124,17 @@ h1 {
     padding: 20px;
     transition: transform 0.3s ease;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border-bottom: 4px solid transparent; /* Borda padrão */
 }
 
 .bot-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bot-card.vip {
+    border-bottom-color: var(--gold-color);
+    box-shadow: 0 6px 12px rgba(255, 215, 0, 0.2);
 }
 
 .bot-header {
@@ -178,6 +239,24 @@ h1 {
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+/* Estilos para o texto de informação VIP e separador */
+.vip-info-text {
+    font-style: italic;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--light-gray);
+    margin: 20px 0 10px 0;
+    grid-column: 1 / -1; /* Ocupa toda a largura do grid */
+}
+
+.bot-separator {
+    border: 0;
+    height: 1px;
+    background: var(--medium-gray);
+    margin: 10px 0 20px 0;
+    grid-column: 1 / -1; /* Ocupa toda a largura do grid */
 }
 
 footer {
@@ -493,9 +572,6 @@ footer {
 
 /* Estilo para contador de mensagens por hora total */
 .total-msgs-counter {
-    /*display: inline-flex;
-    align-items: center;
-    justify-content: center;*/
     text-align: center;
     background-color: var(--medium-purple);
     color: white;
