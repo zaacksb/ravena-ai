@@ -1780,9 +1780,9 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       const number = contactId.split("@")[0];
       contato = await this.recoverContactFromCache(number);
 
-      if(isLid){
-        this.logger.debug(`[getContactDetails][${this.id}][DEBUG_LID] ${JSON.stringify(cid)}, senderPn: ${JSON.stringify(senderPn)}`);
-      }
+      // if(isLid){
+      //   this.logger.debug(`[getContactDetails][${this.id}][DEBUG_LID] ${JSON.stringify(cid)}, senderPn: ${JSON.stringify(senderPn)}`);
+      // }
 
       if(!contato){
         this.logger.debug(`[getContactDetails][${this.id}] Fetching contact details for: ${contactId}`);

@@ -363,6 +363,17 @@ class BotAPI {
       }
     });
 
+    this.app.get('/top-donates', (req, res) => {
+        const fs = require('fs');
+        const donationsPath = path.join(this.database.databasePath, 'donations.json');
+        if (fs.existsSync(donationsPath)) {
+            const donationsData = fs.readFileSync(donationsPath, 'utf8');
+            res.json(JSON.parse(donationsData));
+        } else {
+            res.status(404).json({ error: 'Donations file not found' });
+        }
+    });
+
     // Serve management page
     this.app.get('/manage/:token', (req, res) => {  
       const { token } = req.params;  
