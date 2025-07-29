@@ -618,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    fetchAnalyticsData();
+    setTimeout(fetchAnalyticsData, 1500);
     
     const refreshButton = document.getElementById('refreshButton');
     if (refreshButton) {
