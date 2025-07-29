@@ -189,7 +189,7 @@ async function fetchTopDonates() {
                 .join('  •  ');
             
             // Repete o texto para garantir o preenchimento do banner
-            donatesTextElement.textContent = `🏆 TOP 15 DONATES:  •  ${text}  •  `.repeat(5);
+            donatesTextElement.textContent = `🏆 TOP DONATES:  •  ${text}  •  `.repeat(5);
         } else {
             donatesTextElement.textContent = '🏆 TOP DONATES: Nenhuma doação registrada ainda.';
         }
@@ -223,7 +223,7 @@ function renderBots(data) {
     const msgsCounterDiv = document.getElementById('msgsCounter');
     if (msgsCounterDiv) {
         msgsCounterDiv.innerHTML = `
-            <span>Mensagens por Hora atual:</span>
+            <span>Processando no moomento</span>
             <span class="count">${totalMsgsHr} msgs/h</span>
         `;
     }

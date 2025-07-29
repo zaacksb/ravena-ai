@@ -581,6 +581,7 @@ footer {
     margin: 20px auto;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s, background-color 0.3s;
+    width: 75%;
 }
 
 .total-msgs-counter:hover {
@@ -591,4 +592,15 @@ footer {
 .total-msgs-counter .count {
     margin-left: 8px;
     font-size: 1.2rem;
+    font-style: italic;
+}
+
+.aviso-vips {
+    width: 100%;
+    text-align: center;
+    padding-top: 20px;
+}
+
+.aviso-vips > i{
+    border-bottom: 1px solid #ffd700;
 }
