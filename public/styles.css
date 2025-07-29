@@ -228,7 +228,7 @@ h1 {
 }
 
 .status-legend {
-    display: flex;
+    display: none;
     justify-content: center;
     gap: 20px;
     margin-top: 10px;
