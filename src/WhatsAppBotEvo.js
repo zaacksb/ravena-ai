@@ -1522,7 +1522,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
       } else if (content instanceof MessageMedia || content.isMessageMedia || options.sendMediaAsSticker) {
 
         endpoint = '/message/sendMedia';
-        this.logger.debug(`[sendMessage] ${endpoint} (${JSON.stringify(options)})`);
+        this.logger.debug(`[sendMessage] ${endpoint} (${content.mimetype ?? '?mimetype?'} / ${JSON.stringify(options)})`);
         
 
         let mediaType = 'image';
