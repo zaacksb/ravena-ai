@@ -133,7 +133,7 @@ async function processYoutubeReaction(bot, message, emoji) {
       
       try {
         // Cria objeto de mídia
-        const media = await bot.createMedia(result.arquivo);
+        const media = await bot.createMedia(result.arquivo, "video/mp4");
         
         // Envia vídeo
         const videoMsg = new ReturnMessage({
@@ -376,7 +376,7 @@ async function ytCommand(bot, message, args, group) {
       
       try {
         // Cria objeto de mídia
-        const media = await bot.createMedia(result.arquivo);
+        const media = await bot.createMedia(result.arquivo, "video/mp4");
         
         // Envia vídeo
         const videoMsg = new ReturnMessage({
@@ -493,7 +493,7 @@ async function srCommand(bot, message, args, group) {
       
       try {
         // Cria objeto de mídia
-        const media = await bot.createMedia(result.arquivo);
+        const media = await bot.createMedia(result.arquivo, "audio/mp3");
         
         // Envia áudio
         const audioMsg = new ReturnMessage({
