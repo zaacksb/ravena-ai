@@ -217,13 +217,19 @@ ${formattedMessages}`;
     const llmMentions = interaction.match(/@(\d{8,})/g)?.map(m => m.slice(1)) || [];
 
     // Envia a mensagem de interação
-    return new ReturnMessage({
-      chatId: message.group,
-      content: interaction,
-      mentions: llmMentions
-    });
+    if(interaction.includes("Não foi poss") && !retornarErro){
+      logger.info(`Mensagem de interação ignorada pois ocorreu um erro na hora de gerar (${message.group}/'${interaction}')`);
+      return [];
+    } else {
+      logger.info(`Mensagem de interação enviada com sucesso para ${message.group}`);
+
+      return new ReturnMessage({
+        chatId: message.group,
+        content: interaction,
+        mentions: llmMentions
+      });
+    }
     
-    logger.info(`Mensagem de interação enviada com sucesso para ${message.group}`);
   } catch (error) {
     logger.error('Erro ao gerar interação:', error);
     if(retornarErro){
