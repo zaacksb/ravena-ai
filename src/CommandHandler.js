@@ -1241,7 +1241,13 @@ class CommandHandler {
               }
             });
           } else {
-            const media = await bot.createMedia(mediaPath);
+
+            // Audio 'mpeg' ela acha que é video, enviar customMime
+            let customMime = false;
+            if(mediaType === "audio"){
+              customMime = "audio/mpeg";
+            }
+            const media = await bot.createMedia(mediaPath, customMime);
             
             return new ReturnMessage({
               chatId: message.group,

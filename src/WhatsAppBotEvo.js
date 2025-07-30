@@ -1690,14 +1690,14 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     return results;
   }
 
-  async createMedia(filePath) {
+  async createMedia(filePath, customMime = false) {
     try {
       if (!fs.existsSync(filePath)) {
           throw new Error(`File not found: ${filePath}`);
       }
       const data = fs.readFileSync(filePath, { encoding: 'base64' });
       const filename = path.basename(filePath);
-      const mimetype = mime.lookup(filePath) || 'application/octet-stream';
+      const mimetype = customMime ?? (mime.lookup(filePath) || 'application/octet-stream');
       return { mimetype, data, filename, source: 'file', isMessageMedia: true }; // MessageMedia compatible
     } catch (error) {
       this.logger.error(`[${this.id}] Evo: Error creating media from ${filePath}:`, error);
