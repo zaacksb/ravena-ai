@@ -78,6 +78,7 @@ const COMMAND_ORDER = [
 	"pesca-ranking",
 	"pescados",
 	"meus-pescados",
+	"pesca-info",
 	"pesca-lendas",
 	"pesca-reset",
 	"pinto",
