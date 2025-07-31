@@ -871,6 +871,7 @@ class CustomVariableProcessor {
         const selectRandom = (arr) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
         let selectedPost, mediaUrl, mediaType;
 
+        let customMime = "image/jpeg";
         if (selectedPost = selectRandom(images)) {
             mediaUrl = selectedPost.data.url_overridden_by_dest;
             mediaType = 'image';
@@ -880,13 +881,14 @@ class CustomVariableProcessor {
         } else if (selectedPost = selectRandom(videos)) {
             mediaUrl = selectedPost.data.media.reddit_video.fallback_url;
             mediaType = 'video';
+            customMime = "video/mp4";
         }
         
 
 
         // 6. Cria o MessageMedia e retorna o payload
         if (selectedPost && mediaUrl && mediaType) {
-            const media = await context.bot.createMediaFromURL(mediaUrl);
+            const media = await context.bot.createMediaFromURL(mediaUrl, {unsafeMime: true, customMime});
 
             // Hijack as options pra fazer legenda
             context.options.caption = `🖼️ [${selectedPost.data.subreddit_name_prefixed}] _${selectedPost.data.title}_

@@ -1690,20 +1690,6 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     return results;
   }
 
-  async createMedia(filePath, customMime = false) {
-    try {
-      if (!fs.existsSync(filePath)) {
-          throw new Error(`File not found: ${filePath}`);
-      }
-      const data = fs.readFileSync(filePath, { encoding: 'base64' });
-      const filename = path.basename(filePath);
-      const mimetype = customMime ?? (mime.lookup(filePath) || 'application/octet-stream');
-      return { mimetype, data, filename, source: 'file', isMessageMedia: true }; // MessageMedia compatible
-    } catch (error) {
-      this.logger.error(`[${this.id}] Evo: Error creating media from ${filePath}:`, error);
-      throw error;
-    }
-  }
 
   async updateContact(contactData){
     // TODO
@@ -1729,8 +1715,23 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
     this.cacheManager.putContactInCache(contato);
   }
 
-  // Essa ode alterar pra mandar a URL e o Evolution se vira
-  async createMediaFromURL(url, options = { unsafeMime: true }) {
+  async createMedia(filePath, customMime = false) {
+    try {
+      if (!fs.existsSync(filePath)) {
+          throw new Error(`File not found: ${filePath}`);
+      }
+      const data = fs.readFileSync(filePath, { encoding: 'base64' });
+      const filename = path.basename(filePath);
+      const mimetype = customMime ? customMime : (mime.lookup(filePath) || 'application/octet-stream');
+      return { mimetype, data, filename, source: 'file', isMessageMedia: true }; // MessageMedia compatible
+    } catch (error) {
+      this.logger.error(`[${this.id}] Evo: Error creating media from ${filePath}:`, error);
+      throw error;
+    }
+  }
+
+
+  async createMediaFromURL(url, options = { unsafeMime: true, customMime: false }) {
     try {
       // For Evolution API, passing URL directly to `sendMessage` is often possible if `content.url` is used.
       const filename = path.basename(new URL(url).pathname) || 'media_from_url';
@@ -1741,7 +1742,7 @@ apikey: '784C1817525B-4C53-BB49-36FF0887F8BF'
           try {
               const headResponse = await axios.head(url);
               this.logger.info("mimetype do hedaer? ", headResponse);
-              mimetype = headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream';
+              mimetype = options.customMime ? options.customMime : (headResponse.headers['content-type']?.split(';')[0] || 'application/octet-stream');
           } catch(e) { /* ignore */ }
       }
       return { url, mimetype, filename, source: 'url', isMessageMedia: true}; // MessageMedia compatible for URL sending
