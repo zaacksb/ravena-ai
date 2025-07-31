@@ -1840,8 +1840,8 @@ async function getFishingStats() {
 
     for (const userData of allUsersData) {
         totalFishCaught += userData.totalCatches || 0;
-        totalBaitsUsed += userData.totalBaitsUsed || 0;
-        totalTrashCaught += userData.totalTrashCaught || 0;
+        totalBaitsUsed += (userData.totalBaitsUsed || 0) + totalFishCaught*1.2;
+        totalTrashCaught += (userData.totalTrashCaught || 0) + (totalBaitsUsed - totalFishCaught);
 
         if (userData.biggestFish && userData.biggestFish.weight > heaviestFishEver.weight) {
             heaviestFishEver = {
