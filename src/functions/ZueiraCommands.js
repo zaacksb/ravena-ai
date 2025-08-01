@@ -175,7 +175,7 @@ async function pix(bot, message, args, group) {
     const cttRecebedor = await bot.client.getContactById(message.mentions[0] ?? message.evoMessageData.sender);
     nomeRecebedor = cttPagador.pushname ?? cttPagador.name ?? "Fulano";
   } else if(!isFinite(args[0])) { // se não for mention nem numero, é um nome (chute)
-    nomeRecebedor = args.slice(0, iValor);
+    nomeRecebedor = args.slice(0, iValor).join(" ");
   }
 
 
