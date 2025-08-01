@@ -163,17 +163,25 @@ async function pix(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   const options = {};
-
   const valorPix = encontrarPrimeiroNumero(args);
 
-  const cttPagador = await bot.client.getContactById(message.evoMessageData.sender);
-  const cttRecebedor = await bot.client.getContactById(message.mentions[0] ?? message.evoMessageData.sender);
+  const nomePagador = message.pushname ?? message.authorName ?? message.name ?? "Fulano";
+  let nomeRecebedor = "Fulano";
+
+  if(args[0].startsWith("@")){
+    // Primeiro argumento é um mention
+    const cttRecebedor = await bot.client.getContactById(message.mentions[0] ?? message.evoMessageData.sender);
+    nomeRecebedor = cttPagador.pushname ?? cttPagador.name ?? "Fulano";
+  } else if(!isFinite(args[0])) { // se não for mention nem numero, é um nome (chute)
+    nomeRecebedor = args[0];
+  }
+
 
   const dadosPix = {
       valor: formatarValorSimples(valorPix),
       dataHora: gerarDataHoraAtual(),
       recebedor: {
-          nome: cttRecebedor.pushname ?? cttRecebedor.name ?? "Fulano",
+          nome: nomeRecebedor,
           cpf: gerarCpf(),
           tipo: `${gerarStringAleatoria(4)}-${gerarStringAleatoria(1)}`,
           conta: `${gerarStringAleatoria(6)}-${gerarStringAleatoria(1)}`,
@@ -181,7 +189,7 @@ async function pix(bot, message, args, group) {
           hash: `${gerarStringAleatoria(8,false,true)}-${gerarStringAleatoria(4,false,true)}-${gerarStringAleatoria(4,false,true)}-${gerarStringAleatoria(4,false,true)}-${gerarStringAleatoria(12,false,true)}`
       },
       pagador: {
-          nome: cttPagador.pushname ?? cttPagador.name ?? "Fulano",
+          nome: nomePagador,
           cpf: gerarCpf(),
           tipo: `${gerarStringAleatoria(4)}-${gerarStringAleatoria(1)}`,
           conta: `${gerarStringAleatoria(6)}-${gerarStringAleatoria(1)}`,
