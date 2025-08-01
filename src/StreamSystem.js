@@ -379,7 +379,7 @@ class StreamSystem {
           );
         }
         
-        await this.bot.database.saveGroup(group);
+        //await this.bot.database.saveGroup(group);
         return;
       }
 

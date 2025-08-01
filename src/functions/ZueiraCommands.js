@@ -143,19 +143,19 @@ function formatarValorSimples(valor){
 function encontrarPrimeiroNumero(args){
   for (const item of args) {
     if (typeof item === 'number' && isFinite(item)) {
-      return item;
+      return {n: item, i: args.indexOf(item)};
     }
 
     if (typeof item === 'string') {
       const strPadronizada = item.replace(',', '.');
       
       if (!isNaN(Number(strPadronizada)) && item.trim() !== '') {
-        return item;
+        return {n: item, i: args.indexOf(item)};
       }
     }
   }
 
-  return null;
+  return {n: 0, i: 1};
 };
 
 
@@ -163,7 +163,9 @@ async function pix(bot, message, args, group) {
   const chatId = message.group || message.author;
 
   const options = {};
-  const valorPix = encontrarPrimeiroNumero(args);
+  const res = encontrarPrimeiroNumero(args);
+  const valorPix = res.n;
+  const iValor = res.i;
 
   const nomePagador = message.pushname ?? message.authorName ?? message.name ?? "Fulano";
   let nomeRecebedor = "Fulano";
@@ -173,7 +175,7 @@ async function pix(bot, message, args, group) {
     const cttRecebedor = await bot.client.getContactById(message.mentions[0] ?? message.evoMessageData.sender);
     nomeRecebedor = cttPagador.pushname ?? cttPagador.name ?? "Fulano";
   } else if(!isFinite(args[0])) { // se não for mention nem numero, é um nome (chute)
-    nomeRecebedor = args[0];
+    nomeRecebedor = args.slice(0, iValor);
   }
 
 
