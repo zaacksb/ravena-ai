@@ -46,7 +46,7 @@ class NSFWPredict {
     try {
       const completionOptions = {
         prompt: prompt,
-        provider: 'lmstudio',
+        //provider: 'lmstudio',
         image: imageBase64,
         response_format: nsfwSchema,
         temperature: 0.2,

@@ -81,7 +81,7 @@ async function aiCommand(bot, message, args, group) {
         completionOptions.prompt = "Analise esta imagem e entregue um resumo detalhado"
       }
 
-      completionOptions.provider = 'lmstudio';
+      //completionOptions.provider = 'lmstudio';
       completionOptions.image = media.data;
       
       // Quando interpretar imagens, usar um contexto diferente
