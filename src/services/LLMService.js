@@ -21,6 +21,9 @@ class LLMService {
     this.apiTimeout = config.apiTimeout || parseInt(process.env.API_TIMEOUT) || 60000;
     this.localModel = process.env.LOCAL_LLM_MODEL || "google/gemma-3-12b";
     this.LMStudioToken = process.env.LMSTUDIO_TOKEN ?? "";
+    this.ollamaEndpoint = config.ollamaEndpoint || process.env.OLLAMA_ENDPOINT || 'http://localhost:11434';
+    this.ollamaModel = config.ollamaModel || process.env.OLLAMA_MODEL || 'gemma3:12b';
+
     /*  
     this.logger.debug('LLMService inicializado com configuração:', {
       hasOpenRouterKey: !!this.openRouterKey,
@@ -364,6 +367,102 @@ class LLMService {
   }
 
   /**
+   * Sends a completion request to the Ollama API.
+   * This method handles text, system context, and image inputs.
+   * @param {Object} options - Request options.
+   * @param {string} options.prompt - The text prompt.
+   * @param {string} [options.model] - The model to use (e.g., 'gemma3:12b').
+   * @param {number} [options.maxTokens=8096] - Maximum number of tokens to generate. Ollama uses 'num_predict'.
+   * @param {number} [options.temperature=0.7] - Sampling temperature.
+   * @param {string} [options.image] - Image for vision input (can be a file path or a base64 string).
+   * @param {string} [options.systemContext] - The system context/instruction.
+   * @param {number} [options.timeout] - Request timeout in milliseconds.
+   * @returns {Promise<Object>} - The response from the Ollama API.
+   */
+  async ollamaCompletion(options) {
+    try {
+      const endpoint = this.ollamaEndpoint + '/api/chat';
+
+      // 1. Set up the messages array, starting with the system context if provided.
+      const messages = [];
+      const systemContext = options.systemContext  ?? "Você é ravena, um bot de whatsapp criado por moothz";
+      messages.push({ role: 'system', content: systemContext });
+
+      // 2. Create the main user message object.
+      const userMessage = {
+        role: 'user',
+        content: options.prompt,
+      };
+
+      // 3. Handle image input if provided.
+      if (options.image) {
+        let base64Image;
+
+        // Case A: Image is a data URI string.
+        if (options.image.startsWith('data:image')) {
+          base64Image = options.image.split(',')[1];
+        // Case B: Image is a valid file path.
+        } else if (fs.existsSync(options.image)) {
+          base64Image = fs.readFileSync(options.image, 'base64');
+        // Case C: Assume it's already a raw base64 string.
+        } else {
+          base64Image = options.image;
+        }
+
+        // If we successfully got a base64 string, add it to the message.
+        // Ollama expects an 'images' array with raw base64 strings.
+        if (base64Image) {
+          userMessage.images = [base64Image];
+        }
+      }
+
+      messages.push(userMessage);
+
+      // 4. Construct the final payload for the Ollama API.
+      const payload = {
+        model: options.model || this.ollamaModel,
+        messages: messages,
+        stream: false, // Set to false for a single response
+        options: {
+          temperature: options.temperature || 0.7,
+          num_predict: options.maxTokens || 8096, // Ollama's equivalent for max_tokens
+        },
+      };
+
+      this.logger.debug('[ollamaCompletion] Sending request to Ollama API', {
+          endpoint: endpoint,
+          model: payload.model,
+          promptLength: options.prompt.length,
+          hasImage: !!options.image
+      });
+
+      // 5. Make the POST request using axios.
+      const response = await axios.post(endpoint, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: options.timeout || this.apiTimeout,
+      });
+
+      // The structure of the successful response from Ollama is different from OpenAI's.
+      // It contains the response message directly. We return the whole data object
+      // for consistency with the other methods in your class.
+      return response.data;
+
+    } catch (error) {
+      // Enhanced error logging
+      this.logger.error('Error calling Ollama API:', error.message);
+      if (error.response) {
+        this.logger.error('Ollama API Response Error Data:', error.response.data);
+        this.logger.error('Ollama API Response Error Status:', error.response.status);
+      } else if (error.request) {
+        this.logger.error('Ollama API No Response Received. Request details:', error.request);
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Obtém completação de texto de qualquer LLM configurado
    * @param {Object} options - Opções de solicitação
    * @param {string} options.prompt - O texto do prompt
@@ -413,6 +512,14 @@ class LLMService {
     let response;
     
     switch (options.provider) {
+      case 'ollama':
+        response = await this.ollamaCompletion(options);
+        if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+          this.logger.error('Resposta inválida da API ollama:', response);
+          return "Não foi possível gerar uma resposta. Por favor, tente novamente mais tarde.";
+        }
+        return response.choices[0].message.content;
+
       case 'lmstudio':
         response = await this.lmstudioCompletion(options);
         if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
@@ -483,22 +590,19 @@ class LLMService {
   async getCompletionFromProviders(options) {
     // Lista de provedores para tentar em ordem
     const providers = [
-      { name: 'lmstudio', method: async () => {
-        const response = await this.lmstudioCompletion(options);
-        return response.choices[0].message.content;
-      }},
-      { name: 'gemini', method: async () => {
-        const response = await this.geminiCompletion(options);
-        return response.candidates[0].content.parts[0].text;
+      { name: 'ollama', method: async () => {
+        const response = await this.ollamaCompletion(options);
+        return response.message.content;
       }}
-      // { name: 'deepseek-r1', method: async () => {
-      //   const response = await this.deepseekCompletion({...options, version: 'v1'});
+      // ,
+      // { name: 'lmstudio', method: async () => {
+      //   const response = await this.lmstudioCompletion(options);
       //   return response.choices[0].message.content;
       // }},
-      // { name: 'deepseek', method: async () => {
-      //   const response = await this.deepseekCompletion({...options, version: 'v3'});
-      //   return response.choices[0].message.content;
-      // }},
+      // { name: 'gemini', method: async () => {
+      //   const response = await this.geminiCompletion(options);
+      //   return response.candidates[0].content.parts[0].text;
+      // }}
     ];
 
     // Tenta cada provedor em sequência
