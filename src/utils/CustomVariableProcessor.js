@@ -888,7 +888,8 @@ class CustomVariableProcessor {
 
         // 6. Cria o MessageMedia e retorna o payload
         if (selectedPost && mediaUrl && mediaType) {
-            const media = await context.bot.createMediaFromURL(mediaUrl, {unsafeMime: true, customMime});
+            const opts = {unsafeMime: false, customMime: customMime};
+            const media = await context.bot.createMediaFromURL(mediaUrl, opts);
 
             // Hijack as options pra fazer legenda
             context.options.caption = `🖼️ [${selectedPost.data.subreddit_name_prefixed}] _${selectedPost.data.title}_
